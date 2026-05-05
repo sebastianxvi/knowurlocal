@@ -1,0 +1,256 @@
+/* ========================
+   TABLE WRAPPER
+======================== */
+.table-wrapper{
+    background:rgba(255,255,255,0.85); /* glass feel */
+    backdrop-filter:blur(10px);
+
+    border-radius:18px;
+
+    box-shadow:
+        0 10px 30px rgba(0,0,0,0.08),
+        0 2px 6px rgba(0,0,0,0.04); /* layered shadow */
+
+    border:1px solid rgba(255,255,255,0.3);
+}
+
+/* ========================
+   TABLE BASE
+======================== */
+.table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+/* HEADER */
+.table thead{
+    background:rgba(31,58,95,0.05); /* subtle brand tint */
+}
+
+.table th{
+    color:var(--blue-main);
+    font-weight:700;
+    letter-spacing:0.3px;
+}
+
+/* CELLS */
+.table th,
+.table td{
+    padding:10px 12px;
+    text-align:center;
+    font-size:13px;
+    color:var(--text-main);
+}
+
+/* ROWS */
+.table tbody tr{
+    transition:all 0.2s ease;
+}
+
+.table tbody tr:hover{
+    background:rgba(31,58,95,0.05);
+    transform:scale(1.005); /* subtle lift */
+}
+
+/* ========================
+   BADGES
+======================== */
+.badge{
+    padding:6px 12px;
+    border-radius:999px; /* smoother pill */
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:0.3px;
+}
+
+/* ========================
+   ACTOR CELL
+======================== */
+.actor-cell{
+    display:flex;
+    align-items:center;
+    justify-content:center; /* since your table is centered */
+    gap:8px;
+}
+
+/* ========================
+   ROLE BADGE
+======================== */
+.role-badge{
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:0.3px;
+}
+
+/* ADMIN */
+.role-badge.admin{
+    background:#dbeafe;
+    color:#1e3a8a;
+}
+
+/* USER */
+.role-badge.user{
+    background:#dcfce7;
+    color:#166534;
+}
+
+/* fallback */
+.role-badge.guest{
+    background:#f3f4f6;
+    color:#374151;
+}
+
+/* name */
+.actor-name{
+    font-size:14px;
+    color:var(--text-main);
+}
+
+.badge.login{ background:#e0f2fe; color:#0284c7; }
+.badge.logout{ background:#fee2e2; color:#dc2626; }
+.badge.navigate{ background:#dcfce7; color:#16a34a; }
+.badge.view_agency{ background:#fef3c7; color:#b45309; }
+.badge.view_map{ background:#ede9fe; color:#6d28d9; }
+
+
+/* ========================
+   PAGINATION
+======================== */
+.pagination-modern{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.pagination-modern .arrow i{
+    font-size:14px;
+    color:inherit;
+}
+
+/* BASE ARROW */
+.pagination-modern .arrow{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    width:32px;
+    height:32px;
+
+    border-radius:50%;
+
+    background:#eef2f7; /* 🔥 softer base */
+    color:#374151;       /* 🔥 visible icon */
+
+    transition:all 0.2s ease;
+}
+
+/* ACTIVE / CLICKABLE */
+.pagination-modern a.arrow{
+    background:var(--blue-main);
+    color:#ffffff;
+}
+
+/* HOVER (only clickable) */
+.pagination-modern a.arrow:hover{
+    background:#162c47;
+    transform:scale(1.05);
+}
+
+/* DISABLED */
+.pagination-modern .disabled{
+    background:#f3f4f6;
+    color:#9ca3af;   /* 🔥 muted but visible */
+    cursor:not-allowed;
+}
+
+/* ICON SIZE */
+.pagination-modern .arrow svg{
+    width:14px;
+    height:14px;
+}
+
+.page-indicator{
+    font-weight:600;
+    color:var(--blue-main);
+}
+
+/* ========================
+   EMPTY STATE
+======================== */
+.empty{
+    text-align:center;
+    padding:30px;
+    color:var(--text-muted);
+}
+
+/* ========================
+   TABLE FOOTER (FIX)
+======================== */
+.footer{
+    display:flex;
+    justify-content:space-between; /* 🔥 spreads left/right */
+    align-items:center;
+    padding:12px 16px;
+    flex-wrap:wrap; /* prevents overflow on small screens */
+}
+
+.result-info{
+    font-size:13px;
+    color:var(--text-muted);
+}
+
+/* ================= BUTTON SYSTEM ================= */
+
+/* BASE BUTTON */
+/* ACTION BUTTON CONTAINER */
+.tablebtn{
+    display:flex;              /* 🔥 makes children horizontal */
+    align-items:center;        /* vertical alignment */
+    justify-content:center;    /* center inside table cell */
+    gap:6px;                   /* spacing between buttons */
+}
+
+/* 🔥 FIX FORM BREAKING LAYOUT */
+.tablebtn form{
+    display:inline;            /* prevents line break */
+    margin:0;                  /* remove default spacing */
+}
+
+.btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+
+    padding:5px 12px;
+    font-size:12px;
+
+    border:none;
+    border-radius:999px;
+
+    cursor:pointer;
+    transition:all 0.2s ease;
+}
+
+/* PRIMARY (VIEW / EDIT) */
+.btn-primary{
+    background:#e0f2fe;
+    color:#0369a1;
+}
+
+.btn-primary:hover{
+    background:#bae6fd;
+    transform:translateY(-1px);
+}
+
+/* DANGER (DELETE) */
+.btn-danger{
+    background:#fee2e2;
+    color:#b91c1c;
+}
+
+.btn-danger:hover{
+    background:#fecaca;
+    transform:translateY(-1px);
+}

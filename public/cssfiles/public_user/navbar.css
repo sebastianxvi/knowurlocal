@@ -1,0 +1,502 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+    background:#f3f4f6;
+    min-height:200vh;
+}
+
+/* HEADER */
+
+.site-header{
+    position:fixed;
+    top:calc(env(safe-area-inset-top, 0px) + 15px);
+    left:0;
+    width:100%;
+    z-index: 9999;
+}
+
+.site-header,
+.menu-toggle,
+.nav-drawer{
+    pointer-events:auto;
+}
+
+/* NAV GROUP */
+
+.nav-group{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    max-width:1100px;
+    margin:auto;
+    padding: 0 10px;
+}
+
+/* LOGO + SEARCH FLOATING CONTAINER */
+
+.logo-search{
+    display:flex;
+    align-items:center;
+    gap:10px;
+
+    flex:1;
+    max-width:600px;
+
+    background:rgba(255,255,255,0.75);
+    backdrop-filter:blur(12px);
+
+    padding:8px 14px;
+
+    border-radius:50px;
+
+    box-shadow:0 6px 18px rgba(0,0,0,0.12);
+}
+
+/* LOGO */
+
+.header-brand{
+    font-weight:bold;
+    font-size:16px;
+    white-space:nowrap;
+}
+
+.logo-full{
+    display:none;
+}
+
+/* SEARCH */
+
+.search-form{
+    display:flex;
+    align-items:center;
+    flex:1;
+}
+
+.search-form input{
+    flex:1;
+    border:none;
+    outline:none;
+    padding:8px;
+    background:transparent;
+    font-size:14px;
+}
+
+.search-form button{
+    border:none;
+    background:none;
+    cursor:pointer;
+    font-size:16px;
+    color:#555;
+}
+
+.search-form {
+    position: relative;
+}
+
+.search-item{
+    display:flex;
+    align-items:flex-start; /* 🔥 important */
+
+    padding:10px 12px;
+
+    font-size:13px;
+    cursor:pointer;
+
+    transition:background 0.2s ease;
+
+    /* ❌ REMOVE FIXED HEIGHT */
+    /* height: 30px; */
+
+    /* 🔥 ALLOW MULTILINE */
+    white-space:normal;
+    word-break:break-word;
+    overflow-wrap:break-word;
+}
+
+.search-item:hover{
+    background:#f1f5f9;
+}
+
+.search-content{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+
+.search-top{
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.search-top i{
+    font-size:16px;
+    opacity:0.85;
+}
+
+.search-name{
+    font-size:13px;
+    font-weight:500;
+}
+
+.search-abbr{
+    font-size:10px;
+    padding:2px 6px;
+
+    background:#eef2ff;
+    color:#4f46e5;
+
+    border-radius:999px;
+}
+
+.search-type{
+    font-size:11px;
+    color:#64748b;
+
+    padding-left:24px;
+}
+
+mark{
+    background:#fde68a;
+    border-radius:2px;
+}
+
+.search-results {
+    position: absolute;
+    top: 130%; /* directly below input */
+    width:100%;
+    left: -10%;
+    right: 0;
+
+    background:rgba(255,255,255,0.75);
+    border-radius: 5px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 3000;
+}
+
+
+/* BURGER BUTTON */
+
+.menu-toggle{
+    width:50px;
+    height:50px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:rgba(255,255,255,0.75);
+    backdrop-filter:blur(12px);
+
+    border:none;
+    cursor:pointer;
+
+    border-radius:50%;
+
+    box-shadow:0 6px 18px rgba(0,0,0,0.12);
+
+    font-size:20px;
+}
+
+/* DRAWER */
+
+#greet{
+    color:white;
+    text-align: center;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+}
+
+.nav-drawer{
+
+    position:fixed;
+    top:0;
+    right:0;
+
+    width:70%;
+    max-width:150px;
+    height:100vh;
+
+    background:rgba(0,0,0,0.85);
+
+    display:flex;
+    flex-direction:column;
+
+    padding-top:60px;
+
+    transform:translateX(100%);
+    transition:transform .35s ease;
+
+    z-index:10000;
+
+}
+
+/* OPEN */
+
+.nav-drawer.is-open{
+    transform:translateX(0);
+}
+
+/* LINKS */
+
+.nav-link{
+
+    display:flex;
+    align-items:center;
+    gap:12px;
+
+    padding:18px 24px;
+
+    color:white;
+    text-decoration:none;
+    font-size:0.9rem;
+
+    opacity:0;
+    transform:translateX(30px);
+
+}
+
+.account-wrapper {
+    display: flex; /* 🔥 ADD THIS */
+    position: relative;
+    flex-direction: column;
+    align-items: flex-start;
+    cursor: pointer;
+
+    opacity: 0;
+    transform: translateX(30px);
+}
+
+.account-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    opacity:0;
+    transform:translateX(30px);
+}
+
+.account-dropdown {
+    width: 100%;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.account-dropdown.active {
+    max-height: 200px;
+}
+
+.dropdown-item {
+    display: block;
+    padding: 10px 20px;
+    color: inherit;
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+
+.logout {
+    color: #ff6b6b;
+}
+
+button,
+a,
+.account-toggle,
+.nav-link {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ANIMATION */
+
+.nav-drawer.is-open .nav-link{
+    animation:navItemSlide .35s forwards;
+}
+
+.nav-drawer.is-open .account-toggle{
+    animation: navItemSlide .35s forwards;
+}
+
+@keyframes navItemSlide{
+    to{
+        opacity:1;
+        transform:translateX(0);
+    }
+}
+
+/* STAGGER */
+
+.nav-drawer.is-open .nav-link:nth-of-type(1){animation-delay:.08s;}
+.nav-drawer.is-open .nav-link:nth-of-type(2){animation-delay:.13s;}
+.nav-drawer.is-open .nav-link:nth-of-type(3){animation-delay:.23s;}
+.nav-drawer.is-open .nav-link:nth-of-type(4){animation-delay:.33s;}
+.nav-drawer.is-open .account-toggle{
+    animation-delay:.43s;
+}
+
+
+
+/* if the screen size is larger than 768 apply this design */
+@media (min-width:768px){
+
+    .account-toggle{
+        opacity:1;
+        transform:none;
+    }
+
+    .account-toggle:hover{
+        background:rgba(0,0,0,0.06);
+        border-radius:20px;
+    }
+
+    .logo-short{
+        display:none;
+    }
+
+    .logo-full{
+        display:inline;
+    }
+
+    /* hide burger */
+
+    .menu-toggle{
+        display:none;
+    }
+
+    .site-header{
+        display:flex;
+        justify-content:center;   /* centers the whole navbar area */
+        padding:16px 32px;
+    }
+
+    .nav-group{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        max-width:1100px;
+        gap:16px;
+
+        max-width:100vw;
+        width:100%;
+        margin:auto;
+    }
+
+    .account-wrapper {
+        margin-left:4px;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .account-dropdown {
+        position: absolute;
+        top: 200%;
+        right: 0;
+        width: 180px;
+
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+
+        opacity: 0;
+        transform: translateY(-8px);
+        pointer-events: none;
+        transition:all 0.25s ease;
+
+        max-height: none;
+    }
+
+    .account-dropdown.active {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    .logo-search{
+        flex:1;
+        max-width:500px;
+    }
+
+    .search-item:hover{
+        background-color: #d1d1d1;
+    }
+
+    /* navbar capsule */
+
+    .nav-drawer{
+        flex-shrink:0;
+        position:static;
+        transform:none;
+
+        display:flex;
+        flex-direction:row;
+        align-items:center;
+        gap:14px;
+
+        padding:15px 18px;
+
+        height:auto;
+        width:auto;
+
+        min-width:320px;
+        width:max-content;
+
+
+        background:rgba(255,255,255,0.75);
+        backdrop-filter:blur(12px);
+
+        border-radius:50px;
+
+        box-shadow:0 6px 18px rgba(0,0,0,0.12);
+    }
+
+    
+
+    /* remove greeting */
+
+    #greet{
+        display:none;
+    }
+
+    /* nav links */
+
+    .nav-link{
+        color:#333;
+        font-size:15px;
+
+        opacity:1;
+        transform:none;
+        animation:none;
+        padding:0;
+        transition:all 0.2s ease;
+    }
+
+    .nav-link:hover{
+        background:rgba(0,0,0,0.06);
+    }
+
+    .nav-link.active{
+        background:rgba(0,0,0,0.12);
+        font-weight:600;
+    }
+
+    /* hide icons on desktop */
+
+    .nav-link i{
+        display:none;
+    }
+
+    
+
+}

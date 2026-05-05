@@ -1,0 +1,12 @@
+:root {
+    --blue-main: #1F3A5F;
+    --red-main: #f06277;
+    --red-hover: #e2556a;
+    --bg-color: #e9edf3;
+
+    --text-main: #1f2937;
+    --text-muted: #6b7280;
+
+    --border-light: #e5e7eb;
+    --table-hover: #f9fafb;
+}

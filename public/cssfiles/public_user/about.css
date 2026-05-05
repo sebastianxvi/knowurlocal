@@ -1,0 +1,219 @@
+/* MAIN PAGE */
+
+.about-container{
+    padding:90px 20px 100px;
+    max-width:1100px;
+    margin:auto;
+}
+
+/* SECTION TITLES */
+
+.section-title{
+    text-align:center;
+    font-size:22px;
+    margin-bottom:20px;
+    color:#1f2937;
+}
+
+
+/* HERO */
+
+.hero{
+    text-align:center;
+    margin-bottom:50px;
+}
+
+.hero-content{
+    background:linear-gradient(135deg,#4f46e5,#6366f1);
+    color:white;
+    padding:40px 20px;
+    border-radius:16px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+}
+
+.hero h1{
+    font-size:28px;
+    margin-bottom:10px;
+}
+
+.hero p{
+    font-size:14px;
+    opacity:0.9;
+}
+
+
+
+/* INFO GRID */
+
+.info-grid{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+}
+
+/* INFO CARD */
+
+.info-card{
+    background:white;
+    padding:22px;
+    border-radius:12px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.08);
+    text-align:center;
+    transition:0.3s;
+}
+
+.info-card:hover{
+    transform:translateY(-6px);
+}
+
+.info-card i{
+    font-size:26px;
+    color:#4f46e5;
+    margin-bottom:10px;
+}
+
+
+
+/* GOAL */
+
+.goal-section{
+    margin:60px 0;
+    text-align:center;
+}
+
+.goal-section p{
+    color:#555;
+}
+
+
+
+/* DEVELOPERS */
+
+.developers{
+    margin-top:40px;
+}
+
+.dev-sub{
+    text-align:center;
+    font-size:13px;
+    color:#777;
+    margin-bottom:30px;
+}
+
+.dev-container{
+    display:flex;
+    flex-direction:column;
+    gap:20px;
+}
+
+/* DEV CARD */
+
+.dev-card{
+    background:white;
+    border-radius:14px;
+    padding:20px;
+    text-align:center;
+    box-shadow:0 8px 22px rgba(0,0,0,0.08);
+    transition:0.3s;
+}
+
+.dev-card:hover{
+    transform:translateY(-8px);
+}
+
+.dev-card img{
+    width:90px;
+    height:90px;
+    border-radius:50%;
+    object-fit:cover;
+    margin-bottom:10px;
+}
+
+
+
+/* SCROLL ANIMATION BASE */
+
+.hidden{
+    opacity:0;
+}
+
+.show{
+    animation:fadeSlideUp 0.9s ease forwards;
+}
+
+
+/* KEYFRAMES */
+
+@keyframes fadeSlideUp{
+
+    0%{
+        opacity:0;
+        transform:translateY(40px);
+    }
+
+    100%{
+        opacity:1;
+        transform:translateY(0);
+    }
+
+}
+
+
+
+/* SEQUENTIAL DEVELOPER ANIMATION */
+
+.dev1.show{ animation-delay:0.1s; }
+.dev2.show{ animation-delay:0.3s; }
+.dev3.show{ animation-delay:0.5s; }
+.dev4.show{ animation-delay:0.7s; }
+.dev5.show{ animation-delay:0.9s; }
+
+
+
+/* TABLET */
+
+@media(min-width:768px){
+
+.info-grid{
+    flex-direction:row;
+    flex-wrap:wrap;
+}
+
+.info-card{
+    width:48%;
+}
+
+.dev-container{
+    flex-direction:row;
+    flex-wrap:wrap;
+    justify-content:center;
+}
+
+.dev-card{
+    width:220px;
+}
+
+.hero h1{
+    font-size:32px;
+}
+
+}
+
+
+/* DESKTOP */
+
+@media(min-width:1024px){
+
+.info-card{
+    width:30%;
+}
+
+.hero h1{
+    font-size:38px;
+}
+
+.dev-card{
+    width:200px;
+}
+
+}

@@ -1,0 +1,531 @@
+:root {
+    --blue-main: #1F3A5F;
+    --red-main: #f06277;
+    --red-hover: #e2556a;
+    --bg-color: #e9edf3;
+
+    --panel-width: 55%;
+}
+
+/* RESET */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", sans-serif;
+}
+
+/* BODY */
+body {
+    height: 100vh;
+    background: var(--bg-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* CONTAINER */
+.container {
+    width: 950px;
+    height: 600px;
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.12);
+    position: relative;
+    overflow: hidden;
+}
+
+/* =========================================
+   CURVED PANEL
+========================================= */
+.overlay-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--panel-width);
+    height: 100%;
+    background: var(--blue-main);
+    color: #fff;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    transition: all 0.7s ease;
+
+    clip-path: ellipse(85% 100% at 0% 50%);
+
+    box-shadow: 
+        inset -15px 0 40px rgba(0,0,0,0.2),
+        0 10px 40px rgba(0,0,0,0.1);
+}
+
+.container.is-register .overlay-panel {
+    left: calc(100% - var(--panel-width));
+    clip-path: ellipse(85% 100% at 100% 50%);
+}
+
+/* =========================================
+   FORM SIDES
+========================================= */
+.form-side {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 50%;
+    padding: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.register-side {
+    left: 0;
+    opacity: 0;
+    z-index: 1;
+}
+
+.login-side {
+    right: 0;
+    z-index: 5;
+}
+
+.container.is-register .login-side {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.container.is-register .register-side {
+    opacity: 1;
+    z-index: 5;
+}
+
+/* =========================================
+   PANEL CONTENT
+========================================= */
+.panel-content {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 80px;
+    opacity: 0;
+    transition: 0.4s;
+}
+
+.panel-content.active {
+    opacity: 1;
+    transition-delay: 0.3s;
+}
+
+.login-content {
+    align-items: flex-start;
+    text-align: left;
+}
+
+.register-content {
+    align-items: flex-end;
+    text-align: right;
+}
+
+.panel-content h1 {
+    font-size: 2rem;
+    margin-bottom: 15px;
+}
+
+.panel-content p {
+    font-size: 0.95rem;
+    opacity: 0.8;
+    margin-bottom: 30px;
+}
+
+.features {
+    list-style: none;
+}
+
+.features li {
+    font-size: 0.85rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.register-content .features li {
+    justify-content: flex-end;
+}
+
+.features i {
+    color: var(--red-main);
+}
+
+/* =========================================
+   FORM
+========================================= */
+.form {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100%;
+}
+
+.form h2 {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    color: var(--blue-main);
+}
+
+.subtitle {
+    font-size: 0.85rem;
+    color: #777;
+    margin-bottom: 30px;
+}
+
+/* ROW */
+.row {
+    display: flex;
+    gap: 12px;
+}
+
+.input-group.half {
+    width: 50%;
+}
+
+/* INPUTS */
+.input-group {
+    position: relative;
+    margin-bottom: 18px;
+}
+
+/* LEFT ICON ONLY */
+.input-group > i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 14px 45px;
+    border-radius: 14px;
+    border: 1px solid #eee;
+    background: #f9f9f9;
+    font-size: 0.9rem;
+    transition: 0.3s;
+}
+
+.input-group input:focus {
+    border-color: var(--blue-main);
+    background: #fff;
+    outline: none;
+}
+
+/* PASSWORD TOGGLE */
+.toggle-password {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    color: #aaa;
+    transition: 0.3s;
+}
+
+.toggle-password:hover {
+    color: var(--blue-main);
+}
+
+/* CHECKBOX */
+.checkbox-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.8rem;
+    color: #666;
+    margin: 10px 0 20px;
+    cursor: pointer;
+}
+
+.checkbox-group input {
+    margin-top: 3px;
+    cursor: pointer;
+}
+
+.checkbox-group a {
+    color: var(--red-main);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.checkbox-group a:hover {
+    text-decoration: underline;
+}
+
+/* BUTTON */
+.btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    background: var(--red-main);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn:hover {
+    background: var(--red-hover);
+}
+
+/* GOOGLE BUTTON */
+.google-btn {
+    margin-top: 15px;
+    width: 100%;
+    padding: 13px;
+    border-radius: 14px;
+    border: 1px solid #ddd;
+    background: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.google-btn:hover {
+    background: #f7f7f7;
+    border-color: #ccc;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.google-btn:active {
+    transform: scale(0.97);
+}
+
+/* DIVIDER */
+.divider {
+    text-align: center;
+    margin: 20px 0;
+    font-size: 0.75rem;
+    color: #aaa;
+    position: relative;
+}
+
+.divider::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 1px;
+    background: #eee;
+    top: 50%;
+    left: 0;
+}
+
+.divider span {
+    background: #fff;
+    padding: 0 10px;
+    position: relative;
+}
+
+/* SWITCH */
+.switch {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.switch span {
+    color: var(--red-main);
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* MOBILE */
+@media (max-width: 850px) {
+
+    body {
+        align-items: flex-start;
+        padding: 0;
+    }
+
+    /* =========================================
+       CONTAINER (VERTICAL FLOW)
+    ========================================= */
+    .container {
+        width: 100%;
+        height: auto;
+        border-radius: 0;
+        box-shadow: none;
+        overflow: visible;
+
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* =========================================
+       HEADER (STATIC CURVED PANEL)
+    ========================================= */
+    .overlay-panel {
+        position: relative !important;
+        top: auto;
+        left: 0 !important;
+        transform: none !important;
+
+        order: -1;
+
+        width: 100% !important;
+        height: 200px;
+
+        background: var(--blue-main);
+
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        padding: 0;
+
+        clip-path: ellipse(120% 100% at 50% 0%);
+        z-index: 1;
+    }
+
+    /* =========================================
+       PANEL CONTENT (CENTERED PROPERLY)
+    ========================================= */
+    .panel-content {
+        position: relative;
+        height: auto !important;
+
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+
+        opacity: 1 !important;
+
+        align-items: center !important;
+        text-align: center !important;
+
+        padding: 0 20px;
+    }
+
+    /* FIX REGISTER ALIGNMENT */
+    .register-content {
+        display: none;
+        align-items: center !important;
+        text-align: center !important;
+    }
+
+    .container.is-register .login-content {
+        display: none;
+    }
+
+    .container.is-register .register-content {
+        display: block;
+    }
+
+    .register-content .features li {
+        justify-content: center !important;
+    }
+
+    /* =========================================
+       FORM SECTION
+    ========================================= */
+    .form-side {
+        position: relative;
+        width: 100%;
+        padding: 20px 20px 40px;
+        opacity: 1 !important;
+
+        margin-top: 0;
+        z-index: 2;
+    }
+
+    /* SWITCH FORMS (NO ANIMATION) */
+    .register-side {
+        display: none;
+    }
+
+    .container.is-register .register-side {
+        display: block;
+    }
+
+    .container.is-register .login-side {
+        display: none;
+    }
+
+    .form {
+        max-width: 100%;
+    }
+
+    /* =========================================
+       ROW + INPUT SPACING (FIXED PROPERLY)
+    ========================================= */
+    .row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .row .input-group {
+        margin-bottom: 18px;
+    }
+
+
+    .input-group.half {
+        width: 100%;
+    }
+
+    /* CENTER FORM HEADER ON MOBILE */
+    .form h2,
+    .subtitle {
+        text-align: center;
+    }
+
+    /* CENTER TERMS SECTION */
+    .checkbox-group {
+        justify-content: center;
+        text-align: center;
+    }
+
+    /* =========================================
+       TEXT SCALE
+    ========================================= */
+    .panel-content h1 {
+        font-size: 1.4rem;
+        margin-bottom: 10px;
+    }
+
+    .panel-content p {
+        font-size: 0.8rem;
+    }
+
+    /* =========================================
+       REMOVE DESKTOP ANIMATION
+    ========================================= */
+    .overlay-panel,
+    .panel-content {
+        transition: none !important;
+    }
+
+    /* HARD RESET DESKTOP BEHAVIOR */
+    .container.is-register .overlay-panel {
+        left: 0 !important;
+        width: 100% !important;
+        transform: none !important;
+        clip-path: ellipse(120% 100% at 50% 0%) !important;
+    }
+    
+    .overlay-panel {
+        box-shadow: none;
+    }
+}

@@ -1,0 +1,200 @@
+/* ================= ALERT MODAL ================= */
+
+#alert-modal {
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  opacity: 0;
+  pointer-events: none;
+
+  transition: opacity 0.2s ease;
+  z-index: 9999;
+}
+
+#alert-modal.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#alert-modal.hidden {
+  display: none !important;
+}
+
+/* ================= MODAL ================= */
+
+#alert-modal .modal {
+  background: #f7f7f7;
+  width: 520px;
+  max-width: 90%;
+
+  border-radius: 16px;
+  padding: 32px;
+
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+
+  text-align: center;
+  color: #333;
+
+  transform: translateY(30px) scale(0.96);
+  opacity: 0;
+}
+
+#alert-modal.show .modal {
+  animation: modalPop 0.18s ease-out forwards;
+}
+
+/* ================= TEXT ================= */
+
+#alert-modal .title {
+  font-size: 20px;
+  margin-bottom: 8px;
+  color: #111;
+}
+
+#alert-modal .name {
+  font-size: 26px;
+  margin-bottom: 20px;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+/* ================= MESSAGE ================= */
+
+#alert-modal .message-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 16px;
+  border-radius: 10px;
+
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+#alert-modal .message-box p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ================= ICON ================= */
+
+#alert-modal .icon {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: bold;
+}
+
+/* ================= VARIANTS ================= */
+
+#alert-modal .danger {
+  background: #f8d7da;
+  color: #5a1a1a;
+}
+
+#alert-modal .danger .icon {
+  border: 2px solid #d9534f;
+  color: #d9534f;
+}
+
+#alert-modal .success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+#alert-modal .success .icon {
+  border: 2px solid #10b981;
+  color: #10b981;
+}
+
+/* ================= BUTTONS ================= */
+
+#alert-modal .actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+
+  width: 90%;
+  margin: 0 auto;
+}
+
+#alert-modal .btn {
+  flex: 1;
+  border: none;
+
+  padding: 12px 0;
+
+  border-radius: 999px;
+
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+
+  transition: all 0.2s ease;
+}
+
+/* CANCEL */
+#alert-modal .cancel {
+  background: #e5e7eb;
+  color: #333;
+}
+
+#alert-modal .cancel:hover {
+  background: #d1d5db;
+}
+
+/* CONFIRM */
+#alert-modal .confirm {
+  color: white;
+}
+
+/* VARIANTS */
+#alert-modal .danger-btn {
+  background: #e11d48;
+}
+
+#alert-modal .danger-btn:hover {
+  background: #be123c;
+}
+
+#alert-modal .success-btn {
+  background: #10b981;
+}
+
+#alert-modal .success-btn:hover {
+  background: #059669;
+}
+
+/* ================= ANIMATION ================= */
+
+@keyframes modalPop {
+  0% {
+    transform: translateY(10px) scale(0.98);
+    opacity: 0;
+  }
+
+  50% {
+    transform: translateY(-2px) scale(1.01);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}

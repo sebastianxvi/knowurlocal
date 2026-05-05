@@ -1,0 +1,306 @@
+
+/* ================= RESET ================= */
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:'Inter', sans-serif;
+    background:#f6f7fb;
+    color:#111827;
+}
+
+/* ================= LAYOUT ================= */
+.layout{
+    display:flex;
+    min-height:100vh;
+}
+
+/* ================= SIDEBAR ================= */
+.sidebar{
+    position:fixed;
+    top:0;
+    left:0;
+    height:100vh;
+    width:150px;
+    background:#fff;
+    border-right:1px solid #e5e7eb;
+    padding:16px 12px;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+}
+
+.logo{
+    font-weight:600;
+    font-size:14px;
+    margin-bottom:22px;
+
+    padding:0 8px;      /* 🔥 match nav padding */
+    text-align:left;
+}
+
+/* NAV */
+.sidebar nav{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.sidebar nav a{
+    display:flex;
+    align-items:center;
+    gap:8px;
+
+    min-height:34px;   /* 🔥 flexible height */
+    padding:6px 8px;
+
+    font-size:13px;
+    color:#6b7280;
+    text-decoration:none;
+
+    border-radius:6px;
+    position:relative;
+    transition:
+        color 0.25s ease,
+        transform 0.2s ease;
+
+    line-height:1.2; 
+}
+
+.sidebar nav a i{
+    font-size:16px;
+    opacity:0.9;
+
+    transition:
+        transform 0.25s ease,
+        opacity 0.25s ease;
+}
+
+.sidebar nav a:hover{
+    color:#111827;
+
+    transform:translateX(2px); /* 🔥 slight move */
+}
+
+.sidebar nav a.active{
+    color:#2563eb;
+    font-weight:500;
+
+    transform:scale(1.03);
+}
+
+.sidebar nav a::before{
+    content:"";
+    position:absolute;
+    left:-9.6px;
+    width:2px;
+    height:55%;
+    background:#2563eb;
+
+    transform:scaleY(0);
+    transform-origin:center;
+    box-shadow:0 0 6px rgba(37,99,235,0.4);
+
+    transition:transform 0.25s ease;
+}
+
+.sidebar nav a.active::before{
+    transform:scaleY(1);
+}
+
+.sidebar nav a.active i{
+    transform:translateX(2px); /* 🔥 slight push */
+    opacity:1;
+}
+
+
+/* ================= NAV GROUP ================= */
+.nav-group{
+    display:flex;
+    flex-direction:column;
+}
+
+.nav-parent{
+    display:flex;
+    align-items:center;
+    gap:8px;
+
+    font-size:13px;
+    color:#6b7280;
+    padding:6px 8px;
+}
+
+.nav-parent i{
+    font-size:16px;
+}
+
+.nav-children{
+    display:flex;
+    flex-direction:column;
+    margin-left:18px;
+    border-left:1px solid #e5e7eb;
+    padding-left:10px;
+    margin-top:4px;
+}
+
+.nav-children a{
+    font-size:12.5px;
+    color:#6b7280;
+    padding:6px 0;
+    text-decoration:none;
+
+    white-space: nowrap;
+}
+
+.nav-children a.active{
+    color:#2563eb;
+    font-weight:500;
+}
+
+/* ================= LOGOUT ================= */
+.logout{
+    margin-bottom:20px; /* slightly higher positioning */
+}
+
+/* 🔥 Shared button style (works for <a> OR <button>) */
+.logout-btn{
+    display:flex;
+    align-items:center;
+    gap:8px;
+
+    height:34px;
+    padding:0 8px;
+
+    font-size:13px;
+    color:#6b7280;
+
+    background:none;        /* remove default button bg */
+    border:none;            /* remove default border */
+    outline:none;           /* remove focus outline */
+
+    text-decoration:none;   /* safe if reused on <a> */
+    border-radius:6px;
+
+    cursor:pointer;
+    transition:0.2s;
+}
+
+/* icon */
+.logout-btn i{
+    font-size:16px;
+    opacity:0.9;
+}
+
+/* hover */
+.logout-btn:hover{
+    color:#111827;
+}
+
+
+/* ================= MAIN ================= */
+.main{
+    margin-left:150px;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+}
+
+/* ================= HEADER ================= */
+.topbar{
+    position:sticky;
+    top:0;
+    z-index:100;
+    height:60px;
+    padding:0 20px;
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    border-bottom:1px solid #e5e7eb;
+    background:#fff;
+}
+
+/* LEFT */
+.header-left{
+    display:flex;
+    flex-direction:column;
+}
+
+.page-title{
+    font-size:18px;
+    font-weight:600;
+}
+
+.page-subtitle{
+    font-size:12px;
+    color:#9ca3af;
+}
+
+/* RIGHT */
+.header-right{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    margin-right:12px;
+}
+
+/* NOTIFICATION */
+.notification{
+    position:relative;
+    cursor:pointer;
+}
+
+.notification i{
+    font-size:18px;
+}
+
+.notif-dot{
+    position:absolute;
+    top:0;
+    right:0;
+
+    width:6px;
+    height:6px;
+    background:#ef4444;
+    border-radius:50%;
+}
+
+/* PROFILE */
+.profile img{
+    width:30px;
+    height:30px;
+    border-radius:50%;
+}
+
+/* ================= CONTENT ================= */
+.content{
+    padding:12px 16px;
+}
+
+/* ================= CARD ================= */
+.card{
+    background:#fff;
+    border-radius:10px;
+    padding:18px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.03);
+}
+
+.card-header{
+    margin-bottom:12px;
+}
+
+.card-header h3{
+    font-size:14px;
+    font-weight:500;
+}
+
+/* ================= TABLE ================= */
+.table{
+    width:100%;
+    border-collapse:collapse;
+}

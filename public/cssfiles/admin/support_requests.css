@@ -1,0 +1,258 @@
+/* ================= FILTER CARD ================= */
+.filter-card{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+
+    padding:14px 18px;
+
+    background:#fff;
+    border-radius:14px;
+    border:1px solid #e5e7eb;
+
+    box-shadow:0 6px 18px rgba(0,0,0,0.04);
+
+    margin-bottom:14px;
+    flex-wrap:wrap;
+}
+
+/* ================= FILTER BAR ================= */
+.filter-bar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:nowrap; 
+}
+
+/* INPUT */
+.filter-bar input[name="search"]{
+    flex:1;
+    min-width:180px;
+}
+
+.filter-bar select{
+    width:150px;
+}
+
+/* ================= FILTER INPUTS ================= */
+.filter-bar input,
+.filter-bar select{
+    height:36px;
+    padding:0 12px;
+
+    border-radius:10px;
+    border:1px solid #e5e7eb;
+
+    background:#f9fafb;
+    font-size:13px;
+
+    transition:all 0.2s ease;
+}
+
+/* FOCUS */
+.filter-bar input:focus,
+.filter-bar select:focus{
+    border-color:#3b82f6;
+    box-shadow:0 0 0 3px rgba(59,130,246,0.08);
+}
+
+/* HOVER */
+.filter-bar input:hover,
+.filter-bar select:hover{
+    border-color:#d1d5db;
+}
+
+/* BUTTON */
+.filter-bar > button{
+    height:36px;
+    padding:0 14px;
+
+    border:none;
+    border-radius:999px;
+
+    background:#f06277;
+    color:white;
+    font-size:13px;
+
+    cursor:pointer;
+    transition:all 0.2s ease;
+}
+
+.filter-bar > button:hover{
+    background:#e11d48;
+    transform:translateY(-1px);
+    box-shadow:0 6px 14px rgba(240,98,119,0.25);
+}
+
+/* ================= MODAL BACKDROP ================= */
+.back{
+    position:fixed;
+    inset:0;
+
+    background:rgba(0,0,0,0.35);
+    backdrop-filter:blur(6px);
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    opacity:0;
+    pointer-events:none;
+
+    transition:opacity 0.25s ease;
+    z-index:1000;
+}
+
+.back.active{
+    opacity:1;
+    pointer-events:auto;
+}
+
+/* ================= MODAL ================= */
+.modal{
+    width:560px;
+    max-height:90vh;
+
+    background:#ffffff;
+    border-radius:16px;
+
+    display:flex;
+    flex-direction:column;
+
+    box-shadow:0 20px 50px rgba(0,0,0,0.15);
+
+    overflow:hidden;
+
+    transform:translateY(20px) scale(0.96);
+    opacity:0;
+
+    transition:
+        transform 0.25s cubic-bezier(.16,1,.3,1),
+        opacity 0.2s ease;
+}
+
+.back.active .modal{
+    transform:translateY(0) scale(1);
+    opacity:1;
+}
+
+/* ================= MODAL HEADER ================= */
+.modal-header{
+    position:sticky;
+    top:0;
+    z-index:10;
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    padding:16px 20px;
+
+    background:#fff;
+    border-bottom:1px solid #f1f5f9;
+}
+
+.modal-header h2{
+    font-size:15px;
+    font-weight:600;
+    color:#111827;
+}
+
+/* ================= ACTIONS ================= */
+.modal-actions{
+    display:flex;
+    gap:10px;
+    align-items:center;
+}
+
+/* SAVE BUTTON */
+.btn-save{
+    background:#d1fae5;
+    color:#065f46;
+    border:none;
+    padding:6px 14px;
+    border-radius:999px;
+    font-size:12px;
+    cursor:pointer;
+    transition:all 0.2s ease;
+}
+
+.btn-save:hover{
+    background:#bbf7d0;
+    transform:translateY(-1px);
+}
+
+/* CANCEL BUTTON */
+.btn-cancel{
+    background:#f3f4f6;
+    border:none;
+    padding:6px 14px;
+    border-radius:999px;
+    font-size:12px;
+    cursor:pointer;
+    transition:all 0.2s ease;
+}
+
+.btn-cancel:hover{
+    background:#e5e7eb;
+}
+
+/* ================= FORM CONTAINER ================= */
+.modal .form-card{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+
+    padding:18px;
+
+    border-radius:14px;
+    border:1px solid #f1f5f9;
+
+    background:#fafafa;
+}
+
+/* ================= INPUT SYSTEM FIX ================= */
+.modal input,
+.modal textarea,
+.modal select{
+    width:100%;
+    font-size:13px;
+}
+
+/* ================= TEXTAREA ================= */
+.modal textarea{
+    min-height:90px;
+    resize:vertical;
+    line-height:1.5;
+}
+
+/* Specific tuning */
+#sr-question{
+    min-height:80px;
+}
+
+#sr-reply{
+    min-height:120px;
+}
+
+/* ================= SCROLL HANDLING ================= */
+.modal{
+    overflow:hidden;
+}
+
+.modal .form-card{
+    overflow-y:auto;
+    max-height:calc(90vh - 70px);
+}
+
+/* ================= MICRO POLISH ================= */
+.modal textarea:focus,
+.modal input:focus{
+    outline:none;
+}
+
+/* smoother feel */
+.modal textarea{
+    transition:border 0.2s ease, box-shadow 0.2s ease;
+}

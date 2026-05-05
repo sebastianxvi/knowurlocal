@@ -1,0 +1,180 @@
+/* ================= FLOATING SYSTEM (REFINED + STABLE) ================= */
+
+.floating-group{
+    position:relative;
+}
+
+/* ================= INPUT + TEXTAREA BASE ================= */
+.floating-group input,
+.floating-group textarea{
+    width:100%;
+
+    padding:24px 12px 10px;
+    min-height:54px;
+
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+
+    font-size:14px;
+    line-height:1.4;
+
+    background:#fff;
+    outline:none;
+
+    box-sizing:border-box; /* 🔥 prevents layout bugs */
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+/* ================= TEXTAREA OVERRIDE ================= */
+.floating-group textarea{
+    min-height:90px;
+    resize:vertical;
+}
+
+/* ================= LABEL BASE ================= */
+.floating-group label{
+    position:absolute;
+    left:12px;
+
+    font-size:13px;
+    font-weight:400;
+    color:#94a3b8;
+
+    pointer-events:none;
+
+    transition:all 0.18s ease;
+}
+
+/* ================= SELECT BASE ================= */
+.floating-group select{
+    width:100%;
+
+    padding:24px 12px 10px;
+    min-height:54px;
+
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+
+    font-size:14px;
+
+    background:#fff;
+    outline:none;
+
+    appearance:none; /* 🔥 removes default browser arrow */
+    cursor:pointer;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+/* ================= INPUT LABEL START ================= */
+.floating-group input + label{
+    top:50%;
+    transform:translateY(-50%);
+}
+
+/* ================= TEXTAREA LABEL START ================= */
+.floating-group textarea + label{
+    top:12px;
+    transform:none;
+}
+
+/* ================= SELECT LABEL START ================= */
+.floating-group select + label{
+    top:50%;
+    transform:translateY(-50%);
+}
+
+/* ================= FLOAT (INPUT + TEXTAREA) ================= */
+.floating-group input:focus + label,
+.floating-group input:not(:placeholder-shown) + label,
+.floating-group textarea:focus + label,
+.floating-group textarea:not(:placeholder-shown) + label{
+    top:8px;
+    transform:none;
+
+    font-size:12px;
+    color:#6b7280;
+}
+
+/* ================= FLOAT (SELECT) ================= */
+.floating-group select:focus + label,
+.floating-group select:valid + label{
+    top:8px;
+    transform:none;
+
+    font-size:12px;
+    color:#6b7280;
+}
+
+/* ================= FOCUS STATE ================= */
+.floating-group input:focus,
+.floating-group textarea:focus{
+    border-color:#3b82f6;
+    box-shadow:0 0 0 3px rgba(59,130,246,0.08);
+}
+
+/* ================= SAFETY RESET ================= */
+.floating-group input:not(:focus),
+.floating-group textarea:not(:focus){
+    border-color:#e5e7eb;
+}
+
+
+
+
+
+
+
+
+/* ================= VALIDATION STATES ================= */
+
+/* ERROR */
+.floating-group.error input,
+.floating-group.error textarea{
+    border-color:#ef4444;
+    box-shadow:0 0 0 3px rgba(239,68,68,0.08);
+}
+
+/* SUCCESS */
+.floating-group.success input,
+.floating-group.success textarea{
+    border-color:#10b981;
+    box-shadow:0 0 0 3px rgba(16,185,129,0.08);
+}
+
+/* MESSAGE TEXT */
+.form-message{
+    font-size:12px;
+    margin-top:6px;
+    display:none;
+    line-height:1.4;
+}
+
+/* SHOW ERROR */
+.floating-group.error .form-message{
+    display:block;
+    color:#ef4444;
+}
+
+/* SHOW SUCCESS */
+.floating-group.success .form-message{
+    display:block;
+    color:#10b981;
+}
+
+/* ERROR */
+.floating-group.error select{
+    border-color:#ef4444;
+    box-shadow:0 0 0 3px rgba(239,68,68,0.08);
+}
+
+/* SUCCESS */
+.floating-group.success select{
+    border-color:#10b981;
+    box-shadow:0 0 0 3px rgba(16,185,129,0.08);
+}

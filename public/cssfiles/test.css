@@ -1,0 +1,106 @@
+* {
+  box-sizing: border-box;
+}
+
+body{
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* ===== NAVBAR ===== */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-shadow: 0 2px 2px rgba(0,0,0,0.1);
+  z-index: 1000;
+}
+
+.navbar .logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: bold;
+}
+
+.navbar .right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.logout-btn {
+  background: #2f80ed;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.sidebar {
+  position: fixed;
+  top: 60px; /* 👈 push it below navbar */
+  left: 0;
+  height: calc(100vh - 60px); /* 👈 full height minus navbar */
+  width: 70px;
+  background: #f4f4f4;
+
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar ul li {
+  position: relative;
+  margin: 15px 0;
+}
+
+.sidebar ul li a {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50px;
+  color: #333;
+  text-decoration: none;
+}
+
+/* ICON */
+.sidebar i {
+  font-size: 18px;
+}
+
+/* TOOLTIP */
+.tooltip {
+  position: absolute;
+  left: 80px;
+  background: #333;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+
+  opacity: 0;
+  transform: translateY(-50%) translateX(-10px);
+  top: 50%;
+
+  transition: 0.2s ease;
+  pointer-events: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* SHOW TOOLTIP ON HOVER */
+.sidebar ul li:hover .tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}

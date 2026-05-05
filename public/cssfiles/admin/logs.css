@@ -1,0 +1,540 @@
+/* ================= GLOBAL ================= */
+body{
+    background:var(--bg-color);
+    font-family:"Inter", sans-serif;
+}
+
+/* ================= PAGE WRAPPER ================= */
+.logs-page{
+    max-width:1200px;
+    margin:40px auto;
+    width:100%;
+    padding:12px 16px;
+    margin-top:4px;
+}
+
+/* ================= HEADER ================= */
+.logs-header h2{
+    font-size:26px;
+    color:var(--blue-main);
+}
+
+/* ================= FILTER CARD ================= */
+.filter-card{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+
+    padding:14px 16px;
+
+    background:#ffffff;
+    border-radius:16px;
+    border:1px solid var(--border-light);
+
+    box-shadow:0 4px 12px rgba(0,0,0,0.05);
+
+    margin-bottom:20px;
+    flex-wrap:wrap;
+}
+
+/* ================= FILTER BAR ================= */
+.filter-bar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.filter-card input[type="text"]{
+    min-width:220px;
+}
+
+/* ================= INPUTS ================= */
+.filter-card input,
+.filter-card select{
+    height:40px;
+    padding:0 16px;
+
+    border-radius:10px;
+    border:1px solid var(--border-light);
+
+    background:#f9fafb;
+    outline:none;
+    min-width:140px;
+
+    transition:all 0.2s ease;
+}
+
+.filter-card input:focus,
+.filter-card select:focus{
+    background:#ffffff;
+    border-color:var(--blue-main);
+    box-shadow:0 0 0 2px rgba(31,58,95,0.1);
+}
+
+/* ================= FILTER BUTTON ================= */
+.filter-bar > button{
+    height:36px;
+    padding:0 14px;
+
+    border:none;
+    border-radius:999px;
+
+    background:#f06277;
+    color:white;
+    font-size:13px;
+
+    cursor:pointer;
+    transition:all 0.2s ease;
+}
+
+.filter-bar > button:hover{
+    background:#e11d48;
+    transform:translateY(-1px);
+    box-shadow:0 6px 14px rgba(240,98,119,0.25);
+}
+
+/* ================= RIGHT SIDE TABS ================= */
+.log-tabs{
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.log-tabs .tab{
+    height:40px;
+    display:flex;
+    align-items:center;
+
+    padding:0 16px;
+
+    border-radius:999px;
+
+    background:#f3f4f6;
+    color:#374151;
+
+    text-decoration:none;
+    font-size:13px;
+    font-weight:500;
+
+    transition:all 0.2s ease;
+}
+
+.log-tabs .tab:hover{
+    background:#e5e7eb;
+}
+
+.log-tabs .tab.active{
+    background:var(--blue-main);
+    color:#ffffff;
+}
+
+/* ================= BASE BADGE ================= */
+.badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+
+    padding:6px 12px;
+    border-radius:999px;
+
+    font-size:12px;
+    font-weight:500;
+    letter-spacing:0.2px;
+
+    white-space:nowrap;
+}
+
+/* ================= ACTION BADGE ================= */
+.badge.action{
+    gap:6px;
+}
+
+/* ICON INSIDE BADGE */
+.badge.action i{
+    font-size:14px;
+    opacity:0.85;
+}
+
+/* ================= AUTH ================= */
+.badge.login{
+    background:#e0f2fe;
+    color:#0284c7;
+}
+
+.badge.logout{
+    background:#fee2e2;
+    color:#dc2626;
+}
+
+.badge.admin_login{
+    background:#dbeafe;
+    color:#1d4ed8;
+}
+
+.badge.admin_logout{
+    background:#fee2e2;
+    color:#b91c1c;
+}
+
+/* ================= CREATE ================= */
+.badge.create_agency,
+.badge.create_faq{
+    background:#dcfce7;
+    color:#166534;
+}
+
+/* ================= UPDATE ================= */
+.badge.update_agency,
+.badge.update_faq{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+/* ================= DELETE ================= */
+.badge.delete_agency,
+.badge.delete_faq{
+    background:#fee2e2;
+    color:#b91c1c;
+}
+
+/* ================= VIEW / NAVIGATION ================= */
+.badge.view_agency,
+.badge.view_agencies,
+.badge.navigate{
+    background:#e0f2fe;
+    color:#0369a1;
+}
+
+.badge.view_map{
+    background:#ede9fe;
+    color:#5b21b6;
+}
+
+/* ================= ADMIN ACTIONS ================= */
+.badge.approve_admin{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.badge.promote_admin{
+    background:#e0f2fe;
+    color:#0369a1;
+}
+
+.badge.demote_admin{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.badge.delete_admin{
+    background:#fee2e2;
+    color:#b91c1c;
+}
+
+/* ================= CHANGE BOX ================= */
+.change-box{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+}
+
+.change-box .old{
+    background:#f3f4f6;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:12px;
+}
+
+.change-box .new{
+    background:#dbeafe;
+    color:#1d4ed8;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:12px;
+}
+
+.change-box i{
+    font-size:14px;
+    opacity:0.6;
+}
+
+/* ================= TARGET USER ================= */
+.target-user{
+    font-size:13px;
+    font-weight:500;
+    color:#111827;
+}
+
+/* ================= ROLE BADGES ================= */
+.role-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+
+    padding:5px 12px;
+    border-radius:999px;
+
+    font-size:12px;
+    font-weight:600;
+
+    letter-spacing:0.3px;
+}
+
+/* USER */
+.role-badge.user{
+    background:#dcfce7;
+    color:#166534;
+}
+
+/* ADMIN */
+.role-badge.admin{
+    background:#dbeafe;
+    color:#1d4ed8;
+}
+
+/* SUPERADMIN */
+.role-badge.superadmin{
+    background:#ede9fe;
+    color:#5b21b6;
+}
+
+
+/* ================= CHATBOT TYPE BADGES ================= */
+.badge.faq{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.badge.options{
+    background:#e0f2fe;
+    color:#0369a1;
+}
+
+.badge.greeting{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.badge.fallback{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+.badge.thanks{
+    background:#ede9fe;
+    color:#5b21b6;
+}
+
+
+/* ================= SCORE BADGES ================= */
+.badge.score-high{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.badge.score-medium{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.badge.score-low{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+/* ================= CHATBOT EDGE CASE TYPES ================= */
+
+/* WRONG AGENCY (user picked wrong agency intent) */
+.badge.wrong_agency{
+    background:#fee2e2;
+    color:#b91c1c;
+}
+
+/* IRRELEVANT (off-topic / nonsense input) */
+.badge.irrelevant{
+    background:#f3f4f6;
+    color:#374151;
+}
+
+/* ================= MODAL ================= */
+
+.log-modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    opacity:0;
+    pointer-events:none;
+
+    z-index:9999;
+
+    /* 🔥 KEY FIX: allow modal scroll */
+    overflow-y:auto;
+    padding:20px;
+
+    transition:all 0.25s ease;
+}
+
+.log-modal.active{
+    opacity:1;
+    pointer-events:auto;
+}
+
+/* ================= CONTENT ================= */
+
+.modal-content{
+    background:#fff;
+    border-radius:16px;
+
+    width:500px;
+    max-width:100%;
+
+    /* 🔥 prevent overflow */
+    max-height:90vh;
+
+    display:flex;
+    flex-direction:column;
+
+    box-shadow:0 20px 40px rgba(0,0,0,0.15);
+
+    transform:translateY(20px) scale(0.98);
+    opacity:0;
+
+    transition:all 0.25s ease;
+}
+
+.log-modal.active .modal-content{
+    transform:translateY(0) scale(1);
+    opacity:1;
+}
+
+/* ================= HEADER ================= */
+
+.modal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    padding:16px 18px;
+    border-bottom:1px solid #f1f5f9;
+
+    font-weight:600;
+    font-size:14px;
+}
+
+/* ================= BODY ================= */
+
+.modal-body{
+    padding:20px;
+
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+
+    /* 🔥 KEY: internal scroll */
+    overflow-y:auto;
+    max-height:60vh;
+}
+
+/* ================= BLOCK ================= */
+
+.modal-block{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+.modal-label{
+    font-size:11px;
+    color:#64748b;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+}
+
+/* ================= VALUE BOX ================= */
+
+.modal-box{
+    padding:12px 14px;
+    border-radius:10px;
+    font-size:13px;
+
+    word-break:break-word;
+    line-height:1.5;
+
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+/* OLD */
+.modal-box.old{
+    background:#fef2f2;
+    color:#991b1b;
+}
+
+/* NEW */
+.modal-box.new{
+    background:#eff6ff;
+    color:#1d4ed8;
+}
+
+/* ================= ARROW ================= */
+
+.modal-arrow{
+    text-align:center;
+    opacity:0.5;
+    font-size:14px;
+}
+
+/* ================= CLOSE BUTTON ================= */
+
+#closeModal{
+    border:none;
+    background:none;
+    font-size:18px;
+    cursor:pointer;
+    opacity:0.7;
+
+    transition:opacity 0.2s ease;
+}
+
+#closeModal:hover{
+    opacity:1;
+}
+
+/* ================= DATA DISPLAY ================= */
+
+.data-row{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    margin-bottom:10px;
+}
+
+.data-label{
+    font-size:11px;
+    color:#64748b;
+}
+
+.data-value{
+    font-size:13px;
+    color:#1e293b;
+    line-height:1.4;
+}
+
+/* ================= SCROLLBAR (PREMIUM TOUCH) ================= */
+
+.modal-body::-webkit-scrollbar{
+    width:6px;
+}
+
+.modal-body::-webkit-scrollbar-thumb{
+    background:#cbd5f5;
+    border-radius:10px;
+}
