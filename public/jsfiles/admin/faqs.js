@@ -8,12 +8,666 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const agencySelect = document.getElementById("faq_agency");
     const questionInput = document.getElementById("faq_question");
+    const answerInput = document.getElementById("faq_answer");
+
+    const questionFilInput = document.getElementById("faq_question_fil");
+    const answerFilInput = document.getElementById("faq_answer_fil");
+
     const keywordsInput = document.getElementById("faq_keywords");
 
+    const uploadPlaceholder = document.getElementById("upload-placeholder");
     const previewImg = document.getElementById("preview-img");
     const imageInput = document.getElementById("faq_image");
+    const translateFaqBtn = document.getElementById("translateFaqBtn");
+
+    /*
+ * Support Request → FAQ conversion data.
+ *
+ * These variables are injected by the FAQ Blade.
+ * They are null during normal FAQ management.
+ */
+const supportFaqData =
+    window.SUPPORT_FAQ_DATA || null;
+
+const supportFaqPrepareUrl =
+    window.SUPPORT_FAQ_PREPARE_URL || null;
+
 
     let userEditedKeywords = false;
+
+    let currentMode = "add";
+
+    // ================= AI KEYWORD SELECTION =================
+
+let selectedKeywordSuggestions = new Set();
+
+const keywordSuggestionsBox =
+    document.getElementById("keywordSuggestions");
+
+const keywordSuggestionList =
+    document.getElementById("keywordSuggestionList");
+
+const addKeywordSuggestionsBtn =
+    document.getElementById("addKeywordSuggestions");
+
+
+    // ================= KEYWORD SUGGESTION UI =================
+
+function updateKeywordSelectionButton() {
+
+    const count = selectedKeywordSuggestions.size;
+
+    addKeywordSuggestionsBtn.textContent =
+        `Add selected (${count})`;
+
+    addKeywordSuggestionsBtn.disabled =
+        count === 0;
+}
+
+
+/**
+ * ================= SUPPORT REQUEST → FAQ =================
+ *
+ * Generates a bilingual FAQ draft from the selected
+ * Support Request.
+ *
+ * IMPORTANT:
+ * This does NOT save anything.
+ * It only fills the existing FAQ form.
+ */
+async function prepareSupportFaq() {
+
+    /*
+     * Make sure the server supplied the required data.
+     */
+    if (
+        !supportFaqData ||
+        !supportFaqPrepareUrl
+    ) {
+        return;
+    }
+
+    /*
+     * The Save button should remain disabled while
+     * the AI is preparing the draft.
+     */
+    const saveBtn =
+        document.querySelector(".btn-save");
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+    }
+
+    /*
+     * Temporarily prevent editing while the draft
+     * is being generated.
+     */
+    enableInputs(false);
+
+    /*
+     * Give the admin immediate visual feedback.
+     */
+    title.textContent =
+        "Preparing FAQ...";
+
+    try {
+
+        /*
+         * The browser sends only the CSRF token.
+         *
+         * The actual question and answer remain on
+         * the server and are retrieved by ID.
+         */
+        const response = await fetch(
+            supportFaqPrepareUrl,
+            {
+                method: "POST",
+
+                headers: {
+                    "Accept": "application/json",
+
+                    "X-CSRF-TOKEN":
+                        document.querySelector(
+                            'meta[name="csrf-token"]'
+                        )?.getAttribute("content")
+                }
+            }
+        );
+
+        /*
+         * Parse Laravel's JSON response.
+         */
+        const result =
+            await response.json();
+
+        /*
+         * Stop if the server or AI preparation failed.
+         */
+        if (
+            !response.ok ||
+            !result.success ||
+            !result.draft
+        ) {
+            throw new Error(
+                result.message ||
+                "Unable to prepare FAQ."
+            );
+        }
+
+        const draft =
+            result.draft;
+
+        /*
+         * Set the agency from the original
+         * Support Request.
+         *
+         * The admin can still change it afterwards.
+         */
+        agencySelect.value =
+            result.agency_id || "";
+
+        /*
+         * Fill the English FAQ fields.
+         */
+        questionInput.value =
+            draft.question || "";
+
+        answerInput.value =
+            draft.answer || "";
+
+        /*
+         * Fill the Filipino/Taglish fields.
+         */
+        questionFilInput.value =
+            draft.question_fil || "";
+
+        answerFilInput.value =
+            draft.answer_fil || "";
+
+        /*
+         * Use the AI-generated keyword suggestions.
+         *
+         * We do NOT automatically insert them into
+         * the final keyword field.
+         *
+         * The admin must approve the suggestions.
+         */
+        selectedKeywordSuggestions.clear();
+
+        keywordSuggestionList.innerHTML = "";
+
+        const suggestions =
+            Array.isArray(
+                draft.keyword_suggestions
+            )
+                ? draft.keyword_suggestions
+                : [];
+
+        suggestions.forEach(keyword => {
+
+            const cleanKeyword =
+                String(keyword).trim();
+
+            if (!cleanKeyword) {
+                return;
+            }
+
+            const chip =
+                document.createElement("button");
+
+            chip.type = "button";
+
+            chip.className =
+                "keyword-suggestion";
+
+            chip.textContent =
+                cleanKeyword;
+
+            chip.setAttribute(
+                "aria-pressed",
+                "false"
+            );
+
+            chip.title =
+                "Select this keyword";
+
+            chip.addEventListener(
+                "click",
+                () => {
+                    toggleKeywordSuggestion(
+                        cleanKeyword,
+                        chip
+                    );
+                }
+            );
+
+            keywordSuggestionList.appendChild(
+                chip
+            );
+        });
+
+        keywordSuggestionsBox.hidden =
+            suggestions.length === 0;
+
+        updateKeywordSelectionButton();
+
+        /*
+         * Generate a basic fallback keyword set
+         * only when the AI returned no suggestions.
+         */
+        if (
+            suggestions.length === 0 &&
+            !keywordsInput.value.trim()
+        ) {
+            userEditedKeywords = false;
+            generateKeywords();
+        }
+
+        /*
+         * Trigger input events so the floating-label
+         * system recognizes populated fields.
+         */
+        questionInput.dispatchEvent(
+            new Event("input", {
+                bubbles: true
+            })
+        );
+
+        answerInput.dispatchEvent(
+            new Event("input", {
+                bubbles: true
+            })
+        );
+
+        questionFilInput.dispatchEvent(
+            new Event("input", {
+                bubbles: true
+            })
+        );
+
+        answerFilInput.dispatchEvent(
+            new Event("input", {
+                bubbles: true
+            })
+        );
+
+        keywordsInput.dispatchEvent(
+            new Event("input", {
+                bubbles: true
+            })
+        );
+
+        /*
+         * The AI draft is now ready for human review.
+         */
+        title.textContent =
+            "Create FAQ from Support Request";
+
+        enableInputs(true);
+
+        if (saveBtn) {
+            saveBtn.disabled = false;
+        }
+
+        /*
+         * Tell the admin what happened.
+         */
+        showAlertModal({
+            title: "FAQ draft ready",
+            text:
+                "The support request has been prepared as a bilingual FAQ. Please review the information before saving.",
+            icon: "✓",
+            variant: "success",
+            confirmText: "Review",
+            showCancel: false
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Support Request FAQ preparation error:",
+            error
+        );
+
+        /*
+         * Re-enable the form so the admin isn't
+         * trapped inside a disabled modal.
+         */
+        enableInputs(true);
+
+        if (saveBtn) {
+            saveBtn.disabled = false;
+        }
+
+        showAlertModal({
+            title: "Unable to prepare FAQ",
+            text:
+                "The bilingual FAQ draft could not be generated. Please try again.",
+            icon: "!",
+            variant: "danger",
+            confirmText: "OK",
+            showCancel: false
+        });
+
+        /*
+         * Restore a useful modal title.
+         */
+        title.textContent =
+            "Create FAQ from Support Request";
+    }
+}
+
+function toggleKeywordSuggestion(keyword, chip) {
+
+    if (selectedKeywordSuggestions.has(keyword)) {
+
+        selectedKeywordSuggestions.delete(keyword);
+
+        chip.classList.remove("selected");
+
+        chip.setAttribute("aria-pressed", "false");
+
+    } else {
+
+        selectedKeywordSuggestions.add(keyword);
+
+        chip.classList.add("selected");
+
+        chip.setAttribute("aria-pressed", "true");
+    }
+
+    updateKeywordSelectionButton();
+}
+
+    // ================= AI TRANSLATION =================
+
+if (translateFaqBtn) {
+
+    translateFaqBtn.addEventListener("click", async function () {
+
+        const question = questionInput.value.trim();
+        const answer = answerInput.value.trim();
+
+        // -----------------------------------------
+        // 1. Validate English source content
+        // -----------------------------------------
+
+        if (!question || !answer) {
+
+            showAlertModal({
+                title: "English content required",
+                text: "Please enter the English question and answer first.",
+                icon: "!",
+                variant: "danger",
+                confirmText: "OK",
+                showCancel: false
+            });
+
+            return;
+        }
+
+        // -----------------------------------------
+        // 2. Prevent duplicate requests
+        // -----------------------------------------
+
+        if (translateFaqBtn.disabled) {
+            return;
+        }
+
+        const originalButtonHTML = translateFaqBtn.innerHTML;
+
+        translateFaqBtn.disabled = true;
+
+        translateFaqBtn.innerHTML = `
+            <i class="ph-light ph-spinner"></i>
+            Translating...
+        `;
+
+        try {
+
+            // -----------------------------------------
+            // 3. Send request to Laravel
+            // -----------------------------------------
+
+            const response = await fetch(
+                window.FAQ_TRANSLATE_URL,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "X-CSRF-TOKEN":
+                            document.querySelector(
+                                'meta[name="csrf-token"]'
+                            )?.getAttribute("content")
+                    },
+
+                    body: JSON.stringify({
+                        question: question,
+                        answer: answer,
+                        keywords: keywordsInput.value.trim()
+                    })
+                }
+            );
+
+            // -----------------------------------------
+            // 4. Parse Laravel response
+            // -----------------------------------------
+
+            const result = await response.json();
+
+            // -----------------------------------------
+            // 5. Handle server-side failure
+            // -----------------------------------------
+
+            if (!response.ok || !result.success) {
+
+                throw new Error(
+                    result.message ||
+                    "Translation failed."
+                );
+            }
+
+            // -----------------------------------------
+            // 6. Put AI draft into Filipino fields
+            // -----------------------------------------
+
+            questionFilInput.value =
+                result.translation.question_fil || "";
+
+            answerFilInput.value =
+                result.translation.answer_fil || "";
+
+                
+const keywordSuggestions =
+    Array.isArray(
+        result.translation.keyword_suggestions
+    )
+        ? result.translation.keyword_suggestions
+        : [];
+
+// Reset previous AI selections.
+selectedKeywordSuggestions.clear();
+
+keywordSuggestionList.innerHTML = "";
+
+if (keywordSuggestions.length > 0) {
+
+    keywordSuggestions.forEach(keyword => {
+
+        const cleanKeyword =
+            String(keyword).trim();
+
+        // Ignore empty suggestions.
+        if (!cleanKeyword) {
+            return;
+        }
+
+        const chip =
+            document.createElement("button");
+
+        chip.type = "button";
+
+        chip.className =
+            "keyword-suggestion";
+
+        chip.textContent =
+            cleanKeyword;
+
+        chip.setAttribute(
+            "aria-pressed",
+            "false"
+        );
+
+        chip.title =
+            "Select this keyword";
+
+        chip.addEventListener(
+            "click",
+            () => {
+                toggleKeywordSuggestion(
+                    cleanKeyword,
+                    chip
+                );
+            }
+        );
+
+        keywordSuggestionList.appendChild(
+            chip
+        );
+    });
+
+    keywordSuggestionsBox.hidden = false;
+
+} else {
+
+    keywordSuggestionsBox.hidden = true;
+}
+
+updateKeywordSelectionButton();
+
+
+
+            // -----------------------------------------
+            // 7. Notify floating-label system
+            // -----------------------------------------
+
+            questionFilInput.dispatchEvent(
+                new Event("input", {
+                    bubbles: true
+                })
+            );
+
+            answerFilInput.dispatchEvent(
+                new Event("input", {
+                    bubbles: true
+                })
+            );
+
+        } catch (error) {
+
+            console.error(
+                "FAQ translation error:",
+                error
+            );
+
+            showAlertModal({
+                title: "Translation failed",
+                text: "The AI translation could not be generated. Please try again.",
+                icon: "!",
+                variant: "danger",
+                confirmText: "OK",
+                showCancel: false
+            });
+
+        } finally {
+
+            // -----------------------------------------
+            // 8. Always restore the button
+            // -----------------------------------------
+
+            translateFaqBtn.disabled = false;
+
+            translateFaqBtn.innerHTML =
+                originalButtonHTML;
+        }
+
+    });
+
+}
+
+// ================= ADD SELECTED KEYWORDS =================
+
+if (addKeywordSuggestionsBtn) {
+
+    addKeywordSuggestionsBtn.addEventListener(
+        "click",
+        function () {
+
+            if (
+                selectedKeywordSuggestions.size === 0
+            ) {
+                return;
+            }
+
+            const existingKeywords =
+                keywordsInput.value
+                    .split(",")
+                    .map(keyword =>
+                        keyword.trim()
+                    )
+                    .filter(Boolean);
+
+            const combinedKeywords = [
+                ...existingKeywords,
+                ...selectedKeywordSuggestions
+            ];
+
+            const uniqueKeywords = [];
+
+            const seen = new Set();
+
+            combinedKeywords.forEach(keyword => {
+
+                const normalized =
+                    keyword.toLowerCase();
+
+                if (!seen.has(normalized)) {
+
+                    seen.add(normalized);
+
+                    uniqueKeywords.push(
+                        keyword
+                    );
+                }
+            });
+
+            keywordsInput.value =
+                uniqueKeywords.join(", ");
+
+            // The admin intentionally modified
+            // the keyword field.
+            userEditedKeywords = true;
+
+            keywordsInput.dataset.auto = "false";
+
+            keywordsInput.dispatchEvent(
+                new Event("input", {
+                    bubbles: true
+                })
+            );
+
+            // Clear the current selection.
+            selectedKeywordSuggestions.clear();
+
+            // Hide suggestions after approval.
+            keywordSuggestionsBox.hidden = true;
+
+            updateKeywordSelectionButton();
+        }
+    );
+}
 
     function resetImageState(){
         previewImg.src = "";
@@ -50,29 +704,65 @@ document.addEventListener("DOMContentLoaded", function () {
     // ================= ENABLE / DISABLE INPUTS =================
     function enableInputs(enable = true) {
 
-        const inputs = form.querySelectorAll("input, textarea, select");
+    const inputs =
+        form.querySelectorAll(
+            "input, textarea, select"
+        );
 
-        inputs.forEach(input => {
-            if (input.name !== '_method' && input.type !== 'hidden') {
+    inputs.forEach(input => {
 
-                if (enable) {
-                    input.removeAttribute('readonly');
-                    input.disabled = false;
+        /*
+         * Hidden fields are never disabled because
+         * Laravel still needs them during submission.
+         */
+        if (
+            input.name === "_method" ||
+            input.type === "hidden"
+        ) {
+            return;
+        }
 
-                    if (input.tagName === "SELECT") {
-                        input.style.pointerEvents = "auto";
-                    }
+        /*
+         * File inputs do not support readonly.
+         *
+         * They must be disabled explicitly when
+         * the form is temporarily locked.
+         */
+        if (input.type === "file") {
 
-                } else {
-                    input.setAttribute('readonly', true);
+            input.disabled = !enable;
 
-                    if (input.tagName === "SELECT") {
-                        input.style.pointerEvents = "none";
-                    }
-                }
+            return;
+        }
+
+        if (enable) {
+
+            input.removeAttribute("readonly");
+            input.disabled = false;
+
+            if (input.tagName === "SELECT") {
+                input.style.pointerEvents = "auto";
             }
-        });
-    }
+
+        } else {
+
+            /*
+             * Text fields remain technically enabled so
+             * their values can still be manipulated by
+             * the application, but the administrator
+             * cannot edit them.
+             */
+            input.setAttribute(
+                "readonly",
+                "readonly"
+            );
+
+            if (input.tagName === "SELECT") {
+                input.style.pointerEvents = "none";
+            }
+        }
+    });
+}
 
     // ================= KEYWORD GENERATOR =================
     function generateKeywords(){
@@ -102,14 +792,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     keywordsInput.addEventListener("input", () => {
-
-        // 🔥 Only mark as edited if user REALLY changed it
-        const autoGenerated = keywordsInput.dataset.auto === "true";
-
-        if (!autoGenerated) {
-            userEditedKeywords = true;
-        }
-    });
+    userEditedKeywords = true;
+    keywordsInput.dataset.auto = "false";
+});
 
     agencySelect.addEventListener("change", generateKeywords);
     questionInput.addEventListener("input", generateKeywords);
@@ -136,7 +821,18 @@ document.addEventListener("DOMContentLoaded", function () {
         // RESET
         form.reset();
         resetImageState();
+
         userEditedKeywords = false;
+        keywordsInput.dataset.auto = "true";
+
+        // Reset AI keyword suggestions.
+        selectedKeywordSuggestions.clear();
+
+        keywordSuggestionList.innerHTML = "";
+
+        keywordSuggestionsBox.hidden = true;
+
+        updateKeywordSelectionButton();
 
         // ================= ADD =================
         if (mode === 'add') {
@@ -163,12 +859,23 @@ document.addEventListener("DOMContentLoaded", function () {
             methodInput.value = "PUT";
 
             agencySelect.value = data.agency || "";
+
             questionInput.value = data.question || "";
-            document.getElementById('faq_answer').value = data.answer || "";
+            answerInput.value = data.answer || "";
+
+            questionFilInput.value = data.questionFil || "";
+            answerFilInput.value = data.answerFil || "";
+
             keywordsInput.value = data.keywords || "";
 
-            keywordsInput.dataset.auto = "false";
-            userEditedKeywords = false;
+// 🔥 FIX STARTS HERE
+keywordsInput.dataset.auto = "true";
+userEditedKeywords = false;
+
+// 🔥 re-run generator safely
+if (!data.keywords || data.keywords.trim() === "") {
+    generateKeywords();
+}
 
             title.textContent = "Update FAQ";
 
@@ -191,35 +898,81 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         // ================= VIEW =================
+                // ================= VIEW =================
         if (mode === 'view' && data) {
 
             agencySelect.value = data.agency || "";
+
             questionInput.value = data.question || "";
-            document.getElementById('faq_answer').value = data.answer || "";
+            answerInput.value = data.answer || "";
+
+            questionFilInput.value = data.questionFil || "";
+            answerFilInput.value = data.answerFil || "";
+
             keywordsInput.value = data.keywords || "";
+
+            // Force the floating-label state when
+            // the keyword field already contains data.
+            if (keywordsInput.value.trim() !== "") {
+                keywordsInput.classList.add("has-value");
+            } else {
+                keywordsInput.classList.remove("has-value");
+            }
 
             title.textContent = "View FAQ";
 
+            // Disable editing while viewing.
             enableInputs(false);
+
+            // Viewing an FAQ should never allow saving.
             saveBtn.disabled = true;
 
-            if(mode === 'view' && data){
-
-                // existing code...
-
-                if (data.image) {
-                    previewImg.src = `/storage/${data.image}`;
-                    previewImg.style.display = "block";
-                    uploadPlaceholder.style.display = "none";
-                } else {
-                    previewImg.style.display = "none";
-                    uploadPlaceholder.style.display = "block";
-                }
+            // Show the existing image when available.
+            if (data.image) {
+                previewImg.src = `/storage/${data.image}`;
+                previewImg.style.display = "block";
+                uploadPlaceholder.style.display = "none";
+            } else {
+                previewImg.style.display = "none";
+                uploadPlaceholder.style.display = "block";
             }
+        }
+
+        // ================= SUPPORT REQUEST → FAQ =================
+        if (mode === 'convert' && data) {
+
+            // A Support Request becomes a new FAQ,
+            // so use the normal FAQ creation endpoint.
+            form.action = "/faqs";
+
+            // Laravel expects POST for creating a new FAQ.
+            methodInput.value = "POST";
+
+            title.textContent =
+                "Create FAQ from Support Request";
+
+            // Preselect the agency attached to the
+            // original Support Request.
+            agencySelect.value =
+                data.agency_id || "";
+
+            // Prevent editing while AI prepares
+            // the bilingual FAQ draft.
+            enableInputs(false);
+
+            // Prevent premature saving.
+            saveBtn.disabled = true;
+
+            // Ask Laravel to prepare the bilingual draft.
+            prepareSupportFaq();
         }
     }
 
+    // Make the function available to the Blade
+    // because the Add FAQ button calls it inline.
     window.openFaqModal = openFaqModal;
+
+
 
     // ================= ROW CLICK (VIEW) =================
     document.addEventListener('click', function (e) {
@@ -232,8 +985,13 @@ document.addEventListener("DOMContentLoaded", function () {
         openFaqModal('view', {
             id: row.dataset.id,
             agency: row.dataset.agency,
+
             question: row.dataset.question,
             answer: row.dataset.answer,
+
+            questionFil: row.dataset.questionFil,
+            answerFil: row.dataset.answerFil,
+
             keywords: row.dataset.keywords,
             image: row.dataset.image
         });
@@ -242,14 +1000,19 @@ document.addEventListener("DOMContentLoaded", function () {
     // ================= EDIT BUTTON =================
     document.addEventListener('click', function(e){
 
-        const btn = e.target.closest('.btn-primary');
+        const btn = e.target.closest('.edit-btn');
         if(!btn) return;
 
-        openFaqModal('edit', { // 🔥 FIX MODE
+        openFaqModal('edit', {
             id: btn.dataset.id,
             agency: btn.dataset.agency,
+
             question: btn.dataset.question,
             answer: btn.dataset.answer,
+
+            questionFil: btn.dataset.questionFil,
+            answerFil: btn.dataset.answerFil,
+
             keywords: btn.dataset.keywords,
             image: btn.dataset.image
         });
@@ -323,7 +1086,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 
-const uploadPlaceholder = document.getElementById("upload-placeholder");
+
 
 imageInput.addEventListener("change", function(){
 
@@ -381,7 +1144,7 @@ imageInput.addEventListener("change", function(){
 });
 
 const uploadBox = document.getElementById("image-upload-box");
-let currentMode = "add";
+
 
 if (uploadBox && imageInput) {
     uploadBox.addEventListener("click", () => {
@@ -411,6 +1174,21 @@ form.addEventListener("submit", function(e){
         }
     });
 });
+
+/*
+ * ================= AUTO OPEN SUPPORT FAQ =================
+ *
+ * When the FAQ page was opened through
+ * "Support Request → To FAQ", automatically
+ * open the existing FAQ modal in conversion mode.
+ */
+if (supportFaqData) {
+
+    openFaqModal(
+        "convert",
+        supportFaqData
+    );
+}
 
 });
 

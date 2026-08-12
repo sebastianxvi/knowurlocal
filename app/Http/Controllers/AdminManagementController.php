@@ -70,11 +70,22 @@ class AdminManagementController extends Controller
             'ip_address' => request()->ip(),
             'device' => substr(request()->userAgent(), 0, 255),
 
-            'old_values' => null,
-            'new_values' => ['email' => $user->email],
+            'old_values' => [
+    'status' => 'Data did not exist',
+],
 
-            'old_value' => null,
-            'new_value' => 'email: ' . $user->email,
+'new_values' => [
+    'email' => $user->email,
+    'role' => $user->role,
+    'status' => $user->status,
+],
+
+            'old_value' => 'status: Data did not exist',
+
+'new_value' =>
+    'email: ' . $user->email .
+    ', role: ' . $user->role .
+    ', status: ' . $user->status,
 
             'description' => 'Invited admin: ' . $user->email,
         ]);
@@ -83,158 +94,314 @@ class AdminManagementController extends Controller
     }
 
     /**
-     * ✅ APPROVE ADMIN
+ * ✅ APPROVE ADMIN
+ */
+public function approve($id)
+{
+    /*
+     * Find the administrator being approved.
      */
-    public function approve($id)
-    {
-        $user = User::findOrFail($id);
+    $user = User::findOrFail($id);
 
-        // 🔥 CAPTURE OLD BEFORE UPDATE
-        $old = [
-            'status' => $user->getOriginal('status')
-        ];
+    /*
+     * Capture ONLY the value relevant to this action.
+     *
+     * We do not need to record email, password, name, etc.
+     */
+    $oldValues = [
+        'status' => $user->status,
+    ];
 
-        $user->update([
-            'status' => 'active'
-        ]);
+    /*
+     * Perform the actual business operation.
+     */
+    $user->update([
+        'status' => 'active',
+    ]);
 
-        // 🔥 NEW AFTER UPDATE
-        $new = [
-            'status' => $user->fresh()->status
-        ];
+    /*
+     * Read the value that was actually persisted.
+     */
+    $user->refresh();
 
-        UserLog::create([
-            'user_id' => auth()->id() ?? 0,
-            'target_user_id' => $user->id,
-            'action' => 'approve_admin',
-            'page' => 'admin_management',
-            'role' => auth()->user()->role ?? 'admin',
-            'ip_address' => request()->ip(),
-            'device' => substr(request()->userAgent(), 0, 255),
+    $newValues = [
+        'status' => $user->status,
+    ];
 
-            'old_values' => $old,
-            'new_values' => $new,
+    /*
+     * Record the audit event.
+     */
+    $this->logAdminAction(
+        $user,
+        'approve_admin',
+        $oldValues,
+        $newValues,
+        'Approved admin: ' . $user->email
+    );
 
-            'old_value' => 'status: ' . $old['status'],
-            'new_value' => 'status: ' . $new['status'],
+    return back()->with(
+        'success',
+        'Admin approved.'
+    );
+}
 
-            'description' => 'Approved admin: ' . $user->email,
-        ]);
 
-        return back()->with('success', 'Admin approved.');
-    }
 
     /**
-     * ⬆ PROMOTE ADMIN
+ * ⬆ PROMOTE ADMIN
+ */
+public function promote($id)
+{
+    /*
+     * Find the administrator being promoted.
      */
-    public function promote($id)
-    {
-        $user = User::findOrFail($id);
+    $user = User::findOrFail($id);
 
-        $old = [
-            'role' => $user->getOriginal('role')
-        ];
+    /*
+     * Capture the role before the change.
+     */
+    $oldValues = [
+        'role' => $user->role,
+    ];
 
-        $user->update([
-            'role' => 'superadmin'
-        ]);
+    /*
+     * Promote the administrator.
+     */
+    $user->update([
+        'role' => 'superadmin',
+    ]);
 
-        $new = [
-            'role' => $user->fresh()->role
-        ];
+    /*
+     * Refresh to obtain the actual database value.
+     */
+    $user->refresh();
 
-        UserLog::create([
-            'user_id' => auth()->id() ?? 0,
-            'target_user_id' => $user->id,
-            'action' => 'promote_admin',
-            'page' => 'admin_management',
-            'role' => auth()->user()->role ?? 'admin',
-            'ip_address' => request()->ip(),
-            'device' => substr(request()->userAgent(), 0, 255),
+    $newValues = [
+        'role' => $user->role,
+    ];
 
-            'old_values' => $old,
-            'new_values' => $new,
+    /*
+     * Record the role transition.
+     */
+    $this->logAdminAction(
+        $user,
+        'promote_admin',
+        $oldValues,
+        $newValues,
+        'Promoted admin: ' . $user->email
+    );
 
-            'old_value' => 'role: ' . $old['role'],
-            'new_value' => 'role: ' . $new['role'],
+    return back()->with(
+        'success',
+        'Admin promoted.'
+    );
+}
 
-            'description' => 'Promoted admin: ' . $user->email,
-        ]);
 
-        return back()->with('success', 'Admin promoted.');
-    }
 
     /**
-     * ⬇ DEMOTE ADMIN
+ * ⬇ DEMOTE ADMIN
+ */
+public function demote($id)
+{
+    /*
+     * Find the administrator being demoted.
      */
-    public function demote($id)
-    {
-        $user = User::findOrFail($id);
+    $user = User::findOrFail($id);
 
-        $old = [
-            'role' => $user->getOriginal('role')
-        ];
+    /*
+     * Capture the current role.
+     */
+    $oldValues = [
+        'role' => $user->role,
+    ];
 
-        $user->update([
-            'role' => 'admin'
-        ]);
+    /*
+     * Demote the account to normal admin.
+     */
+    $user->update([
+        'role' => 'admin',
+    ]);
 
-        $new = [
-            'role' => $user->fresh()->role
-        ];
+    /*
+     * Refresh to confirm the persisted value.
+     */
+    $user->refresh();
 
-        UserLog::create([
-            'user_id' => auth()->id() ?? 0,
-            'target_user_id' => $user->id,
-            'action' => 'demote_admin',
-            'page' => 'admin_management',
-            'role' => auth()->user()->role ?? 'admin',
-            'ip_address' => request()->ip(),
-            'device' => substr(request()->userAgent(), 0, 255),
+    $newValues = [
+        'role' => $user->role,
+    ];
 
-            'old_values' => $old,
-            'new_values' => $new,
+    /*
+     * Record the role transition.
+     */
+    $this->logAdminAction(
+        $user,
+        'demote_admin',
+        $oldValues,
+        $newValues,
+        'Demoted admin: ' . $user->email
+    );
 
-            'old_value' => 'role: ' . $old['role'],
-            'new_value' => 'role: ' . $new['role'],
+    return back()->with(
+        'success',
+        'Admin demoted.'
+    );
+}
 
-            'description' => 'Demoted admin: ' . $user->email,
-        ]);
-
-        return back()->with('success', 'Admin demoted.');
-    }
 
     /**
-     * ❌ DELETE ADMIN
+ * ❌ DELETE ADMIN
+ */
+public function delete($id)
+{
+    /*
+     * Find the administrator before deletion.
      */
-    public function delete($id)
-    {
-        $user = User::findOrFail($id);
+    $user = User::findOrFail($id);
 
-        $old = [
-            'email' => $user->email
-        ];
+    /*
+     * Capture useful, non-sensitive information.
+     *
+     * IMPORTANT:
+     * Never put password/password_hash into an audit log.
+     */
+    $oldValues = [
+        'first_name' => $user->first_name,
+        'last_name'  => $user->last_name,
+        'email'      => $user->email,
+        'role'       => $user->role,
+        'status'     => $user->status,
+    ];
 
-        $user->delete();
+    /*
+     * Perform the existing deletion behavior.
+     *
+     * If User uses SoftDeletes, this will be recoverable.
+     * If it does not, this remains a permanent deletion.
+     */
+    $user->delete();
 
-        UserLog::create([
-            'user_id' => auth()->id() ?? 0,
-            'target_user_id' => $user->id,
-            'action' => 'delete_admin',
-            'page' => 'admin_management',
-            'role' => auth()->user()->role ?? 'admin',
-            'ip_address' => request()->ip(),
-            'device' => substr(request()->userAgent(), 0, 255),
+    /*
+     * We intentionally do NOT store NULL here.
+     *
+     * The new state is represented explicitly as an audit event.
+     */
+    $newValues = [
+        'status' => 'Data deleted',
+    ];
 
-            'old_values' => $old,
-            'new_values' => null,
+    /*
+     * Record the deletion.
+     */
+    $this->logAdminAction(
+        $user,
+        'delete_admin',
+        $oldValues,
+        $newValues,
+        'Deleted admin: ' . $user->email
+    );
 
-            'old_value' => 'email: ' . $old['email'],
-            'new_value' => null,
+    return back()->with(
+        'success',
+        'Admin deleted.'
+    );
+}
 
-            'description' => 'Deleted admin: ' . $old['email'],
-        ]);
 
-        return back()->with('success', 'Admin deleted.');
-    }
+
+    /**
+ * 🔒 CENTRALIZED ADMIN AUDIT LOGGING
+ *
+ * Keeps all admin-management audit records consistent.
+ *
+ * Only safe audit fields should be passed here.
+ * Never pass passwords, password hashes, tokens, or other
+ * sensitive authentication data.
+ */
+private function logAdminAction(
+    User $user,
+    string $action,
+    array $oldValues,
+    array $newValues,
+    string $description
+): void {
+    UserLog::create([
+        /*
+         * The currently authenticated administrator is the actor.
+         */
+        'user_id' => auth()->id(),
+
+        /*
+         * The administrator account being affected.
+         */
+        'target_user_id' => $user->id,
+
+        /*
+         * This is an admin-management audit, so there is
+         * no agency associated with the action.
+         */
+        'agency_id' => null,
+
+        'action' => $action,
+
+        'page' => 'admin_management',
+
+        /*
+         * Store the actor's role at the time of the action.
+         */
+        'role' => auth()->user()->role,
+
+        'ip_address' => request()->ip(),
+
+        /*
+         * Limit the user-agent length so it fits safely
+         * within the database column.
+         */
+        'device' => substr(
+            request()->userAgent(),
+            0,
+            255
+        ),
+
+        /*
+         * UserLog casts these JSON columns to arrays.
+         *
+         * Therefore we pass arrays directly instead of
+         * manually calling json_encode().
+         */
+        'old_values' => $oldValues,
+        'new_values' => $newValues,
+
+        /*
+         * Keep the legacy columns populated as well.
+         *
+         * These are only short summaries. The complete
+         * structured audit data lives in old_values/new_values.
+         */
+        'old_value' => !empty($oldValues)
+            ? collect($oldValues)
+                ->map(
+                    fn ($value, $key) =>
+                        $key . ': ' . (is_scalar($value)
+                            ? $value
+                            : json_encode($value))
+                )
+                ->implode(', ')
+            : null,
+
+        'new_value' => !empty($newValues)
+            ? collect($newValues)
+                ->map(
+                    fn ($value, $key) =>
+                        $key . ': ' . (is_scalar($value)
+                            ? $value
+                            : json_encode($value))
+                )
+                ->implode(', ')
+            : null,
+
+        'description' => $description,
+    ]);
+}
 }

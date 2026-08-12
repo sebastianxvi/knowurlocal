@@ -118,6 +118,7 @@
     data-question="{{ $req->question }}"
     data-user="{{ $req->user->first_name ?? 'Guest' }}"
     data-agency="{{ $req->agency->agency_name ?? 'Unknown' }}"
+    data-agency-id="{{ $req->agency_id }}"
     data-answer="{{ $req->answer }}"
 >
     Manage
@@ -136,16 +137,14 @@
         </form>
 
         <!-- ADD TO FAQ -->
-        <form method="POST" action="{{ route('admin.support.toFaq', $req->id) }}">
-            @csrf
-            <button 
-                type="button"
-                class="btn btn-secondary faq-btn"
-                onclick="this.closest('form').submit()"
-            >
-                To FAQ
-            </button>
-        </form>
+        <a
+            href="{{ route('admin.support.toFaq', $req->id) }}"
+            class="btn btn-secondary faq-btn"
+            data-id="{{ $req->id }}"
+            data-similar-url="{{ route('admin.support.similarFaqs', $req->id) }}"
+        >
+            To FAQ
+        </a>
 
     @endif
 
@@ -254,10 +253,19 @@
             <label>User</label>
         </div>
 
-        <div class="floating-group">
-            <input type="text" id="sr-agency" readonly>
-            <label>Agency</label>
-        </div>
+        <div class="floating-group select-group">
+    <select name="agency_id" id="sr-agency" required>
+    <option value="" disabled selected hidden></option>
+
+    @foreach($agencies as $agency)
+        <option value="{{ $agency->id }}">
+            {{ $agency->agency_name }}
+        </option>
+    @endforeach
+</select>
+
+    <label>Agency</label>
+</div>
 
         <div class="floating-group">
             <textarea id="sr-question" placeholder=" " readonly></textarea>
@@ -271,6 +279,104 @@
 
     </div>
 </form>
+
+    </div>
+</div>
+
+
+<!-- =========================================================
+     SIMILAR FAQ MODAL
+     ========================================================= -->
+
+<div
+    id="similar-faq-modal-back"
+    class="similar-faq-modal-back"
+    aria-hidden="true"
+>
+    <div
+        class="similar-faq-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="similar-faq-title"
+    >
+
+        <!-- ================= HEADER ================= -->
+<div class="similar-faq-header">
+
+    <div class="similar-faq-heading">
+
+        <div class="similar-faq-icon" aria-hidden="true">
+            <i class="ph-light ph-copy-simple"></i>
+        </div>
+
+        <div>
+            <h2 id="similar-faq-title">
+                Similar FAQs found
+            </h2>
+
+            <p>
+                Existing FAQs may already cover this question.
+            </p>
+        </div>
+
+    </div>
+
+
+    <!-- HEADER ACTIONS -->
+    <div class="similar-faq-actions">
+
+        <button
+            type="button"
+            class="btn-cancel"
+            id="similar-faq-cancel"
+        >
+            Cancel
+        </button>
+
+        <button
+            type="button"
+            class="btn-save"
+            id="similar-faq-continue"
+        >
+            Continue to FAQ
+        </button>
+
+    </div>
+
+</div>
+
+
+        <!-- ================= DESCRIPTION ================= -->
+        <div class="similar-faq-description">
+
+            <p id="similar-faq-message">
+                We found existing FAQs that may be related
+                to this Support Request.
+            </p>
+
+        </div>
+
+
+        <!-- ================= MATCHES ================= -->
+        <div
+            id="similar-faq-results"
+            class="similar-faq-results"
+        >
+            <!-- JavaScript inserts matching FAQs here. -->
+        </div>
+
+
+        
+        <!-- ================= FOOTER ================= -->
+        <div class="similar-faq-footer">
+
+            <p class="similar-faq-note">
+                Similarity is only a suggestion.
+                You can still create a new FAQ if this is
+                a different question.
+            </p>
+
+        </div>
 
     </div>
 </div>

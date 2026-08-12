@@ -30,7 +30,7 @@
             <div id="chatbox">
                 <div id="chat-header">
                     <img src="{{asset('images/logo.png')}}">
-                    <p>Ask your questions about the offices of NGAs and NGOs of San Jose, Occidental Mindoro.</p>
+                    <p>Need help with an agency service? Ask about requirements, procedures, office hours, and more.</p>
                 </div>
             </div>
 

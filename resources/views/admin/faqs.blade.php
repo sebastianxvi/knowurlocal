@@ -97,14 +97,19 @@
 
             <tbody>
                 @forelse($faqs as $faq)
-                <tr class="faq-row"
-
+                <tr
+                    class="faq-row"
                     data-id="{{ $faq->id }}"
                     data-agency="{{ $faq->agency_id }}"
+
                     data-question="{{ $faq->question }}"
                     data-answer="{{ $faq->answer }}"
-                    data-keywords="{{ $faq->keywords }}"
-                    data-image="{{ $faq->image }}"
+
+                    data-question-fil="{{ $faq->question_fil }}"
+                    data-answer-fil="{{ $faq->answer_fil }}"
+
+                    data-keywords="{{ $faq->keywords ?? '' }}"
+                    data-image="{{ $faq->image ?? '' }}"
                 >
 
                     <td>{{ $faq->id }}</td>
@@ -141,14 +146,19 @@
                         <div class="tablebtn">
 
                             <button 
-                                type="button"
-                                class="btn btn-primary"
+    type="button"
+    class="btn btn-primary edit-btn"
 
                                 data-id="{{ $faq->id }}"
                                 data-agency="{{ $faq->agency_id }}"
+
                                 data-question="{{ $faq->question }}"
                                 data-answer="{{ $faq->answer }}"
-                                data-keywords="{{ $faq->keywords }}"
+
+                                data-question-fil="{{ $faq->question_fil }}"
+                                data-answer-fil="{{ $faq->answer_fil }}"
+
+                                data-keywords="{{ e($faq->keywords ?? '') }}"
                                 data-image="{{ $faq->image }}"
                             >
                                 Edit
@@ -262,14 +272,103 @@
                     <label>Keywords</label>
                 </div>
 
-                <div class="floating-group">
-                    <input type="text" name="question" id="faq_question" placeholder=" " required>
-                    <label>Question</label>
+                <div
+                    id="keywordSuggestions"
+                    class="keyword-suggestions"
+                    hidden
+                >
+                    <div class="keyword-suggestions-header">
+
+                        <span>
+                            AI keyword suggestions
+                        </span>
+
+                        <button
+                            type="button"
+                            id="addKeywordSuggestions"
+                            disabled
+                        >
+                            Add selected (0)
+                        </button>
+
+                    </div>
+
+                    <div
+                        id="keywordSuggestionList"
+                        class="keyword-suggestion-list"
+                        role="group"
+                        aria-label="AI keyword suggestions"
+                    ></div>
                 </div>
 
-                <div class="floating-group">
-                    <textarea name="answer" id="faq_answer" placeholder=" " required></textarea>
-                    <label>Answer</label>
+                <div class="language-section">
+
+                    <div class="language-heading">
+                        <span>English</span>
+                        <small>Official</small>
+                    </div>
+
+                    <div class="floating-group">
+                        <input
+                            type="text"
+                            name="question"
+                            id="faq_question"
+                            placeholder=" "
+                            required
+                        >
+                        <label>Question</label>
+                    </div>
+
+                    <div class="floating-group">
+                        <textarea
+                            name="answer"
+                            id="faq_answer"
+                            placeholder=" "
+                            required
+                        ></textarea>
+                        <label>Answer</label>
+                    </div>
+
+                </div>
+
+                <div class="language-section filipino-section">
+
+                    <div class="language-heading">
+<div class="faq-language-heading">
+    <div class="faq-language-title optional">
+        Filipino / Taglish
+        <span class="faq-optional-badge">Optional</span>
+    </div>
+
+    <button
+        type="button"
+        class="btn-ai-translate"
+        id="translateFaqBtn"
+    >
+        <i class="ph-light ph-sparkle"></i>
+        Translate with AI
+    </button>
+</div>
+
+                    <div class="floating-group">
+                        <input
+                            type="text"
+                            name="question_fil"
+                            id="faq_question_fil"
+                            placeholder=" "
+                        >
+                        <label>Question</label>
+                    </div>
+
+                    <div class="floating-group">
+                        <textarea
+                            name="answer_fil"
+                            id="faq_answer_fil"
+                            placeholder=" "
+                        ></textarea>
+                        <label>Answer</label>
+                    </div>
+
                 </div>
 
                 <div class="floating-group">
@@ -316,7 +415,44 @@
 <!-- 🔥 ALERT MODAL SYSTEM (REUSABLE) -->
 <script src="{{ asset('jsfiles/components/modal-system.js') }}"></script>
 
-<!-- 🔥 FAQ LOGIC -->
+<script>
+    /*
+     * Existing manual FAQ translation endpoint.
+     */
+    window.FAQ_TRANSLATE_URL =
+        @json(route('faqs.translate'));
+
+    /*
+     * Support Request → FAQ conversion data.
+     *
+     * This variable only exists when the FAQ page
+     * was opened from a support request.
+     */
+    window.SUPPORT_FAQ_DATA =
+        @json($conversionSupport ?? null);
+
+    /*
+     * Endpoint used to prepare the bilingual draft.
+     */
+    /*
+ * Endpoint used to prepare a bilingual FAQ draft
+ * from an existing Support Request.
+ *
+ * The endpoint receives the Support Request ID,
+ * then retrieves the authoritative question and
+ * answer directly from the database.
+ */
+window.SUPPORT_FAQ_PREPARE_URL =
+    @json(
+        !empty($conversionSupport)
+            ? route(
+                'admin.faqs.prepareFromSupport',
+                $conversionSupport['id']
+            )
+            : null
+    );
+</script>
+
 <script src="{{ asset('jsfiles/admin/faqs.js') }}"></script>
 
 <!-- 🔥 SUCCESS HANDLER (same pattern as NGA) -->

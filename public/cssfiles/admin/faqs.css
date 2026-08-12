@@ -393,3 +393,353 @@ select[readonly]:hover{
     z-index:1;
     transition:opacity 0.2s ease;
 }
+
+/* ================= KEYWORD SUGGESTIONS ================= */
+
+.keyword-suggestions {
+    margin-top: 6px;
+    padding: 11px 12px;
+
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+
+    animation: keywordSuggestionsIn 0.2s ease;
+}
+
+@keyframes keywordSuggestionsIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.keyword-suggestions-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+
+    margin-bottom: 9px;
+
+    font-size: 11px;
+    font-weight: 500;
+    color: #64748b;
+}
+
+.keyword-suggestions-header span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.keyword-suggestions-header span::before {
+    content: "✦";
+
+    color: #2563eb;
+    font-size: 11px;
+}
+
+.keyword-suggestions-header button {
+    border: none;
+    background: transparent;
+
+    color: #2563eb;
+
+    font-size: 11px;
+    font-weight: 500;
+
+    cursor: pointer;
+
+    padding: 3px 5px;
+    border-radius: 6px;
+
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.keyword-suggestions-header button:hover {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+/* ================= ADD SELECTED BUTTON ================= */
+
+.keyword-suggestions-header button:disabled {
+    opacity: 0.45;
+
+    cursor: not-allowed;
+
+    background: transparent;
+
+    transform: none;
+}
+
+.keyword-suggestions-header button:not(:disabled) {
+    padding: 5px 9px;
+
+    background: #eff6ff;
+
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+
+    color: #2563eb;
+}
+
+.keyword-suggestions-header button:not(:disabled):hover {
+    background: #dbeafe;
+    border-color: #bfdbfe;
+
+    color: #1d4ed8;
+
+    transform: translateY(-1px);
+}
+
+.keyword-suggestion-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* ================= SELECTABLE KEYWORD ================= */
+
+.keyword-suggestion {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    padding: 6px 10px;
+
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+
+    background: #eff6ff;
+    color: #1e40af;
+
+    font-family: inherit;
+    font-size: 11px;
+    line-height: 1.2;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease,
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+/* Small check indicator */
+.keyword-suggestion::before {
+    content: "";
+
+    flex: 0 0 13px;
+    width: 13px;
+    height: 13px;
+
+    box-sizing: border-box;
+
+    border: 1px solid #93c5fd;
+    border-radius: 50%;
+
+    background: #ffffff;
+
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease;
+}
+
+/* Hover */
+.keyword-suggestion:hover {
+    background: #dbeafe;
+    border-color: #bfdbfe;
+
+    transform: translateY(-1px);
+}
+
+/* Keyboard accessibility */
+.keyword-suggestion:focus-visible {
+    outline: none;
+
+    box-shadow:
+        0 0 0 3px rgba(59,130,246,0.12);
+}
+
+/* ================= SELECTED ================= */
+
+.keyword-suggestion.selected {
+    background: #dbeafe;
+    border-color: #60a5fa;
+    color: #1d4ed8;
+
+    box-shadow:
+        0 2px 6px rgba(37,99,235,0.08);
+}
+
+/* Selected check */
+.keyword-suggestion.selected::before {
+    content: "✓";
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    flex: 0 0 13px;
+    width: 13px;
+    height: 13px;
+
+    box-sizing: border-box;
+
+    border-color: #3b82f6;
+    background: #3b82f6;
+    color: #ffffff;
+
+    font-size: 8px;
+    font-weight: 600;
+    line-height: 13px;
+
+    text-align: center;
+
+    transform: translateY(-0.5px);
+}
+
+/* ================= FAQ FIELD SPACING ================= */
+
+.form-card .floating-group {
+    margin-bottom: 4px;
+}
+
+.form-card .floating-group + .floating-group {
+    margin-top: 4px;
+}
+
+/* ================= LANGUAGE SECTIONS ================= */
+
+.faq-language-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    margin-top: 8px;
+}
+
+.faq-language-section + .faq-language-section {
+    margin-top: 18px;
+}
+
+.faq-language-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-bottom: 2px;
+
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.faq-language-title::before {
+    content: "";
+
+    width: 3px;
+    height: 16px;
+
+    border-radius: 999px;
+
+    background: #3b82f6;
+}
+
+.faq-language-title.optional::before {
+    background: #94a3b8;
+}
+
+/* ================= AI TRANSLATE BUTTON ================= */
+
+.btn-ai-translate {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    width: fit-content;
+
+    padding: 6px 11px;
+
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+
+    background: #eff6ff;
+    color: #2563eb;
+
+    font-size: 12px;
+    font-weight: 500;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.btn-ai-translate:hover {
+    background: #dbeafe;
+    border-color: #bfdbfe;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 4px 10px rgba(37, 99, 235, 0.12);
+}
+
+.btn-ai-translate:active {
+    transform: translateY(0);
+}
+
+.btn-ai-translate:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-ai-translate i {
+    font-size: 14px;
+}
+
+/* ================= LANGUAGE HEADING ================= */
+
+.faq-language-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    margin-top: 4px;
+    margin-bottom: 2px;
+}
+
+.faq-optional-badge {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 3px 7px;
+
+    border-radius: 999px;
+
+    background: #f1f5f9;
+    color: #64748b;
+
+    font-size: 10px;
+    font-weight: 500;
+}

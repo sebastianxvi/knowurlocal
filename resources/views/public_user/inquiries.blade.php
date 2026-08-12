@@ -247,7 +247,7 @@ body{
     <div class="empty">
         <i class="ph-light ph-chat-centered-dots"></i>
         <p>No inquiries yet</p>
-        <a href="{{ route('chat') }}">Ask a question</a>
+        <a href="{{ route('map') }}">Ask a question</a>
     </div>
 
     @endforelse

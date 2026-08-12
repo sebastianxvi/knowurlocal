@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\AdminInvite;
+use App\Models\UserLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -16,35 +17,91 @@ class AdminInviteController extends Controller
      * =========================
      */
     public function sendInvite(Request $request)
-    {
-        // 🔒 Validate email (must not exist yet)
-        $request->validate([
-            'email' => 'required|email|unique:users,email'
-        ]);
+{
+    // Validate that the supplied address is valid
+    // and does not already belong to an existing user.
+    $request->validate([
+        'email' => 'required|email|unique:users,email'
+    ]);
 
-        // 🔐 Generate secure token (unguessable)
-        $token = Str::random(64);
+    // Generate a cryptographically random invitation token.
+    $token = Str::random(64);
 
-        // 🧠 Store invite
-        AdminInvite::create([
-            'email' => $request->email,
-            'token' => $token,
-            'created_by' => Auth::id(),
-            'expires_at' => now()->addHours(24),
-            'used' => false,
-        ]);
+    // Create the invitation record.
+    $invite = AdminInvite::create([
+        'email' => $request->email,
+        'token' => $token,
+        'created_by' => Auth::id(),
+        'expires_at' => now()->addHours(24),
+        'used' => false,
+    ]);
 
-        // 📧 Build invite link
-        $link = url('/admin/register?token=' . $token);
+    // Generate the registration URL containing the invitation token.
+    $link = url('/admin/register?token=' . $token);
 
-        // 📧 Send email
-        Mail::raw("You’ve been invited as an admin.\n\nRegister here:\n$link", function ($message) use ($request) {
+    // Send the invitation email.
+    Mail::raw(
+        "You’ve been invited as an admin.\n\nRegister here:\n$link",
+        function ($message) use ($request) {
             $message->to($request->email)
                     ->subject('KNOWURLOCAL Admin Invitation');
-        });
+        }
+    );
 
-        return back()->with('success', 'Admin invite sent successfully.');
-    }
+    // Record the successful invitation in the audit log.
+    UserLog::create([
+        'user_id' => Auth::id(),
+
+        // The invited person does not have a users.id yet.
+        'target_user_id' => null,
+
+        // Admin invitations are not associated with an agency.
+        'agency_id' => null,
+
+        'action' => 'invite_admin',
+        'page' => 'admin_management',
+
+        // Record the role of the administrator performing the action.
+        'role' => Auth::user()->role,
+
+        'ip_address' => $request->ip(),
+
+        // Keep the browser/device information within the database limit.
+        'device' => substr(
+            $request->userAgent(),
+            0,
+            255
+        ),
+
+        // There was no previous admin account for this email.
+        'old_values' => [
+            'status' => 'Data did not exist',
+        ],
+
+        // Record only information relevant to the invitation.
+        // Never store the invitation token here.
+        'new_values' => [
+            'email' => $invite->email,
+            'status' => 'Invitation sent',
+            'expires_at' => $invite->expires_at->toDateTimeString(),
+        ],
+
+        // Short legacy representation.
+        'old_value' => 'status: Data did not exist',
+
+        'new_value' =>
+            'email: ' . $invite->email .
+            ', status: Invitation sent',
+
+        'description' =>
+            'Sent admin invitation to: ' . $invite->email,
+    ]);
+
+    return back()->with(
+        'success',
+        'Admin invite sent successfully.'
+    );
+}
 
     /**
      * =========================

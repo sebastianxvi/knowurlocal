@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'openrouter' => [
+    'api_key' => env('OPENROUTER_API_KEY'),
+
+    // Same model currently used by the public chatbot.
+    'model' => env(
+        'OPENROUTER_MODEL',
+        'deepseek/deepseek-chat'
+    ),
+],
+
 ];

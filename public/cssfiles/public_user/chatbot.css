@@ -498,3 +498,30 @@ html, body{
 #image-close:hover{
     opacity: 1;
 }
+
+.chat-fallback {
+    margin-top: 8px;
+}
+
+.fallback-human-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 6px 12px;
+
+    border-radius: 999px;
+    border: none;
+
+    background: #f3f4f6;
+    color: #111827;
+
+    font-size: 12px;
+    cursor: pointer;
+
+    transition: all 0.2s ease;
+}
+
+.fallback-human-btn:hover {
+    background: #e5e7eb;
+}

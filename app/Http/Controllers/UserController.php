@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\SupportRequest;
 use App\Models\User;
+use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
@@ -72,4 +73,17 @@ class UserController extends Controller
 
         return back()->with('success', 'User deleted successfully.');
     }
+
+    public function inquiries($id)
+{
+    $user = User::findOrFail($id);
+
+    $logs = SupportRequest::where('user_id', $id)
+        ->latest()
+        ->get();
+
+    return response()->json([
+        'logs' => $logs
+    ]);
+}
 }

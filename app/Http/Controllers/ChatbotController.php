@@ -4,13 +4,206 @@ namespace App\Http\Controllers;
 
 use App\Models\Agency;
 use App\Models\ChatbotLog;
-use App\Models\Faq;
 use App\Models\SupportRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use App\Services\OpenRouterService;
+use App\Services\FaqMatcherService;
+use App\Services\FaqSemanticMatcherService;
+use App\Services\FaqIntentService;
 
 class ChatbotController extends Controller
 {
+
+private OpenRouterService $ai;
+
+private FaqMatcherService $faqMatcher;
+
+private FaqSemanticMatcherService $faqSemanticMatcher;
+
+private FaqIntentService $faqIntent;
+
+
+/**
+ * Determine whether the user's question is too generic
+ * to identify a specific agency service or process.
+ */
+private function isAmbiguousHelpdeskQuestion(
+    string $question,
+    string $userIntent,
+    ?int $agencyId
+): bool {
+
+    if (!in_array($userIntent, [
+        'requirements',
+        'procedure',
+        'eligibility',
+        'fees',
+        'processing_time',
+    ], true)) {
+        return false;
+    }
+
+    $text = mb_strtolower(
+        trim(
+            preg_replace('/\s+/', ' ', $question)
+        ),
+        'UTF-8'
+    );
+
+    /*
+     * Generic phrases indicate that the user has not
+     * specified what service they are asking about.
+     */
+    $genericPatterns = [
+        'what are the requirements',
+        'what requirements do i need',
+        'what requirements should i prepare',
+        'what do i need',
+        'what do i need to bring',
+
+        'anong requirements',
+        'anong mga requirements',
+        'ano ang requirements',
+        'ano mga requirements',
+        'ano ang mga requirements',
+
+        'anong kailangan',
+        'anong mga kailangan',
+        'ano ang kailangan',
+        'ano kailangan',
+        'ano mga kailangan',
+        'ano ang mga kailangan',
+    ];
+
+    $isGeneric = false;
+
+    foreach ($genericPatterns as $pattern) {
+
+        if (str_contains($text, $pattern)) {
+            $isGeneric = true;
+            break;
+        }
+    }
+
+    if (!$isGeneric) {
+        return false;
+    }
+
+    /*
+     * Look for context that identifies the agency or service.
+     *
+     * We deliberately use a conservative list here.
+     * The purpose is only to avoid asking for clarification
+     * when the user already provided meaningful context.
+     */
+    $contextTerms = [
+        'pnp',
+        'police clearance',
+        'police report',
+        'fire safety inspection',
+        'bfp',
+        'dswd',
+        'assistance',
+        'application',
+        'clearance',
+        'inspection',
+        'permit',
+        'registration',
+        'id',
+        'license',
+    ];
+
+    foreach ($contextTerms as $term) {
+
+        if (str_contains($text, $term)) {
+            return false;
+        }
+    }
+
+    /*
+     * The question is genuinely generic.
+     */
+    return true;
+}
+
+/**
+ * Detect whether the user is asking in Filipino/Taglish.
+ *
+ * This is used only to select the already-approved FAQ answer.
+ * It does not determine whether the question matches an FAQ.
+ *
+ * We intentionally use conservative Filipino indicators
+ * instead of asking the AI to decide the response language.
+ */
+private function detectResponseLanguage(string $question): string
+{
+    $text = mb_strtolower(
+        trim(
+            preg_replace('/\s+/', ' ', $question)
+        ),
+        'UTF-8'
+    );
+
+    /*
+     * Common Filipino/Taglish words and phrases that are
+     * strong indicators that the user expects a Filipino
+     * response.
+     */
+    $filipinoIndicators = [
+        'ano',
+        'anong',
+        'paano',
+        'saan',
+        'sino',
+        'kailan',
+        'magkano',
+        'kailangan',
+        'kailangan ko',
+        'kailangan kong',
+        'papeles',
+        'dokumento',
+        'mga dokumento',
+        'mga kailangan',
+        'dalhin',
+        'kumuha',
+        'makakuha',
+        'mag-apply',
+        'mag apply',
+        'para sa',
+        'pagkuha',
+        'pwede',
+        'puwede',
+        'maaari',
+        'saan ang',
+        'ano ang',
+        'ano mga',
+        'anong mga',
+    ];
+
+    foreach ($filipinoIndicators as $indicator) {
+
+        if (str_contains($text, $indicator)) {
+            return 'fil';
+        }
+    }
+
+    return 'en';
+}
+
+public function __construct(
+    OpenRouterService $ai,
+    FaqMatcherService $faqMatcher,
+    FaqSemanticMatcherService $faqSemanticMatcher,
+    FaqIntentService $faqIntent
+) {
+    $this->ai = $ai;
+    $this->faqMatcher = $faqMatcher;
+    $this->faqSemanticMatcher = $faqSemanticMatcher;
+    $this->faqIntent = $faqIntent;
+}
+
+
     /**
      * 🔐 SAFE LOGGING (never breaks system)
      */
@@ -32,17 +225,10 @@ class ChatbotController extends Controller
     /**
      * 🤖 AI REQUEST (used ONLY for classification)
      */
-    private function askAI($messages)
-    {
-        return Http::withHeaders([
-            'Authorization' => 'Bearer '.env('OPENROUTER_API_KEY'),
-            'Content-Type' => 'application/json',
-        ])->post('https://openrouter.ai/api/v1/chat/completions', [
-            "model" => "deepseek/deepseek-chat",
-            "messages" => $messages,
-            "temperature" => 0.3
-        ])->json();
-    }
+    private function askAI(array $messages): array
+{
+    return $this->ai->chat($messages, 0.3);
+}
 
     public function suggestions()
 {
@@ -94,23 +280,353 @@ public function submitSupportRequest(Request $request)
     /**
      * 🧠 AI CLASSIFIER (YES / NO ONLY)
      */
-    private function isRelevant($question)
-    {
+    /**
+ * Determine whether the user's question belongs to
+ * the public-information scope of KNOWURLOCAL.
+ *
+ * IMPORTANT:
+ * This does NOT determine whether an FAQ exists.
+ *
+ * It only answers:
+ *
+ * "Is this the kind of question KNOWURLOCAL is designed
+ * to help with?"
+ */
+/**
+ * Determine whether the user's question belongs to
+ * the actual KNOWURLOCAL helpdesk scope.
+ *
+ * IMPORTANT:
+ *
+ * This method does NOT determine whether an FAQ exists.
+ * It only determines whether the question is the type of
+ * question KNOWURLOCAL is designed to handle.
+ *
+ * Scope:
+ * - Agency services
+ * - Requirements
+ * - Procedures
+ * - Eligibility
+ * - Fees
+ * - Processing information
+ * - Agency responsibilities/programs
+ * - Office hours
+ * - Contact information
+ * - Agency-specific office information
+ */
+private function isRelevant(string $question): bool
+{
+    try {
+
         $response = $this->askAI([
             [
-                "role" => "system",
-                "content" => "Answer ONLY YES or NO. Is the question related to government services, agencies, or NGOs?"
+                'role' => 'system',
+
+                'content' => <<<'PROMPT'
+You are the scope classifier for KNOWURLOCAL.
+
+KNOWURLOCAL is a public-information helpdesk for
+citizens of San Jose, Occidental Mindoro.
+
+Its purpose is to help users understand the documented
+services and office information of registered NGAs and
+NGOs in the KNOWURLOCAL system.
+
+Your task is ONLY to determine whether the user's question
+belongs to the KNOWURLOCAL HELPDESK scope.
+
+Return ONLY:
+
+YES
+
+or
+
+NO
+
+
+========================
+IN-SCOPE QUESTIONS
+========================
+
+Return YES when the user is asking about a documented
+agency or NGO service, process, or office information.
+
+This includes questions about:
+
+1. SERVICES
+- What services does this agency provide?
+- What can I apply for at this office?
+- What assistance or programs does this agency offer?
+
+2. REQUIREMENTS
+- What documents are required?
+- What do I need to bring?
+- Do I need a valid ID?
+- What are the requirements for this application?
+
+3. PROCEDURES
+- How do I apply?
+- What are the steps?
+- How do I register?
+- How do I obtain this document or service?
+- What should I do to complete the process?
+
+4. ELIGIBILITY
+- Who can apply?
+- Who is qualified?
+- Am I eligible for this service?
+
+5. FEES
+- Is there a fee?
+- How much does the application cost?
+- Is this service free?
+
+6. PROCESSING INFORMATION
+- How long does processing take?
+- When can I claim the document?
+- How long before the application is completed?
+
+7. AGENCY INFORMATION
+- What does this agency do?
+- What is this agency responsible for?
+- What programs does this agency handle?
+
+8. OFFICE INFORMATION
+- What are the office hours?
+- What is the agency's contact number?
+- What is the agency's email?
+- Where is this specific agency office located?
+- How can I contact or visit this agency?
+
+
+========================
+OUT-OF-SCOPE QUESTIONS
+========================
+
+Return NO when the question is not a KNOWURLOCAL
+helpdesk question.
+
+This includes:
+
+1. GENERAL KNOWLEDGE
+- What is the weather?
+- Who is the president?
+- What is inflation?
+- Explain a general topic.
+
+2. GENERAL EMERGENCY ADVICE
+- What should I do during an emergency?
+- Who should I call during an emergency?
+- How do I get emergency help?
+- How can I get police assistance right now?
+
+IMPORTANT:
+
+Simply mentioning a government agency does NOT
+automatically make a question in scope.
+
+For example:
+
+"Paano humingi ng tulong sa police kapag emergency?"
+
+should be NO if the question is asking for general
+emergency assistance rather than information about a
+documented service or procedure in KNOWURLOCAL.
+
+3. GENERAL NAVIGATION
+- Where is the nearest police station?
+- What is the nearest hospital?
+- Which office is closest to me?
+
+KNOWURLOCAL has map and agency-location features for
+agency discovery. The chatbot should not become a
+general navigation assistant.
+
+However:
+
+"Where is the DSWD office?"
+
+may be YES because it asks for the location of a
+specific agency registered in KNOWURLOCAL.
+
+4. PERSONAL ADVICE
+- What should I do about my personal legal problem?
+- What medicine should I take?
+- What decision should I make?
+
+5. GENERAL RECOMMENDATIONS
+- Which agency is best for me?
+- Which hospital should I choose?
+- Which organization should I use?
+
+6. UNRELATED TOPICS
+- Sports
+- Entertainment
+- Weather
+- Mathematics
+- General trivia
+- Creative writing
+- Casual questions unrelated to the helpdesk
+
+7. INFORMATION NOT DOCUMENTED BY KNOWURLOCAL
+
+A question may be related to government but still be
+outside the chatbot's intended scope if it asks for
+general knowledge that is not part of the documented
+agency FAQ/helpdesk information.
+
+
+========================
+IMPORTANT DISTINCTION
+========================
+
+Do NOT confuse:
+
+"Is this a KNOWURLOCAL helpdesk question?"
+
+with:
+
+"Does KNOWURLOCAL currently have an answer?"
+
+For example:
+
+"What are the requirements for a government service?"
+
+is IN SCOPE even if the FAQ database currently has
+no answer for that service.
+
+The correct result is:
+
+YES
+
+The controller will then handle the "no FAQ found"
+case separately.
+
+Likewise:
+
+"What's the weather today?"
+
+is OUT OF SCOPE.
+
+The correct result is:
+
+NO
+
+
+========================
+EXAMPLES
+========================
+
+YES:
+"What are the requirements for this application?"
+
+YES:
+"Paano mag-apply?"
+
+YES:
+"What documents do I need?"
+
+YES:
+"What time does the office open?"
+
+YES:
+"What services does this agency provide?"
+
+YES:
+"Where is the DSWD office?"
+
+YES:
+"How much is the processing fee?"
+
+NO:
+"What's the weather today?"
+
+NO:
+"Where is the nearest police station?"
+
+NO:
+"Who should I call during an emergency?"
+
+NO:
+"Paano humingi ng tulong sa police kapag emergency?"
+
+NO:
+"What medicine should I take?"
+
+NO:
+"Which government agency is best for me?"
+
+NO:
+"Tell me a joke."
+
+
+========================
+FINAL RULE
+========================
+
+Return ONLY YES or NO.
+
+Do not explain your decision.
+Do not answer the user's question.
+Do not generate any additional text.
+PROMPT
             ],
+
             [
-                "role" => "user",
-                "content" => $question
+                'role' => 'user',
+                'content' => $question
             ]
         ]);
 
-        $reply = strtoupper(trim($response['choices'][0]['message']['content'] ?? ''));
+        /*
+         * Extract the classifier's response.
+         */
+        $reply = strtoupper(
+            trim(
+                $response['choices'][0]['message']['content'] ?? ''
+            )
+        );
 
-        return str_contains($reply, 'YES');
+        /*
+         * Only accept exact YES/NO responses.
+         *
+         * Anything unexpected fails closed.
+         */
+        if ($reply === 'YES') {
+            return true;
+        }
+
+        if ($reply === 'NO') {
+            return false;
+        }
+
+        /*
+         * Security principle:
+         *
+         * When the classifier is uncertain or malformed,
+         * do not allow the chatbot to proceed as if the
+         * question were in scope.
+         */
+        return false;
+
+    } catch (\Throwable $e) {
+
+        /*
+         * Do not expose provider/API errors to the user.
+         */
+        \Log::warning(
+            'KNOWURLOCAL scope classification failed.',
+            [
+                'error' => $e->getMessage(),
+            ]
+        );
+
+        /*
+         * Fail closed.
+         */
+        return false;
     }
+}
 
     /**
      * 🚀 MAIN FUNCTION
@@ -126,42 +642,120 @@ public function submitSupportRequest(Request $request)
         $agencyId = $request->agency_id;
 
             // 🧠 SIMPLE INTENT DETECTION (RUN FIRST)
-        $greetings = ['hi','hello','hey','good morning','good afternoon','good evening'];
-        $thanks = ['thanks','thank you','salamat'];
+        
+            // ============================================================
+// 👋 SIMPLE CONVERSATIONAL INTENT
+// ============================================================
 
-        foreach ($greetings as $word) {
-            if (str_contains($question, $word)) {
+/*
+ * Greetings should only trigger when the ENTIRE message
+ * is essentially a greeting.
+ *
+ * We intentionally do NOT use str_contains() here.
+ *
+ * Example:
+ *
+ * "hello"
+ *      → greeting
+ *
+ * "hi there"
+ *      → greeting
+ *
+ * "hi, how do I file a police report?"
+ *      → NOT a greeting
+ *
+ * This prevents a conversational word from overriding
+ * an actual public-information request.
+ */
+$greetings = [
+    'hi',
+    'hello',
+    'hey',
+    'good morning',
+    'good afternoon',
+    'good evening',
+    'kamusta',
+    'kumusta',
+];
 
-                $reply = "Hello! How can I assist you today?";
+/*
+ * Remove punctuation so:
+ *
+ * "Hello!"
+ *
+ * becomes:
+ *
+ * "hello"
+ */
+$cleanForIntent = trim(
+    preg_replace(
+        '/[^\p{L}\p{N}\s]/u',
+        '',
+        $question
+    )
+);
 
-                $this->logChat($question, $reply, $agencyId, 'greeting');
+/*
+ * Only treat the message as a greeting when the complete
+ * cleaned message exactly matches one of the approved
+ * greeting phrases.
+ */
+if (in_array($cleanForIntent, $greetings, true)) {
 
-                return response()->json([
-                    "choices" => [[
-                        "message" => [
-                            "content" => $reply
-                        ]
-                    ]]
-                ]);
-            }
-        }
+    $reply = "Hello! How can I assist you today?";
 
-        foreach ($thanks as $word) {
-            if (str_contains($question, $word)) {
+    $this->logChat(
+        $question,
+        $reply,
+        $agencyId,
+        'greeting'
+    );
 
-                $reply = "You're welcome! Let me know if you need anything else.";
+    return response()->json([
+        "choices" => [[
+            "message" => [
+                "content" => $reply
+            ]
+        ]]
+    ]);
+}
 
-                $this->logChat($question, $reply, $agencyId, 'thanks');
 
-                return response()->json([
-                    "choices" => [[
-                        "message" => [
-                            "content" => $reply
-                        ]
-                    ]]
-                ]);
-            }
-        }
+        /*
+ * Thank-you messages should also be standalone messages.
+ *
+ * "salamat"
+ *      → thanks
+ *
+ * "salamat, paano mag-file ng police report?"
+ *      → NOT thanks
+ */
+$thanks = [
+    'thanks',
+    'thank you',
+    'salamat',
+    'maraming salamat',
+];
+
+if (in_array($cleanForIntent, $thanks, true)) {
+
+    $reply = "You're welcome! Let me know if you need anything else.";
+
+    $this->logChat(
+        $question,
+        $reply,
+        $agencyId,
+        'thanks'
+    );
+
+    return response()->json([
+        "choices" => [[
+            "message" => [
+                "content" => $reply
+            ]
+        ]]
+    ]);
+}
 
 
         
@@ -212,199 +806,380 @@ Please visit {$mentionedAgency->agency_name} for accurate information.";
             ]);
         }
 
-        // 🔍 KEYWORDS
-        $stopWords = ['how','do','i','what','is','the','for','a','an','to','of','in'];
-        $words = array_diff(explode(' ', $cleanQuestion), $stopWords);
+        // ============================================================
+// 🔐 KNOWURLOCAL SCOPE CHECK
+// ============================================================
 
-        // 🔍 FAQ QUERY
-        $query = Faq::query();
+/*
+ * Check the scope BEFORE searching the FAQ database.
+ *
+ * This is important because an existing FAQ must not
+ * automatically make an out-of-scope question answerable.
+ *
+ * Example:
+ *
+ * "Who should I call during an emergency?"
+ *
+ * may accidentally match a police FAQ because of words
+ * such as "police", "emergency", or "call".
+ *
+ * The scope check prevents that FAQ from being used.
+ */
+if (!$this->isRelevant($question)) {
 
-        if ($agencyId) {
-            $query->where('agency_id', $agencyId);
-        }
+    $reply =
+        "Sorry, this question is outside the scope of KNOWURLOCAL.";
 
-        $query->where(function ($q) use ($words) {
-            foreach ($words as $word) {
-                $q->orWhere('question', 'like', "%$word%")
-                  ->orWhere('keywords', 'like', "%$word%");
-            }
-        });
+    $this->logChat(
+        $question,
+        $reply,
+        $agencyId,
+        'irrelevant'
+    );
 
-        $faqs = $query->limit(5)->get();
+    return response()->json([
+        "choices" => [[
+            "message" => [
+                "content" => $reply
+            ]
+        ]]
+    ]);
+}
 
-        // 🔥 SECOND SEARCH: check other agencies if none found
-        if ($faqs->isEmpty()) {
+// ============================================================
+// 🧠 INTENT DETECTION
+// ============================================================
 
-            $globalFaqs = Faq::where(function($q) use ($words) {
-                foreach ($words as $word) {
-                    $q->orWhere('question', 'like', "%$word%")
-                    ->orWhere('keywords', 'like', "%$word%");
-                }
-            })->limit(5)->get();
+/*
+ * Determine what type of helpdesk information the user
+ * is requesting.
+ *
+ * This is independent of whether an FAQ currently exists.
+ */
+$userIntent = $this->faqIntent->detect(
+    $question
+);
 
-            // if found in another agency
-            if (!$globalFaqs->isEmpty()) {
+// ============================================================
+// ❓ AMBIGUOUS HELPDESK QUESTION
+// ============================================================
 
-                $otherFaq = $globalFaqs->first();
-                $otherAgency = $otherFaq->agency;
+/*
+ * If the user is clearly asking for helpdesk information
+ * but has not identified the agency or service, do not guess.
+ *
+ * Ask the user to provide the missing context instead.
+ */
+if (
+    $this->isAmbiguousHelpdeskQuestion(
+        $question,
+        $userIntent,
+        $agencyId ? (int) $agencyId : null
+    )
+) {
 
-                $reply = "It looks like your question is about {$otherAgency->agency_name}.
+    $responseLanguage =
+        $this->detectResponseLanguage($question);
 
-        You are currently viewing another agency.
+    if ($responseLanguage === 'fil') {
 
-        Please go to {$otherAgency->agency_name} page to get accurate information.";
+        $reply =
+            "Matutulungan kitang hanapin ang requirements. " .
+            "Anong agency o serbisyo ang tinutukoy mo?";
 
-                $this->logChat($question, $reply, $agencyId, 'wrong_agency');
+    } else {
 
-                return response()->json([
-                    "choices" => [[
-                        "message" => ["content" => $reply]
-                    ]]
-                ]);
-            }
-        }
+        $reply =
+            "I can help you find the requirements. " .
+            "Which agency or service are you asking about?";
+    }
 
-        // 🔥 FALLBACK
-        if ($faqs->isEmpty()) {
-            $faqs = $agencyId
-                ? Faq::where('agency_id', $agencyId)->limit(5)->get()
-                : Faq::limit(5)->get();
-        }
+    $this->logChat(
+        $question,
+        $reply,
+        $agencyId,
+        'clarification'
+    );
 
-        // 🔍 SCORE MATCH
-        $bestFaq = null;
-        $bestScore = 0;
+    return response()->json([
+        "choices" => [[
+            "message" => [
+                "content" => $reply,
+                "clarification" => true
+            ]
+        ]]
+    ]);
+}
 
-        // 🔍 SCORE FAQS (ONLY ONCE)
-        $weakWords = [
-            'police','dilg','dti','agency','office','government',
-            'information','service'
-        ];
+// ============================================================
+// 🔍 FAQ MATCHING
+// ============================================================
 
-        $scoredFaqs = [];
-        $bestFaq = null;
-        $bestScore = 0;
+/*
+ * Ask the dedicated FAQ matcher to find the most relevant
+ * approved FAQ records.
+ *
+ * Passing the current agency ID means that when the user is
+ * inside a specific agency, that agency's FAQs are prioritized.
+ */
+$faqs = $this->faqMatcher->match(
+    $question,
+    $agencyId ? (int) $agencyId : null,
+    5
+);
 
-        foreach ($faqs as $faq) {
+/*
+ * The matcher already returns FAQs ordered from highest
+ * confidence to lowest confidence.
+ */
+$bestFaq = $faqs->first();
 
-            $score = 0;
+/*
+ * Read the calculated score from the best candidate.
+ *
+ * The matcher attaches this value dynamically to the FAQ model.
+ */
+$bestScore = $bestFaq
+    ? (int) ($bestFaq->match_score ?? 0)
+    : 0;
 
-            // ✅ boost if agency matches
-            if ($mentionedAgency && $faq->agency_id == $mentionedAgency->id) {
-                $score += 5;
-            }
 
-            foreach ($words as $word) {
+// ============================================================
+// 🔐 MATCH CONFIDENCE THRESHOLD
+// ============================================================
 
-                if (in_array($word, $weakWords)) continue;
+/*
+ * This is deliberately conservative.
+ *
+ * A FAQ must have enough matching evidence before the chatbot
+ * is allowed to use it as an answer.
+ */
+$minScore = 35;
 
-                if (str_contains(strtolower($faq->question), $word)) $score += 2;
-                if (str_contains(strtolower($faq->keywords ?? ''), $word)) $score += 2;
-            }
 
-            $scoredFaqs[] = [
-                'faq' => $faq,
-                'score' => $score
-            ];
+// ============================================================
+// 🎯 STRONG FAQ MATCH
+// ============================================================
 
-            if ($score > $bestScore) {
-                $bestScore = $score;
-                $bestFaq = $faq;
-            }
-        }
+if ($bestFaq && $bestScore >= $minScore) {
 
-        // 🔥 THRESHOLD (prevents random answers)
-        $MIN_SCORE = 3;
+    /*
+     * The matcher determines which language produced
+     * the stronger match.
+     *
+     * Filipino/Taglish → use the admin-approved Filipino answer.
+     * English → use the admin-approved English answer.
+     */
+    /*
+ * Determine the response language from the user's actual
+ * message rather than relying on the matcher or AI.
+ */
+$responseLanguage = $this->detectResponseLanguage(
+    $question
+);
 
-        if ($bestScore < $MIN_SCORE) {
-            $bestFaq = null;
-        }
-
-        // 🔍 FIND SIMILAR MATCHES
-        $similarFaqs = [];
-
-        foreach ($scoredFaqs as $item) {
-            if ($bestScore >= $MIN_SCORE && $item['score'] == $bestScore) {
-                $similarFaqs[] = $item['faq'];
-            }
-        }
-
-        // 🔥 GLOBAL MODE → SHOW OPTIONS FIRST
-        if (count($similarFaqs) > 1 && !$agencyId && $bestScore >= $MIN_SCORE) {
-
-            $options = "";
-            $count = 0;
-
-            foreach ($similarFaqs as $faq) {
-
-                $options .= "• ".$faq->agency->agency_name." – ".$faq->question."\n";
-
-                if (++$count == 3) break;
-            }
-
-            $reply = "I found multiple related questions. Did you mean:\n\n".$options;
-
-            $this->logChat($question, 'Multiple options shown', $agencyId, 'options');
-
-            return response()->json([
-                "choices" => [[
-                    "message" => ["content" => $reply]
-                ]]
-            ]);
-        }
-
-        // ✅ SINGLE BEST MATCH
-        // ✅ SINGLE BEST MATCH
-if ($bestFaq) {
-
+if (
+    $responseLanguage === 'fil' &&
+    filled($bestFaq->answer_fil)
+) {
+    $reply = $bestFaq->answer_fil;
+} else {
+    /*
+     * Safe fallback to the approved English answer when
+     * no Filipino answer has been provided.
+     */
     $reply = $bestFaq->answer;
+}
 
-    $maxPossible = count($words) * 2 + 5; // keywords + agency boost
-
-    $normalizedScore = $maxPossible > 0 
-        ? $bestScore / $maxPossible 
-        : 0;
-
-    $this->logChat($question, $reply, $agencyId, 'faq', $normalizedScore);
+    /*
+     * Store the raw matcher score for debugging and auditing.
+     */
+    $this->logChat(
+        $question,
+        $reply,
+        $agencyId,
+        'faq',
+        $bestScore
+    );
 
     return response()->json([
         "choices" => [[
             "message" => [
                 "content" => $reply,
 
-                // ✅ NEW: include image if exists
-                "image" => $bestFaq->image 
-                    ? asset('storage/' . $bestFaq->image) 
+                /*
+                 * Return the FAQ image when one exists.
+                 */
+                "image" => $bestFaq->image
+                    ? asset('storage/' . $bestFaq->image)
                     : null
             ]
         ]]
     ]);
 }
 
-        // 🤖 AI CLASSIFICATION (ONLY HERE)
-        if (!$this->isRelevant($question)) {
+// ============================================================
+// 🧠 SEMANTIC FAQ MATCHING
+// ============================================================
 
-            $reply = "Sorry, this question is outside the scope of KNOWURLOCAL.";
+/*
+ * At this point the rule-based matcher did not have
+ * enough confidence to answer directly.
+ *
+ * However, it may still have found useful candidates.
+ *
+ * Ask the semantic matcher to determine whether one of
+ * those candidates has the same meaning as the user's
+ * question.
+ */
+if ($faqs->isNotEmpty()) {
 
-            $this->logChat($question, $reply, $agencyId, 'irrelevant');
+    try {
 
-            return response()->json([
-                "choices" => [[
-                    "message" => ["content" => $reply]
-                ]]
-            ]);
+        /*
+ * All FAQs in this candidate collection were matched
+ * against the same user question.
+ *
+ * Therefore the user's detected intent is attached
+ * to the candidate models by FaqMatcherService.
+ */
+$userIntent =
+    $faqs->first()->match_user_intent ?? 'other';
+
+$semanticMatch =
+    $this->faqSemanticMatcher->match(
+        $question,
+        $faqs,
+        $userIntent
+    );
+
+        /*
+         * Only accept a semantic match when the model
+         * reports sufficiently high confidence.
+         */
+        if (
+            $semanticMatch &&
+            $semanticMatch['faq_id'] !== null &&
+            $semanticMatch['confidence'] >= 0.85
+        ) {
+
+            /*
+             * Find the FAQ that the AI selected.
+             *
+             * We search ONLY inside the candidate collection.
+             */
+            $semanticFaq = $faqs->first(
+                fn ($faq) =>
+                    (int) $faq->id ===
+                    (int) $semanticMatch['faq_id']
+            );
+
+            /*
+             * Never continue if the FAQ somehow disappeared
+             * from the candidate collection.
+             */
+            if ($semanticFaq) {
+
+                /*
+                 * Use the language selected by the semantic
+                 * matcher.
+                 */
+                /*
+ * Determine the response language from the user's actual
+ * message instead of trusting the AI's language classification.
+ */
+$responseLanguage = $this->detectResponseLanguage(
+    $question
+);
+
+if (
+    $responseLanguage === 'fil' &&
+    filled($semanticFaq->answer_fil)
+) {
+    $reply = $semanticFaq->answer_fil;
+} else {
+    /*
+     * Safe fallback to the approved English answer.
+     */
+    $reply = $semanticFaq->answer;
+}
+
+                /*
+                 * Log the semantic match separately so you can
+                 * measure how often AI-assisted retrieval is used.
+                 */
+                $this->logChat(
+                    $question,
+                    $reply,
+                    $agencyId,
+                    'semantic_faq',
+                    (int) round(
+                        $semanticMatch['confidence'] * 100
+                    )
+                );
+
+                return response()->json([
+                    "choices" => [[
+                        "message" => [
+                            "content" => $reply,
+
+                            "image" =>
+                                $semanticFaq->image
+                                    ? asset(
+                                        'storage/' .
+                                        $semanticFaq->image
+                                    )
+                                    : null
+                        ]
+                    ]]
+                ]);
+            }
         }
 
+    } catch (\Throwable $e) {
+
+        /*
+         * Semantic matching is an enhancement, not a
+         * requirement for the chatbot to function.
+         *
+         * If the AI service fails, continue to the normal
+         * scope/no-FAQ flow.
+         */
+        \Log::warning(
+            'FAQ semantic matching failed.',
+            [
+                'error' => $e->getMessage(),
+            ]
+        );
+    }
+}
+
+
+// ============================================================
+// ✅ SINGLE BEST FAQ MATCH
+// ============================================================
+
+
+
+
+
         // 📩 FINAL FALLBACK
-        $reply = "I couldn’t find an exact answer for your question.<br><br>
-        <button class='fallback-human-btn'>Send to human</button>";
+        $reply = "I couldn’t find an exact answer for your question.";
 
-        $this->logChat($question, $reply, $agencyId, 'fallback');
+$this->logChat(
+    $question,
+    $reply,
+    $agencyId,
+    'no_faq'
+);
 
-        return response()->json([
-            "choices" => [[
-                "message" => ["content" => $reply]
-            ]]
-        ]);
+return response()->json([
+    "choices" => [[
+        "message" => [
+            "content" => $reply,
+            "fallback" => true
+        ]
+    ]]
+]);
     }
 }

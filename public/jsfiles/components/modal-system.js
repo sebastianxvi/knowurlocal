@@ -75,21 +75,66 @@
         }
 
         // ================= CONFIRM ACTION =================
-        confirmBtn.addEventListener("click", () => {
+confirmBtn.addEventListener("click", () => {
 
-            // 🔒 Prevent double clicks
-            if (confirmBtn.dataset.loading === "true") return;
-
-            confirmBtn.dataset.loading = "true";
-            confirmBtn.disabled = true;
-
-            // 🎨 UX feedback
-            confirmBtn.textContent = "Processing...";
-if (typeof config.onConfirm === "function") {
-        config.onConfirm();
+    /*
+     * Some alert modals are informational only.
+     *
+     * Example:
+     * "FAQ draft ready" → "Review"
+     * "Translation failed" → "OK"
+     *
+     * These modals do not have an action to execute.
+     * Therefore, clicking the button should simply close
+     * the modal instead of entering a loading state.
+     */
+    if (typeof config.onConfirm !== "function") {
+        closeAlertModal();
+        return;
     }
 
-                    });
+    /*
+     * 🔒 Prevent double submission.
+     *
+     * Once an action has started, additional clicks are
+     * ignored until the modal is closed.
+     */
+    if (confirmBtn.dataset.loading === "true") {
+        return;
+    }
+
+    /*
+     * Mark the button as processing.
+     *
+     * This state is stored on the DOM element itself so
+     * repeated clicks can be detected reliably.
+     */
+    confirmBtn.dataset.loading = "true";
+
+    /*
+     * Disable the button immediately.
+     *
+     * This prevents duplicate destructive operations such
+     * as deleting the same FAQ twice.
+     */
+    confirmBtn.disabled = true;
+
+    /*
+     * Give the administrator visual feedback that the
+     * requested operation is being processed.
+     */
+    confirmBtn.textContent = "Processing...";
+
+    /*
+     * Execute the actual action supplied by the caller.
+     *
+     * Examples:
+     * - Delete a FAQ
+     * - Submit a form
+     * - Approve an admin
+     */
+    config.onConfirm();
+});
 
         // ================= CANCEL =================
         cancelBtn.addEventListener("click", closeAlertModal);

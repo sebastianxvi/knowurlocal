@@ -444,3 +444,49 @@ select[readonly]:hover {
 .coord-row input{
     flex:1;
 }
+
+
+/* ================= CATEGORY BADGE ================= */
+
+.category-badge{
+    display:inline-flex;
+    align-items:center;
+
+    padding:3px 8px;
+
+    border-radius:999px;
+
+    font-size:11px;
+    font-weight:500;
+
+    color:var(--category-color);
+
+    background:color-mix(
+        in srgb,
+        var(--category-color) 10%,
+        white
+    );
+
+    border:1px solid color-mix(
+        in srgb,
+        var(--category-color) 25%,
+        white
+    );
+
+    white-space:nowrap;
+
+    transition:
+        background-color .2s ease,
+        border-color .2s ease,
+        transform .2s ease;
+}
+
+.category-badge:hover{
+    transform:translateY(-1px);
+
+    background:color-mix(
+        in srgb,
+        var(--category-color) 15%,
+        white
+    );
+}

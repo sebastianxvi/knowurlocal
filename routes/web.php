@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminInviteController;
 use App\Http\Controllers\AdminManagementController;
 use App\Http\Controllers\AgencyController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\ChatbotLogController;
 use App\Http\Controllers\DashboardController;
@@ -107,7 +108,12 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     Route::post('/chat/support', [ChatbotController::class, 'submitSupportRequest']);
 
     // FAQ (IMPORTANT — protect this too)
+    // FAQ
     Route::resource('faqs', FaqController::class);
+
+    // AI FAQ translation
+    Route::post('/faqs/translate', [FaqController::class, 'translate'])
+        ->name('faqs.translate');
 
     // 🔥 YOUR NEW FEATURE
     Route::get('/my-inquiries', [SupportRequestController::class, 'userIndex'])
@@ -189,6 +195,21 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::delete('/agencies/{agency}', [AgencyController::class, 'destroy'])
         ->name('admin.agencies.destroy');
 
+
+    // ================= CATEGORY MANAGEMENT =================
+    Route::get('/categories', [CategoryController::class, 'index'])
+        ->name('admin.categories');
+
+    Route::post('/categories', [CategoryController::class, 'store'])
+        ->name('admin.categories.store');
+
+    Route::put('/categories/{category}', [CategoryController::class, 'update'])
+        ->name('admin.categories.update');
+
+    Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
+        ->name('admin.categories.destroy');
+        
+
     Route::get('/admin/users', [UserController::class, 'index'])
         ->name('admin.users');
 
@@ -201,9 +222,14 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::put('/support-requests/{id}', [SupportRequestController::class, 'update'])
         ->name('admin.support.update'); 
 
+    Route::get('/users/{id}/inquiries', [UserController::class, 'inquiries']);
+
     // CHATBOT LOGS
     Route::get('/chatbot-logs', [ChatbotLogController::class, 'index'])
         ->name('admin.chatbot.logs');
+
+    Route::post('/faqs/translate', [FaqController::class, 'translate'])
+        ->name('admin.faqs.translate');
 
     
 
@@ -238,8 +264,56 @@ Route::middleware(['auth', 'superadmin.only', 'no.cache'])->group(function () {
     Route::delete('/support-requests/{id}', [SupportRequestController::class, 'destroy'])
         ->name('admin.support.delete');
 
-    Route::post('/support-requests/{id}/to-faq', [SupportRequestController::class, 'toFaq'])
-        ->name('admin.support.toFaq');
+    /*
+|--------------------------------------------------------------------------
+| SUPPORT REQUEST → FAQ
+|--------------------------------------------------------------------------
+*/
+
+/*
+|--------------------------------------------------------------------------
+| SUPPORT REQUEST → FAQ SIMILARITY CHECK
+|--------------------------------------------------------------------------
+*/
+
+/*
+ * Check whether an answered Support Request has potentially
+ * similar FAQs already stored in the database.
+ *
+ * This route does NOT create, update, or delete anything.
+ * It only returns similarity results for the administrator.
+ */
+Route::post(
+    '/support-requests/{id}/similar-faqs',
+    [SupportRequestController::class, 'findSimilarFaqs']
+)->name('admin.support.similarFaqs');
+
+/*
+ * Open the FAQ conversion workflow.
+ *
+ * This route only prepares the navigation/context.
+ * It does NOT create an FAQ and does NOT call the AI.
+ */
+Route::get(
+    '/support-requests/{id}/to-faq',
+    [SupportRequestController::class, 'toFaq']
+)->name('admin.support.toFaq');
+
+/*
+ * Generate the bilingual FAQ draft.
+ *
+ * This is a POST request because it performs an
+ * AI-powered processing operation.
+ *
+ * IMPORTANT:
+ * This still does NOT save the FAQ.
+ * The administrator must review and save it
+ * through the normal FAQ creation flow.
+ */
+Route::post(
+    '/faqs/prepare-from-support/{id}',
+    [FaqController::class, 'prepareFromSupport']
+)->name('admin.faqs.prepareFromSupport');
 
     // INVITE SYSTEM
     Route::post('/invite', [AdminInviteController::class, 'sendInvite'])

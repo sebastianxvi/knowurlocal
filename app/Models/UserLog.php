@@ -13,6 +13,9 @@ class UserLog extends Model
     'user_id',
     'target_user_id',
     'agency_id',
+    'faq_id',
+    'category_id',
+    
     'action',
     'page',
     'role',
@@ -38,9 +41,30 @@ protected $casts = [
      * 🔗 RELATION: Agency
      */
     public function agency()
-    {
-        return $this->belongsTo(\App\Models\Agency::class);
-    }
+{
+    /*
+     * Include soft-deleted agencies when loading an audit log.
+     *
+     * This is necessary because audit records must remain
+     * historically readable even after an agency is deleted.
+     */
+    return $this->belongsTo(
+        \App\Models\Agency::class
+    )->withTrashed();
+}
+
+/**
+ * 🔗 RELATION: Category
+ *
+ * Include soft-deleted categories so historical audit
+ * records remain understandable after deletion.
+ */
+public function category()
+{
+    return $this->belongsTo(
+        \App\Models\Category::class
+    )->withTrashed();
+}
 
     /**
      * 🔗 RELATION: User (ALL roles: user, admin, superadmin)

@@ -180,21 +180,25 @@ body{
 
 /* ================= CREATE ================= */
 .badge.create_agency,
-.badge.create_faq{
+.badge.create_faq,
+.badge.create_category{
     background:#dcfce7;
     color:#166534;
 }
 
 /* ================= UPDATE ================= */
 .badge.update_agency,
-.badge.update_faq{
+.badge.update_faq,
+.badge.update_category{
     background:#fef3c7;
     color:#92400e;
 }
 
 /* ================= DELETE ================= */
 .badge.delete_agency,
-.badge.delete_faq{
+.badge.delete_faq,
+.badge.delete_category,
+.badge.delete_support_request{
     background:#fee2e2;
     color:#b91c1c;
 }
@@ -233,11 +237,23 @@ body{
     color:#b91c1c;
 }
 
+.badge.invite_admin{
+    background:#e0f2fe;
+    color:#0369a1;
+}
+
 /* ================= CHANGE BOX ================= */
 .change-box{
     display:inline-flex;
     align-items:center;
+    justify-content:center;
     gap:8px;
+
+    /*
+     * Prevents the old/new values from stretching
+     * the Change column.
+     */
+    max-width:100%;
 }
 
 .change-box .old{
@@ -260,11 +276,208 @@ body{
     opacity:0.6;
 }
 
+/* ================= FAQ AUDIT SUMMARY ================= */
+
+/*
+ * Controls the overall Change column.
+ *
+ * The table should remain compact even when an FAQ
+ * contains long answers, keywords, or image paths.
+ */
+.audit-change-cell{
+    width:240px;
+    min-width:220px;
+    max-width:240px;
+
+    /*
+     * Keep the entire Change cell vertically centered
+     * relative to the table row.
+     */
+    vertical-align:middle;
+
+    /*
+     * Center the audit content horizontally when
+     * the row contains a multi-line summary.
+     */
+    text-align:center;
+}
+
+
+/*
+ * Compact summary container.
+ *
+ * The detailed values are intentionally NOT displayed
+ * here. They remain available inside the audit modal.
+ */
+.audit-summary{
+    display:flex;
+    flex-direction:column;
+
+    /*
+     * Keeps the title and field preview tightly grouped.
+     */
+    gap:3px;
+
+    /*
+     * Makes the summary occupy only the space it needs.
+     */
+    width:100%;
+
+    /*
+     * Centers the summary's children vertically within
+     * the available flex container.
+     */
+    align-items:center;
+
+    /*
+     * Prevents long audit information from expanding
+     * the table.
+     */
+    min-width:0;
+    max-width:100%;
+}
+
+
+/*
+ * Main summary.
+ *
+ * Example:
+ *
+ * 4 fields changed
+ */
+.audit-summary-count{
+    font-size:13px;
+    font-weight:600;
+    color:#334155;
+
+    line-height:1.3;
+
+    /*
+     * Prevents the summary heading from wrapping
+     * unnecessarily.
+     */
+    white-space:nowrap;
+}
+
+
+/*
+ * Names of the fields that changed.
+ *
+ * Example:
+ *
+ * Answer · Answer Fil · Keywords · +1 more
+ */
+.audit-summary-fields{
+    display:block;
+
+    max-width:220px;
+
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+
+    font-size:11px;
+    line-height:1.4;
+
+    color:#64748b;
+}
+
+
+/*
+ * Keep the existing status messages compact.
+ *
+ * Used by:
+ *
+ * Created FAQ
+ * Deleted FAQ
+ * No recorded changes
+ */
+.audit-change-cell .change-status{
+    white-space:nowrap;
+}
+
+/* ================= LOG CONTEXT ================= */
+
+.log-context{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+
+    max-width:190px;
+
+    padding:5px 10px;
+
+    border-radius:999px;
+
+    font-size:12px;
+    font-weight:500;
+
+    line-height:1.3;
+
+    text-align:center;
+
+    white-space:normal;
+}
+
+/* Actual agency */
+.log-context.agency-context{
+    background:#f1f5f9;
+    color:#334155;
+}
+
+/* Admin Management */
+.log-context.admin-context{
+    background:#ede9fe;
+    color:#5b21b6;
+}
+
+/* Other system/page context */
+.log-context.system-context{
+    background:#f3f4f6;
+    color:#475569;
+}
+
+
 /* ================= TARGET USER ================= */
 .target-user{
     font-size:13px;
     font-weight:500;
     color:#111827;
+}
+
+.target-email{
+    display:inline-block;
+    max-width:180px;
+
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+
+    vertical-align:middle;
+}
+
+.pending-target{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    min-width:0;
+}
+
+.pending-target .target-user{
+    font-weight:600;
+}
+
+.pending-target .target-email{
+    display:block;
+    max-width:180px;
+
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+
+    font-size:11px;
+    color:#64748b;
 }
 
 /* ================= ROLE BADGES ================= */

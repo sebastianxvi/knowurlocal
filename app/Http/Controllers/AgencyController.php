@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Agency;
 use App\Models\UserLog;
 use App\Models\AgencyType;
+use App\Models\Category;
 
 class AgencyController extends Controller
 {
@@ -15,7 +16,7 @@ class AgencyController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Agency::with('type');
+        $query = Agency::with(['type', 'category']);
 
         // 🔍 SEARCH
         if ($request->filled('search')) {
@@ -25,6 +26,10 @@ class AgencyController extends Controller
         // 🔍 FILTER TYPE
         if ($request->filled('type')) {
             $query->where('agency_type_id', $request->type);
+        }
+
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
         }
 
         // 🔒 SORT
@@ -39,17 +44,23 @@ class AgencyController extends Controller
 
         $types = AgencyType::all();
 
-        return view('admin.nga-management', compact('agencies', 'types'));
+        $categories = Category::orderBy('category_name')->get();
+
+        return view(
+            'admin.nga-management',
+            compact('agencies', 'types', 'categories')
+        );
     }
 
     public function getAll()
 {
-    $agencies = Agency::with('type') // 🔥 LOAD RELATION
+    $agencies = Agency::with(['type', 'category']) // 🔥 LOAD RELATION
         ->select(
             'id',
             'agency_name',
             'agency_abbreviation',
             'agency_type_id',
+            'category_id',
             'agency_description',
             'agency_email',
             'agency_hotline',
@@ -74,243 +85,450 @@ class AgencyController extends Controller
 }
 
     /**
-     * ➕ STORE AGENCY
+ * ➕ STORE AGENCY
+ */
+public function store(Request $request)
+{
+    /*
+     * 🔒 Validate the incoming data first.
+     *
+     * Never use raw request values directly when creating
+     * database records. Only validated fields should reach
+     * the model.
      */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'agency_name'        => 'required|string|max:255',
-            'agency_abbreviation'=> 'nullable|string|max:50',
-            'agency_type_id'     => 'required|exists:agency_types,id',
-            'agency_description' => 'nullable|string',
+    $validated = $request->validate([
+        'agency_name'         => 'required|string|max:255',
+        'agency_abbreviation' => 'nullable|string|max:50',
 
-            'agency_location'    => 'required|string|max:255',
-            'agency_hotline'     => 'required|string|max:20',
+        'agency_type_id'      => 'required|exists:agency_types,id',
+        'category_id'         => 'required|exists:categories,id',
 
-            'agency_landline'    => 'nullable|string|max:20',
-            'agency_email'       => 'nullable|email|max:255',
-            'agency_website'     => 'nullable|string|max:255',
-            'agency_fb'          => 'nullable|string|max:255',
+        'agency_description'  => 'nullable|string',
+        'services_offered' => 'nullable|string',
 
-            'office_hours'       => 'nullable|string',
+        'agency_location'     => 'required|string|max:255',
+        'agency_hotline'      => 'required|string|max:20',
 
-            'lat' => 'nullable|numeric',
-            'lng' => 'nullable|numeric',
+        'agency_landline'     => 'nullable|string|max:20',
+        'agency_email'        => 'nullable|email|max:255',
+        'agency_website'      => 'nullable|string|max:255',
+        'agency_fb'           => 'nullable|string|max:255',
 
-            'agency_image' => 'nullable|image|mimes:jpeg,png|max:2048',
-        ]);
+        'office_hours'        => 'nullable|string',
 
-        /**
-         * 📁 HANDLE IMAGE UPLOAD (SECURE)
-         */
-        $imagePath = null;
+        'lat' => 'nullable|numeric|between:-90,90',
+        'lng' => 'nullable|numeric|between:-180,180',
 
-        if ($request->hasFile('agency_image')) {
-            $imagePath = $request->file('agency_image')->store('agencies', 'public');
-        }
+        'agency_image'        => 'nullable|image|mimes:jpeg,png|max:2048',
+    ]);
 
-        /**
-         * 🏗 CREATE AGENCY
-         */
-        $agency = Agency::create([
-            'agency_name'         => $request->agency_name,
-            'agency_abbreviation' => $request->agency_abbreviation,
-            'agency_type_id'      => $request->agency_type_id,
-            'agency_description'  => $request->agency_description,
+    /*
+     * 📁 Handle the optional agency image.
+     *
+     * Laravel's validated file is stored on the public disk.
+     */
+    if ($request->hasFile('agency_image')) {
 
-            'agency_location'     => $request->agency_location,
-            'agency_hotline'      => $request->agency_hotline,
-
-            'agency_landline'     => $request->agency_landline,
-            'agency_email'        => $request->agency_email,
-            'agency_website'      => $request->agency_website,
-            'agency_fb'           => $request->agency_fb,
-
-            'office_hours'        => $request->office_hours,
-
-            'lat' => $request->lat,
-            'lng' => $request->lng,
-
-            'agency_image' => $imagePath,
-        ]);
-
-        /**
-         * 🔥 LOGGING
-         */
-        $this->logAction(
-            auth()->user()->role ?? 'admin',
-            auth()->id(),
-            $agency->id,
-            'create_agency',
-            'admin_agency',
-            null,
-            [
-                'agency_name' => $agency->agency_name,
-                'location'    => $agency->agency_location,
-            ],
-            'Created Agency: ' . $agency->agency_name
-        );
-
-        return redirect()->back()->with('success', 'Agency created successfully.');
+        $validated['agency_image'] = $request
+            ->file('agency_image')
+            ->store('agencies', 'public');
     }
+
+    /*
+     * 🏗 Create the agency using ONLY validated data.
+     */
+    $agency = Agency::create($validated);
+
+    /*
+     * 📋 Build the audit snapshot AFTER creation.
+     *
+     * There is no old agency because this record did not
+     * exist before this action.
+     *
+     * We therefore use a descriptive status instead of NULL.
+     */
+    $newValues = [
+        'agency_name'         => $agency->agency_name,
+        'agency_abbreviation' => $agency->agency_abbreviation,
+        'agency_type_id'      => $agency->agency_type_id,
+        'category_id'         => $agency->category_id,
+        'agency_description'  => $agency->agency_description,
+        'services_offered'      => $agency->services_offered,
+        'agency_location'     => $agency->agency_location,
+        'agency_hotline'      => $agency->agency_hotline,
+        'agency_landline'     => $agency->agency_landline,
+        'agency_email'        => $agency->agency_email,
+        'agency_website'      => $agency->agency_website,
+        'agency_fb'           => $agency->agency_fb,
+        'office_hours'        => $agency->office_hours,
+        'lat'                 => $agency->lat,
+        'lng'                 => $agency->lng,
+        'agency_image'        => $agency->agency_image,
+    ];
+
+    /*
+     * 🔐 Do not leave the old side of the audit empty.
+     *
+     * "Data did not exist" clearly communicates that this
+     * was a creation rather than an update.
+     */
+    $oldValues = [
+        'status' => 'Data did not exist',
+    ];
+
+    /*
+     * 🔥 Record the creation.
+     *
+     * The agency ID is now immediately available and is used
+     * as the audit target.
+     */
+    $this->logAction(
+        auth()->user()->role ?? 'admin',
+        auth()->id(),
+        $agency->id,
+        'create_agency',
+        'admin_agency',
+        $oldValues,
+        $newValues,
+        'Created Agency: ' . $agency->agency_name
+    );
+
+    return redirect()
+        ->back()
+        ->with('success', 'Agency created successfully.');
+}
+
+
+
 
     /**
      * ✏️ UPDATE AGENCY
      */
-    public function update(Request $request, $id)
-    {
-        $agency = Agency::findOrFail($id);
+    /**
+ * ✏️ UPDATE AGENCY
+ */
+public function update(Request $request, $id)
+{
+    /*
+     * 🔎 Find the existing agency.
+     *
+     * Soft-deleted agencies are automatically excluded by
+     * Laravel's SoftDeletes behavior.
+     */
+    $agency = Agency::findOrFail($id);
 
-        $request->validate([
-            'agency_name'        => 'required|string|max:255',
-            'agency_abbreviation'=> 'nullable|string|max:50',
-            'agency_type_id'     => 'required|exists:agency_types,id',
-            'agency_description' => 'nullable|string',
+    /*
+     * 🔒 Validate only fields that the admin is allowed
+     * to modify.
+     */
+    $validated = $request->validate([
+        'agency_name'         => 'required|string|max:255',
+        'agency_abbreviation' => 'nullable|string|max:50',
+        'agency_type_id'      => 'required|exists:agency_types,id',
+        'category_id'         => 'required|exists:categories,id',
+        'agency_description'  => 'nullable|string',
+        'services_offered' => 'nullable|string',
 
-            'agency_location'    => 'required|string|max:255',
-            'agency_hotline'     => 'required|string|max:20',
+        'agency_location'     => 'required|string|max:255',
+        'agency_hotline'      => 'required|string|max:20',
 
-            'agency_landline'    => 'nullable|string|max:20',
-            'agency_email'       => 'nullable|email|max:255',
-            'agency_website'     => 'nullable|string|max:255',
-            'agency_fb'          => 'nullable|string|max:255',
+        'agency_landline'     => 'nullable|string|max:20',
+        'agency_email'        => 'nullable|email|max:255',
+        'agency_website'      => 'nullable|string|max:255',
+        'agency_fb'           => 'nullable|string|max:255',
 
-            'office_hours'       => 'nullable|string',
+        'office_hours'        => 'nullable|string',
 
-            'lat' => 'nullable|numeric',
-            'lng' => 'nullable|numeric',
+        'lat' => 'nullable|numeric|between:-90,90',
+        'lng' => 'nullable|numeric|between:-180,180',
 
-            'agency_image' => 'nullable|image|mimes:jpeg,png|max:2048',
-        ]);
+        'agency_image'        => 'nullable|image|mimes:jpeg,png|max:2048',
+    ]);
 
-        /**
-         * 🔥 CAPTURE OLD DATA
+    /*
+     * 📸 Remember the old image path before replacing it.
+     *
+     * This allows the audit system to show that the image
+     * itself was changed.
+     */
+    $oldImage = $agency->agency_image;
+
+    /*
+     * 📋 Store the agency's current values BEFORE updating.
+     *
+     * We need this snapshot so we can compare old vs new.
+     */
+    $oldData = [
+        'agency_name'         => $agency->agency_name,
+        'agency_abbreviation' => $agency->agency_abbreviation,
+        'agency_type_id'      => $agency->agency_type_id,
+        'category_id'         => $agency->category_id,
+        'agency_description'  => $agency->agency_description,
+        'services_offered'      => $agency->services_offered,
+        'agency_location'     => $agency->agency_location,
+        'agency_hotline'      => $agency->agency_hotline,
+        'agency_landline'     => $agency->agency_landline,
+        'agency_email'        => $agency->agency_email,
+        'agency_website'      => $agency->agency_website,
+        'agency_fb'           => $agency->agency_fb,
+        'office_hours'        => $agency->office_hours,
+        'lat'                 => $agency->lat,
+        'lng'                 => $agency->lng,
+        'agency_image'        => $agency->agency_image,
+    ];
+
+    /*
+     * 📁 Handle a new agency image.
+     */
+    if ($request->hasFile('agency_image')) {
+
+        /*
+         * Store the new image using Laravel's public disk.
+         *
+         * The uploaded file is already protected by the
+         * validation rule above.
          */
-        $oldData = $agency->only([
-            'agency_name',
-            'agency_location',
-            'agency_hotline'
-        ]);
+        $validated['agency_image'] = $request
+            ->file('agency_image')
+            ->store('agencies', 'public');
+    }
 
-        /**
-         * 📁 HANDLE IMAGE UPDATE
+    /*
+     * 🔄 Update the agency.
+     *
+     * Only validated fields are written to the database.
+     */
+    $agency->update($validated);
+
+    /*
+     * 🔄 Refresh the model so it contains the actual
+     * values now stored in the database.
+     */
+    $agency->refresh();
+
+    /*
+     * 📋 Capture the agency AFTER the update.
+     */
+    $newData = [
+        'agency_name'         => $agency->agency_name,
+        'agency_abbreviation' => $agency->agency_abbreviation,
+        'agency_type_id'      => $agency->agency_type_id,
+        'category_id'         => $agency->category_id,
+        'agency_description'  => $agency->agency_description,
+        'services_offered' => $agency->services_offered,
+        'agency_location'     => $agency->agency_location,
+        'agency_hotline'      => $agency->agency_hotline,
+        'agency_landline'     => $agency->agency_landline,
+        'agency_email'        => $agency->agency_email,
+        'agency_website'      => $agency->agency_website,
+        'agency_fb'           => $agency->agency_fb,
+        'office_hours'        => $agency->office_hours,
+        'lat'                 => $agency->lat,
+        'lng'                 => $agency->lng,
+        'agency_image'        => $agency->agency_image,
+    ];
+
+    /*
+     * 🔍 Keep ONLY fields whose values actually changed.
+     *
+     * This is the important part of the audit system.
+     */
+    $changedOldValues = [];
+    $changedNewValues = [];
+
+    foreach ($oldData as $field => $oldValue) {
+
+        /*
+         * Compare the old database value with the new value.
+         *
+         * Casting to string prevents harmless differences such
+         * as numeric database values being compared incorrectly.
          */
-        if ($request->hasFile('agency_image')) {
-            $imagePath = $request->file('agency_image')->store('agencies', 'public');
-            $agency->agency_image = $imagePath;
+        if ((string) $oldValue !== (string) $newData[$field]) {
+
+            $changedOldValues[$field] = $oldValue;
+            $changedNewValues[$field] = $newData[$field];
         }
+    }
 
-        /**
-         * 🔄 UPDATE DATA
-         */
-        $agency->update([
-            'agency_name'         => $request->agency_name,
-            'agency_abbreviation' => $request->agency_abbreviation,
-            'agency_type_id'      => $request->agency_type_id,
-            'agency_description'  => $request->agency_description,
+    /*
+     * 🚫 Do not create an "Update Agency" audit entry when
+     * absolutely nothing changed.
+     */
+    if (!empty($changedOldValues)) {
 
-            'agency_location'     => $request->agency_location,
-            'agency_hotline'      => $request->agency_hotline,
-
-            'agency_landline'     => $request->agency_landline,
-            'agency_email'        => $request->agency_email,
-            'agency_website'      => $request->agency_website,
-            'agency_fb'           => $request->agency_fb,
-
-            'office_hours'        => $request->office_hours,
-
-            'lat' => $request->lat,
-            'lng' => $request->lng,
-        ]);
-
-        /**
-         * 🔥 LOGGING
-         */
         $this->logAction(
             auth()->user()->role ?? 'admin',
             auth()->id(),
             $agency->id,
             'update_agency',
             'admin_agency',
-            $oldData,
-            [
-                'agency_name' => $agency->agency_name,
-                'location'    => $agency->agency_location,
-            ],
+            $changedOldValues,
+            $changedNewValues,
             'Updated Agency: ' . $agency->agency_name
         );
-
-        return redirect()->back()->with('success', 'Agency updated successfully.');
     }
+
+    return redirect()
+        ->back()
+        ->with('success', 'Agency updated successfully.');
+}
+
+
+
 
     /**
-     * ❌ DELETE AGENCY
+ * ❌ DELETE AGENCY
+ */
+public function destroy($id)
+{
+    /*
+     * 🔎 Find the existing agency.
+     *
+     * Because this is a normal admin delete action,
+     * findOrFail() intentionally only finds active agencies.
      */
-    public function destroy($id)
-    {
-        $agency = Agency::findOrFail($id);
+    $agency = Agency::findOrFail($id);
 
-        $oldData = [
-            'agency_name' => $agency->agency_name,
-        ];
+    /*
+     * 📋 Capture the complete agency state BEFORE deletion.
+     *
+     * This is important because the agency is about to be
+     * soft-deleted.
+     */
+    $oldValues = [
+        'agency_name'         => $agency->agency_name,
+        'agency_abbreviation' => $agency->agency_abbreviation,
+        'agency_type_id'      => $agency->agency_type_id,
+        'category_id'         => $agency->category_id,
+        'agency_description'  => $agency->agency_description,
+        'services_offered'      => $agency->services_offered,
+        'agency_location'     => $agency->agency_location,
+        'agency_hotline'      => $agency->agency_hotline,
+        'agency_landline'     => $agency->agency_landline,
+        'agency_email'        => $agency->agency_email,
+        'agency_website'      => $agency->agency_website,
+        'agency_fb'           => $agency->agency_fb,
+        'office_hours'        => $agency->office_hours,
+        'lat'                 => $agency->lat,
+        'lng'                 => $agency->lng,
+        'agency_image'        => $agency->agency_image,
+    ];
 
-        $agency->delete();
+    /*
+     * 🗑 Soft-delete the agency.
+     *
+     * The database record is NOT permanently removed.
+     *
+     * Laravel simply sets deleted_at.
+     */
+    $agency->delete();
 
-        /**
-         * 🔥 LOGGING
-         */
-        $this->logAction(
-            auth()->user()->role ?? 'admin',
-            auth()->id(),
-            $agency->id,
-            'delete_agency',
-            'admin_agency',
-            $oldData,
-            null,
-            'Deleted Agency: ' . $oldData['agency_name']
-        );
+    /*
+     * 📋 Represent the result of the delete operation.
+     *
+     * We intentionally do not use NULL here.
+     */
+    $newValues = [
+        'status' => 'Data deleted',
+    ];
 
-        return redirect()->back()->with('success', 'Agency deleted successfully.');
-    }
+    /*
+     * 🔥 Record the deletion.
+     *
+     * The agency ID remains available even though the agency
+     * is now soft-deleted.
+     */
+    $this->logAction(
+        auth()->user()->role ?? 'admin',
+        auth()->id(),
+        $agency->id,
+        'delete_agency',
+        'admin_agency',
+        $oldValues,
+        $newValues,
+        'Deleted Agency: ' . $agency->agency_name
+    );
+
+    return redirect()
+        ->back()
+        ->with('success', 'Agency deleted successfully.');
+}
 
     /**
      * 🔒 CENTRALIZED LOGGING
      */
-    private function logAction(
-        $role,
-        $userId,
-        $agencyId,
-        $action,
-        $page,
-        $oldValues = null,
-        $newValues = null,
-        $description = null,
-        $targetUserId = null
-    ) {
-        try {
-            UserLog::create([
-                'user_id' => $userId,
-                'target_user_id' => $targetUserId,
-                'agency_id' => $agencyId,
+    /**
+ * 🔒 CENTRALIZED LOGGING
+ */
+private function logAction(
+    $role,
+    $userId,
+    $agencyId,
+    $action,
+    $page,
+    $oldValues = null,
+    $newValues = null,
+    $description = null,
+    $targetUserId = null
+) {
+    try {
 
-                'action' => $action,
-                'page'   => $page,
-                'role'   => $role,
+        /*
+         * Create the audit record.
+         *
+         * old_values and new_values are passed as arrays.
+         *
+         * UserLog's $casts property allows Laravel to
+         * automatically serialize them into JSON.
+         */
+        UserLog::create([
+            'user_id'        => $userId,
+            'target_user_id' => $targetUserId,
+            'agency_id'      => $agencyId,
 
-                'ip_address' => request()->ip(),
-                'device'     => substr(request()->userAgent(), 0, 255),
+            'action' => $action,
+            'page'   => $page,
+            'role'   => $role,
 
-                'old_values' => $oldValues ? json_encode($oldValues) : null,
-                'new_values' => $newValues ? json_encode($newValues) : null,
+            'ip_address' => request()->ip(),
+            'device'     => substr(request()->userAgent(), 0, 255),
 
-                // backward compatibility
-                'old_value' => $oldValues ? json_encode($oldValues) : null,
-                'new_value' => $newValues ? json_encode($newValues) : null,
+            /*
+             * IMPORTANT:
+             *
+             * Pass arrays directly.
+             *
+             * Do NOT json_encode() them here.
+             */
+            'old_values' => $oldValues,
+            'new_values' => $newValues,
 
-                'description' => $description,
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Agency log failed: ' . $e->getMessage());
-        }
+            /*
+             * Legacy fields.
+             *
+             * We can keep these populated for compatibility
+             * with older audit records or code that still
+             * references them.
+             */
+            'old_value' => null,
+            'new_value' => null,
+
+            'description' => $description,
+        ]);
+
+    } catch (\Exception $e) {
+
+        /*
+         * Audit failure should never break the actual
+         * agency operation.
+         *
+         * The error is recorded in Laravel's application log
+         * so the developer can investigate it.
+         */
+        \Log::error(
+            'Agency log failed: ' . $e->getMessage()
+        );
     }
+}
 }

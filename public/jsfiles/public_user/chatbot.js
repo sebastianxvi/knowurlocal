@@ -200,51 +200,186 @@ function sendMessage(){
         </div>
     `, "bot", true);
 
-    fetch('/chat',{
-        method:'POST',
-        headers:{
-            'Content-Type':'application/json',
-            'X-CSRF-TOKEN': csrfToken
-        },
-        body:JSON.stringify({
-            message:message,
-            agency_id: agencyId
-        })
+    fetch('/chat', {
+    method: 'POST',
+
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': csrfToken
+    },
+
+    body: JSON.stringify({
+        message: message,
+        agency_id: agencyId
     })
-    .then(res=>res.json())
-    .then(data=>{
-        
-        
-        let messageData = data.choices[0].message;
+})
+.then(async response => {
 
-        // ✅ sanitize text (security)
-        let html = allowSafeHTML(messageData.content).replace(/\n/g, "<br>");
+    /*
+     * Read the response as text first.
+     *
+     * This lets us safely inspect both JSON responses
+     * and Laravel error responses.
+     */
+    const text = await response.text();
 
-        // ✅ append image ONLY if exists
-        if (messageData.image) {
-            html += `
-                <div class="chat-image">
-                    <img src="${messageData.image}" alt="FAQ Image" class="clickable-image">
-                </div>
-            `;
-        }
+    let data;
 
-        typingMessage.querySelector(".bubble").innerHTML = html;
+    try {
+        data = JSON.parse(text);
+    } catch (error) {
 
-                chatbox.scrollTo({
-                    top: chatbox.scrollHeight,
-                    behavior: "smooth"
-                });
+        console.error(
+            'Chatbot returned a non-JSON response:',
+            text
+        );
 
-                input.disabled = false; // enable input again
-                input.focus(); // focus cursor back to input
-            })
-            .catch(error=>{
-                let errormsg = "Sorry, something went wrong.";
-                typingMessage.querySelector(".bubble").innerHTML = escapeHTML(errormsg).replace(/\n/g, "<br>");
-            });
+        throw new Error(
+            `Server returned HTTP ${response.status}`
+        );
+    }
+
+    /*
+     * Treat HTTP errors as actual errors.
+     */
+    if (!response.ok) {
+
+        console.error(
+            'Chatbot API error:',
+            data
+        );
+
+        throw new Error(
+            data.message ||
+            `Chatbot request failed (${response.status})`
+        );
+    }
+
+    return data;
+})
+.then(data => {
+
+    /*
+     * Validate the expected response structure before
+     * accessing nested properties.
+     */
+    if (
+        !data?.choices?.[0]?.message
+    ) {
+        throw new Error(
+            'Invalid chatbot response format.'
+        );
+    }
+
+    const messageData =
+        data.choices[0].message;
+
+    /*
+     * Sanitize chatbot text before inserting it
+     * into the DOM.
+     */
+    let html = allowSafeHTML(
+        messageData.content || ''
+    ).replace(/\n/g, "<br>");
+
+    /*
+     * Show human-support option when the backend
+     * explicitly requests fallback.
+     */
+    if (messageData.fallback) {
+
+        html += `
+            <div class="chat-fallback">
+                <button class="fallback-human-btn">
+                    Talk to a human
+                </button>
+            </div>
+        `;
+    }
+
+    /*
+     * Only display an image when the backend supplied one.
+     */
+    if (messageData.image) {
+
+        html += `
+            <div class="chat-image">
+                <img
+                    src="${messageData.image}"
+                    alt="FAQ Image"
+                    class="clickable-image"
+                >
+            </div>
+        `;
+    }
+
+    typingMessage
+        .querySelector(".bubble")
+        .innerHTML = html;
+
+    chatbox.scrollTo({
+        top: chatbox.scrollHeight,
+        behavior: "smooth"
+    });
+
+    input.disabled = false;
+    input.focus();
+})
+.catch(error => {
+
+    console.error(
+        "Chatbot request error:",
+        error
+    );
+
+    typingMessage
+        .querySelector(".bubble")
+        .textContent =
+            "Sorry, something went wrong. Please try again.";
+
+    /*
+     * IMPORTANT:
+     *
+     * Always restore the input after an error.
+     * Otherwise one failed request permanently disables
+     * the chatbot input.
+     */
+    input.disabled = false;
+    input.focus();
+});
 
 }
+
+document.addEventListener("click", async function(e){
+
+    if(e.target.classList.contains("fallback-human-btn")){
+
+        let btn = e.target;
+
+        if(btn.disabled) return;
+        btn.disabled = true;
+
+        let question = lastUserMessage;
+
+        if(!question){
+            addMessage("Please type your question first.", "bot");
+            btn.disabled = false;
+            return;
+        }
+
+        let data = await sendToHuman(question);
+
+        if(data?.success){
+            addMessage("✅ Your question has been sent to a human assistant.", "bot");
+        }else{
+            addMessage("❌ Failed to send your request.", "bot");
+        }
+
+        btn.disabled = false;
+    }
+
+});
 
 
 const chatToggle = document.getElementById("chat-toggle");

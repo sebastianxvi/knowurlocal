@@ -254,3 +254,64 @@
     background:#fecaca;
     transform:translateY(-1px);
 }
+
+/* ================= FAQ ACTION ================= */
+
+/*
+ * "To FAQ" is an <a> element rather than a <button>.
+ *
+ * The shared .btn class already provides:
+ * - inline-flex layout
+ * - padding
+ * - font size
+ * - pill shape
+ * - cursor
+ * - transition
+ *
+ * Therefore this class only defines the FAQ-specific color.
+ */
+.btn-secondary {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
+/*
+ * Match the existing button hover behavior.
+ *
+ * We intentionally use the same translateY movement as
+ * .btn-primary and .btn-danger for visual consistency.
+ */
+.btn-secondary:hover {
+    background: #ddd6fe;
+    color: #5b21b6;
+    transform: translateY(-1px);
+}
+
+/*
+ * Remove the browser's default link decoration because
+ * the FAQ action is an <a> element.
+ */
+.tablebtn .faq-btn {
+    text-decoration: none;
+}
+
+/*
+ * Preserve the FAQ color even after the link has been visited.
+ *
+ * Otherwise the browser may apply its default purple
+ * visited-link color.
+ */
+.tablebtn .faq-btn:visited {
+    color: #6d28d9;
+}
+
+/*
+ * Give keyboard users a clear focus indicator without
+ * changing the normal visual appearance.
+ */
+.tablebtn .faq-btn:focus-visible {
+    outline: none;
+
+    box-shadow:
+        0 0 0 3px rgba(109, 40, 217, 0.12);
+}

@@ -52,6 +52,19 @@
                     @endforeach
                 </select>
 
+                <select name="category" id="filterCategory">
+                    <option value="">All Categories</option>
+
+                    @foreach($categories as $category)
+                        <option
+                            value="{{ $category->id }}"
+                            {{ request('category') == $category->id ? 'selected' : '' }}
+                        >
+                            {{ $category->category_name }}
+                        </option>
+                    @endforeach
+                </select>
+
                 <!-- 📅 SORT -->
                 <select name="sort">
                     <option value="latest" {{ request('sort') == 'latest' ? 'selected' : '' }}>
@@ -100,7 +113,9 @@
                     data-id="{{ $agency->id }}"
                     data-name="{{ $agency->agency_name }}"
                     data-abbreviation="{{ $agency->agency_abbreviation }}"
+                    data-category_id="{{ $agency->category_id }}"
                     data-description="{{ $agency->agency_description }}"
+                    data-services_offered="{{ $agency->services_offered }}"
                     data-location="{{ $agency->agency_location }}"
                     data-email="{{ $agency->agency_email }}"
                     data-hotline="{{ $agency->agency_hotline }}"
@@ -130,11 +145,21 @@
 
                             @php
                                 $type = $agency->type?->name;
+                                $category = $agency->category;
                             @endphp
 
                             <span class="type-badge {{ strtolower($type) }}">
                                 {{ $type ?? '—' }}
                             </span>
+
+                            @if($category)
+                                <span
+                                    class="category-badge"
+                                    style="--category-color: {{ $category->display_color }}"
+                                >
+                                    {{ $category->category_name }}
+                                </span>
+                            @endif
 
                         </div>
                     </td>
@@ -156,7 +181,9 @@
                                 data-name="{{ $agency->agency_name }}"
                                 data-abbreviation="{{ $agency->agency_abbreviation }}"
                                 data-type_id="{{ $agency->agency_type_id }}"
+                                data-category_id="{{ $agency->category_id }}"
                                 data-description="{{ $agency->agency_description }}"
+                                data-services_offered="{{ $agency->services_offered }}"
                                 data-location="{{ $agency->agency_location }}"
                                 data-email="{{ $agency->agency_email }}"
                                 data-hotline="{{ $agency->agency_hotline }}"
@@ -354,13 +381,52 @@
 
                 </div>
 
+                <!-- CATEGORY -->
+                <div class="floating-group">
+
+                    <select
+                        name="category_id"
+                        id="category_id"
+                        required
+                    >
+                        <option value="" disabled selected hidden></option>
+
+                        @foreach($categories as $category)
+                            <option value="{{ $category->id }}">
+                                {{ $category->category_name }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <label for="category_id">
+                        Category
+                    </label>
+
+                </div>
+
                 <!-- OPTIONAL (NO STRICT VALIDATION) -->
                 <div class="floating-group" data-validate="optional-text">
                     <textarea name="agency_description" id="agency_description" placeholder=" "></textarea>
                     <label for="agency_description">Description</label>
                     <span class="form-message"></span>
                 </div>
+
+                <div class="floating-group" data-validate="optional-text">
+                <textarea
+                    name="services_offered"
+                    id="services_offered"
+                    placeholder=" "
+                ></textarea>
+
+                <label for="services_offered">
+                    Services Offered
+                </label>
+
+                <span class="form-message"></span>
             </div>
+            </div>
+
+            
 
             <!-- ================= CONTACT ================= -->
             <div class="form-card">
@@ -448,12 +514,12 @@
 
                     <!-- SYSTEM GENERATED -->
                     <div class="floating-group">
-                        <input type="text" id="lat" name="lat" placeholder=" " readonly>
+                        <input type="text" id="lat" name="lat" placeholder=" ">
                         <label for="lat">Latitude</label>
                     </div>
 
                     <div class="floating-group">
-                        <input type="text" id="lng" name="lng" placeholder=" " readonly>
+                        <input type="text" id="lng" name="lng" placeholder=" ">
                         <label for="lng">Longitude</label>
                     </div>
 

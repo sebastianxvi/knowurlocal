@@ -2,27 +2,58 @@
 
     <div class="nav-group">
 
-        <div class="logo-search">
+        <div class="search-area">
 
-            <div class="header-brand">
-                <span class="logo-short">KYL</span>
-                <span class="logo-full">KNOWURLOCAL</span>
+            {{-- SEARCH CAPSULE --}}
+            <div class="logo-search">
+
+                <div class="header-brand">
+                    <span class="logo-short">KYL</span>
+                    <span class="logo-full">KNOWURLOCAL</span>
+                </div>
+
+                @if(!isset($hideSearch))
+
+                    <div class="search-form">
+
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Search agencies"
+                        >
+
+                        <button
+                            type="button"
+                            id="searchBtn"
+                            aria-label="Search agencies"
+                        >
+                            <i class="ph-light ph-magnifying-glass"></i>
+                        </button>
+
+                        <div
+                            id="searchResults"
+                            class="search-results"
+                        ></div>
+
+                    </div>
+
+                @endif
+
             </div>
 
-            {{-- 🔥 SEARCH (optional) --}}
+            {{-- CATEGORY FILTERS --}}
             @if(!isset($hideSearch))
-            <div class="search-form">
-                <input type="text" id="searchInput" placeholder="Search agencies">
 
-                <button id="searchBtn">
-                    <i class="ph-light ph-magnifying-glass"></i>
-                </button>
+                <div
+                    id="categoryFilters"
+                    class="category-filters"
+                    aria-label="Agency category filters"
+                ></div>
 
-                <div id="searchResults" class="search-results"></div>
-            </div>
             @endif
 
         </div>
+
 
         <button class="menu-toggle" id="menuToggle">
             <i class="ph-light ph-list"></i>
@@ -34,15 +65,15 @@
                 Hi, {{ Auth::user()->first_name ?? 'User' }}!
             </h2>
 
-            <a href="{{ url('home') }}" class="nav-link">
+            {{-- <a href="{{ url('home') }}" class="nav-link">
                 <i class="ph-light ph-house"></i>
                 Home
-            </a>
+            </a> --}}
 
-            <a href="{{ url('agencies') }}" class="nav-link">
+            {{-- <a href="{{ url('agencies') }}" class="nav-link">
                 <i class="ph-light ph-buildings"></i>
                 Agencies
-            </a>
+            </a> --}}
 
             <a href="{{ url('map') }}" class="nav-link">
                 <i class="ph-light ph-map-trifold"></i>

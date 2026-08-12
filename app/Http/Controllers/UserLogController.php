@@ -31,6 +31,7 @@ class UserLogController extends Controller
             'delete_faq',
 
             'approve_admin',
+            'invite_admin',
             'promote_admin',
             'demote_admin',
             'delete_admin'

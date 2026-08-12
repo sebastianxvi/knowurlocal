@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const fileInput = document.getElementById('agency_image');
     const previewImg = document.getElementById('agency-preview');
     const placeholder = document.getElementById('agency-upload-placeholder');
+    let currentMode = "add";
 
 
     window.map = null;
@@ -93,7 +94,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 option.selected = option.value == data.type_id;
             });
         }
+
+        const categorySelect = document.getElementById('category_id');
+
+        if (categorySelect) {
+            [...categorySelect.options].forEach(option => {
+                option.selected = option.value == data.category_id;
+            });
+        }
         document.getElementById('agency_description').value = data.description || '';
+        document.getElementById('services_offered').value = data.services_offered || '';
         document.getElementById('agency_location').value = data.location || '';
 
         document.getElementById('agency_email').value = data.email || '';
@@ -134,9 +144,39 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 }
 
+function setMapToCoordinates(lat, lng) {
+
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return;
+    }
+
+    if (latitude < -90 || latitude > 90) {
+        return;
+    }
+
+    if (longitude < -180 || longitude > 180) {
+        return;
+    }
+
+    if (!window.map || !window.marker) {
+        return;
+    }
+
+    window.marker.setLatLng([latitude, longitude]);
+
+    window.map.setView(
+        [latitude, longitude],
+        17
+    );
+}
+
 
     /* ================= OPEN MODAL ================= */
     function openModal(mode = 'add', data = null) {
+        currentMode = mode;
 
         modal.style.display = "flex";
         setTimeout(() => modal.classList.add("active"), 10);
@@ -182,9 +222,14 @@ document.addEventListener("DOMContentLoaded", function () {
             placeholder.style.display = 'flex';
 
             document.getElementById('lat').value = '';
-            document.getElementById('lng').value = '';
+document.getElementById('lng').value = '';
 
-            enableInputs(true);
+if (window.map && window.marker) {
+    window.marker.setLatLng([12.354, 121.065]);
+    window.map.setView([12.354, 121.065], 15);
+}
+
+enableInputs(true);
         }
 
         // ================= EDIT =================
@@ -197,6 +242,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             fillForm(data);
+
+            setMapToCoordinates(data.lat, data.lng);
 
             if (data && data.image) {
                 previewImg.src = `/storage/${data.image}`;
@@ -215,6 +262,8 @@ document.addEventListener("DOMContentLoaded", function () {
         if (mode === 'view' && data) {
             form.action = "#"; // or just leave empty
             fillForm(data);
+
+            setMapToCoordinates(data.lat, data.lng);
 
             if (data && data.image) {
                 previewImg.src = `/storage/${data.image}`;
@@ -250,7 +299,9 @@ document.addEventListener("DOMContentLoaded", function () {
             name: row.dataset.name,
             abbreviation: row.dataset.abbreviation, // ✅ FIX
             type_id: row.dataset.type_id,
+            category_id: row.dataset.category_id,
             description: row.dataset.description,
+            services_offered: row.dataset.services_offered,
             location: row.dataset.location,
             email: row.dataset.email,
             hotline: row.dataset.hotline,
@@ -360,6 +411,89 @@ document.addEventListener("DOMContentLoaded", function () {
         getAddress(lat, lng);
     }
 
+
+    // ================= MANUAL COORDINATE SYNC =================
+
+function updateMapFromCoordinates() {
+
+    const latInput = document.getElementById('lat');
+    const lngInput = document.getElementById('lng');
+
+    if (!latInput || !lngInput) {
+        return;
+    }
+
+    const lat = parseFloat(latInput.value.trim());
+    const lng = parseFloat(lngInput.value.trim());
+
+    // Wait until both coordinates are valid numbers.
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return;
+    }
+
+    // Validate latitude range.
+    if (lat < -90 || lat > 90) {
+        return;
+    }
+
+    // Validate longitude range.
+    if (lng < -180 || lng > 180) {
+        return;
+    }
+
+    // Make sure Leaflet has already been initialized.
+    if (!window.map || !window.marker) {
+        return;
+    }
+
+    // Move the existing marker.
+    window.marker.setLatLng([lat, lng]);
+
+    // Center the map on the new coordinates.
+    window.map.setView([lat, lng], 17);
+
+    // Reverse-geocode the new location.
+    getAddress(lat, lng);
+}
+
+
+// Update after the administrator finishes editing
+// either coordinate field.
+const latInput = document.getElementById('lat');
+const lngInput = document.getElementById('lng');
+
+let coordinateUpdateTimer = null;
+
+function scheduleCoordinateUpdate() {
+
+    // Cancel the previous timer.
+    // This prevents the map from updating while the admin
+    // is still typing.
+    clearTimeout(coordinateUpdateTimer);
+
+    // Wait 5 seconds after the last edit.
+    coordinateUpdateTimer = setTimeout(() => {
+
+        updateMapFromCoordinates();
+
+    }, 5000);
+}
+
+if (latInput) {
+    latInput.addEventListener(
+        'input',
+        scheduleCoordinateUpdate
+    );
+}
+
+if (lngInput) {
+    lngInput.addEventListener(
+        'input',
+        scheduleCoordinateUpdate
+    );
+}
+
+
     async function getAddress(lat, lng) {
         try {
 
@@ -387,7 +521,9 @@ document.addEventListener("DOMContentLoaded", function () {
             name: btn.dataset.name,
             abbreviation: btn.dataset.abbreviation,
             type_id: btn.dataset.type_id,
+            category_id: btn.dataset.category_id,
             description: btn.dataset.description,
+            services_offered: btn.dataset.services_offered,
             location: btn.dataset.location,
             email: btn.dataset.email,
             hotline: btn.dataset.hotline,
@@ -454,7 +590,12 @@ document.addEventListener("DOMContentLoaded", function () {
  */
 form.addEventListener("submit", function(e){
 
-    // 🔒 prevent instant submit
+    // Creating a new agency? Submit immediately.
+    if (currentMode === "add") {
+        return;
+    }
+
+    // Editing an existing agency? Ask for confirmation.
     e.preventDefault();
 
     showAlertModal({
@@ -466,7 +607,7 @@ form.addEventListener("submit", function(e){
         showCancel: true,
 
         onConfirm: () => {
-            form.submit(); // ✅ real submit
+            form.submit();
         }
     });
 });

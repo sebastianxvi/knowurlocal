@@ -1,0 +1,234 @@
+/* FILTER CARD */
+.filter-card{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+
+    padding:14px 18px;
+
+    background:#fff;
+    border-radius:14px;
+    border:1px solid #e5e7eb;
+
+    box-shadow:0 6px 18px rgba(0,0,0,0.04);
+
+    margin-bottom:14px;
+    flex-wrap:wrap;
+}
+
+/* FILTER BAR */
+.filter-bar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+/* INPUTS */
+.filter-bar input,
+.filter-bar select{
+    height:36px;
+    padding:0 12px;
+
+    border-radius:10px;
+    border:1px solid #e5e7eb;
+
+    background:#f9fafb;
+    font-size:13px;
+
+    transition:all 0.2s ease;
+}
+
+/* 🔥 ADD THIS */
+.filter-bar input:focus,
+.filter-bar select:focus{
+    border-color:#3b82f6;
+    box-shadow:0 0 0 3px rgba(59,130,246,0.08);
+}
+
+.filter-bar input:hover,
+.filter-bar select:hover{
+    border-color:#d1d5db;
+}
+
+/* BUTTON */
+.filter-bar > button{
+    height:36px;
+    padding:0 14px;
+
+    border:none;
+    border-radius:999px;
+
+    background:#f06277;
+    color:white;
+    font-size:13px;
+
+    cursor:pointer;
+    transition:all 0.2s ease;
+}
+
+.filter-bar > button:hover{
+    background:#e11d48; /* darker pink */
+    transform:translateY(-1px);
+    box-shadow:0 6px 14px rgba(240,98,119,0.25);
+}
+
+/* ADD BUTTON */
+.add-agencybtn{
+    height:36px;
+    padding:0 16px;
+
+    border:none;
+    border-radius:999px;
+
+    background:#3b82f6;
+    color:white;
+    font-size:13px;
+
+    cursor:pointer;
+
+    transition:all 0.2s ease;
+}
+
+.add-agencybtn:hover{
+    background:#2563eb; /* slightly darker */
+    transform:translateY(-1px); /* subtle lift */
+    box-shadow:0 6px 14px rgba(59,130,246,0.25);
+}
+
+
+.category-color{
+    width:20px;
+    height:20px;
+
+    border-radius:50%;
+
+    border:1px solid #d1d5db;
+
+    margin:auto;
+}
+
+.table td:nth-child(2),
+.table th:nth-child(2){
+    text-align:center;
+}
+
+/* ================= BODY ================= */
+.modal form{
+
+    overflow-y:auto;
+
+    padding:18px 20px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:22px;
+
+}
+
+/* ================= COLOR PICKER ================= */
+
+/* ================= COLOR PICKER ================= */
+.category-color-picker{
+
+    width:100%;
+
+    display:flex;
+    justify-content:center;
+
+}
+
+.color-section{
+
+    display:flex;
+    flex-direction:column;
+
+    align-items:center;
+
+    gap:10px;
+
+    margin-top:4px;
+
+}
+
+.color-title{
+
+    align-self:flex-start;
+
+    margin-bottom:2px;
+
+    font-size:13px;
+    font-weight:500;
+
+}
+
+.color-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(6,44px);
+
+    gap:14px;
+
+    width:max-content;
+
+    margin:auto;
+
+}
+
+.color-chip{
+
+    width:44px;
+    height:44px;
+
+    border:none;
+    border-radius:50%;
+
+    cursor:pointer;
+
+    position:relative;
+
+    transition:
+        transform .2s ease,
+        box-shadow .2s ease;
+
+}
+
+.color-chip:hover{
+
+    transform:scale(1.08);
+
+}
+
+.color-chip.active{
+
+    transform:scale(1.08);
+
+    box-shadow:
+        0 0 0 3px #fff,
+        0 0 0 5px rgba(59,130,246,.35);
+
+}
+
+.color-chip.active::after{
+
+    content:"✓";
+
+    position:absolute;
+
+    inset:0;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    color:#fff;
+
+    font-size:16px;
+    font-weight:700;
+
+}
+

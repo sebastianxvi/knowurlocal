@@ -5,6 +5,12 @@
     box-sizing: border-box;
 }
 
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+}
+
 html, body {
     height: 100%;
     font-family: Arial, sans-serif;
@@ -144,3 +150,92 @@ html, body {
     animation: popupSmooth 0.25s ease;
 }
 
+/* ================= CATEGORY MAP MARKER ================= */
+
+.category-map-marker {
+    background: transparent;
+    border: none;
+}
+
+.category-marker-circle {
+    --marker-color: #3B82F6;
+
+    width: 25px;
+    height: 25px;
+
+    box-sizing: border-box;
+
+    background: var(--marker-color);
+
+    border: 3px solid #ffffff;
+
+    border-radius: 50%;
+
+    /*
+     * The white ring separates the marker
+     * from the map without making it oversized.
+     */
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.35),
+        0 0 0 1px rgba(0, 0, 0, 0.08);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+/* ================= AGENCY MAP LABEL ================= */
+
+.agency-map-label {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+
+    color: #C026D3;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    white-space: normal;
+
+    width: 150px;
+
+    text-align: center;
+
+    line-height: 1.2;
+
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+
+    overflow: hidden;
+
+    padding: 0;
+
+    pointer-events: none;
+
+    transition: opacity 0.3s ease;
+
+    /*
+     * Soft white halo.
+     *
+     * This keeps the violet text visible without
+     * creating a thick outline around every letter.
+     */
+    text-shadow:
+        0 1px 2px rgba(255, 255, 255, 1),
+        1px 0 2px rgba(255, 255, 255, 1),
+        -1px 0 2px rgba(255, 255, 255, 1),
+        0 -1px 2px rgba(255, 255, 255, 1),
+        0 0 3px rgba(255, 255, 255, 0.95);
+}
+
+.agency-map-label::before {
+    display: none;
+}
+
+.category-filters {
+    cursor: grab;
+    overscroll-behavior: contain;
+}

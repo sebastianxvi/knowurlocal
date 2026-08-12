@@ -12,11 +12,18 @@
                 Dashboard
             </a>
 
-            <!-- NGA -->
+           <!-- Agencies -->
             <a href="{{ route('admin.nga') }}"
-               class="{{ request()->routeIs('admin.nga') ? 'active' : '' }}">
+            class="{{ request()->routeIs('admin.nga') ? 'active' : '' }}">
                 <i class="ph-light ph-buildings"></i>
                 Agencies
+            </a>
+
+            <!-- Categories -->
+            <a href="{{ route('admin.categories') }}"
+            class="{{ request()->routeIs('admin.categories') ? 'active' : '' }}">
+                <i class="ph-light ph-tag"></i>
+                Categories
             </a>
 
             <!-- FAQ -->
