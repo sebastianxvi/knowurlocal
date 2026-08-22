@@ -647,3 +647,101 @@ a,
     
 
 }
+
+/* =========================================================
+   INQUIRY NOTIFICATION
+   ========================================================= */
+
+.inquiry-link{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+
+
+/*
+ * Small unread indicator.
+ *
+ * The dot intentionally contains no text. Its purpose is
+ * simply to tell the user that something needs attention.
+ */
+.inquiry-notification-dot{
+    width:7px;
+    height:7px;
+
+    flex:0 0 7px;
+
+    border-radius:50%;
+
+    background:#ef4444;
+
+    box-shadow:
+        0 0 0 3px rgba(239,68,68,0.10);
+}
+
+/* =========================================================
+   ACCOUNT NOTIFICATION
+   ========================================================= */
+
+.account-toggle{
+    position:relative;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    gap:10px;
+}
+
+
+.account-label{
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+
+.account-notification-dot{
+    width:7px;
+    height:7px;
+
+    flex:0 0 7px;
+
+    border-radius:50%;
+
+    background:#ef4444;
+
+    box-shadow:
+        0 0 0 3px rgba(239,68,68,0.10);
+}
+
+
+.account-chevron{
+    margin-left:auto;
+}
+/* =========================================================
+   MOBILE MENU NOTIFICATION
+   ========================================================= */
+
+.menu-toggle{
+    position:relative;
+}
+
+
+.menu-notification-dot{
+    position:absolute;
+
+    top:5px;
+    right:5px;
+
+    width:7px;
+    height:7px;
+
+    border-radius:50%;
+
+    background:#ef4444;
+
+    box-shadow:
+        0 0 0 2px var(--bg-color);
+}

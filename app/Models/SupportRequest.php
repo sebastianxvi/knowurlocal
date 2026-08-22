@@ -7,8 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SupportRequest extends Model
 {
-
-use SoftDeletes;
+    use SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -17,6 +16,15 @@ use SoftDeletes;
         'answer',
         'status',
         'ip_address',
+
+        // Answer lifecycle timestamps
+        'answered_at',
+        'answer_seen_at',
+    ];
+
+    protected $casts = [
+        'answered_at' => 'datetime',
+        'answer_seen_at' => 'datetime',
     ];
 
     /**

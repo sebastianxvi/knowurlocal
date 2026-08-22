@@ -184,6 +184,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
 
         <!-- ================= FOOTER ================= -->
         <div class="footer">
@@ -227,7 +228,7 @@
 
             </div>
 
-        </div>
+        
 
     </div>
 

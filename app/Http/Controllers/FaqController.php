@@ -294,6 +294,26 @@ public function prepareFromSupport(
         }
 
         /**
+         * 🌐 FILTER: MISSING FILIPINO / TAGLISH TRANSLATION
+         *
+         * The FAQ may still be saved without a translation,
+         * but the dashboard can identify it as content that
+         * needs attention.
+         */
+        if ($request->query('filter') === 'missing_translation') {
+
+            $query->where(function ($q) {
+
+                $q
+                    ->whereNull('question_fil')
+                    ->orWhere('question_fil', '')
+                    ->orWhereNull('answer_fil')
+                    ->orWhere('answer_fil', '');
+
+            });
+        }
+
+        /**
          * ✅ PAGINATION
          */
         $faqs = $query->paginate(10)->withQueryString();

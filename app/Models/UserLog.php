@@ -96,12 +96,43 @@ public function category()
     }
 
     /**
-     * 🎯 ACCESSOR: Clean Page Label
-     */
-    public function getPageLabelAttribute()
-    {
-        return ucwords(str_replace('_', ' ', $this->page));
-    }
+ * 🎯 ACCESSOR: Clean Page Label
+ *
+ * Converts internal page identifiers into
+ * human-readable labels for the audit log.
+ */
+public function getPageLabelAttribute()
+{
+    return match ($this->page) {
+
+        /*
+         * Main NGA & NGO data management page.
+         */
+        'nga_ngo_management' =>
+            'NGA & NGO Management',
+
+        /*
+         * Trashed-data recovery page.
+         */
+        'nga_ngo_recovery' =>
+            'NGA & NGO Recovery',
+
+        /*
+         * Fallback for other page identifiers.
+         *
+         * This keeps existing pages working without
+         * requiring every page to be manually added here.
+         */
+        default =>
+            ucwords(
+                str_replace(
+                    '_',
+                    ' ',
+                    $this->page
+                )
+            ),
+    };
+}
 
     public function targetUser()
     {

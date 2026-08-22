@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Agency;
+use App\Models\Faq;
 use App\Models\ChatbotLog;
 use App\Models\SupportRequest;
 use Illuminate\Http\Request;
@@ -205,22 +206,101 @@ public function __construct(
 
 
     /**
-     * 🔐 SAFE LOGGING (never breaks system)
-     */
-    private function logChat($question, $reply, $agencyId = null, $type = null, $score = null)
-    {
-        try {
-            ChatbotLog::create([
-                'user_id' => auth()->id(),
-                'question' => $question,
-                'answer' => $reply,
-                'agency_id' => $agencyId,
-                'type' => $type,
-                'score' => $score, // NEW
-                'ip_address' => request()->ip(),
-            ]);
-        } catch (\Throwable $e) {}
+ * 📝 RECORD CHATBOT INTERACTION
+ *
+ * Stores a structured record of how KNOWURLOCAL handled
+ * an authenticated user's chatbot question.
+ *
+ * The logger must never interrupt the chatbot itself.
+ * If logging fails, the user's request should still receive
+ * its normal chatbot response.
+ */
+private function logChat(
+    string $question,
+    string $answer,
+    string $outcome,
+    ?string $matchMethod = null,
+    ?int $agencyId = null,
+    ?int $faqId = null,
+    ?int $score = null
+): void {
+
+    try {
+
+        ChatbotLog::create([
+            /*
+             * KNOWURLOCAL requires authentication before
+             * accessing the chatbot, so every interaction
+             * should have an authenticated user ID.
+             */
+            'user_id' => auth()->id(),
+
+            /*
+             * Store exactly what the user asked.
+             */
+            'question' => $question,
+
+            /*
+             * Store the answer actually returned by the chatbot.
+             */
+            'answer' => $answer,
+
+            /*
+             * Agency associated with the interaction.
+             */
+            'agency_id' => $agencyId,
+
+            /*
+             * FAQ that ultimately supplied the answer.
+             *
+             * This remains null for greetings, fallback,
+             * irrelevant questions, etc.
+             */
+            'faq_id' => $faqId,
+
+            /*
+             * Describes the outcome of the interaction.
+             */
+            'outcome' => $outcome,
+
+            /*
+             * Describes how an FAQ answer was obtained.
+             *
+             * Examples:
+             * rule
+             * semantic
+             * none
+             */
+            'match_method' => $matchMethod,
+
+            /*
+             * Matching confidence represented as 0–100.
+             */
+            'score' => $score,
+
+            /*
+             * Capture the request IP for operational/security
+             * auditing.
+             */
+            'ip_address' => request()->ip(),
+        ]);
+
+    } catch (\Throwable $e) {
+
+        /*
+         * Logging must never break the chatbot.
+         *
+         * We record the failure in Laravel's application log
+         * instead of exposing an internal error to the user.
+         */
+        \Log::warning(
+            'KNOWURLOCAL chatbot interaction logging failed.',
+            [
+                'error' => $e->getMessage(),
+            ]
+        );
     }
+}
 
     /**
      * 🤖 AI REQUEST (used ONLY for classification)
@@ -232,14 +312,94 @@ public function __construct(
 
     public function suggestions()
 {
-    // LIMIT to prevent abuse (security + performance)
-    $faqs = \App\Models\Faq::select('question')
-        ->whereNotNull('question')
-        ->inRandomOrder()
-        ->limit(10)
-        ->get();
+    /*
+     * Determine which FAQs have actually been used
+     * successfully by the chatbot.
+     *
+     * We only count logs that have a real FAQ reference
+     * and were successfully answered.
+     */
+    $popularFaqIds = ChatbotLog::query()
+        ->where('outcome', 'answered')
+        ->whereNotNull('faq_id')
+        ->select('faq_id')
+        ->selectRaw('COUNT(*) as usage_count')
+        ->groupBy('faq_id')
+        ->orderByDesc('usage_count')
+        ->limit(15)
+        ->pluck('faq_id');
 
-    return response()->json($faqs);
+    /*
+     * Retrieve the actual FAQ records.
+     *
+     * Eloquent automatically excludes soft-deleted FAQs
+     * when the Faq model uses SoftDeletes.
+     */
+    $popularFaqs = Faq::query()
+        ->select('id', 'question')
+        ->whereNotNull('question')
+        ->whereIn('id', $popularFaqIds)
+        ->get()
+        ->sortBy(function ($faq) use ($popularFaqIds) {
+
+            /*
+             * Preserve the popularity order returned
+             * by the grouped chatbot-log query.
+             */
+            return $popularFaqIds->search(
+                $faq->id
+            );
+        })
+        ->values();
+
+    /*
+     * We want exactly 15 suggestions when enough FAQs exist.
+     *
+     * If fewer than 15 popular FAQs have been used,
+     * fill the remaining slots with random FAQs.
+     */
+    $remainingCount = max(
+        0,
+        15 - $popularFaqs->count()
+    );
+
+    if ($remainingCount > 0) {
+
+        /*
+         * Do not show an FAQ twice in the same slideshow.
+         */
+        $excludedIds = $popularFaqs
+            ->pluck('id')
+            ->all();
+
+        $additionalFaqs = Faq::query()
+            ->select('id', 'question')
+            ->whereNotNull('question')
+            ->when(
+                !empty($excludedIds),
+                fn ($query) =>
+                    $query->whereNotIn('id', $excludedIds)
+            )
+            ->inRandomOrder()
+            ->limit($remainingCount)
+            ->get();
+
+        $popularFaqs = $popularFaqs
+            ->concat($additionalFaqs);
+    }
+
+    /*
+     * Return only the fields the frontend actually needs.
+     *
+     * This prevents unnecessary database information
+     * from being exposed to the browser.
+     */
+    return response()->json(
+        $popularFaqs->map(fn ($faq) => [
+            'id' => $faq->id,
+            'question' => $faq->question,
+        ])->values()
+    );
 }
 
 
@@ -634,12 +794,28 @@ PROMPT
     public function ask(Request $request)
     {
         // 🔒 VALIDATION
-        $request->validate([
-            'message' => 'required|string|max:1000'
-        ]);
+        $validated = $request->validate([
+    'message' => [
+        'required',
+        'string',
+        'max:1000',
+    ],
 
-        $question = strtolower(trim($request->message));
-        $agencyId = $request->agency_id;
+    'agency_id' => [
+        'nullable',
+        'integer',
+        'exists:agencies,id',
+    ],
+]);
+
+        $question = trim($validated['message']);
+
+$normalizedQuestion = mb_strtolower(
+    $question,
+    'UTF-8'
+);
+
+$agencyId = $validated['agency_id'] ?? null;
 
             // 🧠 SIMPLE INTENT DETECTION (RUN FIRST)
         
@@ -705,11 +881,12 @@ if (in_array($cleanForIntent, $greetings, true)) {
     $reply = "Hello! How can I assist you today?";
 
     $this->logChat(
-        $question,
-        $reply,
-        $agencyId,
-        'greeting'
-    );
+    $question,
+    $reply,
+    'greeting',
+    'none',
+    $agencyId
+);
 
     return response()->json([
         "choices" => [[
@@ -742,11 +919,12 @@ if (in_array($cleanForIntent, $thanks, true)) {
     $reply = "You're welcome! Let me know if you need anything else.";
 
     $this->logChat(
-        $question,
-        $reply,
-        $agencyId,
-        'thanks'
-    );
+    $question,
+    $reply,
+    'thanks',
+    'none',
+    $agencyId
+);
 
     return response()->json([
         "choices" => [[
@@ -797,7 +975,13 @@ You are currently chatting with {$currentAgency->agency_name}.
 
 Please visit {$mentionedAgency->agency_name} for accurate information.";
 
-            $this->logChat($question, $reply, $agencyId, 'wrong_agency');
+            $this->logChat(
+    $question,
+    $reply,
+    'wrong_agency',
+    'none',
+    $agencyId
+);
 
             return response()->json([
                 "choices" => [[
@@ -831,11 +1015,12 @@ if (!$this->isRelevant($question)) {
         "Sorry, this question is outside the scope of KNOWURLOCAL.";
 
     $this->logChat(
-        $question,
-        $reply,
-        $agencyId,
-        'irrelevant'
-    );
+    $question,
+    $reply,
+    'irrelevant',
+    'none',
+    $agencyId
+);
 
     return response()->json([
         "choices" => [[
@@ -895,11 +1080,12 @@ if (
     }
 
     $this->logChat(
-        $question,
-        $reply,
-        $agencyId,
-        'clarification'
-    );
+    $question,
+    $reply,
+    'clarification',
+    'none',
+    $agencyId
+);
 
     return response()->json([
         "choices" => [[
@@ -995,12 +1181,14 @@ if (
      * Store the raw matcher score for debugging and auditing.
      */
     $this->logChat(
-        $question,
-        $reply,
-        $agencyId,
-        'faq',
-        $bestScore
-    );
+    $question,
+    $reply,
+    'answered',
+    'rule',
+    $bestFaq->agency_id,
+    $bestFaq->id,
+    $bestScore
+);
 
     return response()->json([
         "choices" => [[
@@ -1111,8 +1299,10 @@ if (
                 $this->logChat(
                     $question,
                     $reply,
-                    $agencyId,
-                    'semantic_faq',
+                    'answered',
+                    'semantic',
+                    $semanticFaq->agency_id,
+                    $semanticFaq->id,
                     (int) round(
                         $semanticMatch['confidence'] * 100
                     )
@@ -1169,8 +1359,9 @@ if (
 $this->logChat(
     $question,
     $reply,
-    $agencyId,
-    'no_faq'
+    'fallback',
+    'none',
+    $agencyId
 );
 
 return response()->json([

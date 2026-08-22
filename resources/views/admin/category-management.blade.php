@@ -189,6 +189,7 @@ No categories found.
 </tbody>
 
 </table>
+</div>
 
 <!-- ================= FOOTER ================= -->
         <div class="footer">
@@ -232,7 +233,7 @@ No categories found.
 
             </div>
 
-        </div>
+        
 </div>
 
 <div id="modal-back" class="back">

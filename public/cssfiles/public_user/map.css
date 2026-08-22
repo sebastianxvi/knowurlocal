@@ -198,7 +198,7 @@ html, body {
 
     white-space: normal;
 
-    width: 150px;
+    width: 110px;
 
     text-align: center;
 
@@ -238,4 +238,1185 @@ html, body {
 .category-filters {
     cursor: grab;
     overscroll-behavior: contain;
+}
+
+/* =========================================================
+   AGENCY DETAILS PANEL
+   ========================================================= */
+
+.agency-details {
+
+    position: fixed;
+
+    z-index: 5000;
+
+    /*
+     * Start below the navbar + category filters.
+     *
+     * This prevents the filter chips from sitting
+     * on top of the agency panel.
+     */
+    top: 145px;
+
+    left: 20px;
+
+    /*
+     * Keep a small amount of breathing room
+     * above the bottom of the viewport.
+     */
+    bottom: 20px;
+
+    /*
+     * This makes the panel shorter naturally because
+     * its top has moved downward.
+     */
+    height: auto;
+
+    width: 390px;
+
+    max-width: calc(100vw - 40px);
+
+    /*
+     * Prevent very tall desktop screens from creating
+     * an unnecessarily huge panel.
+     */
+    max-height: 620px;
+
+    background: rgba(255,255,255,0.96);
+
+    border: 1px solid rgba(15,23,42,0.08);
+
+    border-radius: 20px;
+
+    box-shadow:
+        0 20px 50px rgba(15,23,42,0.16),
+        0 4px 12px rgba(15,23,42,0.08);
+
+    backdrop-filter: blur(18px);
+
+    opacity: 0;
+
+    visibility: hidden;
+
+    pointer-events: none;
+
+    transform:
+        translateX(-24px)
+        scale(0.98);
+
+    transition:
+        opacity 0.25s ease,
+        transform 0.25s cubic-bezier(0.22,1,0.36,1),
+        visibility 0.25s ease;
+
+    overflow: hidden;
+
+    display: flex;
+    flex-direction: column;
+}
+
+
+/*
+ * Visible state.
+ */
+.agency-details.active {
+
+    opacity: 1;
+
+    visibility: visible;
+
+    pointer-events: auto;
+
+    transform:
+        translateX(0)
+        scale(1);
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.agency-details-header{
+
+    position:absolute;
+
+    top:14px;
+    right:14px;
+
+    z-index:3;
+}
+
+
+.agency-details-actions{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
+}
+
+
+/*
+ * Shared action-button styling.
+ *
+ * This follows the same lightweight circular controls
+ * used throughout the navigation interface.
+ */
+.agency-action-button{
+
+    width:36px;
+    height:36px;
+
+    border:1px solid rgba(15,23,42,0.08);
+
+    border-radius:50%;
+
+    display:flex;
+
+    align-items:center;
+    justify-content:center;
+
+    background:rgba(255,255,255,0.9);
+
+    color:#0f172a;
+
+    box-shadow:
+        0 4px 12px rgba(15,23,42,0.10);
+
+    backdrop-filter:blur(10px);
+
+    cursor:pointer;
+
+    text-decoration:none;
+
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+.agency-action-button i{
+
+    font-size:18px;
+
+    opacity:0.9;
+}
+
+
+.agency-action-button:hover{
+
+    background:#fff;
+
+    box-shadow:
+        0 6px 16px rgba(15,23,42,0.14);
+
+    transform:translateY(-1px);
+}
+
+
+.agency-action-button:active{
+
+    transform:scale(0.92);
+}
+
+/* =========================================================
+   AGENCY NAVIGATE BUTTON
+   ========================================================= */
+
+/*
+ * Base button.
+ *
+ * The button starts as a compact capsule.
+ * position: relative gives the icon and label
+ * a predictable positioning reference.
+ */
+.agency-navigate-button {
+    position: relative;
+
+    width: 38px;
+    min-width: 38px;
+    height: 36px;
+
+    padding: 0;
+
+    overflow: hidden;
+
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 999px;
+
+    background: #ffffff;
+    color: #172033;
+
+    box-shadow:
+        0 4px 12px rgba(15, 23, 42, 0.10);
+
+    white-space: nowrap;
+    cursor: pointer;
+
+    transition:
+        width 0.3s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+/* =========================================================
+   NAVIGATION ICON
+   ========================================================= */
+
+/*
+ * Keep the icon independently positioned.
+ *
+ * This guarantees that it is perfectly centered
+ * when the button is collapsed.
+ */
+.agency-navigate-button > i {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+
+    transform: translate(-50%, -50%);
+
+    font-size: 17px;
+
+    transition:
+        left 0.3s ease;
+}
+
+
+/*
+ * When expanded, move the icon toward the
+ * left side of the capsule.
+ */
+.agency-navigate-button.is-expanded > i {
+    left: 19px;
+
+    transform: translate(-50%, -50%);
+}
+
+
+/* =========================================================
+   NAVIGATE LABEL
+   ========================================================= */
+
+/*
+ * The label is also independently positioned.
+ *
+ * This is the important fix:
+ * it is no longer being centered by flexbox.
+ */
+.agency-navigate-label {
+    position: absolute;
+
+    left: 34px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    max-width: 0;
+
+    opacity: 0;
+
+    overflow: hidden;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    line-height: 1;
+
+    transition:
+        max-width 0.25s ease,
+        opacity 0.18s ease;
+}
+
+
+/*
+ * Reveal the label when the button expands.
+ */
+.agency-navigate-button.is-expanded
+.agency-navigate-label {
+    max-width: 50px;
+
+    opacity: 1;
+}
+
+
+/* =========================================================
+   EXPANDED STATE
+   ========================================================= */
+
+/*
+ * Expand the capsule enough to comfortably contain
+ * both the icon and the label.
+ */
+.agency-navigate-button.is-expanded {
+    width: 92px;
+}
+
+
+/* =========================================================
+   INTERACTION
+   ========================================================= */
+
+.agency-navigate-button:hover {
+    box-shadow:
+        0 5px 15px rgba(15, 23, 42, 0.14);
+}
+
+.agency-navigate-button:active {
+    transform: scale(0.96);
+}
+
+
+/*
+ * Accessible keyboard focus.
+ */
+.agency-navigate-button:focus-visible {
+    outline: 2px solid rgba(124, 58, 237, 0.35);
+    outline-offset: 2px;
+}
+
+/* =========================================================
+   SCROLLABLE CONTENT
+   ========================================================= */
+
+.agency-details-content{
+
+    height:100%;
+
+    overflow-y:auto;
+
+    overflow-x:hidden;
+
+    overscroll-behavior:contain;
+
+    scrollbar-width:thin;
+}
+
+
+/* =========================================================
+   COVER
+   ========================================================= */
+
+.agency-details-cover {
+    width: 100%;
+
+    height: 110px;
+
+    background: #f1f5f9;
+
+    overflow: hidden;
+}
+
+
+.agency-details-cover img{
+
+    width:100%;
+    height:100%;
+
+    display:block;
+
+    object-fit:cover;
+}
+
+
+/* =========================================================
+   MAIN CONTENT
+   ========================================================= */
+
+.agency-details-main {
+    padding: 16px 18px 24px;
+}
+
+
+/* =========================================================
+   TITLE
+   ========================================================= */
+
+.agency-details-title-row{
+
+    padding-right:80px;
+}
+
+
+.agency-details-title-row h2{
+
+    margin:0;
+
+    font-size:20px;
+
+    line-height:1.25;
+
+    font-weight:650;
+
+    color:#0f172a;
+
+    overflow-wrap:anywhere;
+}
+
+
+/* =========================================================
+   AGENCY BADGES
+   ========================================================= */
+
+/* =========================================================
+   AGENCY IDENTITY
+   ========================================================= */
+
+/*
+ * Stack the abbreviation and category vertically.
+ *
+ * This gives the agency name, abbreviation, and category
+ * their own visual hierarchy instead of making two badges
+ * compete for attention on the same line.
+ */
+.agency-details-badges {
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 6px;
+
+    margin-top: 7px;
+}
+
+
+/* =========================================================
+   AGENCY ABBREVIATION
+   ========================================================= */
+
+/*
+ * The abbreviation is intentionally neutral.
+ *
+ * It identifies the agency, while the category below
+ * provides the stronger color identity.
+ */
+.agency-details-abbr {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    min-height: 23px;
+
+    padding: 4px 9px;
+
+    border-radius: 999px;
+
+    background: #f1f5f9;
+
+    color: #475569;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    letter-spacing: 0.35px;
+
+    line-height: 1;
+}
+
+
+/* =========================================================
+   CATEGORY
+   ========================================================= */
+
+/*
+ * The category gets its own row.
+ *
+ * The color comes from the category's database value,
+ * which is also used by the map marker.
+ */
+.agency-details-category {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    min-height: 23px;
+
+    max-width: 100%;
+
+    padding: 4px 9px;
+
+    border-radius: 999px;
+
+    --category-color: #3b82f6;
+
+    background: color-mix(
+        in srgb,
+        var(--category-color) 10%,
+        white
+    );
+
+    color: var(--category-color);
+
+    border: 1px solid color-mix(
+        in srgb,
+        var(--category-color) 18%,
+        transparent
+    );
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    line-height: 1;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+}
+
+
+/*
+ * Small category indicator.
+ *
+ * It visually connects the category badge to
+ * the colored marker on the map.
+ */
+.agency-details-category::before {
+
+    content: '';
+
+    width: 6px;
+    height: 6px;
+
+    flex: 0 0 auto;
+
+    border-radius: 50%;
+
+    background: var(--category-color);
+}
+
+
+
+
+/* =========================================================
+   LOCATION / TYPE
+   ========================================================= */
+
+.agency-detail-location,
+.agency-detail-meta{
+
+    display:flex;
+
+    align-items:flex-start;
+
+    gap:8px;
+
+    margin-top:10px;
+
+    font-size:12px;
+
+    line-height:1.45;
+
+    color:#64748b;
+}
+
+
+.agency-detail-location i,
+.agency-detail-meta i{
+
+    flex:0 0 auto;
+
+    font-size:17px;
+
+    opacity:0.9;
+
+    margin-top:1px;
+}
+
+
+/* =========================================================
+   INFORMATION SECTIONS
+   ========================================================= */
+
+.agency-detail-section{
+
+    margin-top:22px;
+
+    padding-top:18px;
+
+    border-top:1px solid rgba(15,23,42,0.07);
+}
+
+
+.agency-detail-section h3{
+
+    margin:0 0 8px;
+
+    font-size:11px;
+
+    font-weight:650;
+
+    letter-spacing:0.9px;
+
+    text-transform:uppercase;
+
+    color:#64748b;
+}
+
+
+.agency-detail-section p{
+
+    margin:0;
+
+    font-size:13px;
+
+    line-height:1.65;
+
+    color:#334155;
+
+    white-space:pre-line;
+
+    overflow-wrap:anywhere;
+}
+
+
+/* =========================================================
+   AGENCY CONTACTS
+   ========================================================= */
+
+/*
+ * Contact list
+ *
+ * Contacts are rendered dynamically by map.js.
+ * Each contact gets its own compact row so multiple
+ * phone numbers, emails, websites, etc. remain readable.
+ */
+.agency-contact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    width: 100%;
+}
+
+
+/*
+ * Individual contact row.
+ *
+ * The row itself is not styled like a large button.
+ * Only the actual contact value is interactive.
+ */
+.agency-contact-item {
+    display: flex;
+    align-items: center;
+
+    width: 100%;
+    min-width: 0;
+
+    gap: 12px;
+
+    padding: 11px 12px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/*
+ * Subtle hover state for desktop users.
+ */
+.agency-contact-item:hover {
+    border-color: #dbe3ee;
+    background: #f8fafc;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+
+/*
+ * Contact icon container.
+ *
+ * Keeping the icon in a fixed-width area prevents
+ * different Phosphor icons from shifting the text.
+ */
+.agency-contact-item > i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex: 0 0 34px;
+
+    width: 34px;
+    height: 34px;
+
+    border-radius: 10px;
+
+    background: #f1f5f9;
+    color: var(--blue-main);
+
+    font-size: 17px;
+
+    opacity: 0.9;
+}
+
+
+/*
+ * Contact content.
+ *
+ * min-width: 0 is important here.
+ *
+ * Without it, long emails and URLs can force the
+ * entire agency panel wider than the viewport.
+ */
+.agency-contact-content {
+    display: flex;
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    min-width: 0;
+    flex: 1;
+
+    gap: 2px;
+}
+
+
+/*
+ * Contact label.
+ *
+ * Examples:
+ * Hotline
+ * Email
+ * Official Website
+ */
+.agency-contact-label {
+    display: block;
+
+    max-width: 100%;
+
+    color: #64748b;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    line-height: 1.3;
+
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/*
+ * Contact value.
+ *
+ * This is the actual interactive element when the
+ * contact type supports a destination.
+ */
+.agency-contact-value {
+    display: block;
+
+    max-width: 100%;
+
+    color: #1e293b;
+
+    font-size: 13px;
+    font-weight: 500;
+
+    line-height: 1.45;
+
+    text-decoration: none;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
+
+    transition:
+        color 0.18s ease;
+}
+
+
+/*
+ * Interactive contact values.
+ */
+a.agency-contact-value:hover {
+    color: var(--blue-main);
+
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+}
+
+
+/*
+ * Keyboard accessibility.
+ *
+ * Users navigating with Tab should be able to clearly
+ * identify the focused contact.
+ */
+a.agency-contact-value:focus-visible {
+    outline: 2px solid var(--blue-main);
+    outline-offset: 3px;
+
+    border-radius: 3px;
+}
+
+
+/*
+ * Primary contact badge.
+ *
+ * This is intentionally subtle so it does not overpower
+ * the actual contact information.
+ */
+.agency-contact-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    padding: 3px 7px;
+
+    border-radius: 999px;
+
+    background: #dcfce7;
+    color: #166534;
+
+    font-size: 11px;
+    font-weight: 600;
+
+    line-height: 1.2;
+
+    white-space: nowrap;
+
+    letter-spacing: 0.1px;
+}
+
+
+/*
+ * Primary contact gets a slightly stronger visual
+ * hierarchy without relying entirely on color.
+ */
+.agency-contact-item.is-primary {
+    border-color: #dbeafe;
+}
+
+
+/* =========================================================
+   CONTACT RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    /*
+     * Remove the desktop lift effect on touch devices.
+     *
+     * Hover states have little meaning on mobile and can
+     * make the interface feel visually unstable.
+     */
+    .agency-contact-item:hover {
+        transform: none;
+
+        box-shadow: none;
+    }
+
+
+    /*
+     * Give touch users a little more vertical space.
+     */
+    .agency-contact-item {
+        padding: 12px;
+    }
+
+
+    /*
+     * Slightly larger icon target for mobile.
+     */
+    .agency-contact-item > i {
+        flex-basis: 36px;
+
+        width: 36px;
+        height: 36px;
+
+        font-size: 18px;
+    }
+
+
+    /*
+     * Keep the value comfortably readable.
+     */
+    .agency-contact-value {
+        font-size: 13px;
+    }
+
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 480px) {
+
+    .agency-contact-list {
+        gap: 7px;
+    }
+
+
+    .agency-contact-item {
+        gap: 10px;
+
+        padding: 10px;
+        border-radius: 11px;
+    }
+
+
+    .agency-contact-item > i {
+        flex-basis: 34px;
+
+        width: 34px;
+        height: 34px;
+
+        border-radius: 9px;
+
+        font-size: 17px;
+    }
+
+
+    .agency-contact-label {
+        font-size: 9px;
+    }
+
+
+    .agency-contact-value {
+        font-size: 12px;
+        line-height: 1.45;
+    }
+
+
+    .agency-contact-primary {
+    font-size: 11px;
+    padding: 4px 8px;
+
+    /*
+     * Keeps the badge readable even on
+     * narrow mobile layouts.
+     */
+    line-height: 1.2;
+}
+
+}
+
+
+.agency-contact-item a:hover{
+
+    color:#4f46e5;
+}
+
+
+/* =========================================================
+   TABLET / NARROW DESKTOP
+   ========================================================= */
+
+@media (max-width:900px){
+
+    .agency-details{
+
+        /*
+         * At this width the left panel would begin
+         * competing with the map and chatbot.
+         *
+         * Convert it into the mobile-style sheet.
+         */
+        top:auto;
+
+        left:0;
+        right:0;
+        bottom:0;
+
+        width:100%;
+        max-width:none;
+
+        height:60vh;
+
+        border-radius:
+            20px 20px 0 0;
+
+        transform:
+            translateY(100%);
+    }
+
+
+    .agency-details.active{
+
+        transform:
+            translateY(0);
+    }
+
+
+    .agency-details-cover{
+
+        height:130px;
+    }
+
+    .agency-contact-primary {
+    font-size: 11px;
+    padding: 4px 8px;
+
+    /*
+     * Keeps the badge readable even on
+     * narrow mobile layouts.
+     */
+    line-height: 1.2;
+}
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width:600px){
+
+    .agency-details{
+
+        height:60vh;
+
+        max-height:60vh;
+
+        border-radius:
+            18px 18px 0 0;
+    }
+
+
+    .agency-details-main{
+
+        padding:
+            18px 15px 26px;
+    }
+
+
+    .agency-details-title-row h2{
+
+        font-size:18px;
+    }
+
+
+    .agency-details-cover{
+
+        height:125px;
+    }
+
+}
+
+/* =========================================================
+   SELECTED AGENCY MARKER
+   ========================================================= */
+
+.leaflet-marker-icon.selected-agency-marker {
+
+    /*
+     * Gives the selected marker a little visual
+     * separation from the map.
+     */
+    filter:
+        drop-shadow(
+            0 4px 7px rgba(0, 0, 0, 0.24)
+        );
+
+    animation:
+        selectedAgencyMarkerIn
+        0.25s
+        ease-out;
+}
+
+
+/* =========================================================
+   SELECTED AGENCY MARKER
+   ========================================================= */
+
+/*
+ * Remove Leaflet's default icon styling.
+ */
+.selected-agency-marker-icon {
+    background: transparent;
+    border: none;
+}
+
+
+/*
+ * Small center highlight.
+ *
+ * This makes the marker feel like a location
+ * indicator rather than just a colored circle.
+ */
+.selected-agency-marker span {
+
+    position: absolute;
+
+    width: 8px;
+    height: 8px;
+
+    top: 50%;
+    left: 50%;
+
+    transform:
+        translate(-50%, -50%);
+
+    border-radius: 50%;
+
+    background: #ffffff;
+
+    opacity: 0.9;
+}
+
+
+/*
+ * Entrance animation when an agency becomes selected.
+ */
+@keyframes selectedAgencyMarkerIn {
+
+    0% {
+
+        transform: scale(0.65);
+
+        opacity: 0;
+
+    }
+
+    70% {
+
+        transform: scale(1.08);
+
+        opacity: 1;
+
+    }
+
+    100% {
+
+        transform: scale(1);
+
+        opacity: 1;
+
+    }
+
 }

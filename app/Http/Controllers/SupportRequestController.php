@@ -30,7 +30,9 @@ class SupportRequestController extends Controller
             $query->where('agency_id', $agency);
         }
 
-        $requests = $query->paginate(10);
+        $requests = $query
+            ->paginate(10)
+            ->withQueryString();
         $agencies = Agency::select('id', 'agency_name')->get();
 
         return view('admin.support_requests', compact('requests', 'agencies'));
@@ -53,10 +55,16 @@ class SupportRequestController extends Controller
         $support = SupportRequest::findOrFail($validated['request_id']);
 
         $support->update([
-            'answer' => $validated['reply'],
-            'agency_id' => $validated['agency_id'],
-            'status' => 'answered'
-        ]);
+    'answer' => $validated['reply'],
+    'agency_id' => $validated['agency_id'],
+    'status' => 'answered',
+
+    // Record when the administrator provided the answer.
+    'answered_at' => now(),
+
+    // The new answer has not been seen by the user yet.
+    'answer_seen_at' => null,
+]);
 
         return redirect()->back()->with('success', 'Reply sent successfully');
     }
@@ -74,6 +82,51 @@ class SupportRequestController extends Controller
         return view('public_user.inquiries', compact('requests'));
     }
 
+
+    /**
+ * 👁️ MARK AN ANSWER AS SEEN
+ *
+ * Records that the authenticated user has opened
+ * an answered support request.
+ */
+public function markAnswerSeen($id)
+{
+    /*
+     * 🔒 Retrieve the request belonging specifically
+     * to the currently authenticated user.
+     *
+     * This is important: we do NOT retrieve by ID alone,
+     * because a user must never be able to mark another
+     * user's inquiry as seen.
+     */
+    $support = SupportRequest::where('id', $id)
+        ->where('user_id', auth()->id())
+        ->where('status', 'answered')
+        ->firstOrFail();
+
+    /*
+     * Only update the timestamp if the answer has not
+     * already been seen.
+     *
+     * This avoids unnecessary database writes every time
+     * the user opens the same inquiry.
+     */
+    if (is_null($support->answer_seen_at)) {
+
+        $support->update([
+            'answer_seen_at' => now(),
+        ]);
+    }
+
+    /*
+     * Return JSON because the inquiry page will call
+     * this endpoint asynchronously with JavaScript.
+     */
+    return response()->json([
+        'success' => true,
+    ]);
+}
+
     public function update(Request $request, $id)
 {
     // 🔒 Validate input
@@ -86,9 +139,15 @@ class SupportRequestController extends Controller
 
     // 🔄 Update safely
     $support->update([
-        'answer' => $validated['reply'],
-        'status' => 'answered'
-    ]);
+    'answer' => $validated['reply'],
+    'status' => 'answered',
+
+    // Keep the original answer timestamp if one already exists.
+    'answered_at' => $support->answered_at ?? now(),
+
+    // The answer was modified, so the user should be notified again.
+    'answer_seen_at' => null,
+]);
 
     return back()->with('success', 'Answer updated successfully.');
 }

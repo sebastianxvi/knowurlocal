@@ -40,13 +40,20 @@ class AdminInviteController extends Controller
     $link = url('/admin/register?token=' . $token);
 
     // Send the invitation email.
-    Mail::raw(
-        "You’ve been invited as an admin.\n\nRegister here:\n$link",
-        function ($message) use ($request) {
-            $message->to($request->email)
-                    ->subject('KNOWURLOCAL Admin Invitation');
-        }
-    );
+    Mail::send(
+    'emails.admin-invitation',
+    [
+        'link' => $link,
+        'expiresAt' => $invite->expires_at,
+    ],
+    function ($message) use ($request) {
+
+        $message
+            ->to($request->email)
+            ->subject('You’re invited to KNOWURLOCAL Admin');
+    }
+);
+
 
     // Record the successful invitation in the audit log.
     UserLog::create([

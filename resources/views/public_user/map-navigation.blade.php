@@ -29,6 +29,7 @@
 
     <div class="pill-text">
         <span class="pill-sub">Navigating to</span>
+
         <span class="pill-name">
             {{ $agency->agency_abbreviation ?? $agency->agency_name }}
         </span>
@@ -37,168 +38,183 @@
 </div>
 
 <!-- ROUTE BUTTON -->
+<!-- ROUTE CONTROL -->
 <div class="route-toggle">
-    <button id="openRoute">
+
+    <!--
+        Main directions button.
+
+        This remains available when the contextual
+        hint is not being displayed.
+    -->
+    <button
+        id="openRoute"
+        aria-label="View directions"
+    >
         <i class="ph-light ph-path"></i>
     </button>
+
+
+    <!--
+        Contextual route hint.
+
+        The entire hint is clickable and opens
+        the directions panel for the selected mode.
+    -->
+    <button 
+    class="route-hint" 
+    id="routeHint" 
+    type="button" 
+    aria-label="View selected route directions"
+    tabindex="-1"
+>
+
+        <i
+            class="ph-light ph-navigation-arrow"
+            id="routeHintIcon"
+        ></i>
+
+
+        <span class="route-hint-text">
+
+            <strong id="routeHintTitle">
+                View route
+            </strong>
+
+            <span id="routeHintSubtitle">
+                See directions
+            </span>
+
+        </span>
+
+    </button>
+
 </div>
 
-<!-- MODAL -->
+
+<!-- DIRECTIONS MODAL -->
 <div class="route-modal" id="routeModal">
+
     <div class="route-modal-content">
 
         <div class="route-modal-header">
-            <span>Directions</span>
-            <button id="closeRoute">&times;</button>
+
+    <div class="route-mode-header">
+
+        <div class="route-mode-icon" id="routeModeIcon">
+            <i class="ph-light ph-car"></i>
         </div>
+
+        <div class="route-mode-text">
+
+            <span id="routeModeName">
+                Car directions
+            </span>
+
+            <span id="routeModeSummary">
+                Calculating route...
+            </span>
+
+        </div>
+
+    </div>
+
+    <button id="closeRoute" aria-label="Close directions">
+        <i class="ph-light ph-x"></i>
+    </button>
+
+</div>
 
         <div id="routeContainer"></div>
 
     </div>
+
 </div>
 
 <!-- MAP -->
-<div id="navMap"
-     data-lat="{{ $agency->lat }}"
-     data-lng="{{ $agency->lng }}"
-     data-name="{{ $agency->agency_name }}">
-</div>
+<div
+    id="navMap"
+    data-lat="{{ $agency->lat }}"
+    data-lng="{{ $agency->lng }}"
+    data-name="{{ $agency->agency_name }}"
+></div>
 
-<div class="sheet" id="sheet">
 
-    <div class="sheet-handle" id="sheetHandle"></div>
+<!-- TRAVEL TIME SUMMARY -->
+<div class="travel-time-card" id="travelTimeCard">
 
-    <div class="sheet-content">
+    <div class="travel-time-header">
+        <div>
+            <span class="travel-time-label">Estimated travel time</span>
+            <span class="travel-time-subtext">
+                Based on your current location
+            </span>
+        </div>
 
-    <!-- COVER -->
-    <div class="agency-cover">
-        <img src="{{ $agency->agency_image 
-            ? asset('storage/' . $agency->agency_image) 
-            : asset('images/default-agency.png') }}">
+        <i class="ph-light ph-clock"></i>
     </div>
 
-    <div class="sheet-inner">
-        <div class="cover-text">
+    <div class="travel-time-options">
 
-    <!-- NAME + ABBR -->
-    <div class="agency-header">
-        <h2>{{ $agency->agency_name }}</h2>
+        <!-- WALKING -->
+        <div
+    class="travel-mode"
+    data-mode="walking"
+    role="button"
+    tabindex="0"
+    aria-pressed="false"
+    aria-label="Select walking route"
+>
+            <div class="travel-mode-icon">
+                <i class="ph-light ph-person-simple-walk"></i>
+            </div>
 
-        @if($agency->agency_abbreviation)
-        <span class="agency-abbr">
-            {{ $agency->agency_abbreviation }}
-        </span>
-        @endif
+            <div class="travel-mode-info">
+                <span class="travel-mode-name">Walking</span>
+                <span class="travel-mode-time">Calculating...</span>
+            </div>
+        </div>
+
+        <!-- BICYCLE -->
+        <div
+    class="travel-mode"
+    data-mode="cycling"
+    role="button"
+    tabindex="0"
+    aria-pressed="false"
+    aria-label="Select bicycle route"
+>
+            <div class="travel-mode-icon">
+                <i class="ph-light ph-bicycle"></i>
+            </div>
+
+            <div class="travel-mode-info">
+                <span class="travel-mode-name">Bicycle</span>
+                <span class="travel-mode-time">Calculating...</span>
+            </div>
+        </div>
+
+        <!-- CAR -->
+        <div
+    class="travel-mode"
+    data-mode="driving"
+    role="button"
+    tabindex="0"
+    aria-pressed="false"
+    aria-label="Select car route"
+>
+            <div class="travel-mode-icon">
+                <i class="ph-light ph-car"></i>
+            </div>
+
+            <div class="travel-mode-info">
+                <span class="travel-mode-name">Car</span>
+                <span class="travel-mode-time">Calculating...</span>
+            </div>
+        </div>
+
     </div>
 
-    <!-- LOCATION -->
-    <p class="location">
-        {{ $agency->agency_location }}
-    </p>
-
-    <!-- TYPE -->
-    @if($agency->type)
-    <p class="agency-type">
-        <i class="ph-light ph-buildings"></i>
-        {{ $agency->type->name ?? 'Unknown Type' }}
-    </p>
-    @endif
-
-</div>
-    
-
-    <!-- ABOUT -->
-    @if($agency->agency_description)
-    <div class="card">
-        <h4>About</h4>
-        <p>{{ $agency->agency_description }}</p>
-    </div>
-    @endif
-
-    <!-- CONTACT -->
-    <div class="card">
-    <h4>Contact</h4>
-
-    @if($agency->agency_hotline)
-    <div class="contact-item">
-        <i class="ph-light ph-phone"></i>
-
-        <a href="tel:{{ $agency->agency_hotline }}">
-            {{ $agency->agency_hotline }}
-        </a>
-
-        <button class="copy-btn" data-copy="{{ $agency->agency_hotline }}">
-            <i class="ph-light ph-copy"></i>
-        </button>
-    </div>
-    @endif
-
-    @if($agency->agency_landline)
-    <div class="contact-item">
-        <i class="ph-light ph-device-mobile"></i>
-
-        <span>{{ $agency->agency_landline }}</span>
-
-        <button class="copy-btn" data-copy="{{ $agency->agency_landline }}">
-            <i class="ph-light ph-copy"></i>
-        </button>
-    </div>
-    @endif
-
-    @if($agency->agency_email)
-    <div class="contact-item">
-        <i class="ph-light ph-envelope"></i>
-
-        <a href="mailto:{{ $agency->agency_email }}">
-            {{ $agency->agency_email }}
-        </a>
-
-        <button class="copy-btn" data-copy="{{ $agency->agency_email }}">
-            <i class="ph-light ph-copy"></i>
-        </button>
-    </div>
-    @endif
-
-    @if($agency->agency_website)
-    <div class="contact-item">
-        <i class="ph-light ph-globe"></i>
-
-        <a href="{{ $agency->agency_website }}" target="_blank">
-            Official Website link
-        </a>
-
-        <button class="copy-btn" data-copy="{{ $agency->agency_website }}">
-            <i class="ph-light ph-copy"></i>
-        </button>
-    </div>
-    @endif
-
-    @if($agency->agency_fb)
-    <div class="contact-item">
-        <i class="ph-light ph-facebook-logo"></i>
-
-        <a href="{{ $agency->agency_fb }}" target="_blank">
-            Facebook Page
-        </a>
-
-        <button class="copy-btn" data-copy="{{ $agency->agency_fb }}">
-            <i class="ph-light ph-copy"></i>
-        </button>
-    </div>
-    @endif
-
-</div>
-
-    <!-- OFFICE HOURS -->
-    @if($agency->office_hours)
-    <div class="card">
-        <h4>Office Hours</h4>
-        <p>{{ $agency->office_hours }}</p>
-    </div>
-    @endif
-
-</div>
-</div>
 </div>
 
 <script src="{{ asset('jsfiles/public_user/navigation.js') }}" defer></script>

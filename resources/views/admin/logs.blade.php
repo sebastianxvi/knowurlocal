@@ -106,13 +106,12 @@
 
             <thead>
                 <tr>
-                    <th>User</th>
-                    <th>Target</th>
-                    <th>Action</th>
-                    <th>Change</th>
-                    <th>Context</th>
-                    <th>Page</th>
-                    <th>Date</th>
+                    <th class="col-user">User</th>
+                    <th class="col-target">Target</th>
+                    <th class="col-action">Action</th>
+                    <th class="col-change">Changes</th>
+                    <th class="col-page">Page</th>
+                    <th class="col-date">Date</th>
                 </tr>
             </thead>
 
@@ -134,23 +133,31 @@
                 >
 
                     <!-- USER -->
-                    <td>
+                    <td class="col-user">
                         <div class="actor-cell">
 
                             <span class="role-badge {{ $log->user->role ?? 'user' }}">
-    
-                                <i class="ph-light 
-                                    @if(($log->user->role ?? '') === 'superadmin') ph-crown
-                                    @elseif(($log->user->role ?? '') === 'admin') ph-shield
-                                    @else ph-user
+
+                                <i class="ph-light
+                                    @if(($log->user->role ?? '') === 'superadmin')
+                                        ph-crown
+                                    @elseif(($log->user->role ?? '') === 'admin')
+                                        ph-shield
+                                    @else
+                                        ph-user
                                     @endif
                                 "></i>
 
-                                {{ ucfirst($log->user->role ?? 'User') }}
+                                <span>
+                                    {{ ucfirst($log->user->role ?? 'User') }}
+                                </span>
 
                             </span>
 
-                            <span class="actor-name">
+                            <span
+                                class="actor-name"
+                                title="{{ $log->actor_name }}"
+                            >
                                 {{ $log->actor_name }}
                             </span>
 
@@ -158,124 +165,44 @@
                     </td>
 
                     <!-- TARGET -->
-                    <td>
 
-                        @if(in_array($log->action, [
-                            'create_faq',
-                            'update_faq',
-                            'delete_faq'
-                        ], true))
+                    <td class="col-target">
 
-                            {{-- FAQ audit target --}}
-                            <span class="target-user">
-                                FAQ #{{ $log->faq_id }}
-                            </span>
+                        @if(
+                            $log->log_target_name &&
+                            $log->log_target !== 'System'
+                        )
 
-                            @elseif(in_array($log->action, [
-    'create_category',
-    'update_category',
-    'delete_category'
-], true))
+                            <div
+                                class="target-cell"
+                                title="{{ $log->log_target_name }}"
+                            >
 
-    {{-- Category audit target --}}
-    <span class="target-user">
-        Category #{{ $log->category_id }}
-    </span>
-
-                            @elseif($log->action === 'delete_support_request')
-
-    @php
-        /*
-         * The Support Request ID is stored inside the
-         * old_values audit snapshot because UserLog does
-         * not currently have a dedicated support_request_id
-         * column.
-         */
-        $supportAuditData = $log->old_values ?? [];
-
-        /*
-         * Support older records where old_values may be
-         * stored as a JSON string.
-         */
-        if (is_string($supportAuditData)) {
-            $decoded = json_decode($supportAuditData, true);
-            $supportAuditData = is_array($decoded)
-                ? $decoded
-                : [];
-        }
-
-        $supportRequestId =
-            $supportAuditData['support_request_id'] ?? null;
-    @endphp
-
-    <span class="target-user">
-        {{ $supportRequestId
-            ? 'Support Request #' . $supportRequestId
-            : 'Support Request'
-        }}
-    </span>
-
-                        @elseif(in_array($log->action, [
-                            'create_agency',
-                            'update_agency',
-                            'delete_agency'
-                        ], true))
-
-                            {{-- Agency audit target --}}
-                            <span class="target-user">
-                                Agency #{{ $log->agency_id }}
-                            </span>
-
-                        @elseif($log->action === 'invite_admin')
-
-                        @php
-                            /*
-                            * The invited administrator does not have a users record yet.
-                            * Therefore target_user_id is intentionally NULL.
-                            *
-                            * The invited email is stored in the audit snapshot instead.
-                            */
-                            $inviteData = $log->new_values ?? [];
-
-                            /*
-                            * Support older audit records where new_values
-                            * may still be stored as a JSON string.
-                            */
-                            if (is_string($inviteData)) {
-                                $decoded = json_decode($inviteData, true);
-                                $inviteData = is_array($decoded) ? $decoded : [];
-                            }
-
-                            $inviteEmail = $inviteData['email'] ?? null;
-                        @endphp
-
-                        <div class="pending-target">
-
-                            <span class="target-user">
-                                Pending Admin
-                            </span>
-
-                            @if($inviteEmail)
-                                <span class="target-email">
-                                    {{ $inviteEmail }}
+                                <span class="target-name">
+                                    {{ $log->log_target_name }}
                                 </span>
-                            @endif
 
-                        </div>
+                                @if($log->log_target !== $log->log_target_name)
 
-                    @elseif($log->target_user_id)
+                                    <span class="target-meta">
+                                        {{ $log->log_target }}
+                                    </span>
 
-                        <span class="target-user">
-                            {{ $log->targetUser->email ?? 'User #' . $log->target_user_id }}
-                        </span>
+                                @endif
 
-                    @else
+                            </div>
 
-                        <span class="target-user">
-                            System
-                        </span>
+                        @else
 
-                    @endif
+                            <div class="target-cell">
+
+                                <span class="target-name system-target">
+                                    System
+                                </span>
+
+                            </div>
+
+                        @endif
 
                     </td>
 
@@ -291,27 +218,74 @@
         @case('admin_login') ph-shield-check @break
         @case('admin_logout') ph-shield-slash @break
 
-        {{-- VIEW / NAVIGATION --}}
+        {{-- PUBLIC USER ACTIVITY --}}
         @case('view_map') ph-map-trifold @break
-        @case('navigate') ph-compass @break
-        @case('view_agency') ph-building @break
         @case('view_agencies') ph-buildings @break
+        @case('view_agency') ph-building @break
+        @case('search_agency') ph-magnifying-glass @break
+        @case('get_directions') ph-navigation-arrow @break
+        @case('contact_agency') ph-address-book @break
+        @case('filter_category') ph-funnel-simple @break
+        @case('navigate') ph-compass @break
 
         {{-- CREATE --}}
-        @case('create_agency') ph-plus-circle @break
-        @case('create_faq') ph-chat-centered-dots @break
-        @case('create_category') ph-tag @break
+        @case('create_agency')
+            ph-plus-circle
+            @break
+
+        @case('create_faq')
+            ph-chat-centered-dots
+            @break
+
+        @case('create_category')
+            ph-tag
+            @break
+
 
         {{-- UPDATE --}}
-        @case('update_agency') ph-pencil-simple @break
-        @case('update_faq') ph-pencil-simple-line @break
-        @case('update_category') ph-pencil-simple @break
+        @case('update_agency')
+            ph-pencil-simple
+            @break
+
+        @case('update_faq')
+            ph-pencil-simple-line
+            @break
+
+        @case('update_category')
+            ph-pencil-simple
+            @break
+
+
+        {{-- AGENCY LIFECYCLE --}}
+        @case('trash_agency')
+            ph-trash
+            @break
+
+        @case('restore_agency')
+            ph-arrow-counter-clockwise
+            @break
+
+        @case('force_delete_agency')
+            ph-trash-simple
+            @break
+
 
         {{-- DELETE --}}
-        @case('delete_agency') ph-trash @break
-        @case('delete_faq') ph-trash @break
-        @case('delete_support_request') ph-trash @break
-        @case('delete_category') ph-trash @break
+        @case('delete_agency')
+            ph-trash
+            @break
+
+        @case('delete_faq')
+            ph-trash
+            @break
+
+        @case('delete_support_request')
+            ph-trash
+            @break
+
+        @case('delete_category')
+            ph-trash
+            @break
 
         {{-- ADMIN --}}
         @case('approve_admin') ph-check @break
@@ -321,7 +295,7 @@
         @case('invite_admin') ph-paper-plane-tilt @break
 
         {{-- DEFAULT --}}
-        @default ph-circle
+        @default ph-lightning
 
     @endswitch
 "></i>
@@ -359,11 +333,18 @@
     'delete_faq',
     'delete_agency',
     'delete_support_request',
-    'delete_category'
+    'delete_category',
+    'trash_agency',
+    'restore_agency',
+    'force_delete_agency'
 ], true))
 
         {{-- Deletion actions represent the removal of an existing record. --}}
-        <span class="change-status deleted">
+        <span class="change-status {{ 
+    $log->action === 'restore_agency'
+        ? 'created'
+        : 'deleted'
+}}">
 
     @switch($log->action)
 
@@ -381,6 +362,18 @@
 
         @case('delete_support_request')
             Deleted Support Request
+            @break
+
+        @case('trash_agency')
+            Agency Trashed
+            @break
+
+        @case('restore_agency')
+            Agency Restored
+            @break
+
+        @case('force_delete_agency')
+            Agency Permanently Deleted
             @break
 
     @endswitch
@@ -580,6 +573,42 @@
 
         </div>
 
+        @elseif(in_array($log->action, [
+    'search_agency',
+    'view_agency',
+    'get_directions',
+    'contact_agency',
+    'filter_category'
+], true))
+
+    <span class="change-status">
+
+        @switch($log->action)
+
+            @case('search_agency')
+                Searched for agency
+                @break
+
+            @case('view_agency')
+                Viewed agency details
+                @break
+
+            @case('get_directions')
+                Requested directions to agency
+                @break
+
+            @case('contact_agency')
+                {{ $log->description ?? 'Contacted agency' }}
+                @break
+
+            @case('filter_category')
+                Applied category filter
+                @break
+
+        @endswitch
+
+    </span>
+
     @elseif($log->action === 'delete_admin')
 
         <span class="change-status deleted">
@@ -648,6 +677,7 @@
 
             </div>
 
+
         @else
 
             <span class="change-status">
@@ -663,58 +693,35 @@
 
 
 
-
-
-
-
-                    <!-- CONTEXT -->
-<td>
-
-    @if($log->agency)
-
-        {{-- Agency-related context --}}
-        <span class="log-context agency-context">
-            {{ $log->agency->agency_name }}
-        </span>
-
-    @elseif(in_array($log->action, [
-    'invite_admin',
-    'approve_admin',
-    'promote_admin',
-    'demote_admin',
-    'delete_admin'
-], true))
-
-    {{-- Admin-management actions affect an administrator account. --}}
-    <span class="log-context admin-context">
-        Admin Account
-    </span>
-
-@else
-
-    {{-- Other system/user activity has its own context. --}}
-    <span class="log-context system-context">
-        {{ ucfirst(str_replace('_', ' ', $log->page ?? 'System')) }}
-    </span>
-
-@endif
-
-</td>
-
                     <!-- PAGE -->
-                    <td>
-                        {{ ucfirst(str_replace('_', ' ', $log->page)) }}
+                    <td
+                        class="col-page page-cell"
+                        title="{{ $log->page_label }}"
+                    >
+                        {{ $log->page_label }}
                     </td>
 
                     <!-- DATE -->
-                    <td>
-                        {{ $log->created_at->format('M d, Y H:i') }}
+                    <td class="col-date">
+
+                        <div class="date-cell">
+
+                            <span>
+                                {{ $log->created_at->format('M d, Y') }}
+                            </span>
+
+                            <span>
+                                {{ $log->created_at->format('H:i') }}
+                            </span>
+
+                        </div>
+
                     </td>
 
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="empty">
+                    <td colspan="6" class="empty">
                         No logs found.
                     </td>
                 </tr>
@@ -723,6 +730,7 @@
             </tbody>
 
         </table>
+        </div>
 
         <!-- FOOTER -->
         <div class="footer">
@@ -769,7 +777,7 @@
 
             </div>
 
-        </div>
+        
 
     </div>
 
@@ -819,75 +827,250 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalNew = document.getElementById('modalNew');
     const closeBtn = document.getElementById('closeModal');
 
-    /* ================= FORMAT FUNCTION ================= */
+
+    /* =========================================================
+       HTML ESCAPING
+       ========================================================= */
+
     function escapeHtml(value) {
 
-    const div = document.createElement('div');
+        /*
+         * Create a temporary DOM element.
+         *
+         * textContent treats the supplied value as plain text,
+         * not executable HTML.
+         *
+         * This protects the audit modal against stored XSS when
+         * displaying database-controlled values.
+         */
+        const div = document.createElement('div');
 
-    div.textContent = String(value);
+        div.textContent = String(value ?? '');
 
-    return div.innerHTML;
-}
-
-
-function formatData(value) {
-
-    /*
-     * NULL means there was no previous/new state.
-     */
-    if (
-        value === null ||
-        value === undefined ||
-        value === '' ||
-        value === 'null'
-    ) {
-        return `
-            <div class="data-value">
-                No recorded data
-            </div>
-        `;
+        /*
+         * Returning innerHTML gives us the safely escaped
+         * representation that can be inserted using innerHTML.
+         */
+        return div.innerHTML;
     }
 
-    try {
 
-        let parsed = JSON.parse(value);
+    /* =========================================================
+       READABLE FIELD LABEL
+       ========================================================= */
 
-        /*
-         * Handle accidentally double-encoded JSON.
-         */
-        if (typeof parsed === 'string') {
-            parsed = JSON.parse(parsed);
-        }
+    function formatLabel(key) {
 
         /*
-         * Handle simple non-object values.
+         * Convert database-style field names:
+         *
+         * agency_name
+         *
+         * into:
+         *
+         * Agency Name
          */
-        if (
-            typeof parsed !== 'object' ||
-            parsed === null ||
-            Array.isArray(parsed)
-        ) {
+        return String(key)
+            .replaceAll('_', ' ')
+            .replace(/\b\w/g, letter => letter.toUpperCase());
+    }
+
+
+    /* =========================================================
+       CONTACT VALUE FORMATTER
+       ========================================================= */
+
+    function formatContacts(contacts) {
+
+        /*
+         * Make sure we actually received an array.
+         *
+         * This prevents malformed audit data from breaking
+         * the entire modal.
+         */
+        if (!Array.isArray(contacts) || contacts.length === 0) {
+
             return `
                 <div class="data-value">
-                    ${escapeHtml(parsed)}
+                    No contact information
                 </div>
             `;
         }
 
-        let html = '';
 
-        Object.entries(parsed).forEach(([key, val]) => {
+        /*
+         * Create one visual block for every contact.
+         */
+        return contacts.map(contact => {
 
-            const label = key
-                .replaceAll('_', ' ')
-                .replace(/\b\w/g, letter => letter.toUpperCase());
+            /*
+             * Safely retrieve the contact properties.
+             *
+             * The backend snapshot currently provides:
+             *
+             * type
+             * type_slug
+             * label
+             * value
+             * is_primary
+             * sort_order
+             */
+            const type =
+                contact?.type ||
+                contact?.type_slug ||
+                'Contact';
 
+            const label =
+                contact?.label ||
+                '';
+
+            const value =
+                contact?.value ??
+                'No value';
+
+            const isPrimary =
+                contact?.is_primary === true ||
+                contact?.is_primary === 1 ||
+                contact?.is_primary === '1';
+
+
+            /*
+             * Build the optional custom label.
+             */
+            const labelHtml = label
+                ? `
+                    <div class="contact-audit-label">
+                        ${escapeHtml(label)}
+                    </div>
+                `
+                : '';
+
+
+            /*
+             * Primary status is represented visually but
+             * remains text-based for accessibility.
+             */
+            const primaryHtml = isPrimary
+                ? `
+                    <span class="contact-audit-primary">
+                        Primary
+                    </span>
+                `
+                : '';
+
+
+            /*
+             * Every contact becomes its own compact card.
+             */
+            return `
+                <div class="contact-audit-item">
+
+                    <div class="contact-audit-header">
+
+                        <span class="contact-audit-type">
+                            ${escapeHtml(type)}
+                        </span>
+
+                        ${primaryHtml}
+
+                    </div>
+
+                    ${labelHtml}
+
+                    <div class="contact-audit-value">
+                        ${escapeHtml(value)}
+                    </div>
+
+                </div>
+            `;
+
+        }).join('');
+    }
+
+
+    /* =========================================================
+       GENERIC OBJECT FORMATTER
+       ========================================================= */
+
+    function formatObject(object) {
+
+        /*
+         * Object.entries() converts an object into
+         * [key, value] pairs that we can safely iterate.
+         */
+        return Object.entries(object).map(([key, value]) => {
+
+            const label = formatLabel(key);
+
+
+            /*
+             * CONTACTS GET THEIR OWN SPECIAL FORMAT.
+             *
+             * This is the important fix for:
+             *
+             * [object Object],[object Object]
+             */
+            if (key === 'contacts' && Array.isArray(value)) {
+
+                return `
+                    <div class="data-row">
+
+                        <div class="data-label">
+                            ${escapeHtml(label)}
+                        </div>
+
+                        <div class="contact-audit-list">
+                            ${formatContacts(value)}
+                        </div>
+
+                    </div>
+                `;
+            }
+
+
+            /*
+             * Nested arrays/objects other than contacts should
+             * still be displayed safely instead of becoming
+             * [object Object].
+             */
+            if (
+                Array.isArray(value) ||
+                (
+                    typeof value === 'object' &&
+                    value !== null
+                )
+            ) {
+
+                return `
+                    <div class="data-row">
+
+                        <div class="data-label">
+                            ${escapeHtml(label)}
+                        </div>
+
+                        <div class="data-value">
+
+                            ${formatNestedValue(value)}
+
+                        </div>
+
+                    </div>
+                `;
+            }
+
+
+            /*
+             * Normal scalar database values.
+             */
             const displayValue =
-                val === null || val === ''
+                value === null ||
+                value === undefined ||
+                value === ''
                     ? 'No value'
-                    : val;
+                    : value;
 
-            html += `
+
+            return `
                 <div class="data-row">
 
                     <div class="data-label">
@@ -900,21 +1083,218 @@ function formatData(value) {
 
                 </div>
             `;
-        });
 
-        return html;
-
-    } catch {
-
-        return `
-            <div class="data-value">
-                ${escapeHtml(value)}
-            </div>
-        `;
+        }).join('');
     }
-}
 
-    /* ================= OPEN MODAL ================= */
+
+    /* =========================================================
+       NESTED VALUE FORMATTER
+       ========================================================= */
+
+    function formatNestedValue(value) {
+
+        /*
+         * Arrays are formatted one item at a time.
+         */
+        if (Array.isArray(value)) {
+
+            return value.map(item => {
+
+                /*
+                 * Nested objects should be represented as
+                 * structured JSON rather than [object Object].
+                 */
+                if (
+                    typeof item === 'object' &&
+                    item !== null
+                ) {
+
+                    return `
+                        <div class="nested-object">
+                            ${formatObject(item)}
+                        </div>
+                    `;
+                }
+
+
+                return `
+                    <div class="data-value">
+                        ${escapeHtml(item)}
+                    </div>
+                `;
+
+            }).join('');
+        }
+
+
+        /*
+         * Nested object.
+         */
+        if (
+            typeof value === 'object' &&
+            value !== null
+        ) {
+
+            return `
+                <div class="nested-object">
+                    ${formatObject(value)}
+                </div>
+            `;
+        }
+
+
+        /*
+         * Scalar fallback.
+         */
+        return escapeHtml(
+            value === null ||
+            value === undefined ||
+            value === ''
+                ? 'No value'
+                : value
+        );
+    }
+
+
+    /* =========================================================
+       MAIN AUDIT DATA FORMATTER
+       ========================================================= */
+
+    function formatData(value) {
+
+        /*
+         * NULL means there was no previous/new state.
+         */
+        if (
+            value === null ||
+            value === undefined ||
+            value === '' ||
+            value === 'null'
+        ) {
+
+            return `
+                <div class="data-value">
+                    No recorded data
+                </div>
+            `;
+        }
+
+
+        try {
+
+            let parsed = value;
+
+
+            /*
+             * data-* attributes always arrive from HTML as strings.
+             *
+             * Therefore JSON must normally be decoded here.
+             */
+            if (typeof parsed === 'string') {
+
+                parsed = JSON.parse(parsed);
+
+
+                /*
+                 * Handle accidentally double-encoded JSON.
+                 */
+                if (typeof parsed === 'string') {
+
+                    try {
+                        parsed = JSON.parse(parsed);
+                    } catch {
+                        /*
+                         * If the second parse fails, the first
+                         * decoded string is still usable.
+                         */
+                    }
+                }
+            }
+
+
+            /*
+             * Handle simple scalar values.
+             */
+            if (
+                typeof parsed !== 'object' ||
+                parsed === null
+            ) {
+
+                return `
+                    <div class="data-value">
+                        ${escapeHtml(parsed)}
+                    </div>
+                `;
+            }
+
+
+            /*
+             * A top-level array can occur in older audit records.
+             *
+             * Format it safely instead of converting it into
+             * comma-separated [object Object] values.
+             */
+            if (Array.isArray(parsed)) {
+
+                /*
+                 * If the array looks like a contact collection,
+                 * render it using the specialized contact UI.
+                 */
+                if (
+                    parsed.length === 0 ||
+                    parsed.every(item =>
+                        item &&
+                        typeof item === 'object' &&
+                        (
+                            'value' in item ||
+                            'type' in item ||
+                            'type_slug' in item
+                        )
+                    )
+                ) {
+
+                    return `
+                        <div class="contact-audit-list">
+                            ${formatContacts(parsed)}
+                        </div>
+                    `;
+                }
+
+
+                /*
+                 * Generic array fallback.
+                 */
+                return formatNestedValue(parsed);
+            }
+
+
+            /*
+             * Normal structured audit object.
+             */
+            return formatObject(parsed);
+
+        } catch (error) {
+
+            /*
+             * Never allow malformed historical audit data to
+             * break the modal.
+             *
+             * Fall back to escaped plain text.
+             */
+            return `
+                <div class="data-value">
+                    ${escapeHtml(value)}
+                </div>
+            `;
+        }
+    }
+
+
+    /* =========================================================
+       OPEN MODAL
+       ========================================================= */
+
     document.querySelectorAll('.log-row').forEach(row => {
 
         row.addEventListener('click', () => {
@@ -922,92 +1302,145 @@ function formatData(value) {
             const oldVal = row.dataset.old;
             const newVal = row.dataset.new;
 
+
+            /*
+             * Render the previous state first.
+             */
             modalOld.innerHTML = formatData(oldVal);
 
-if (
-    row.dataset.action === 'delete_faq' ||
-    row.dataset.action === 'delete_agency' ||
-    row.dataset.action === 'delete_category' ||
-    row.dataset.action === 'delete_admin' ||
-    row.dataset.action === 'delete_support_request'
-) {
 
-    /*
-     * A deletion has no new database state.
-     *
-     * We display an explicit audit event instead of
-     * showing an empty or misleading NULL value.
-     */
-    modalNew.innerHTML = `
-        <div class="data-value">
-            Data deleted
-        </div>
-    `;
+            /*
+             * Destructive actions don't have a meaningful
+             * "new database state".
+             */
+            if (
+                row.dataset.action === 'delete_faq' ||
+                row.dataset.action === 'delete_agency' ||
+                row.dataset.action === 'delete_category' ||
+                row.dataset.action === 'delete_admin' ||
+                row.dataset.action === 'delete_support_request' ||
+                row.dataset.action === 'trash_agency' ||
+                row.dataset.action === 'force_delete_agency'
+            ) {
 
-} else if (
-    row.dataset.action === 'create_faq' ||
-    row.dataset.action === 'create_agency' ||
-    row.dataset.action === 'create_category'
-) {
+                modalNew.innerHTML = `
+                    <div class="data-value">
 
-    /*
-     * A creation has no previous database state.
-     */
-    modalOld.innerHTML = `
-        <div class="data-value">
-            No previous data
-        </div>
-    `;
+                        ${
+                            row.dataset.action === 'trash_agency'
+                                ? 'Agency moved to trash'
+                                : row.dataset.action === 'force_delete_agency'
+                                    ? 'Agency permanently deleted'
+                                    : 'Data deleted'
+                        }
 
-    /*
-     * The new audit snapshot contains the created record.
-     */
-    modalNew.innerHTML = formatData(newVal);
+                    </div>
+                `;
 
-} else {
+            } else if (
+                row.dataset.action === 'restore_agency'
+            ) {
 
-    /*
-     * Update and all other audit records show their
-     * actual old/new snapshots.
-     */
-    modalNew.innerHTML = formatData(newVal);
-}
+                modalOld.innerHTML = `
+                    <div class="data-value">
+                        Agency was in trash
+                    </div>
+                `;
+
+                modalNew.innerHTML = `
+                    <div class="data-value">
+                        Agency restored to active records
+                    </div>
+                `;
+
+            } else if (
+                row.dataset.action === 'create_faq' ||
+                row.dataset.action === 'create_agency' ||
+                row.dataset.action === 'create_category'
+            ) {
+
+                modalOld.innerHTML = `
+                    <div class="data-value">
+                        No previous data
+                    </div>
+                `;
+
+                modalNew.innerHTML = formatData(newVal);
+
+            } else {
+
+                /*
+                 * Normal update action.
+                 */
+                modalNew.innerHTML = formatData(newVal);
+            }
 
 
-
-
-
-
+            /*
+             * Display the modal.
+             */
             modal.classList.add('active');
 
-            // 🔥 LOCK BACKGROUND SCROLL
+
+            /*
+             * Prevent the page behind the modal from scrolling.
+             */
             document.body.style.overflow = 'hidden';
+
         });
 
     });
 
-    /* ================= CLOSE MODAL ================= */
-    function closeModal(){
+
+    /* =========================================================
+       CLOSE MODAL
+       ========================================================= */
+
+    function closeModal() {
+
         modal.classList.remove('active');
 
-        // 🔓 RESTORE SCROLL
+        /*
+         * Restore normal page scrolling.
+         */
         document.body.style.overflow = '';
     }
 
-    closeBtn.addEventListener('click', closeModal);
 
-    /* click outside */
-    modal.addEventListener('click', (e) => {
-        if(e.target === modal){
+    closeBtn.addEventListener(
+        'click',
+        closeModal
+    );
+
+
+    /* =========================================================
+       CLOSE WHEN CLICKING THE BACKDROP
+       ========================================================= */
+
+    modal.addEventListener('click', event => {
+
+        /*
+         * Only close when the actual backdrop is clicked.
+         *
+         * Clicking inside the modal content does nothing.
+         */
+        if (event.target === modal) {
             closeModal();
         }
+
     });
 
-    /* ESC key (PRO FEATURE) */
-    document.addEventListener('keydown', (e) => {
-        if(e.key === 'Escape'){
+
+    /* =========================================================
+       CLOSE WITH ESCAPE
+       ========================================================= */
+
+    document.addEventListener('keydown', event => {
+
+        if (event.key === 'Escape') {
             closeModal();
         }
+
     });
 
 });

@@ -234,20 +234,50 @@ html, body{
 
 /* suggestion pills */
 .suggestion{
+    appearance: none;
+    border: 1px solid #e5e7eb;
+
     white-space: nowrap;
+
     padding: 8px 14px;
+
     border-radius: 999px;
-    background: #f1f3f5;
+
+    background: #f8fafc;
+    color: #1f2937;
+
+    font: inherit;
     font-size: 0.8rem;
+
     cursor: pointer;
-    transition: all 0.25s ease;
+
+    transition:
+        transform 0.2s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+
     user-select: none;
     -webkit-user-drag: none;
 }
 
 .suggestion:hover{
-    background: #e4e6eb;
+    background: #ffffff;
+    border-color: #d8dee8;
+
     transform: translateY(-2px);
+
+    box-shadow:
+        0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.suggestion:active{
+    transform: translateY(0) scale(0.98);
+}
+
+.suggestion:focus-visible{
+    outline: 2px solid #93c5fd;
+    outline-offset: 2px;
 }
 
 /* pause on hover (PRO UX) */
@@ -272,6 +302,14 @@ html, body{
     padding:10px;
     border-radius:10px;
     max-width:70%;
+
+    /*
+     * Prevent long URLs and other unbroken content
+     * from expanding the chatbot horizontally.
+     */
+    min-width:0;
+    overflow-wrap:anywhere;
+    word-break:break-word;
 }
 
 .user .bubble{
@@ -281,6 +319,43 @@ html, body{
 
 .bot .bubble{
     background:#e4e6eb;
+}
+
+/* ================= CHATBOT LINKS ================= */
+
+.chatbot-link{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+
+    max-width:100%;
+
+    color:#2563eb;
+    font-size:0.82rem;
+    font-weight:500;
+
+    text-decoration:none;
+
+    overflow-wrap:anywhere;
+    word-break:break-word;
+
+    transition:
+        color 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.chatbot-link:hover{
+    color:#1d4ed8;
+    text-decoration:underline;
+}
+
+.chatbot-link:active{
+    opacity:0.75;
+}
+
+.chatbot-link i{
+    flex-shrink:0;
+    font-size:14px;
 }
 
 #inputArea{
@@ -304,14 +379,49 @@ html, body{
     padding:10px;
 }
 
+/* ================= SEND BUTTON ================= */
+
 .chatbot-btn{
-    background-color: transparent;
+    width:42px;
+    height:42px;
+
+    flex-shrink:0;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
     border:none;
+    border-radius:50%;
+
+    background:#0084ff;
+    color:#ffffff;
+
+    cursor:pointer;
+
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease,
+        opacity 0.2s ease;
 }
 
-.chatbot-btn img{
-    width:40px;
-    height: 40px;
+.chatbot-btn:hover{
+    background:#0077e6;
+    transform:translateY(-1px);
+}
+
+.chatbot-btn:active{
+    transform:scale(0.94);
+}
+
+.chatbot-btn:focus-visible{
+    outline:2px solid #93c5fd;
+    outline-offset:2px;
+}
+
+.chatbot-btn i{
+    font-size:19px;
+    line-height:1;
 }
 
 .user-message-animate {
@@ -445,8 +555,10 @@ html, body{
 .chat-image img{
     width:100%;
     max-width:220px;
+    height:auto;
     border-radius:10px;
     display:block;
+    cursor:pointer;
 }
 
 #image-modal{
@@ -524,4 +636,16 @@ html, body{
 
 .fallback-human-btn:hover {
     background: #e5e7eb;
+}
+
+@media (prefers-reduced-motion: reduce){
+
+    .suggestion-track{
+        animation: none !important;
+        transform: none !important;
+    }
+
+    .suggestion{
+        transition: none;
+    }
 }

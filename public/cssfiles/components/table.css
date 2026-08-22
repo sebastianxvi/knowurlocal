@@ -1,317 +1,706 @@
-/* ========================
-   TABLE WRAPPER
-======================== */
-.table-wrapper{
-    background:rgba(255,255,255,0.85); /* glass feel */
-    backdrop-filter:blur(10px);
+/* =========================================================
+   GLOBAL TABLE SYSTEM
+   ========================================================= */
 
-    border-radius:18px;
+
+/* =========================================================
+   TABLE WRAPPER
+   ========================================================= */
+
+.table-wrapper {
+    /*
+     * The wrapper owns the visual container of every table.
+     *
+     * Individual pages should only override behavior when
+     * their table has special requirements.
+     */
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+
+    background: rgba(255, 255, 255, 0.85);
+
+    backdrop-filter: blur(10px);
+
+    border: 1px solid rgba(255, 255, 255, 0.3);
+
+    border-radius: 18px;
 
     box-shadow:
-        0 10px 30px rgba(0,0,0,0.08),
-        0 2px 6px rgba(0,0,0,0.04); /* layered shadow */
+        0 10px 30px rgba(0, 0, 0, 0.08),
+        0 2px 6px rgba(0, 0, 0, 0.04);
 
-    border:1px solid rgba(255,255,255,0.3);
+    /*
+     * Desktop tables should normally fit naturally.
+     *
+     * Pages that need horizontal scrolling on smaller
+     * screens can enable it through a media query.
+     */
+    overflow: hidden;
 }
 
-/* ========================
+
+/* =========================================================
    TABLE BASE
-======================== */
-.table{
-    width:100%;
-    border-collapse:collapse;
+   ========================================================= */
+
+.table {
+    width: 100%;
+
+    max-width: 100%;
+
+    /*
+     * Do not force a large minimum width.
+     *
+     * A value such as min-width: 900px would force
+     * horizontal scrolling even when it isn't necessary.
+     */
+    min-width: 0;
+
+    border-collapse: collapse;
+
+    /*
+     * Allows the browser to determine column widths based
+     * on the available space and actual content.
+     */
+    table-layout: auto;
 }
 
-/* HEADER */
-.table thead{
-    background:rgba(31,58,95,0.05); /* subtle brand tint */
+
+/* =========================================================
+   TABLE HEADER
+   ========================================================= */
+
+.table thead {
+    background: rgba(31, 58, 95, 0.05);
 }
 
-.table th{
-    color:var(--blue-main);
-    font-weight:700;
-    letter-spacing:0.3px;
+
+.table th {
+    /*
+     * Shared table header appearance.
+     *
+     * Individual pages may override alignment.
+     */
+    padding: 11px 14px;
+
+    color: var(--blue-main);
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.3px;
+
+    white-space: nowrap;
+
+    border-bottom: 1px solid #e5e7eb;
+
+    vertical-align: middle;
 }
 
-/* CELLS */
-.table th,
-.table td{
-    padding:10px 12px;
-    text-align:center;
-    font-size:13px;
-    color:var(--text-main);
+
+/* =========================================================
+   TABLE CELLS
+   ========================================================= */
+
+.table td {
+    padding: 12px 14px;
+
+    text-align: center;
+
+    font-size: 13px;
+
+    color: var(--text-main);
+
+    vertical-align: middle;
+
+    /*
+     * Long emails, addresses, agency names, etc. should
+     * wrap rather than force the entire page wider.
+     */
+    white-space: normal;
+
+    overflow-wrap: anywhere;
+
+    word-break: break-word;
+
+    border-bottom: 1px solid #f1f5f9;
 }
 
-/* ROWS */
-.table tbody tr{
-    transition:all 0.2s ease;
-}
-
-.table tbody tr:hover{
-    background:rgba(31,58,95,0.05);
-    transform:scale(1.005); /* subtle lift */
-}
-
-/* ========================
-   BADGES
-======================== */
-.badge{
-    padding:6px 12px;
-    border-radius:999px; /* smoother pill */
-    font-size:12px;
-    font-weight:600;
-    letter-spacing:0.3px;
-}
-
-/* ========================
-   ACTOR CELL
-======================== */
-.actor-cell{
-    display:flex;
-    align-items:center;
-    justify-content:center; /* since your table is centered */
-    gap:8px;
-}
-
-/* ========================
-   ROLE BADGE
-======================== */
-.role-badge{
-    padding:4px 10px;
-    border-radius:999px;
-    font-size:11px;
-    font-weight:600;
-    letter-spacing:0.3px;
-}
-
-/* ADMIN */
-.role-badge.admin{
-    background:#dbeafe;
-    color:#1e3a8a;
-}
-
-/* USER */
-.role-badge.user{
-    background:#dcfce7;
-    color:#166534;
-}
-
-/* fallback */
-.role-badge.guest{
-    background:#f3f4f6;
-    color:#374151;
-}
-
-/* name */
-.actor-name{
-    font-size:14px;
-    color:var(--text-main);
-}
-
-.badge.login{ background:#e0f2fe; color:#0284c7; }
-.badge.logout{ background:#fee2e2; color:#dc2626; }
-.badge.navigate{ background:#dcfce7; color:#16a34a; }
-.badge.view_agency{ background:#fef3c7; color:#b45309; }
-.badge.view_map{ background:#ede9fe; color:#6d28d9; }
-
-
-/* ========================
-   PAGINATION
-======================== */
-.pagination-modern{
-    display:flex;
-    align-items:center;
-    gap:12px;
-}
-
-.pagination-modern .arrow i{
-    font-size:14px;
-    color:inherit;
-}
-
-/* BASE ARROW */
-.pagination-modern .arrow{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    width:32px;
-    height:32px;
-
-    border-radius:50%;
-
-    background:#eef2f7; /* 🔥 softer base */
-    color:#374151;       /* 🔥 visible icon */
-
-    transition:all 0.2s ease;
-}
-
-/* ACTIVE / CLICKABLE */
-.pagination-modern a.arrow{
-    background:var(--blue-main);
-    color:#ffffff;
-}
-
-/* HOVER (only clickable) */
-.pagination-modern a.arrow:hover{
-    background:#162c47;
-    transform:scale(1.05);
-}
-
-/* DISABLED */
-.pagination-modern .disabled{
-    background:#f3f4f6;
-    color:#9ca3af;   /* 🔥 muted but visible */
-    cursor:not-allowed;
-}
-
-/* ICON SIZE */
-.pagination-modern .arrow svg{
-    width:14px;
-    height:14px;
-}
-
-.page-indicator{
-    font-weight:600;
-    color:var(--blue-main);
-}
-
-/* ========================
-   EMPTY STATE
-======================== */
-.empty{
-    text-align:center;
-    padding:30px;
-    color:var(--text-muted);
-}
-
-/* ========================
-   TABLE FOOTER (FIX)
-======================== */
-.footer{
-    display:flex;
-    justify-content:space-between; /* 🔥 spreads left/right */
-    align-items:center;
-    padding:12px 16px;
-    flex-wrap:wrap; /* prevents overflow on small screens */
-}
-
-.result-info{
-    font-size:13px;
-    color:var(--text-muted);
-}
-
-/* ================= BUTTON SYSTEM ================= */
-
-/* BASE BUTTON */
-/* ACTION BUTTON CONTAINER */
-.tablebtn{
-    display:flex;              /* 🔥 makes children horizontal */
-    align-items:center;        /* vertical alignment */
-    justify-content:center;    /* center inside table cell */
-    gap:6px;                   /* spacing between buttons */
-}
-
-/* 🔥 FIX FORM BREAKING LAYOUT */
-.tablebtn form{
-    display:inline;            /* prevents line break */
-    margin:0;                  /* remove default spacing */
-}
-
-.btn{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-
-    padding:5px 12px;
-    font-size:12px;
-
-    border:none;
-    border-radius:999px;
-
-    cursor:pointer;
-    transition:all 0.2s ease;
-}
-
-/* PRIMARY (VIEW / EDIT) */
-.btn-primary{
-    background:#e0f2fe;
-    color:#0369a1;
-}
-
-.btn-primary:hover{
-    background:#bae6fd;
-    transform:translateY(-1px);
-}
-
-/* DANGER (DELETE) */
-.btn-danger{
-    background:#fee2e2;
-    color:#b91c1c;
-}
-
-.btn-danger:hover{
-    background:#fecaca;
-    transform:translateY(-1px);
-}
-
-/* ================= FAQ ACTION ================= */
 
 /*
- * "To FAQ" is an <a> element rather than a <button>.
- *
- * The shared .btn class already provides:
- * - inline-flex layout
- * - padding
- * - font size
- * - pill shape
- * - cursor
- * - transition
- *
- * Therefore this class only defines the FAQ-specific color.
+ * Remove the separator from the final row.
  */
-.btn-secondary {
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+
+/* =========================================================
+   TABLE ROWS
+   ========================================================= */
+
+.table tbody tr {
+    transition:
+        background-color 0.2s ease;
+}
+
+
+/*
+ * Subtle hover only.
+ *
+ * We intentionally do not scale the row because scaling
+ * table rows can cause visual jitter and overflow.
+ */
+.table tbody tr:hover {
+    background: rgba(31, 58, 95, 0.05);
+}
+
+
+/* =========================================================
+   BADGES
+   ========================================================= */
+
+.badge {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 6px 12px;
+
+    border-radius: 999px;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    letter-spacing: 0.3px;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   ACTOR CELL
+   ========================================================= */
+
+.actor-cell {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 8px;
+
+    min-width: 0;
+}
+
+
+.actor-name {
+    font-size: 14px;
+
+    color: var(--text-main);
+}
+
+
+/* =========================================================
+   ROLE BADGE
+   ========================================================= */
+
+.role-badge {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 4px 10px;
+
+    border-radius: 999px;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    letter-spacing: 0.3px;
+
+    white-space: nowrap;
+}
+
+
+/* ADMIN */
+
+.role-badge.admin {
+    background: #dbeafe;
+
+    color: #1e3a8a;
+}
+
+
+/* USER */
+
+.role-badge.user {
+    background: #dcfce7;
+
+    color: #166534;
+}
+
+
+/* GUEST / FALLBACK */
+
+.role-badge.guest {
+    background: #f3f4f6;
+
+    color: #374151;
+}
+
+
+/* =========================================================
+   ACTION BADGES
+   ========================================================= */
+
+.badge.login {
+    background: #e0f2fe;
+
+    color: #0284c7;
+}
+
+
+.badge.logout {
+    background: #fee2e2;
+
+    color: #dc2626;
+}
+
+
+.badge.navigate {
+    background: #dcfce7;
+
+    color: #16a34a;
+}
+
+
+.badge.view_agency {
+    background: #fef3c7;
+
+    color: #b45309;
+}
+
+
+.badge.view_map {
     background: #ede9fe;
+
     color: #6d28d9;
 }
 
+
+/* =========================================================
+   TABLE BUTTON GROUP
+   ========================================================= */
+
+.tablebtn {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 6px;
+
+    flex-wrap: nowrap;
+
+    max-width: 100%;
+}
+
+
 /*
- * Match the existing button hover behavior.
- *
- * We intentionally use the same translateY movement as
- * .btn-primary and .btn-danger for visual consistency.
+ * Forms inside table action groups should not introduce
+ * unwanted spacing or line breaks.
  */
-.btn-secondary:hover {
-    background: #ddd6fe;
-    color: #5b21b6;
+.tablebtn form {
+    display: inline;
+
+    margin: 0;
+}
+
+
+/* =========================================================
+   SHARED BUTTON
+   ========================================================= */
+
+.btn {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 5px;
+
+    padding: 5px 12px;
+
+    font-size: 12px;
+
+    border: none;
+
+    border-radius: 999px;
+
+    cursor: pointer;
+
+    text-decoration: none;
+
+    white-space: nowrap;
+
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/* =========================================================
+   PRIMARY BUTTON
+   ========================================================= */
+
+.btn-primary {
+    background: #e0f2fe;
+
+    color: #0369a1;
+}
+
+
+.btn-primary:hover {
+    background: #bae6fd;
+
     transform: translateY(-1px);
 }
 
+
+/* =========================================================
+   DANGER BUTTON
+   ========================================================= */
+
+.btn-danger {
+    background: #fee2e2;
+
+    color: #b91c1c;
+}
+
+
+.btn-danger:hover {
+    background: #fecaca;
+
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   SECONDARY / FAQ BUTTON
+   ========================================================= */
+
+.btn-secondary {
+    background: #ede9fe;
+
+    color: #6d28d9;
+}
+
+
+.btn-secondary:hover {
+    background: #ddd6fe;
+
+    color: #5b21b6;
+
+    transform: translateY(-1px);
+}
+
+
 /*
- * Remove the browser's default link decoration because
- * the FAQ action is an <a> element.
+ * FAQ links should not receive browser default
+ * underline or visited-link colors.
  */
 .tablebtn .faq-btn {
     text-decoration: none;
 }
 
-/*
- * Preserve the FAQ color even after the link has been visited.
- *
- * Otherwise the browser may apply its default purple
- * visited-link color.
- */
+
 .tablebtn .faq-btn:visited {
     color: #6d28d9;
 }
 
-/*
- * Give keyboard users a clear focus indicator without
- * changing the normal visual appearance.
- */
+
 .tablebtn .faq-btn:focus-visible {
     outline: none;
 
     box-shadow:
         0 0 0 3px rgba(109, 40, 217, 0.12);
+}
+
+
+/* =========================================================
+   PAGINATION
+   ========================================================= */
+
+.pagination-modern {
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   PAGINATION ARROW
+   ========================================================= */
+
+.pagination-modern .arrow {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 30px;
+
+    height: 30px;
+
+    border-radius: 8px;
+
+    background: #ffffff;
+
+    border: 1px solid #e5e7eb;
+
+    color: #64748b;
+
+    text-decoration: none;
+
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease,
+        transform 0.18s ease;
+}
+
+
+/*
+ * Phosphor icon.
+ */
+.pagination-modern .arrow i {
+    font-size: 15px;
+
+    opacity: 0.9;
+}
+
+
+/*
+ * SVG support in case another table uses SVG icons.
+ */
+.pagination-modern .arrow svg {
+    width: 14px;
+
+    height: 14px;
+}
+
+
+/* HOVER */
+
+.pagination-modern .arrow:not(.disabled):hover {
+    background: #f8fafc;
+
+    border-color: #cbd5e1;
+
+    color: #334155;
+
+    transform: translateY(-1px);
+}
+
+
+/* ACTIVE */
+
+.pagination-modern .arrow:not(.disabled):active {
+    transform: translateY(0);
+
+    background: #f1f5f9;
+}
+
+
+/* DISABLED */
+
+.pagination-modern .arrow.disabled {
+    opacity: 0.4;
+
+    cursor: not-allowed;
+
+    background: #f8fafc;
+}
+
+
+/* =========================================================
+   PAGE INDICATOR
+   ========================================================= */
+
+.page-indicator {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    min-width: 62px;
+
+    height: 30px;
+
+    padding: 0 10px;
+
+    border-radius: 8px;
+
+    background: #f8fafc;
+
+    border: 1px solid #eef2f7;
+
+    color: #475569;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   TABLE FOOTER
+   ========================================================= */
+
+.footer {
+    /*
+     * The footer is deliberately outside .table-wrapper.
+     *
+     * Therefore the table can scroll without dragging the
+     * pagination/result information with it.
+     */
+    width: 100%;
+
+    min-width: 0;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 16px;
+
+    margin-top: 8px;
+
+    padding: 10px 12px;
+
+    background: #ffffff;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 3px 12px rgba(15, 23, 42, 0.025);
+}
+
+
+/* =========================================================
+   RESULT INFORMATION
+   ========================================================= */
+
+.result-info {
+    font-size: 12px;
+
+    font-weight: 400;
+
+    color: #64748b;
+
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.empty {
+    padding: 50px 20px;
+
+    text-align: center;
+
+    color: var(--text-muted);
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   RESPONSIVE TABLE BEHAVIOR
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+    /*
+     * On smaller screens, the table itself becomes the only
+     * horizontally scrollable region.
+     *
+     * The footer and status tabs remain outside this region.
+     */
+    .table-wrapper {
+        overflow-x: auto;
+
+        overflow-y: auto;
+
+        -webkit-overflow-scrolling: touch;
+    }
+
+
+    /*
+     * Give the table enough room to remain readable on
+     * narrow screens.
+     *
+     * This is intentionally applied only at the breakpoint.
+     */
+    .table-wrapper .table {
+        min-width: 720px;
+    }
+
+
+    /*
+     * Keep the footer outside the horizontal scroll area.
+     */
+    .footer {
+        flex-wrap: wrap;
+    }
+}
+
+
+@media (max-width: 480px) {
+
+    .footer {
+        align-items: flex-start;
+
+        gap: 10px;
+    }
+
+
+    .result-info {
+        width: 100%;
+    }
+
+
+    .pagination-modern {
+        width: 100%;
+
+        justify-content: flex-end;
+    }
 }

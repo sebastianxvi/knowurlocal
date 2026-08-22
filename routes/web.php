@@ -11,8 +11,10 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\SupportRequestController;
+use App\Http\Controllers\UserActivityController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserLogController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -48,13 +50,34 @@ Route::get('/register', function () {
 Route::post('/register', [AuthController::class, 'register'])
     ->name('public.register.submit');
 
-// OTP
-Route::get('/otp', function () {
-    return view('otp');
+/*
+|--------------------------------------------------------------------------
+| OTP VERIFICATION
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/otp', function (Request $request) {
+
+    $availableAt = $request->session()->get(
+        'otp_resend_available_at'
+    );
+
+    $resendRemaining = $availableAt
+        ? max(0, $availableAt - now()->timestamp)
+        : 0;
+
+    return view('otp', compact(
+        'resendRemaining'
+    ));
+
 })->name('otp.page');
 
 Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])
     ->name('otp.verify');
+
+Route::post('/resend-otp', [AuthController::class, 'resendOtp'])
+    ->middleware('throttle:3,1')
+    ->name('otp.resend');
 
 /*
 |--------------------------------------------------------------------------
@@ -91,6 +114,24 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
 
     Route::get('/map', [PageController::class, 'map'])->name('map');
 
+    Route::post(
+        '/user/activity/agency',
+        [UserActivityController::class, 'agencyAction']
+    )->middleware('throttle:60,1');
+
+    Route::post(
+        '/user/activity/category',
+        [UserActivityController::class, 'categoryAction']
+    )->middleware('throttle:60,1');
+
+    Route::middleware('auth')
+    ->post(
+        '/my-inquiries/{id}/seen',
+        [SupportRequestController::class, 'markAnswerSeen']
+    )
+    ->middleware('throttle:60,1')
+    ->name('user.inquiries.seen');
+
     Route::get('/chat', fn() => view('public_user.chatbot'))->name('chat');
     Route::get('/chat/suggestions', [ChatbotController::class, 'suggestions']);
 
@@ -104,7 +145,8 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     Route::get('/api/agencies', [AgencyController::class, 'getAll']);
 
     // Chatbot
-    Route::post('/chat', [ChatbotController::class, 'ask']);
+    Route::post('/chat', [ChatbotController::class, 'ask'])
+        ->middleware('throttle:chatbot');
     Route::post('/chat/support', [ChatbotController::class, 'submitSupportRequest']);
 
     // FAQ (IMPORTANT — protect this too)
@@ -178,6 +220,11 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('admin.dashboard');
 
+    Route::get(
+        '/admin/dashboard/export',
+        [DashboardController::class, 'exportPdf']
+    )->name('admin.dashboard.export');
+
     // LOGS (we will restrict data later)
     Route::get('/logs', [UserLogController::class, 'index'])
         ->name('admin.logs');
@@ -242,6 +289,16 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
 
 // ================= SUPERADMIN ONLY =================
 Route::middleware(['auth', 'superadmin.only', 'no.cache'])->group(function () {
+
+Route::patch(
+    '/agencies/{id}/restore',
+    [AgencyController::class, 'restore']
+)->name('admin.agencies.restore');
+
+Route::delete(
+    '/agencies/{id}/force-delete',
+    [AgencyController::class, 'forceDestroy']
+)->name('admin.agencies.force-delete');
 
     // ADMIN MANAGEMENT PAGE
     Route::get('/admins', [AdminManagementController::class, 'admins'])

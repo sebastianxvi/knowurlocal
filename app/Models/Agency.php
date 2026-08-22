@@ -19,11 +19,6 @@ class Agency extends Model
         'agency_location',
         'agency_description',
         'services_offered',
-        'agency_landline',
-        'agency_hotline',
-        'agency_email',
-        'agency_website',
-        'agency_fb',
         'office_hours',
         'lat',
         'lng',
@@ -46,5 +41,13 @@ class Agency extends Model
     return $this->belongsTo(Category::class);
 }
 
+/**
+ * All contact information belonging to this agency.
+ */
+public function contacts()
+{
+    return $this->hasMany(AgencyContact::class)
+        ->orderBy('sort_order');
+}
     
 }

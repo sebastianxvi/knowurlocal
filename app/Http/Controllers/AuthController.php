@@ -79,10 +79,19 @@ class AuthController extends Controller
             ]);
 
             // 📧 Send OTP
-            Mail::raw("Your KNOWURLOCAL Admin OTP is: $otp", function ($message) use ($request) {
-                $message->to($request->email)
-                        ->subject('Admin Verification Code');
-            });
+            Mail::send(
+    'emails.otp-verification',
+    [
+        'otp' => $otp,
+        'isAdmin' => true,
+    ],
+    function ($message) use ($request) {
+
+        $message
+            ->to($request->email)
+            ->subject('KNOWURLOCAL | Email Verification');
+    }
+);
 
             return redirect('/otp?email=' . urlencode($request->email));
         }
@@ -106,10 +115,19 @@ class AuthController extends Controller
             'invite_token'  => null,
         ]);
 
-        Mail::raw("Your KNOWURLOCAL OTP is: $otp", function ($message) use ($request) {
-            $message->to($request->email)
-                    ->subject('Verification Code');
-        });
+        Mail::send(
+    'emails.otp-verification',
+    [
+        'otp' => $otp,
+        'isAdmin' => false,
+    ],
+    function ($message) use ($request) {
+
+        $message
+            ->to($request->email)
+            ->subject('KNOWURLOCAL | Email Verification');
+    }
+);
 
         return redirect('/otp?email=' . urlencode($request->email));
     }
@@ -174,15 +192,159 @@ class AuthController extends Controller
         // 🧹 Cleanup
         $record->delete();
 
-        // 🔐 Redirect properly
         if ($user->role === 'admin' || $user->role === 'superadmin') {
-            return redirect('/admin/login')
-                ->with('success', 'Admin account created. Please login.');
-        }
+    return redirect('/admin/login')
+        ->with(
+            'success',
+            'Your email has been verified successfully. Your admin account is now awaiting approval. You will be able to sign in once an administrator approves your account.'
+        );
+}
 
-        return redirect('/login-page')
-            ->with('success', 'Account created successfully.');
+return redirect('/login-page')
+    ->with(
+        'success',
+        'Your email has been verified. You can now log in to your KNOWURLOCAL account.'
+    );
     }
+
+
+    /**
+ * =========================
+ * 🔄 RESEND OTP
+ * =========================
+ */
+public function resendOtp(Request $request)
+{
+    /*
+     * Validate the email supplied by the OTP page.
+     */
+    $request->validate([
+        'email' => 'required|email',
+    ]);
+
+
+    /*
+     * Find the pending email verification record.
+     *
+     * This record tells us whether this is a public
+     * user registration or an administrator registration.
+     */
+    $record = EmailVerification::where(
+        'email',
+        $request->email
+    )->first();
+
+
+    /*
+     * If no pending verification exists, stop here.
+     */
+    if (!$record) {
+
+        return response()->json([
+            'success' => false,
+            'message' =>
+                'This verification request is no longer available. Please start the registration process again.',
+        ], 422);
+    }
+
+
+    /*
+     * Generate a new cryptographically secure OTP.
+     */
+    $otp = random_int(100000, 999999);
+
+
+    /*
+     * Replace the old OTP and reset its expiration.
+     *
+     * The previous OTP immediately becomes invalid.
+     */
+    $record->update([
+        'otp' => $otp,
+        'expires_at' => now()->addMinutes(10),
+    ]);
+
+    /*
+     * Store the resend cooldown in the session.
+     *
+     * This is important because the OTP page can reload
+     * after an incorrect verification attempt.
+     */
+    $request->session()->put(
+        'otp_resend_available_at',
+        now()->addSeconds(60)->timestamp
+    );
+
+
+    /*
+     * Determine whether the pending registration belongs
+     * to an administrator.
+     *
+     * We use the trusted database record instead of
+     * accepting a role from the browser.
+     */
+    $isAdmin =
+        in_array(
+            $record->role,
+            ['admin', 'superadmin'],
+            true
+        );
+
+
+    /*
+     * =========================
+     * 👑 ADMIN OTP
+     * =========================
+     */
+    if ($isAdmin) {
+
+    Mail::send(
+        'emails.otp-verification',
+        [
+            'otp' => $otp,
+            'isAdmin' => true,
+        ],
+        function ($message) use ($request) {
+
+            $message
+                ->to($request->email)
+                ->subject('KNOWURLOCAL | Email Verification');
+
+        }
+    );
+
+} else {
+
+    Mail::send(
+        'emails.otp-verification',
+        [
+            'otp' => $otp,
+            'isAdmin' => false,
+        ],
+        function ($message) use ($request) {
+
+            $message
+                ->to($request->email)
+                ->subject('KNOWURLOCAL | Email Verification');
+
+        }
+    );
+
+}
+
+
+    /*
+     * Return JSON because the OTP page uses fetch()
+     * instead of performing a normal form submission.
+     */
+    return response()->json([
+        'success' => true,
+        'message' =>
+            'A new verification code has been sent to your email address.',
+    ]);
+}
+    
+
 
     /**
      * =========================
@@ -205,10 +367,11 @@ class AuthController extends Controller
         }
 
         if ($user->status !== 'active') {
-            return back()->withErrors([
-                'email' => 'Account not yet approved.'
-            ]);
-        }
+    return back()->withErrors([
+        'email' =>
+            'Your admin account is awaiting approval. You can sign in once an administrator has approved your account.'
+    ]);
+}
 
         if (Auth::attempt($request->only('email','password'))) {
 

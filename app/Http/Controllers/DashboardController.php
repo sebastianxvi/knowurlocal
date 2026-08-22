@@ -3,482 +3,595 @@
 namespace App\Http\Controllers;
 
 use App\Models\Agency;
-use App\Models\ChatbotLog; // 🔥 IMPORTANT
 use App\Models\Faq;
+use App\Models\SupportRequest;
+use App\Models\User;
 use App\Models\UserLog;
+use App\Models\ChatbotLog;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    /**
+     * Display the administrator dashboard.
+     *
+     * The dashboard and PDF report intentionally use the
+     * same data source so their numbers cannot drift apart.
+     */
     public function index()
     {
-        /* ========================
-           📊 TOTAL AGENCIES
-        ======================== */
+        return view(
+            'admin.dashboard',
+            $this->dashboardData()
+        );
+    }
+
+
+    /**
+     * Export the current dashboard information as a PDF.
+     *
+     * The report uses the exact same dataset as the dashboard.
+     */
+    public function exportPdf()
+    {
+        /*
+         * Build the dashboard dataset once.
+         *
+         * This prevents the PDF from having its own separate
+         * analytics calculations.
+         */
+        $data = $this->dashboardData();
+
+
+        /*
+         * Render the dedicated PDF Blade view.
+         *
+         * The dashboard and PDF have different presentation
+         * requirements, so the report gets its own Blade view.
+         */
+        $pdf = Pdf::loadView(
+            'admin.report',
+            $data
+        );
+
+
+        /*
+         * Use a predictable filename containing the report date.
+         *
+         * The date comes from the server rather than user input,
+         * so there is no filename injection risk.
+         */
+        $filename =
+            'KNOWURLOCAL_Admin_Report_' .
+            now()->format('Y-m-d') .
+            '.pdf';
+
+
+        /*
+         * Return the generated PDF as a download response.
+         */
+        return $pdf->download($filename);
+    }
+
+
+    /**
+     * Build the complete dataset used by the dashboard
+     * and administrative PDF report.
+     *
+     * Keeping these calculations in one method gives us
+     * a single source of truth for reporting.
+     */
+    private function dashboardData(): array
+    {
+        /*
+         * =====================================================
+         * OVERVIEW
+         * =====================================================
+         */
+
         $totalAgencies = Agency::count();
 
-        /* ========================
-           📊 TOTAL FAQS
-        ======================== */
         $totalFaqs = Faq::count();
 
-        /* ========================
-           📊 TOTAL CHATBOT QUERIES
-        ======================== */
-        $totalChats = ChatbotLog::count();
+        $totalUsers = User::where(
+            'role',
+            'user'
+        )->count();
 
-        /* ========================
-        📊 TOTAL CHATBOT QUERIES
-        ======================== */
-        $totalChats = ChatbotLog::count();
-
-        /* ========================
-        ❌ FAILED (FALLBACK)
-        ======================== */
-        $fallbackCount = ChatbotLog::where('type', 'fallback')->count();
-
-        /* ========================
-        ✅ ACCURACY (%)
-        ======================== */
-        $accuracy = $totalChats > 0
-            ? round((($totalChats - $fallbackCount) / $totalChats) * 100, 2)
-            : 0;
+        $totalAdmins = User::whereIn(
+            'role',
+            ['admin', 'superadmin']
+        )->count();
 
 
-        /* ========================
-        📅 TODAY CHATS
-        ======================== */
-        $todayChats = ChatbotLog::whereDate('created_at', today())->count();
+        /*
+         * =====================================================
+         * USER INQUIRIES
+         * =====================================================
+         */
 
-        /* ========================
-        📆 WEEK CHATS
-        ======================== */
-        $weekChats = ChatbotLog::whereBetween('created_at', [
-            now()->startOfWeek(),
-            now()->endOfWeek()
-        ])->count();
+        $totalInquiries = SupportRequest::count();
 
-        $failedQueries = $fallbackCount;
+        $pendingInquiries = SupportRequest::where(
+            'status',
+            'pending'
+        )->count();
 
-
-        /* ========================
-        📉 FALLBACK RATE (%)
-        ======================== */
-        $fallbackRate = $totalChats > 0
-            ? round(($fallbackCount / $totalChats) * 100, 2)
-            : 0;
-
-        
-        /* ========================
-        🧠 TOP QUESTION (FILTERED)
-        ======================== */
-
-        // common noise words
-        $ignoredQuestions = [
-            'hi',
-            'hello',
-            'hey',
-            'thanks',
-            'thank you',
-            'ok',
-            'okay'
-        ];
-
-        $topQuestionData = ChatbotLog::select('question')
-            ->selectRaw('COUNT(*) as count')
-            ->whereNotIn(DB::raw('LOWER(question)'), $ignoredQuestions)
-            ->groupBy('question')
-            ->orderByDesc('count')
-            ->first();
-
-        $topQuestion = $topQuestionData->question ?? '-';
-        $topQuestionCount = $topQuestionData->count ?? 0;
+        $answeredInquiries = SupportRequest::where(
+            'status',
+            'answered'
+        )->count();
 
 
-        /* ========================
-        🏢 TOP AGENCY
-        ======================== */
-        $topAgencyData = ChatbotLog::join('agencies', 'chatbot_logs.agency_id', '=', 'agencies.id')
-            ->select('agencies.agency_name')
-            ->selectRaw('COUNT(*) as count')
-            ->whereNotNull('chatbot_logs.agency_id') // avoid null agencies
-            ->groupBy('agencies.agency_name')
-            ->orderByDesc('count')
-            ->first();
-
-
-        $topAgency = $topAgencyData->agency_name ?? '-';
-        $topAgencyCount = $topAgencyData->count ?? 0;
-
-
-        /* ========================
-        ⏰ PEAK HOUR
-        ======================== */
-        $peakHourData = ChatbotLog::selectRaw('HOUR(created_at) as hour, COUNT(*) as count')
-            ->groupBy('hour')
-            ->orderByDesc('count')
-            ->first();
-
-        $peakHour = isset($peakHourData->hour)
-        ? date("g A", strtotime($peakHourData->hour . ":00"))
-        : '-';
-
-
-        /* ========================
-        👥 ACTIVE USERS TODAY
-        ======================== */
-        $activeUsersToday = ChatbotLog::whereDate('created_at', today())
-            ->whereNotNull('user_id') // ignore guests
-            ->distinct('user_id')
-            ->count('user_id');
-
-
-        /* ========================
-        🔐 ADMIN LOGINS TODAY
-        ======================== */
-        $adminLogins = UserLog::where('action', 'login')
-            ->whereIn('role', ['admin', 'superadmin']) // only admins
-            ->whereDate('created_at', today())
-            ->count();
-
-        /* ========================
-        📊 ADMIN CHANGES TODAY
-        ======================== */
-        $changesToday = UserLog::whereIn('role', ['admin', 'superadmin'])
-            ->where('action', '!=', 'login') // exclude login (we already counted it)
-            ->whereDate('created_at', today())
-            ->count();
-
-
-        /* ========================
-        🧠 MOST ACTIVE ADMIN
-        ======================== */
-        $mostActiveAdminData = UserLog::join('users', 'user_logs.user_id', '=', 'users.id')
-            ->selectRaw('CONCAT(users.first_name, " ", users.last_name) as name')
-            ->selectRaw('COUNT(*) as count')
-            ->whereIn('user_logs.role', ['admin', 'superadmin'])
-            ->whereDate('user_logs.created_at', today())
-            ->groupBy('user_logs.user_id', 'users.first_name', 'users.last_name')
-            ->orderByDesc('count')
-            ->first();
-
-        $mostActiveAdmin = $mostActiveAdminData->name ?? '-';
-        $mostActiveAdminCount = $mostActiveAdminData->count ?? 0;
-
-
-        /* ========================
-        🕒 LAST ADMIN ACTION
-        ======================== */
-        $lastActionData = UserLog::join('users', 'user_logs.user_id', '=', 'users.id')
-            ->select(
-                'user_logs.action',
-                'users.first_name',
-                'users.last_name'
+        /*
+         * Calculate the percentage of inquiries currently
+         * waiting for an administrator's response.
+         */
+        $pendingInquiryPercentage = $totalInquiries > 0
+            ? round(
+                ($pendingInquiries / $totalInquiries) * 100
             )
-            ->whereIn('user_logs.role', ['admin', 'superadmin'])
-            ->orderByDesc('user_logs.created_at')
-            ->first();
-
-
-        $lastAction = $lastActionData->action ?? '-';
-
-        $lastActionUser = isset($lastActionData)
-            ? $lastActionData->first_name . ' ' . $lastActionData->last_name
-            : '-';
-
-
-
-        $totalUsers = ChatbotLog::whereNotNull('user_id')
-            ->distinct('user_id')
-            ->count('user_id');
-
-        $totalUserQueries = ChatbotLog::whereNotNull('user_id')->count();
-
-        /* ========================
-        📊 AVG QUERIES PER USER
-        ======================== */
-        $avgQueries = $totalUsers > 0
-            ? round($totalUserQueries / $totalUsers, 2)
             : 0;
 
 
-        /* ========================
-        📈 CHAT TREND (LAST 7 DAYS)
-        ======================== */
-        $chatTrend = ChatbotLog::selectRaw('DATE(created_at) as date, COUNT(*) as count')
-            ->whereBetween('created_at', [
-                now()->subDays(6)->startOfDay(),
-                now()->endOfDay()
-            ])
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
+        /*
+         * =====================================================
+         * INQUIRY ANALYTICS
+         * =====================================================
+         */
+
+        /*
+         * RESPONSE RATE
+         */
+        $responseRate = $totalInquiries > 0
+            ? round(
+                ($answeredInquiries / $totalInquiries) * 100
+            )
+            : 0;
 
 
-        /* ========================
-        🏢 AGENCY USAGE DATA
-        ======================== */
-        $agencyData = ChatbotLog::join('agencies', 'chatbot_logs.agency_id', '=', 'agencies.id')
-            ->select('agencies.agency_name')
-            ->selectRaw('COUNT(*) as count')
-            ->whereNotNull('chatbot_logs.agency_id')
-            ->groupBy('agencies.agency_name')
-            ->orderByDesc('count')
-            ->limit(5) // top 5 agencies
-            ->get();
+        /*
+         * ANSWER VISIBILITY
+         */
+        $seenAnswers = SupportRequest::where(
+            'status',
+            'answered'
+        )
+        ->whereNotNull(
+            'answer_seen_at'
+        )
+        ->count();
 
 
-        /* ========================
-        📊 RESPONSE DISTRIBUTION
-        ======================== */
-        $faqCount = ChatbotLog::where('type', 'faq')->count();
-        $otherCount = ChatbotLog::whereNotIn('type', ['faq', 'fallback'])->count();
+        $unseenAnswers = SupportRequest::where(
+            'status',
+            'answered'
+        )
+        ->whereNull(
+            'answer_seen_at'
+        )
+        ->count();
 
 
-        $responseLabels = collect(['FAQ', 'Fallback', 'Other']);
-        $responseValues = collect([
-            $faqCount,
-            $fallbackCount,
-            $otherCount
+        /*
+         * AVERAGE RESPONSE TIME
+         */
+        $answeredRequests = SupportRequest::where(
+            'status',
+            'answered'
+        )
+        ->whereNotNull(
+            'answered_at'
+        )
+        ->whereNotNull(
+            'created_at'
+        )
+        ->get([
+            'created_at',
+            'answered_at',
         ]);
 
 
-        /* ========================
-        📊 FEATURE USAGE
-        ======================== */
+        $averageResponseMinutes = null;
 
-        $featureLabels = ['FAQ Answered', 'Fallback', 'Other'];
+        if ($answeredRequests->isNotEmpty()) {
 
-        $faqCount = ChatbotLog::where('type', 'faq')->count();
+            $totalResponseMinutes = $answeredRequests->sum(
+                function ($request) {
 
-        $fallbackCount = ChatbotLog::where('type', 'fallback')->count();
-
-        $otherCount = ChatbotLog::whereNotIn('type', ['faq','fallback'])->count();
-
-        $featureValues = [
-            $faqCount,
-            $fallbackCount,
-            $otherCount
-        ]; 
-
-
-        /* ========================
-        🧠 TOP QUESTIONS (LIST)
-        ======================== */
-        $topQuestions = ChatbotLog::select('question', DB::raw('COUNT(*) as count'))
-            ->whereNotNull('question')
-            ->groupBy('question')
-            ->orderByDesc('count')
-            ->limit(5)
-            ->get();
+                    return Carbon::parse(
+                        $request->created_at
+                    )->diffInMinutes(
+                        Carbon::parse(
+                            $request->answered_at
+                        )
+                    );
+                }
+            );
 
 
-        /* ========================
-        🕒 RECENT ACTIVITY
-        ======================== */
-        $recentLogs = UserLog::with('user')
-            ->orderByDesc('created_at')
-            ->limit(5)
-            ->get();
+            $averageResponseMinutes = round(
+                $totalResponseMinutes /
+                $answeredRequests->count()
+            );
+        }
 
 
-        /* ========================
-        📈 GROWTH RATE (WEEKLY)
-        ======================== */
+        /*
+         * Convert the average response time into a
+         * human-readable value.
+         */
+        $averageResponseTime = null;
 
-        // current week
-        $currentWeek = ChatbotLog::whereBetween('created_at', [
-            now()->startOfWeek(),
-            now()->endOfWeek()
-        ])->count();
+        if ($averageResponseMinutes !== null) {
 
-        // previous week
-        $previousWeek = ChatbotLog::whereBetween('created_at', [
-            now()->subWeek()->startOfWeek(),
-            now()->subWeek()->endOfWeek()
-        ])->count();
+            if ($averageResponseMinutes < 60) {
 
-        // calculate growth safely
-        $growthRate = $previousWeek > 0
-            ? round((($currentWeek - $previousWeek) / $previousWeek) * 100, 2)
-            : 0;
+                $averageResponseTime =
+                    $averageResponseMinutes . ' min';
 
+            } else {
 
-        /* ========================
-        📊 FAQ RESOLVED COUNT
-        ======================== */
-        $faqCount = ChatbotLog::where('type', 'faq')->count();
+                $hours = intdiv(
+                    $averageResponseMinutes,
+                    60
+                );
+
+                $minutes = $averageResponseMinutes % 60;
 
 
-        /* ========================
-        🔥 HEATMAP DATA
-        ======================== */
+                if ($minutes === 0) {
 
-        $heatmapRaw = ChatbotLog::select(
-                DB::raw('DAYOFWEEK(created_at) as day'),
-                DB::raw('HOUR(created_at) as hour'),
-                DB::raw('COUNT(*) as count')
-            )
-            ->groupBy('day','hour')
-            ->get();
+                    $averageResponseTime =
+                        $hours . ' hr';
 
+                } else {
 
-        $days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-        $heatmap = [];
-
-        foreach ($days as $index => $dayName) {
-
-            $dayIndex = $index + 1; // MySQL: Sunday = 1
-
-            $dayData = [];
-
-            for ($hour = 0; $hour < 24; $hour++) {
-
-                $match = $heatmapRaw
-                    ->where('day', $dayIndex)
-                    ->where('hour', $hour)
-                    ->first();
-
-                $dayData[] = $match ? $match->count : 0;
+                    $averageResponseTime =
+                        $hours . ' hr ' .
+                        $minutes . ' min';
+                }
             }
+        }
 
-            $heatmap[] = [
-                'name' => $dayName,
-                'data' => $dayData
+
+        /*
+         * =====================================================
+         * INQUIRY TREND — LAST 7 DAYS
+         * =====================================================
+         */
+
+        $analyticsStartDate = now()
+            ->startOfDay()
+            ->subDays(6);
+
+        $analyticsEndDate = now()
+            ->endOfDay();
+
+
+        $recentInquiries = SupportRequest::whereBetween(
+            'created_at',
+            [
+                $analyticsStartDate,
+                $analyticsEndDate,
+            ]
+        )
+        ->get([
+            'created_at',
+        ]);
+
+
+        $recentAnswers = SupportRequest::where(
+            'status',
+            'answered'
+        )
+        ->whereNotNull(
+            'answered_at'
+        )
+        ->whereBetween(
+            'answered_at',
+            [
+                $analyticsStartDate,
+                $analyticsEndDate,
+            ]
+        )
+        ->get([
+            'answered_at',
+        ]);
+
+
+        $inquiryTrend = [];
+
+
+        for ($day = 0; $day < 7; $day++) {
+
+            $date = $analyticsStartDate
+                ->copy()
+                ->addDays($day);
+
+
+            $submitted = $recentInquiries
+                ->filter(function ($request) use ($date) {
+
+                    return Carbon::parse(
+                        $request->created_at
+                    )->isSameDay($date);
+
+                })
+                ->count();
+
+
+            $answered = $recentAnswers
+                ->filter(function ($request) use ($date) {
+
+                    return Carbon::parse(
+                        $request->answered_at
+                    )->isSameDay($date);
+
+                })
+                ->count();
+
+
+            $inquiryTrend[] = [
+                'date' => $date->format('Y-m-d'),
+                'label' => $date->format('D'),
+                'submitted' => $submitted,
+                'answered' => $answered,
             ];
         }
 
-        return view('admin.dashboard', compact(
-            'totalAgencies',
-            'totalFaqs',
-            'totalChats',
-            'accuracy',
 
-            'todayChats',
-            'weekChats',
+        /*
+         * =====================================================
+         * CHATBOT / KNOWLEDGE BASE ANALYTICS
+         * =====================================================
+         */
 
-            'failedQueries',
-            'fallbackRate',
+        $totalChatbotInteractions = ChatbotLog::count();
 
-            // 🔥 ADD THESE
-            'topQuestion',
-            'topQuestionCount',
 
-            'topAgency',
-            'topAgencyCount',
-            'peakHour',  
+        $knowledgeQuestions = ChatbotLog::whereIn(
+            'outcome',
+            [
+                'answered',
+                'fallback',
+                'clarification',
+                'wrong_agency',
+            ]
+        )->count();
 
-            'activeUsersToday',
-            'adminLogins',
-            'changesToday',
 
-            'mostActiveAdmin',
-            'mostActiveAdminCount',
-            'lastAction',
-            'lastActionUser',
+        $faqAnswered = ChatbotLog::where(
+            'outcome',
+            'answered'
+        )
+        ->whereNotNull(
+            'faq_id'
+        )
+        ->count();
 
-            'avgQueries',
-            'chatTrend',
 
-            'agencyData',
-            'responseLabels',
-            'responseValues',
+        $faqAnswerRate = $knowledgeQuestions > 0
+            ? round(
+                ($faqAnswered / $knowledgeQuestions) * 100
+            )
+            : 0;
 
-            'featureLabels',
-            'featureValues',
 
-            'topQuestions',
-            'recentLogs',
+        $fallbackQuestions = ChatbotLog::where(
+            'outcome',
+            'fallback'
+        )->count();
 
-            'growthRate',
-            'faqCount',         // ✅ ADD THIS
-            'fallbackCount', 
-            'heatmap',
-        ));
+
+        $fallbackRate = $knowledgeQuestions > 0
+            ? round(
+                ($fallbackQuestions / $knowledgeQuestions) * 100
+            )
+            : 0;
+
+
+        $clarificationQuestions = ChatbotLog::where(
+            'outcome',
+            'clarification'
+        )->count();
+
+
+        $ruleMatches = ChatbotLog::where(
+            'match_method',
+            'rule'
+        )->count();
+
+
+        $semanticMatches = ChatbotLog::where(
+            'match_method',
+            'semantic'
+        )->count();
+
+
+        /*
+         * MOST USED FAQs
+         */
+        $popularFaqs = ChatbotLog::query()
+            ->where(
+                'outcome',
+                'answered'
+            )
+            ->whereNotNull(
+                'faq_id'
+            )
+            ->select('faq_id')
+            ->selectRaw(
+                'COUNT(*) as usage_count'
+            )
+            ->groupBy('faq_id')
+            ->orderByDesc('usage_count')
+            ->with('faq')
+            ->limit(5)
+            ->get();
+
+
+        /*
+         * MOST REQUESTED AGENCIES
+         */
+        $popularAgencies = ChatbotLog::query()
+            ->whereNotNull(
+                'agency_id'
+            )
+            ->select('agency_id')
+            ->selectRaw(
+                'COUNT(*) as interaction_count'
+            )
+            ->groupBy('agency_id')
+            ->orderByDesc('interaction_count')
+            ->with('agency')
+            ->limit(5)
+            ->get();
+
+
+        /*
+         * =====================================================
+         * AGENCY DATA HEALTH
+         * =====================================================
+         */
+
+        $incompleteAgencies = Agency::where(function ($query) {
+
+            $query
+                ->whereNull('agency_location')
+                ->orWhere('agency_location', '')
+                ->orWhereNull('agency_description')
+                ->orWhere('agency_description', '')
+                ->orWhereNull('services_offered')
+                ->orWhere('services_offered', '')
+                ->orWhereNull('office_hours')
+                ->orWhere('office_hours', '')
+                ->orWhereNull('lat')
+                ->orWhereNull('lng')
+                ->orWhereNull('agency_type_id')
+                ->orWhereNull('category_id');
+
+        })->count();
+
+
+        $completeAgencies =
+            $totalAgencies - $incompleteAgencies;
+
+
+        /*
+         * =====================================================
+         * FAQ DATA HEALTH
+         * =====================================================
+         */
+
+        $incompleteFaqs = Faq::where(function ($query) {
+
+            $query
+                ->whereNull('agency_id')
+                ->orWhereNull('question')
+                ->orWhere('question', '')
+                ->orWhereNull('answer')
+                ->orWhere('answer', '')
+                ->orWhereNull('question_fil')
+                ->orWhere('question_fil', '')
+                ->orWhereNull('answer_fil')
+                ->orWhere('answer_fil', '');
+
+        })->count();
+
+
+        $completeFaqs =
+            $totalFaqs - $incompleteFaqs;
+
+
+        /*
+         * =====================================================
+         * RECENT SYSTEM ACTIVITY
+         * =====================================================
+         */
+
+        $recentActivity = UserLog::with([
+            'user',
+            'agency',
+            'category',
+            'targetUser',
+        ])
+        ->latest()
+        ->limit(8)
+        ->get();
+
+
+        /*
+         * =====================================================
+         * RETURN SHARED REPORT DATA
+         * =====================================================
+         *
+         * Every value returned here can be consumed by both:
+         *
+         * - admin.dashboard
+         * - admin.report
+         */
+
+        return [
+
+            /*
+             * Overview
+             */
+            'totalAgencies' => $totalAgencies,
+            'totalFaqs' => $totalFaqs,
+            'totalUsers' => $totalUsers,
+            'totalAdmins' => $totalAdmins,
+
+
+            /*
+             * Inquiry workload
+             */
+            'totalInquiries' => $totalInquiries,
+            'pendingInquiries' => $pendingInquiries,
+            'answeredInquiries' => $answeredInquiries,
+            'pendingInquiryPercentage' => $pendingInquiryPercentage,
+
+
+            /*
+             * Inquiry analytics
+             */
+            'responseRate' => $responseRate,
+            'seenAnswers' => $seenAnswers,
+            'unseenAnswers' => $unseenAnswers,
+            'averageResponseTime' => $averageResponseTime,
+            'inquiryTrend' => $inquiryTrend,
+
+
+            /*
+             * Chatbot / knowledge base analytics
+             */
+            'totalChatbotInteractions' => $totalChatbotInteractions,
+            'knowledgeQuestions' => $knowledgeQuestions,
+            'faqAnswered' => $faqAnswered,
+            'faqAnswerRate' => $faqAnswerRate,
+            'fallbackQuestions' => $fallbackQuestions,
+            'fallbackRate' => $fallbackRate,
+            'clarificationQuestions' => $clarificationQuestions,
+            'ruleMatches' => $ruleMatches,
+            'semanticMatches' => $semanticMatches,
+            'popularFaqs' => $popularFaqs,
+            'popularAgencies' => $popularAgencies,
+
+
+            /*
+             * Data health
+             */
+            'incompleteAgencies' => $incompleteAgencies,
+            'completeAgencies' => $completeAgencies,
+            'incompleteFaqs' => $incompleteFaqs,
+            'completeFaqs' => $completeFaqs,
+
+
+            /*
+             * Activity
+             */
+            'recentActivity' => $recentActivity,
+        ];
     }
-
-    public function exportPdf()
-{
-    /* ========================
-       📊 CORE METRICS
-    ======================== */
-
-    $totalAgencies = Agency::count();
-    $totalFaqs = Faq::count();
-    $totalChats = ChatbotLog::count();
-
-    $fallbackCount = ChatbotLog::where('type', 'fallback')->count();
-    $faqCount = ChatbotLog::where('type', 'faq')->count();
-
-    $accuracy = $totalChats > 0
-        ? round((($totalChats - $fallbackCount) / $totalChats) * 100, 2)
-        : 0;
-
-    /* ========================
-       📅 TIME DATA
-    ======================== */
-
-    $todayChats = ChatbotLog::whereDate('created_at', today())->count();
-
-    $weekChats = ChatbotLog::whereBetween('created_at', [
-        now()->startOfWeek(),
-        now()->endOfWeek()
-    ])->count();
-
-    $fallbackRate = $totalChats > 0
-        ? round(($fallbackCount / $totalChats) * 100, 2)
-        : 0;
-
-    /* ========================
-       🧠 TOP QUESTION
-    ======================== */
-
-    $topQuestionData = ChatbotLog::select('question')
-        ->selectRaw('COUNT(*) as count')
-        ->groupBy('question')
-        ->orderByDesc('count')
-        ->first();
-
-    $topQuestion = $topQuestionData->question ?? '-';
-    $topQuestionCount = $topQuestionData->count ?? 0;
-
-    /* ========================
-       🏢 TOP AGENCY
-    ======================== */
-
-    $topAgencyData = ChatbotLog::select('agency_id')
-        ->selectRaw('COUNT(*) as count')
-        ->whereNotNull('agency_id')
-        ->groupBy('agency_id')
-        ->orderByDesc('count')
-        ->with('agency')
-        ->first();
-
-    $topAgency = $topAgencyData->agency->agency_name ?? '-';
-
-    /* ========================
-       📦 PASS DATA
-    ======================== */
-
-    $data = compact(
-        'totalAgencies',
-        'totalFaqs',
-        'totalChats',
-        'accuracy',
-        'todayChats',
-        'weekChats',
-        'fallbackRate',
-        'fallbackCount',
-        'faqCount',
-        'topQuestion',
-        'topQuestionCount',
-        'topAgency'
-    );
-
-    $pdf = Pdf::loadView('admin.report', $data);
-
-    return $pdf->download('knowurlocal-report.pdf');
-}
 }

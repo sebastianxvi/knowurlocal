@@ -18,24 +18,102 @@ function escapeHTML(str){
         .replace(/>/g, "&gt;");
 }
 
+function isSafeUrl(value){
+
+    /*
+     * Reject empty or non-string values immediately.
+     */
+    if(
+        typeof value !== "string" ||
+        value.trim() === ""
+    ){
+        return false;
+    }
+
+    try {
+
+        /*
+         * Resolve the supplied value into a real URL.
+         * The current site is used as the base for relative URLs.
+         */
+        const url = new URL(
+            value,
+            window.location.origin
+        );
+
+        /*
+         * Only allow normal web protocols.
+         *
+         * javascript:, data:, file:, and other
+         * potentially dangerous protocols are rejected.
+         */
+        return (
+            url.protocol === "https:" ||
+            url.protocol === "http:"
+        );
+
+    } catch {
+
+        /*
+         * Invalid URL syntax is rejected.
+         */
+        return false;
+    }
+}
+
+
 function allowSafeHTML(str){
 
-    // escape everything first
-    let escaped = escapeHTML(str);
+    /*
+     * Convert the chatbot response into a string.
+     * This prevents errors if the backend returns null.
+     */
+    let escaped = escapeHTML(
+        String(str ?? '')
+    );
 
-    // allow <a href="">
-    escaped = escaped
-        .replace(/&lt;a href=['"]([^'"]+)['"][^&]*&gt;/g, function(match, url){
+    /*
+     * Detect only HTTP and HTTPS URLs.
+     *
+     * The URL is already HTML-escaped at this point,
+     * so arbitrary HTML cannot be interpreted.
+     */
+    escaped = escaped.replace(
+        /https?:\/\/[^\s<]+/gi,
+        function(rawUrl){
 
-            // block javascript:
-            if(url.startsWith("javascript:")){
-                return "";
+            /*
+             * Remove punctuation that belongs to the
+             * surrounding sentence rather than the URL.
+             */
+            const match = rawUrl.match(
+                /^(.*?)([),.!?;:]*)$/
+            );
+
+            const url = match
+                ? match[1]
+                : rawUrl;
+
+            const punctuation = match
+                ? match[2]
+                : '';
+
+            /*
+             * Validate the URL before generating
+             * an interactive link.
+             */
+            if(!isSafeUrl(url)){
+                return rawUrl;
             }
 
-            // allow only safe links
-            return `<a href="${url}" target="_blank" rel="noopener noreferrer">`;
-        })
-        .replace(/&lt;\/a&gt;/g, "</a>");
+            /*
+             * Generate the link ourselves.
+             *
+             * The destination is already escaped above.
+             */
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chatbot-link">Open link <i class="ph-light ph-arrow-up-right"></i></a>${punctuation}`;
+        }
+    );
 
     return escaped;
 }
@@ -92,16 +170,16 @@ function renderSuggestions(questions){
         // 🔥 controlled duplication (not too wide)
         let fullList = [...rowQuestions, ...rowQuestions.slice(0, 3)];
 
-        // 🔥 random start (removes delay feel)
-        track.style.transform = `translateX(-${Math.random() * 20}%)`;
 
         fullList.forEach(q => {
 
             if(!q.question) return;
 
-            let pill = document.createElement("div");
-            pill.classList.add("suggestion");
-            pill.textContent = q.question;
+            let pill = document.createElement("button");
+
+pill.type = "button";
+pill.classList.add("suggestion");
+pill.textContent = q.question;
 
             pill.addEventListener("click", () => {
                 const input = document.getElementById("message");
@@ -273,15 +351,18 @@ function sendMessage(){
     }
 
     const messageData =
-        data.choices[0].message;
+    data.choices[0].message;
 
-    /*
-     * Sanitize chatbot text before inserting it
-     * into the DOM.
-     */
-    let html = allowSafeHTML(
-        messageData.content || ''
-    ).replace(/\n/g, "<br>");
+
+
+/*
+ * Sanitize chatbot text before inserting it
+ * into the DOM.
+ */
+let html = allowSafeHTML(
+    messageData.content || ''
+).replace(/\n/g, "<br>");
+
 
     /*
      * Show human-support option when the backend
@@ -301,18 +382,27 @@ function sendMessage(){
     /*
      * Only display an image when the backend supplied one.
      */
-    if (messageData.image) {
+    if (
+    messageData.image &&
+    isSafeUrl(messageData.image)
+) {
 
-        html += `
-            <div class="chat-image">
-                <img
-                    src="${messageData.image}"
-                    alt="FAQ Image"
-                    class="clickable-image"
-                >
-            </div>
-        `;
-    }
+    const safeImageUrl = escapeHTML(
+        messageData.image
+    );
+
+    html += `
+        <div class="chat-image">
+            <img
+                src="${safeImageUrl}"
+                alt="FAQ Image"
+                class="clickable-image"
+                loading="lazy"
+                referrerpolicy="no-referrer"
+            >
+        </div>
+    `;
+}
 
     typingMessage
         .querySelector(".bubble")

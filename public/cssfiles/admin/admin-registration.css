@@ -1,0 +1,281 @@
+/* =========================================================
+   KNOWURLOCAL — ADMIN REGISTRATION EXTENSIONS
+   ========================================================= */
+
+
+/* =========================================================
+   1. LOCKED INVITATION EMAIL
+   ========================================================= */
+
+/*
+ * Gives the invitation email a slightly different surface
+ * so the administrator understands that it cannot be edited.
+ */
+.admin-registration-locked input {
+
+    background: #f1f4f8;
+
+    color: var(--color-text-secondary);
+
+    cursor: not-allowed;
+
+}
+
+
+/*
+ * Prevents the readonly email from looking like an
+ * ordinary editable field.
+ */
+.admin-registration-locked input:hover {
+
+    border-color: var(--color-border);
+
+}
+
+
+/*
+ * Small lock indicator on the right side of the field.
+ */
+.admin-registration-lock {
+
+    position: absolute;
+
+    right: 13px;
+
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    color: var(--color-text-muted);
+
+    pointer-events: none;
+
+}
+
+
+.admin-registration-lock i {
+
+    font-size: 15px;
+
+}
+
+
+/* =========================================================
+   2. INVITATION EMAIL HINT
+   ========================================================= */
+
+/*
+ * Explains why the email field cannot be changed.
+ */
+.admin-registration-field-hint {
+
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 7px;
+
+    margin:
+        -5px
+        2px
+        14px;
+
+    color: var(--color-text-muted);
+
+    font-size: 0.67rem;
+
+    line-height: 1.45;
+
+}
+
+
+/*
+ * Keeps the informational icon lightweight and aligned
+ * with the explanatory text.
+ */
+.admin-registration-field-hint i {
+
+    flex-shrink: 0;
+
+    margin-top: 1px;
+
+    color: var(--color-primary);
+
+    font-size: 13px;
+
+}
+
+
+/* =========================================================
+   3. PASSWORD REQUIREMENT
+   ========================================================= */
+
+/*
+ * Provides a subtle security hint below the password
+ * fields without creating a large visual block.
+ */
+.admin-registration-password-hint {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    margin:
+        -5px
+        2px
+        18px;
+
+    color: var(--color-text-muted);
+
+    font-size: 0.68rem;
+
+    line-height: 1.4;
+
+}
+
+
+.admin-registration-password-hint i {
+
+    color: var(--color-primary);
+
+    font-size: 14px;
+
+}
+
+
+/* =========================================================
+   4. REGISTRATION LOGIN LINK
+   ========================================================= */
+
+/*
+ * The shared .switch controls the positioning and typography.
+ * This class only provides the registration-specific link
+ * appearance.
+ */
+.admin-registration-login-link {
+
+    margin-left: 3px;
+
+    color: var(--color-primary);
+
+    font-weight: 600;
+
+    text-decoration: none;
+
+    transition:
+        color var(--transition-fast);
+
+}
+
+
+.admin-registration-login-link:hover {
+
+    color: var(--color-primary-dark);
+
+    text-decoration: underline;
+
+}
+
+
+.admin-registration-login-link:focus-visible {
+
+    outline: 2px solid #91afe8;
+
+    outline-offset: 3px;
+
+    border-radius: 2px;
+
+}
+
+
+/* =========================================================
+   5. SECURITY NOTE ON BLUE PANEL
+   ========================================================= */
+
+/*
+ * This note is unique to registration.
+ *
+ * The actual blue panel, curve, spacing, animation,
+ * responsive behavior, and feature styling continue to
+ * come from the shared login.css.
+ */
+.admin-registration-security {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin-top: 26px;
+
+    color:
+        rgba(
+            255,
+            255,
+            255,
+            0.70
+        );
+
+    font-size: 0.69rem;
+
+    line-height: 1.4;
+
+}
+
+
+.admin-registration-security i {
+
+    flex-shrink: 0;
+
+    font-size: 14px;
+
+}
+
+
+/* =========================================================
+   6. MOBILE
+   ========================================================= */
+
+/*
+ * On small screens, the shared login.css already converts
+ * the blue panel into the mobile header.
+ *
+ * We only need to make the registration-specific content
+ * slightly more compact.
+ */
+@media (max-width: 520px) {
+
+    .admin-registration-security {
+
+        margin-top: 10px;
+
+        font-size: 0.62rem;
+
+    }
+
+
+    .admin-registration-field-hint {
+
+        font-size: 0.64rem;
+
+    }
+
+
+    .admin-registration-password-hint {
+
+        font-size: 0.64rem;
+
+        margin-bottom: 16px;
+
+    }
+
+}

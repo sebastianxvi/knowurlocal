@@ -1,492 +1,2036 @@
-/* PAGE SPACING */
-.logs-page{
-    max-width:1200px;
-    margin:20px auto;
-    padding:0 10px;
+/* =========================================================
+   AGENCY MANAGEMENT PAGE
+   ========================================================= */
+
+
+/* =========================================================
+   PAGE CONTAINER
+   ========================================================= */
+
+.logs-page {
+    /*
+     * Keeps the agency management content centered while
+     * preventing the page container itself from becoming
+     * a horizontal scrolling region.
+     */
+    width: 100%;
+    max-width: 1200px;
+
+    margin: 20px auto;
+
+    padding: 0 10px;
+
+    min-width: 0;
 }
 
-/* FILTER CARD */
-.filter-card{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:16px;
 
-    padding:14px 18px;
+/* =========================================================
+   STATUS TABS
+   ========================================================= */
 
-    background:#fff;
-    border-radius:14px;
-    border:1px solid #e5e7eb;
+.agency-status-tabs {
+    /*
+     * Flex keeps Active and Trashed beside each other.
+     */
+    display: flex;
 
-    box-shadow:0 6px 18px rgba(0,0,0,0.04);
+    align-items: center;
 
-    margin-bottom:14px;
-    flex-wrap:wrap;
+    /*
+     * The tabs themselves must NEVER become horizontally
+     * scrollable.
+     */
+    overflow: visible;
+
+    /*
+     * Prevent individual tabs from being compressed.
+     */
+    flex-shrink: 0;
+
+    /*
+     * Keep the tab group compact instead of stretching
+     * across the entire page.
+     */
+    width: fit-content;
+
+    max-width: 100%;
+
+    padding: 4px;
+
+    margin-bottom: 12px;
+
+    background: #f3f4f6;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 12px;
 }
 
-/* FILTER BAR */
-.filter-bar{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    flex-wrap:wrap;
-}
 
-/* INPUTS */
-.filter-bar input,
-.filter-bar select{
-    height:36px;
-    padding:0 12px;
+/* =========================================================
+   INDIVIDUAL STATUS TAB
+   ========================================================= */
 
-    border-radius:10px;
-    border:1px solid #e5e7eb;
+.agency-status-tab {
+    /*
+     * Allows the icon, label, and count to sit horizontally.
+     */
+    display: inline-flex;
 
-    background:#f9fafb;
-    font-size:13px;
+    align-items: center;
 
-    transition:all 0.2s ease;
-}
+    justify-content: center;
 
-/* 🔥 ADD THIS */
-.filter-bar input:focus,
-.filter-bar select:focus{
-    border-color:#3b82f6;
-    box-shadow:0 0 0 3px rgba(59,130,246,0.08);
-}
+    /*
+     * Prevents the tab text from wrapping.
+     */
+    white-space: nowrap;
 
-.filter-bar input:hover,
-.filter-bar select:hover{
-    border-color:#d1d5db;
-}
+    /*
+     * Prevents the browser from shrinking the tab.
+     */
+    flex-shrink: 0;
 
-/* BUTTON */
-.filter-bar > button{
-    height:36px;
-    padding:0 14px;
+    gap: 7px;
 
-    border:none;
-    border-radius:999px;
+    min-height: 34px;
 
-    background:#f06277;
-    color:white;
-    font-size:13px;
+    padding: 0 13px;
 
-    cursor:pointer;
-    transition:all 0.2s ease;
-}
+    border-radius: 9px;
 
-.filter-bar > button:hover{
-    background:#e11d48; /* darker pink */
-    transform:translateY(-1px);
-    box-shadow:0 6px 14px rgba(240,98,119,0.25);
-}
+    /*
+     * Remove default anchor styling.
+     */
+    text-decoration: none;
 
-/* ADD BUTTON */
-.add-agencybtn{
-    height:36px;
-    padding:0 16px;
+    font-size: 12px;
 
-    border:none;
-    border-radius:999px;
+    font-weight: 500;
 
-    background:#3b82f6;
-    color:white;
-    font-size:13px;
-
-    cursor:pointer;
-
-    transition:all 0.2s ease;
-}
-
-.add-agencybtn:hover{
-    background:#2563eb; /* slightly darker */
-    transform:translateY(-1px); /* subtle lift */
-    box-shadow:0 6px 14px rgba(59,130,246,0.25);
-}
-
-.agency-row {
-    cursor: pointer;
-    transition: background 0.2s ease;
-}
-
-.agency-row:hover {
-    background: rgba(0, 0, 0, 0.05);
-}
-
-.actor-cell{
-    display:flex;
-    flex-direction:column;
-}
-
-.type-badge{
-    display:inline-flex;
-    padding:4px 10px;
-    font-size:11px;
-    border-radius:999px;
-    margin-top:4px;
-}
-
-/* NGA */
-.type-badge.nga{
-    background:rgba(59,130,246,0.1);
-    color:#2563eb;
-}
-
-/* NGO */
-.type-badge.ngo{
-    background:rgba(16,185,129,0.1);
-    color:#059669;
-}
-
-/* LGU */
-.type-badge.lgu{
-    background:rgba(139,92,246,0.1);
-    color:#7c3aed;
-}
-
-/* VIEW MODE LOCKED STATE */
-select[readonly] {
-    background: #f9fafb;
-    color: #555;
-}
-
-/* Prevent hover illusion */
-select[readonly]:hover {
-    cursor: default;
-}
-
-/* ================= BACKDROP ================= */
-.back{
-    position:fixed;
-    inset:0;
-
-    background:rgba(0,0,0,0.35);
-    backdrop-filter:blur(6px);
-
-    display:flex;
-    justify-content:center;
-    align-items:center;
-
-    opacity:0;
-    pointer-events:none;
-
-    transition:opacity 0.25s ease;
-    z-index:1000;
-}
-
-.back.active{
-    opacity:1;
-    pointer-events:auto;
-}
-
-/* ================= MODAL ================= */
-.modal{
-    width:520px;
-    max-height:90vh;
-
-    background:#ffffff;
-    border-radius:16px;
-
-    display:flex;
-    flex-direction:column;
-
-    box-shadow:0 20px 50px rgba(0,0,0,0.15);
-
-    overflow:hidden; /* required for sticky header */
-
-    /* 🔥 INITIAL STATE */
-    transform: translateY(20px) scale(0.96);
-    opacity:0;
+    color: #6b7280;
 
     transition:
-        transform 0.25s cubic-bezier(.16,1,.3,1),
-        opacity 0.2s ease;
-}
-
-.back.active .modal{
-    transform: translateY(0) scale(1);
-    opacity:1;
-}
-
-/* ================= HEADER ================= */
-.modal-header{
-    position:sticky;
-    top:0;
-    z-index:10;
-
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-
-    padding:16px 20px;
-
-    background:#ffffff;
-    border-bottom:1px solid #f1f5f9;
-}
-
-.modal-header h2{
-    font-size:15px;
-    font-weight:600;
-    color:#111827;
-}
-
-/* ACTION BUTTONS */
-.modal-actions{
-    display:flex;
-    gap:8px;
-}
-
-.btn-save{
-    background:#d1fae5;
-    color:#065f46;
-    border:none;
-    padding:6px 14px;
-    border-radius:999px;
-    font-size:12px;
-    cursor:pointer;
-    transition:0.2s;
-}
-
-.btn-save:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.btn-save:hover{
-    background:#bbf7d0;
-}
-
-.btn-cancel{
-    background:#f3f4f6;
-    border:none;
-    padding:6px 14px;
-    border-radius:999px;
-    font-size:12px;
-    cursor:pointer;
-    transition:0.2s;
-}
-.btn-cancel:hover{
-    background:#e5e7eb;
-}
-
-/* ================= BODY ================= */
-#agencyForm{
-    overflow-y:auto;
-    padding:18px 20px;
-
-    display:flex;
-    flex-direction:column;
-    gap:22px; /* improved spacing */
+        background-color 0.2s ease,
+        color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
 }
 
 
-/* ================= IMAGE UPLOAD (MODERN) ================= */
-.image-upload-box{
-    border:2px dashed #e5e7eb;
-    border-radius:14px;
+/* =========================================================
+   STATUS TAB ICON
+   ========================================================= */
 
-    height:180px;
-    width:100%;
+.agency-status-tab i {
+    font-size: 16px;
 
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    /*
+     * Slightly muted while inactive.
+     */
+    opacity: 0.85;
 
-    position:relative;
-    overflow:hidden;
-
-    background:#fafafa;
-    cursor:pointer;
-
-    transition:all 0.2s ease;
-}
-
-.image-upload-box:hover{
-    border-color:#3b82f6;
-    background:#f0f7ff;
-}
-
-/* CONTENT */
-.upload-content{
-    display:flex;
-    flex-direction:column; /* stack icon + text */
-    align-items:center;
-    justify-content:center;
-
-    text-align:center;
-    gap:6px; /* spacing between icon/text */
-}
-
-.upload-content i{
-    font-size:26px;
-    opacity:0.85;
-}
-
-.upload-content p{
-    margin:0;
-    font-size:14px;
-    font-weight:500;
-    color:#374151;
-}
-
-.upload-content span{
-    font-size:12px;
-    color:#6b7280;
-}
-
-/* PREVIEW */
-.faq-preview-img{
-    position:absolute;
-    inset:0;
-
-    width:100%;
-    height:100%;
-
-    object-fit:cover;
-    border-radius:12px;
-}
-
-/* ================= CENTERED IMAGE SECTION ================= */
-.form-card:first-child{
-    align-items:center; /* centers children horizontally */
-    text-align:center;  /* centers text */
-}
-
-/* LABEL STYLE */
-.upload-label{
-    font-size:14px;
-    font-weight:500;
-    color:#374151;
-
-    margin-bottom:6px;
-}
-
-/* ================= FILE META ================= */
-.file-meta{
-    font-size:11px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:2px;
-}
-
-/* RULE (always visible) */
-.file-rule{
-    color:#9ca3af; /* muted */
-}
-
-/* CURRENT SIZE */
-.file-size{
-    font-size:11px;
-    color:#9ca3af; /* muted default */
-    font-weight:500;
-    transition:0.2s;
-}
-
-/* STATES */
-.file-size.ok{ color:#16a34a; }       /* green */
-.file-size.warn{ color:#f59e0b; }     /* yellow */
-.file-size.error{ color:#dc2626; }    /* red */
-
-/* ================= FORM ================= */
-.form-card{
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-
-    padding:16px;
-
-    border-radius:14px;
-    border:1px solid #f1f5f9;
-
-    background:#fafafa;
-}
-
-/* ================= MAP ================= */
-.map-search{
-    display:flex;
-    gap:6px;
-}
-
-.map-search input{
-    flex:1;
-}
-
-.map-search button{
-    background:#2563eb;
-    color:white;
-    border:none;
-    padding:8px 12px;
-    border-radius:8px;
-    font-size:12px;
-    cursor:pointer;
-    transition:0.2s;
-}
-
-.map-search button:hover{
-    background:#1d4ed8;
-}
-
-/* MAP */
-#map{
-    width:100%;
-    height:200px;
-    border-radius:10px;
-    border:1px solid #e5e7eb;
-}
-
-/* ================= COORDS ================= */
-.coord-row{
-    display:flex;
-    gap:8px;
-}
-
-.coord-row input{
-    flex:1;
+    transition: opacity 0.2s ease;
 }
 
 
-/* ================= CATEGORY BADGE ================= */
+/* =========================================================
+   STATUS COUNT
+   ========================================================= */
 
-.category-badge{
-    display:inline-flex;
-    align-items:center;
+.agency-status-tab .status-count {
+    display: inline-flex;
 
-    padding:3px 8px;
+    align-items: center;
 
-    border-radius:999px;
+    justify-content: center;
 
-    font-size:11px;
-    font-weight:500;
+    min-width: 22px;
 
-    color:var(--category-color);
+    height: 20px;
 
-    background:color-mix(
+    padding: 0 6px;
+
+    border-radius: 999px;
+
+    background: #e5e7eb;
+
+    color: #6b7280;
+
+    font-size: 10px;
+
+    font-weight: 600;
+
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease;
+}
+
+
+/* =========================================================
+   STATUS TAB HOVER
+   ========================================================= */
+
+.agency-status-tab:hover {
+    color: #374151;
+
+    background: rgba(255, 255, 255, 0.7);
+
+    transform: translateY(-1px);
+}
+
+
+.agency-status-tab:hover i {
+    opacity: 1;
+}
+
+
+/* =========================================================
+   ACTIVE STATUS TAB
+   ========================================================= */
+
+.agency-status-tab.active {
+    background: #ffffff;
+
+    color: #1f3a5f;
+
+    box-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+
+.agency-status-tab.active i {
+    opacity: 1;
+}
+
+
+.agency-status-tab.active .status-count {
+    background: #e8eef6;
+
+    color: #1f3a5f;
+}
+
+
+/* =========================================================
+   FILTER CARD
+   ========================================================= */
+
+.filter-card {
+    /*
+     * Keeps the filter controls and Add Agency button
+     * aligned horizontally on larger screens.
+     */
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 16px;
+
+    padding: 14px 18px;
+
+    margin-bottom: 14px;
+
+    background: #ffffff;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 14px;
+
+    box-shadow:
+        0 6px 18px rgba(0, 0, 0, 0.04);
+
+    /*
+     * Controls may wrap on smaller screens, but this card
+     * itself never becomes a horizontal scrolling area.
+     */
+    flex-wrap: wrap;
+
+    overflow: visible;
+
+    min-width: 0;
+}
+
+
+/* =========================================================
+   FILTER BAR
+   ========================================================= */
+
+.filter-bar {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    flex-wrap: wrap;
+
+    min-width: 0;
+}
+
+
+/* =========================================================
+   FILTER INPUTS
+   ========================================================= */
+
+.filter-bar input,
+.filter-bar select {
+    height: 36px;
+
+    padding: 0 12px;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 10px;
+
+    background: #f9fafb;
+
+    font-size: 13px;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background-color 0.2s ease;
+}
+
+
+/* =========================================================
+   FILTER INPUT FOCUS
+   ========================================================= */
+
+.filter-bar input:focus,
+.filter-bar select:focus {
+    /*
+     * Remove the browser's default focus outline.
+     */
+    outline: none;
+
+    border-color: #3b82f6;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+
+/* =========================================================
+   FILTER INPUT HOVER
+   ========================================================= */
+
+.filter-bar input:hover,
+.filter-bar select:hover {
+    border-color: #d1d5db;
+}
+
+
+/* =========================================================
+   FILTER BUTTON
+   ========================================================= */
+
+.filter-bar > button {
+    height: 36px;
+
+    padding: 0 14px;
+
+    border: none;
+
+    border-radius: 999px;
+
+    background: #f06277;
+
+    color: #ffffff;
+
+    font-size: 13px;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+.filter-bar > button:hover {
+    background: #e11d48;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 6px 14px rgba(240, 98, 119, 0.25);
+}
+
+
+.filter-bar > button:active {
+    transform: translateY(0);
+}
+
+
+/* =========================================================
+   ADD AGENCY BUTTON
+   ========================================================= */
+
+.add-agencybtn {
+    height: 36px;
+
+    padding: 0 16px;
+
+    border: none;
+
+    border-radius: 999px;
+
+    background: #3b82f6;
+
+    color: #ffffff;
+
+    font-size: 13px;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+.add-agencybtn:hover {
+    background: #2563eb;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 6px 14px rgba(59, 130, 246, 0.25);
+}
+
+
+.add-agencybtn:active {
+    transform: translateY(0);
+}
+
+
+/* =========================================================
+   AGENCY TABLE
+   ========================================================= */
+
+.logs-page .table {
+    width: 100%;
+
+    max-width: 100%;
+
+    min-width: 0;
+}
+/*
+ * The global table stylesheet controls the general
+ * appearance of .table-wrapper.
+ *
+ * This page only defines agency-specific behavior.
+ */
+
+/* =========================================================
+   STICKY NGA & NGO CONTROLS
+   ========================================================= */
+
+/*
+ * Keeps the Active / Trashed tabs and filter controls
+ * visible while the administrator scrolls down the page.
+ *
+ * The 60px offset matches the height of the global
+ * admin header (.topbar).
+ */
+.agency-controls {
+    position: sticky;
+
+    /*
+     * Keep the controls directly below the sticky header.
+     */
+    top: 60px;
+
+    /*
+     * Stay above normal page content, but below the
+     * global header.
+     */
+    z-index: 90;
+
+    /*
+     * Slight vertical breathing room.
+     */
+    padding: 4px 0 10px;
+
+    /*
+     * Opaque enough to hide table content while scrolling
+     * underneath the sticky controls.
+     */
+    background: rgba(246, 247, 251, 0.96);
+
+    /*
+     * Modern glass effect.
+     */
+    backdrop-filter: blur(10px);
+
+    /*
+     * Keeps the sticky area visually grouped.
+     */
+    border-radius: 14px;
+}
+
+/* =========================================================
+   TABLE WRAPPER
+   ========================================================= */
+
+/*
+ * The page itself handles vertical scrolling.
+ *
+ * Keeping the wrapper non-scrollable prevents nested
+ * scrolling areas that are difficult to use with a mouse,
+ * trackpad, and touch input.
+ */
+.logs-page .table-wrapper {
+    width: 100%;
+
+    max-width: 100%;
+
+    max-height: none;
+
+    overflow: visible;
+}
+
+
+/* =========================================================
+   AGENCY TABLE COLUMN WIDTHS
+   ========================================================= */
+
+/*
+ * These widths belong here because they describe the
+ * structure of the Agency Management table specifically.
+ */
+
+
+/* ID */
+
+.logs-page .table th:nth-child(1),
+.logs-page .table td:nth-child(1) {
+    width: 6%;
+
+    text-align: center;
+
+    white-space: nowrap;
+}
+
+
+/* AGENCY */
+
+.logs-page .table th:nth-child(2),
+.logs-page .table td:nth-child(2) {
+    width: 27%;
+
+    text-align: left;
+}
+
+
+/* LOCATION */
+
+.logs-page .table th:nth-child(3),
+.logs-page .table td:nth-child(3) {
+    width: 24%;
+
+    text-align: left;
+}
+
+
+/* EMAIL */
+
+.logs-page .table th:nth-child(4),
+.logs-page .table td:nth-child(4) {
+    width: 18%;
+
+    text-align: left;
+}
+
+
+/* HOTLINE */
+
+.logs-page .table th:nth-child(5),
+.logs-page .table td:nth-child(5) {
+    width: 12%;
+
+    text-align: left;
+
+    white-space: nowrap;
+}
+
+
+/* ACTION */
+
+.logs-page .table th:nth-child(6),
+.logs-page .table td:nth-child(6) {
+    width: 13%;
+
+    text-align: center;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   AGENCY ROW
+   ========================================================= */
+
+.agency-row {
+    /*
+     * The row can be clicked to inspect the agency.
+     */
+    cursor: pointer;
+
+    transition:
+        background-color 0.18s ease;
+}
+
+
+.agency-row:hover {
+    background: #f8fafc;
+}
+
+
+/* =========================================================
+   AGENCY CELL
+   ========================================================= */
+
+.logs-page .actor-cell {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    justify-content: flex-start;
+
+    gap: 5px;
+
+    min-width: 0;
+}
+
+
+/* =========================================================
+   AGENCY NAME
+   ========================================================= */
+
+.logs-page .actor-name {
+    display: block;
+
+    width: 100%;
+
+    color: #1f2937;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   AGENCY ABBREVIATION
+   ========================================================= */
+
+.abbr {
+    color: #6b7280;
+
+    font-weight: 500;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   AGENCY META
+   ========================================================= */
+
+.agency-meta {
+    display: flex;
+
+    align-items: center;
+
+    flex-wrap: wrap;
+
+    gap: 5px;
+
+    max-width: 100%;
+}
+
+
+/* =========================================================
+   AGENCY TYPE BADGES
+   ========================================================= */
+
+.type-badge {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: fit-content;
+
+    padding: 3px 9px;
+
+    border-radius: 999px;
+
+    font-size: 10px;
+
+    font-weight: 500;
+
+    line-height: 1.3;
+
+    white-space: nowrap;
+
+    flex-shrink: 0;
+}
+
+
+/* NGA */
+
+.type-badge.nga {
+    background: rgba(59, 130, 246, 0.09);
+
+    color: #2563eb;
+}
+
+
+/* NGO */
+
+.type-badge.ngo {
+    background: rgba(16, 185, 129, 0.09);
+
+    color: #059669;
+}
+
+
+/* LGU */
+
+.type-badge.lgu {
+    background: rgba(139, 92, 246, 0.09);
+
+    color: #7c3aed;
+}
+
+
+/* =========================================================
+   CATEGORY BADGE
+   ========================================================= */
+
+.category-badge {
+    display: inline-flex;
+
+    align-items: center;
+
+    width: fit-content;
+
+    max-width: 100%;
+
+    padding: 3px 8px;
+
+    border-radius: 999px;
+
+    font-size: 10px;
+
+    font-weight: 500;
+
+    line-height: 1.3;
+
+    color: var(--category-color);
+
+    background: color-mix(
         in srgb,
         var(--category-color) 10%,
         white
     );
 
-    border:1px solid color-mix(
+    border: 1px solid color-mix(
         in srgb,
         var(--category-color) 25%,
         white
     );
 
-    white-space:nowrap;
+    /*
+     * Category names are allowed to wrap if they are long.
+     */
+    white-space: normal;
+
+    flex-shrink: 0;
 
     transition:
-        background-color .2s ease,
-        border-color .2s ease,
-        transform .2s ease;
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease;
 }
 
-.category-badge:hover{
-    transform:translateY(-1px);
 
-    background:color-mix(
+.category-badge:hover {
+    transform: translateY(-1px);
+
+    background: color-mix(
         in srgb,
         var(--category-color) 15%,
         white
     );
+}
+
+
+/* =========================================================
+   ACTION BUTTON GROUP
+   ========================================================= */
+
+/*
+ * .tablebtn itself is already provided by the global
+ * table stylesheet.
+ *
+ * Only agency-specific constraints are added here.
+ */
+
+.logs-page .tablebtn .btn {
+    flex-shrink: 0;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   TRASHED RECORD ACTIONS
+   ========================================================= */
+
+
+/* RESTORE */
+
+.btn-restore {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 5px;
+
+    background: #ecfdf5;
+
+    color: #047857;
+
+    border: 1px solid #d1fae5;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+.btn-restore:hover {
+    background: #d1fae5;
+
+    border-color: #a7f3d0;
+
+    transform: translateY(-1px);
+}
+
+
+.btn-restore i {
+    font-size: 14px;
+
+    opacity: 0.9;
+}
+
+
+/* =========================================================
+   PERMANENT DELETE
+   ========================================================= */
+
+.force-delete-btn {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 5px;
+
+    white-space: nowrap;
+
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+.force-delete-btn i {
+    font-size: 14px;
+
+    opacity: 0.9;
+}
+
+
+.force-delete-btn:hover {
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   READONLY SELECT
+   ========================================================= */
+
+select[readonly] {
+    background: #f9fafb;
+
+    color: #555;
+}
+
+
+select[readonly]:hover {
+    cursor: default;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.empty {
+    padding: 50px 20px;
+
+    text-align: center;
+
+    color: #9ca3af;
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   AGENCY MODAL BACKDROP
+   ========================================================= */
+
+.back {
+    position: fixed;
+
+    inset: 0;
+
+    /*
+     * Dark translucent layer keeps the user's attention
+     * on the modal.
+     */
+    background: rgba(0, 0, 0, 0.35);
+
+    /*
+     * Modern SaaS-style glass blur.
+     */
+    backdrop-filter: blur(6px);
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
+    /*
+     * Hidden by default.
+     */
+    opacity: 0;
+
+    pointer-events: none;
+
+    transition: opacity 0.25s ease;
+
+    z-index: 1000;
+}
+
+
+/* =========================================================
+   ACTIVE BACKDROP
+   ========================================================= */
+
+.back.active {
+    opacity: 1;
+
+    pointer-events: auto;
+}
+
+
+/* =========================================================
+   AGENCY MODAL
+   ========================================================= */
+
+.modal {
+    width: 520px;
+
+    max-width: calc(100vw - 24px);
+
+    max-height: 90vh;
+
+    background: #ffffff;
+
+    border-radius: 16px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.15);
+
+    /*
+     * Keeps the header and body inside the rounded
+     * container.
+     */
+    overflow: hidden;
+
+    /*
+     * Initial animation state.
+     */
+    transform:
+        translateY(20px)
+        scale(0.96);
+
+    opacity: 0;
+
+    transition:
+        transform 0.25s cubic-bezier(.16, 1, .3, 1),
+        opacity 0.2s ease;
+}
+
+
+/* =========================================================
+   ACTIVE MODAL
+   ========================================================= */
+
+.back.active .modal {
+    transform:
+        translateY(0)
+        scale(1);
+
+    opacity: 1;
+}
+
+
+/* =========================================================
+   MODAL HEADER
+   ========================================================= */
+
+.modal-header {
+    /*
+     * Keeps the header visible while the form body scrolls.
+     */
+    position: sticky;
+
+    top: 0;
+
+    z-index: 10;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    padding: 16px 20px;
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #f1f5f9;
+}
+
+
+.modal-header h2 {
+    font-size: 15px;
+
+    font-weight: 600;
+
+    color: #111827;
+}
+
+
+/* =========================================================
+   MODAL ACTIONS
+   ========================================================= */
+
+.modal-actions {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+}
+
+
+/* =========================================================
+   SAVE BUTTON
+   ========================================================= */
+
+.btn-save {
+    background: #d1fae5;
+
+    color: #065f46;
+
+    border: none;
+
+    padding: 6px 14px;
+
+    border-radius: 999px;
+
+    font-size: 12px;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+.btn-save:disabled {
+    opacity: 0.5;
+
+    cursor: not-allowed;
+}
+
+
+.btn-save:hover:not(:disabled) {
+    background: #bbf7d0;
+}
+
+
+.btn-save:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+
+/* =========================================================
+   CANCEL BUTTON
+   ========================================================= */
+
+.btn-cancel {
+    background: #f3f4f6;
+
+    color: #374151;
+
+    border: none;
+
+    padding: 6px 14px;
+
+    border-radius: 999px;
+
+    font-size: 12px;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+.btn-cancel:hover {
+    background: #e5e7eb;
+}
+
+
+.btn-cancel:active {
+    transform: scale(0.97);
+}
+
+
+/* =========================================================
+   FORM BODY
+   ========================================================= */
+
+#agencyForm {
+    /*
+     * The form itself is the vertical scrolling area of
+     * the modal.
+     */
+    overflow-y: auto;
+
+    overflow-x: hidden;
+
+    padding: 18px 20px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 22px;
+
+    /*
+     * Prevent flexbox children from forcing horizontal
+     * overflow.
+     */
+    min-width: 0;
+}
+
+
+/* =========================================================
+   IMAGE UPLOAD
+   ========================================================= */
+
+.image-upload-box {
+    width: 100%;
+
+    height: 180px;
+
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    overflow: hidden;
+
+    border: 2px dashed #e5e7eb;
+
+    border-radius: 14px;
+
+    background: #fafafa;
+
+    cursor: pointer;
+
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease;
+}
+
+
+.image-upload-box:hover {
+    border-color: #3b82f6;
+
+    background: #f0f7ff;
+}
+
+
+/* =========================================================
+   IMAGE UPLOAD CONTENT
+   ========================================================= */
+
+.upload-content {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    text-align: center;
+
+    gap: 6px;
+}
+
+
+.upload-content i {
+    font-size: 26px;
+
+    opacity: 0.85;
+}
+
+
+.upload-content p {
+    margin: 0;
+
+    font-size: 14px;
+
+    font-weight: 500;
+
+    color: #374151;
+}
+
+
+.upload-content span {
+    font-size: 12px;
+
+    color: #6b7280;
+}
+
+
+/* =========================================================
+   IMAGE PREVIEW
+   ========================================================= */
+
+.faq-preview-img {
+    position: absolute;
+
+    inset: 0;
+
+    width: 100%;
+
+    height: 100%;
+
+    object-fit: cover;
+
+    border-radius: 12px;
+}
+
+
+/* =========================================================
+   CENTER IMAGE FORM CARD
+   ========================================================= */
+
+.form-card:first-child {
+    align-items: center;
+
+    text-align: center;
+}
+
+
+/* =========================================================
+   UPLOAD LABEL
+   ========================================================= */
+
+.upload-label {
+    margin-bottom: 6px;
+
+    font-size: 14px;
+
+    font-weight: 500;
+
+    color: #374151;
+}
+
+
+/* =========================================================
+   FILE META
+   ========================================================= */
+
+.file-meta {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 2px;
+
+    font-size: 11px;
+}
+
+
+.file-rule {
+    color: #9ca3af;
+}
+
+
+.file-size {
+    font-size: 11px;
+
+    color: #9ca3af;
+
+    font-weight: 500;
+
+    transition: color 0.2s ease;
+}
+
+
+.file-size.ok {
+    color: #16a34a;
+}
+
+
+.file-size.warn {
+    color: #f59e0b;
+}
+
+
+.file-size.error {
+    color: #dc2626;
+}
+
+
+/* =========================================================
+   FORM CARDS
+   ========================================================= */
+
+.form-card {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+    padding: 16px;
+
+    border-radius: 14px;
+
+    border: 1px solid #f1f5f9;
+
+    background: #fafafa;
+
+    min-width: 0;
+}
+
+
+/* =========================================================
+   MAP SEARCH
+   ========================================================= */
+
+.map-search {
+    display: flex;
+
+    gap: 6px;
+
+    min-width: 0;
+}
+
+
+.map-search input {
+    flex: 1;
+
+    min-width: 0;
+}
+
+
+/* =========================================================
+   MAP SEARCH BUTTON
+   ========================================================= */
+
+.map-search button {
+    flex-shrink: 0;
+
+    background: #2563eb;
+
+    color: #ffffff;
+
+    border: none;
+
+    padding: 8px 12px;
+
+    border-radius: 8px;
+
+    font-size: 12px;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+.map-search button:hover {
+    background: #1d4ed8;
+
+    transform: translateY(-1px);
+}
+
+
+.map-search button:active {
+    transform: translateY(0);
+}
+
+
+/* =========================================================
+   MAP
+   ========================================================= */
+
+#map {
+    width: 100%;
+
+    height: 200px;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 10px;
+}
+
+
+/* =========================================================
+   COORDINATES
+   ========================================================= */
+
+.coord-row {
+    display: flex;
+
+    gap: 8px;
+
+    min-width: 0;
+}
+
+
+.coord-row input {
+    flex: 1;
+
+    min-width: 0;
+}
+
+/* =========================================================
+   CONTACT INFORMATION
+   ========================================================= */
+
+/*
+ * Main contact section.
+ *
+ * The contact system is intentionally visually separated
+ * from the other agency information because an agency may
+ * have multiple contact records.
+ */
+.agency-contacts {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+
+    width: 100%;
+
+    min-width: 0;
+}
+
+
+/* =========================================================
+   CONTACT ROW
+   ========================================================= */
+
+/*
+ * Each contact is treated as an independent record.
+ *
+ * This makes multiple hotlines, emails, mobile numbers,
+ * social links, etc. easy to distinguish.
+ */
+.agency-contact-row {
+    position: relative;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+    width: 100%;
+
+    padding: 14px;
+
+    background: #ffffff;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.025);
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+/*
+ * Subtle interaction feedback.
+ */
+.agency-contact-row:hover {
+    border-color: #dbe3ee;
+
+    box-shadow:
+        0 5px 14px rgba(0, 0, 0, 0.045);
+
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   CONTACT HEADER
+   ========================================================= */
+
+/*
+ * Contains the contact type and remove button.
+ */
+.agency-contact-header {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 10px;
+
+    width: 100%;
+
+    min-width: 0;
+}
+
+
+/* =========================================================
+   CONTACT TYPE
+   ========================================================= */
+
+.agency-contact-type {
+    flex: 1;
+
+    min-width: 0;
+}
+
+
+/*
+ * Contact type selector.
+ *
+ * The available options come from the contact_types table,
+ * so this styling deliberately does not depend on a
+ * particular contact type such as Email or Hotline.
+ */
+.contact-type-select {
+    width: 100%;
+
+    height: 36px;
+
+    padding: 0 34px 0 11px;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 9px;
+
+    background: #f9fafb;
+
+    color: #374151;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    font-weight: 500;
+
+    cursor: pointer;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+.contact-type-select:hover {
+    border-color: #d1d5db;
+
+    background: #ffffff;
+}
+
+
+.contact-type-select:focus {
+    border-color: #3b82f6;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+
+/* =========================================================
+   REMOVE CONTACT BUTTON
+   ========================================================= */
+
+.remove-contact-btn {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    width: 32px;
+
+    height: 32px;
+
+    padding: 0;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 8px;
+
+    background: #ffffff;
+
+    color: #9ca3af;
+
+    cursor: pointer;
+
+    transition:
+        color 0.2s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+.remove-contact-btn i {
+    font-size: 15px;
+
+    opacity: 0.9;
+}
+
+
+.remove-contact-btn:hover {
+    color: #dc2626;
+
+    background: #fef2f2;
+
+    border-color: #fecaca;
+
+    transform: translateY(-1px);
+}
+
+
+.remove-contact-btn:active {
+    transform: translateY(0);
+}
+
+
+.remove-contact-btn:disabled {
+    opacity: 0.4;
+
+    cursor: not-allowed;
+
+    transform: none;
+}
+
+
+/* =========================================================
+   CONTACT LABEL
+   ========================================================= */
+
+/*
+ * The generated contact fields use the same floating-label
+ * pattern as the rest of the agency form.
+ */
+.agency-contact-row .floating-group {
+    width: 100%;
+
+    min-width: 0;
+}
+
+
+.agency-contact-row .floating-group input {
+    width: 100%;
+
+    min-width: 0;
+}
+
+
+/* =========================================================
+   CONTACT PRIMARY
+   ========================================================= */
+
+/*
+ * Primary contact is intentionally understated.
+ *
+ * It is metadata about the contact rather than the main
+ * action of the form.
+ */
+.contact-primary {
+    display: inline-flex;
+
+    align-items: center;
+
+    align-self: flex-start;
+
+    gap: 7px;
+
+    margin-top: -2px;
+
+    color: #6b7280;
+
+    font-size: 11px;
+
+    font-weight: 500;
+
+    cursor: pointer;
+
+    user-select: none;
+}
+
+
+.contact-primary-checkbox {
+    appearance: none;
+
+    width: 15px;
+
+    height: 15px;
+
+    margin: 0;
+
+    flex-shrink: 0;
+
+    border: 1px solid #d1d5db;
+
+    border-radius: 4px;
+
+    background: #ffffff;
+
+    cursor: pointer;
+
+    position: relative;
+
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+.contact-primary-checkbox:hover {
+    border-color: #9ca3af;
+}
+
+
+.contact-primary-checkbox:focus-visible {
+    outline: none;
+
+    border-color: #3b82f6;
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+
+.contact-primary-checkbox:checked {
+    background: #2563eb;
+
+    border-color: #2563eb;
+}
+
+
+/*
+ * Lightweight check mark.
+ */
+.contact-primary-checkbox:checked::after {
+    content: "";
+
+    position: absolute;
+
+    left: 4px;
+
+    top: 1px;
+
+    width: 4px;
+
+    height: 8px;
+
+    border-right: 1.5px solid #ffffff;
+
+    border-bottom: 1.5px solid #ffffff;
+
+    transform: rotate(45deg);
+}
+
+
+.contact-primary-checkbox:disabled {
+    opacity: 0.5;
+
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   ADD CONTACT BUTTON
+   ========================================================= */
+
+/*
+ * Secondary action rather than a large primary button.
+ *
+ * The main form action remains Save.
+ */
+.add-contact-btn {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    align-self: flex-start;
+
+    gap: 6px;
+
+    min-height: 34px;
+
+    padding: 0 12px;
+
+    margin-top: 2px;
+
+    border: 1px dashed #cbd5e1;
+
+    border-radius: 9px;
+
+    background: #ffffff;
+
+    color: #475569;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    font-weight: 500;
+
+    cursor: pointer;
+
+    transition:
+        color 0.2s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+.add-contact-btn i {
+    font-size: 15px;
+
+    opacity: 0.9;
+
+    transition:
+        transform 0.2s ease;
+}
+
+
+.add-contact-btn:hover {
+    color: #2563eb;
+
+    background: #f8fbff;
+
+    border-color: #93c5fd;
+
+    box-shadow:
+        0 4px 10px rgba(37, 99, 235, 0.07);
+
+    transform: translateY(-1px);
+}
+
+
+.add-contact-btn:hover i {
+    transform: rotate(90deg);
+}
+
+
+.add-contact-btn:active {
+    transform: translateY(0);
+
+    box-shadow: none;
+}
+
+
+/* =========================================================
+   CONTACT VALIDATION
+   ========================================================= */
+
+/*
+ * Invalid contact type/value fields use the same visual
+ * language as the rest of the form.
+ */
+.agency-contact-row .is-invalid {
+    border-color: #ef4444 !important;
+
+    background: #fffafa !important;
+}
+
+
+.agency-contact-row .is-invalid:focus {
+    box-shadow:
+        0 0 0 3px rgba(239, 68, 68, 0.08) !important;
+}
+
+
+/* =========================================================
+   CONTACT FORM MESSAGE
+   ========================================================= */
+
+.agency-contact-row .form-message {
+    display: block;
+
+    min-height: 0;
+
+    margin-top: 4px;
+
+    color: #dc2626;
+
+    font-size: 10px;
+
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   CONTACT VIEW MODE
+   ========================================================= */
+
+/*
+ * View mode should visually communicate that the fields
+ * are no longer editable.
+ */
+.agency-contact-row input[readonly],
+.agency-contact-row select[readonly] {
+    background: #f8fafc;
+
+    color: #64748b;
+
+    cursor: default;
+}
+
+
+.agency-contact-row input:disabled,
+.agency-contact-row select:disabled {
+    opacity: 0.75;
+
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   CONTACT RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    /*
+     * Reduce the contact card padding on narrow screens.
+     */
+    .agency-contact-row {
+        padding: 12px;
+
+        gap: 10px;
+
+        border-radius: 10px;
+    }
+
+
+    /*
+     * Keep the contact header horizontal because the
+     * selector and remove button still fit comfortably.
+     */
+    .agency-contact-header {
+        gap: 8px;
+    }
+
+
+    .contact-type-select {
+        height: 34px;
+
+        font-size: 11.5px;
+    }
+
+
+    .remove-contact-btn {
+        width: 30px;
+
+        height: 30px;
+    }
+
+
+    .add-contact-btn {
+        width: 100%;
+
+        align-self: stretch;
+    }
+
 }

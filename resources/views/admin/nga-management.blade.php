@@ -28,67 +28,187 @@
         </div>
     @endif
 
-    <!-- ================= FILTER BAR ================= -->
+    {{-- =========================================================
+     AGENCY STATUS TABS
+     =========================================================
+     
+     Only Superadmins can access the Trashed view.
+     
+     The actual authorization is still enforced by the
+     backend. This condition only controls the interface.
+     ========================================================= --}}
+
+
+     <!-- =========================================================
+     STICKY NGA & NGO CONTROLS
+     ========================================================= -->
+
+<div class="agency-controls">
+
+    {{-- =====================================================
+         STATUS TABS
+         ===================================================== --}}
+
+    @if(auth()->user()->role === 'superadmin')
+
+        <div class="agency-status-tabs">
+
+            {{-- ACTIVE --}}
+            <a
+                href="{{ route('admin.nga', array_merge(
+                    request()->except('page', 'status'),
+                    ['status' => 'active']
+                )) }}"
+                class="agency-status-tab {{ $status === 'active' ? 'active' : '' }}"
+            >
+                <i class="ph-light ph-buildings"></i>
+
+                <span>Active</span>
+
+                <span class="status-count">
+                    {{ $activeCount }}
+                </span>
+            </a>
+
+
+            {{-- TRASHED --}}
+            <a
+                href="{{ route('admin.nga', array_merge(
+                    request()->except('page', 'status'),
+                    ['status' => 'trashed']
+                )) }}"
+                class="agency-status-tab {{ $status === 'trashed' ? 'active' : '' }}"
+            >
+                <i class="ph-light ph-trash"></i>
+
+                <span>Trashed</span>
+
+                <span class="status-count">
+                    {{ $trashedCount }}
+                </span>
+            </a>
+
+        </div>
+
+    @endif
+
+
+    {{-- =====================================================
+         FILTER BAR
+         ===================================================== --}}
+
     <form method="GET" action="{{ route('admin.nga') }}">
+
+        <input
+            type="hidden"
+            name="status"
+            value="{{ $status }}"
+        >
+
         <div class="filter-card">
 
             <div class="filter-bar">
 
-                <!-- 🔍 SEARCH -->
-                <input 
-                    type="text" 
-                    name="search" 
+                <!-- SEARCH -->
+                <input
+                    type="text"
+                    name="search"
                     placeholder="Search agency"
                     value="{{ request('search') }}"
                 >
 
+                <!-- TYPE -->
                 <select name="type" id="filterType">
-                    <option value="">All Types</option>
+
+                    <option value="">
+                        All Types
+                    </option>
 
                     @foreach($types as $type)
-                        <option value="{{ $type->id }}">
+
+                        <option
+                            value="{{ $type->id }}"
+                            {{ request('type') == $type->id ? 'selected' : '' }}
+                        >
                             {{ $type->name }}
                         </option>
+
                     @endforeach
+
                 </select>
 
+
+                <!-- CATEGORY -->
                 <select name="category" id="filterCategory">
-                    <option value="">All Categories</option>
+
+                    <option value="">
+                        All Categories
+                    </option>
 
                     @foreach($categories as $category)
+
                         <option
                             value="{{ $category->id }}"
                             {{ request('category') == $category->id ? 'selected' : '' }}
                         >
                             {{ $category->category_name }}
                         </option>
+
                     @endforeach
+
                 </select>
 
-                <!-- 📅 SORT -->
+
+                <!-- SORT -->
                 <select name="sort">
-                    <option value="latest" {{ request('sort') == 'latest' ? 'selected' : '' }}>
+
+                    <option
+                        value="latest"
+                        {{ request('sort') == 'latest' ? 'selected' : '' }}
+                    >
                         Newest First
                     </option>
-                    <option value="oldest" {{ request('sort') == 'oldest' ? 'selected' : '' }}>
+
+                    <option
+                        value="oldest"
+                        {{ request('sort') == 'oldest' ? 'selected' : '' }}
+                    >
                         Oldest First
                     </option>
+
                 </select>
 
-                <!-- 🚀 SUBMIT -->
-                <button type="submit">Filter</button>
+
+                <!-- FILTER -->
+                <button type="submit">
+                    Filter
+                </button>
 
             </div>
 
-            <!-- ➕ ADD BUTTON -->
+
+            <!-- ADD AGENCY -->
             <div>
-                <button type="button" class="add-agencybtn" onclick="openModal()">
-                    + Add Agency
-                </button>
+
+                @if($status === 'active')
+
+                    <button
+                        type="button"
+                        class="add-agencybtn"
+                        onclick="openModal()"
+                    >
+                        + Add Agency
+                    </button>
+
+                @endif
+
             </div>
 
         </div>
+
     </form>
+
+</div>
 
     <!-- ================= TABLE ================= -->
     <div class="table-wrapper">
@@ -108,25 +228,39 @@
             <tbody>
 
                 @forelse($agencies as $agency)
-                <tr class="agency-row"
 
-                    data-id="{{ $agency->id }}"
-                    data-name="{{ $agency->agency_name }}"
-                    data-abbreviation="{{ $agency->agency_abbreviation }}"
-                    data-category_id="{{ $agency->category_id }}"
-                    data-description="{{ $agency->agency_description }}"
-                    data-services_offered="{{ $agency->services_offered }}"
-                    data-location="{{ $agency->agency_location }}"
-                    data-email="{{ $agency->agency_email }}"
-                    data-hotline="{{ $agency->agency_hotline }}"
-                    data-landline="{{ $agency->agency_landline }}"
-                    data-website="{{ $agency->agency_website }}"
-                    data-fb="{{ $agency->agency_fb }}"
-                    data-office="{{ $agency->office_hours }}"
-                    data-lat="{{ $agency->lat }}"
-                    data-lng="{{ $agency->lng }}"
-                    data-image="{{ $agency->agency_image }}"
-                >
+                @php
+                    $agencyContacts = $agency->contacts->map(function ($contact) {
+                        return [
+                            'id' => $contact->id,
+                            'contact_type_id' => $contact->contact_type_id,
+                            'type_name' => $contact->contactType?->name,
+                            'type_slug' => $contact->contactType?->slug,
+                            'label' => $contact->label,
+                            'value' => $contact->value,
+                            'is_primary' => (bool) $contact->is_primary,
+                            'sort_order' => $contact->sort_order,
+                        ];
+                    })->values();
+                @endphp
+                <tr
+    class="agency-row"
+
+    data-id="{{ $agency->id }}"
+    data-name="{{ $agency->agency_name }}"
+    data-abbreviation="{{ $agency->agency_abbreviation }}"
+    data-type_id="{{ $agency->agency_type_id }}"
+    data-category_id="{{ $agency->category_id }}"
+    data-description="{{ $agency->agency_description }}"
+    data-services_offered="{{ $agency->services_offered }}"
+    data-location="{{ $agency->agency_location }}"
+    data-office="{{ $agency->office_hours }}"
+    data-lat="{{ $agency->lat }}"
+    data-lng="{{ $agency->lng }}"
+    data-image="{{ $agency->agency_image }}"
+
+    data-contacts="{{ $agencyContacts->toJson() }}"
+>
 
                     <td>{{ $agency->id }}</td>
 
@@ -148,72 +282,182 @@
                                 $category = $agency->category;
                             @endphp
 
-                            <span class="type-badge {{ strtolower($type) }}">
-                                {{ $type ?? '—' }}
-                            </span>
+                            <div class="agency-meta">
 
-                            @if($category)
-                                <span
-                                    class="category-badge"
-                                    style="--category-color: {{ $category->display_color }}"
-                                >
-                                    {{ $category->category_name }}
-                                </span>
-                            @endif
+    <span class="type-badge {{ strtolower($type) }}">
+        {{ $type ?? '—' }}
+    </span>
+
+    @if($category)
+
+        <span
+            class="category-badge"
+            style="--category-color: {{ $category->display_color }}"
+        >
+            {{ $category->category_name }}
+        </span>
+
+    @endif
+
+</div>
 
                         </div>
                     </td>
 
                     <td>{{ $agency->agency_location }}</td>
-                    <td>{{ $agency->agency_email }}</td>
-                    <td>{{ $agency->agency_hotline }}</td>
-
-                    <!-- ACTIONS -->
                     <td>
-                        <div class="tablebtn">
+                        @php
+                            $primaryEmail = $agency->contacts
+                                ->first(function ($contact) {
+                                    return $contact->contactType?->slug === 'email'
+                                        && $contact->is_primary;
+                                });
+                        @endphp
 
-                            <!-- VIEW -->
-                            <button 
-                                type="button"
-                                class="btn btn-primary"
-
-                                data-id="{{ $agency->id }}"
-                                data-name="{{ $agency->agency_name }}"
-                                data-abbreviation="{{ $agency->agency_abbreviation }}"
-                                data-type_id="{{ $agency->agency_type_id }}"
-                                data-category_id="{{ $agency->category_id }}"
-                                data-description="{{ $agency->agency_description }}"
-                                data-services_offered="{{ $agency->services_offered }}"
-                                data-location="{{ $agency->agency_location }}"
-                                data-email="{{ $agency->agency_email }}"
-                                data-hotline="{{ $agency->agency_hotline }}"
-                                data-landline="{{ $agency->agency_landline }}"
-                                data-website="{{ $agency->agency_website }}"
-                                data-fb="{{ $agency->agency_fb }}"
-                                data-office="{{ $agency->office_hours }}"
-                                data-lat="{{ $agency->lat }}"
-                                data-lng="{{ $agency->lng }}"
-                                data-image="{{ $agency->agency_image }}"
-                            >
-                                Edit
-                            </button>
-
-                            <!-- DELETE (SECURE) -->
-                            <form 
-                                action="{{ route('admin.agencies.destroy', $agency->id) }}" 
-                                method="POST"
-                                class="delete-form"
-                            >
-                                @csrf
-                                @method('DELETE')
-
-                                <button type="submit" class="btn btn-danger delete-btn">
-                                    Delete
-                                </button>
-                            </form>
-
-                        </div>
+                        {{ $primaryEmail?->value ?? '—' }}
                     </td>
+
+                    <td>
+                        @php
+                            $primaryHotline = $agency->contacts
+                                ->first(function ($contact) {
+                                    return $contact->contactType?->slug === 'hotline'
+                                        && $contact->is_primary;
+                                });
+                        @endphp
+
+                        {{ $primaryHotline?->value ?? '—' }}
+                    </td>
+
+                    <!-- =====================================================
+     ACTIONS
+     ===================================================== -->
+
+<td>
+
+    <div class="tablebtn">
+
+        {{-- =================================================
+             ACTIVE AGENCY
+             =================================================
+             Normal Admin + Superadmin
+             ================================================= --}}
+
+        @if($status === 'active')
+
+            <!-- EDIT -->
+            <button
+                type="button"
+                class="btn btn-primary"
+
+                data-id="{{ $agency->id }}"
+                data-name="{{ $agency->agency_name }}"
+                data-abbreviation="{{ $agency->agency_abbreviation }}"
+                data-type_id="{{ $agency->agency_type_id }}"
+                data-category_id="{{ $agency->category_id }}"
+                data-description="{{ $agency->agency_description }}"
+                data-services_offered="{{ $agency->services_offered }}"
+                data-location="{{ $agency->agency_location }}"
+                data-office="{{ $agency->office_hours }}"
+                data-lat="{{ $agency->lat }}"
+                data-lng="{{ $agency->lng }}"
+                data-image="{{ $agency->agency_image }}"
+                data-contacts="{{ $agencyContacts->toJson() }}"
+            >
+            <i class="ph-light ph-pencil-simple"></i>
+                Edit
+            </button>
+
+
+            <!-- SOFT DELETE -->
+            <form
+                action="{{ route(
+                    'admin.agencies.destroy',
+                    $agency->id
+                ) }}"
+                method="POST"
+                class="delete-form"
+            >
+                @csrf
+                @method('DELETE')
+
+                <button
+                    type="button"
+                    class="btn btn-danger delete-btn"
+                    data-agency-name="{{ $agency->agency_name }}"
+                >
+                    <i class="ph-light ph-trash"></i>
+                    Trash
+                </button>
+
+            </form>
+
+
+        {{-- =================================================
+             TRASHED AGENCY
+             =================================================
+             Superadmin only.
+             The backend middleware remains the real security
+             boundary.
+             ================================================= --}}
+
+        @elseif(
+            $status === 'trashed'
+            && auth()->user()->role === 'superadmin'
+        )
+
+            <!-- RESTORE -->
+            <form
+                action="{{ route(
+                    'admin.agencies.restore',
+                    $agency->id
+                ) }}"
+                method="POST"
+                class="restore-form"
+            >
+                @csrf
+                @method('PATCH')
+
+                <button
+                    type="button"
+                    class="btn btn-restore restore-btn"
+                    data-agency-name="{{ $agency->agency_name }}"
+                >
+                    <i class="ph-light ph-arrow-counter-clockwise"></i>
+                    Restore
+                </button>
+
+            </form>
+
+
+            <!-- PERMANENT DELETE -->
+            <form
+                action="{{ route(
+                    'admin.agencies.force-delete',
+                    $agency->id
+                ) }}"
+                method="POST"
+                class="force-delete-form"
+            >
+                @csrf
+                @method('DELETE')
+
+                <button
+                    type="button"
+                    class="btn btn-danger force-delete-btn"
+                    data-agency-name="{{ $agency->agency_name }}"
+                >
+                    <i class="ph-light ph-trash"></i>
+                    Delete Permanently
+                </button>
+
+            </form>
+
+        @endif
+
+    </div>
+
+</td>
 
                 </tr>
                 @empty
@@ -228,52 +472,99 @@
                 @endforelse
 
             </tbody>
-        </table>
+                </table>
+
+    </div>
 
 
-        
+    <!-- =====================================================
+         TABLE FOOTER
+         =====================================================
 
-        <!-- ================= FOOTER ================= -->
-        <div class="footer">
+         IMPORTANT:
 
-            <!-- RESULTS -->
-            <span class="result-info">
-                Showing {{ $agencies->firstItem() ?? 0 }} 
-                to {{ $agencies->lastItem() ?? 0 }} 
-                of {{ $agencies->total() }} results
-            </span>
+         The footer is intentionally OUTSIDE .table-wrapper.
 
-            <!-- PAGINATION -->
-            <div class="pagination-modern">
+         This means the table can have its own scrolling
+         behavior without dragging the pagination along with it.
+         ===================================================== -->
 
-                {{-- PREVIOUS --}}
-                @if ($agencies->onFirstPage())
-                    <span class="arrow disabled">
-                        <i class="ph-light ph-caret-left"></i>
-                    </span>
-                @else
-                    <a href="{{ $agencies->previousPageUrl() }}" class="arrow">
-                        <i class="ph-light ph-caret-left"></i>
-                    </a>
-                @endif
+    <div class="footer">
 
-                {{-- PAGE NUMBER --}}
-                <span class="page-indicator">
-                    Page {{ $agencies->currentPage() }}
+        <!-- RESULTS -->
+
+        <span class="result-info">
+
+            Showing {{ $agencies->firstItem() ?? 0 }}
+
+            to {{ $agencies->lastItem() ?? 0 }}
+
+            of {{ $agencies->total() }} results
+
+        </span>
+
+
+        <!-- PAGINATION -->
+
+        <div class="pagination-modern">
+
+            {{-- PREVIOUS --}}
+
+            @if ($agencies->onFirstPage())
+
+                <span class="arrow disabled">
+
+                    <i class="ph-light ph-caret-left"></i>
+
                 </span>
 
-                {{-- NEXT --}}
-                @if ($agencies->hasMorePages())
-                    <a href="{{ $agencies->nextPageUrl() }}" class="arrow">
-                        <i class="ph-light ph-caret-right"></i>
-                    </a>
-                @else
-                    <span class="arrow disabled">
-                        <i class="ph-light ph-caret-right"></i>
-                    </span>
-                @endif
+            @else
 
-            </div>
+                <a
+                    href="{{ $agencies->previousPageUrl() }}"
+                    class="arrow"
+                    aria-label="Previous page"
+                >
+
+                    <i class="ph-light ph-caret-left"></i>
+
+                </a>
+
+            @endif
+
+
+            {{-- CURRENT PAGE --}}
+
+            <span class="page-indicator">
+
+                Page {{ $agencies->currentPage() }}
+
+            </span>
+
+
+            {{-- NEXT --}}
+
+            @if ($agencies->hasMorePages())
+
+                <a
+                    href="{{ $agencies->nextPageUrl() }}"
+                    class="arrow"
+                    aria-label="Next page"
+                >
+
+                    <i class="ph-light ph-caret-right"></i>
+
+                </a>
+
+            @else
+
+                <span class="arrow disabled">
+
+                    <i class="ph-light ph-caret-right"></i>
+
+                </span>
+
+            @endif
 
         </div>
 
@@ -345,17 +636,22 @@
                 </div>
 
                 <!-- ABBREVIATION -->
-                <div class="floating-group" data-validate="optional-text">
-                    <input 
-                        type="text" 
-                        name="agency_abbreviation" 
-                        id="agency_abbreviation" 
+                <div class="floating-group" data-validate="required">
+
+                    <input
+                        type="text"
+                        name="agency_abbreviation"
+                        id="agency_abbreviation"
                         placeholder=" "
+                        required
                     >
+
                     <label for="agency_abbreviation">
-                        Abbreviation (e.g. DOH, DSWD)
+                        Abbreviation
                     </label>
+
                     <span class="form-message"></span>
+
                 </div>
 
                 <!-- AGENCY TYPE -->
@@ -429,58 +725,84 @@
             
 
             <!-- ================= CONTACT ================= -->
-            <div class="form-card">
-                <label>Contact Information</label>
+<div class="form-card">
 
-                <!-- OPTIONAL LANDLINE -->
-                <div class="floating-group" data-validate="landline">
-                    <input type="text" name="agency_landline" id="agency_landline" placeholder=" ">
-                    <label for="agency_landline">Landline</label>
-                    <span class="form-message"></span>
-                </div>
+    <label>Contact Information</label>
 
-                <!-- REQUIRED HOTLINE (based on your migration) -->
-                <div class="floating-group" data-validate="phone">
-                    <input type="text" name="agency_hotline" id="agency_hotline" placeholder=" " required>
-                    <label for="agency_hotline">Hotline</label>
-                    <span class="form-message"></span>
-                </div>
+    <p class="form-helper">
+        Add the agency's available contact information.
+        At least one Hotline and one Email are required.
+Additional contact information may be added.
+    </p>
 
-                <!-- OPTIONAL EMAIL -->
-                <div class="floating-group" data-validate="email">
-                    <input type="email" name="agency_email" id="agency_email" placeholder=" ">
-                    <label for="agency_email">Email</label>
-                    <span class="form-message"></span>
-                </div>
+    <!--
+        JavaScript will dynamically generate the individual
+        contact fields inside this container.
 
-                <!-- OPTIONAL WEBSITE -->
-                <div class="floating-group" data-validate="website">
-                    <input type="text" name="agency_website" id="agency_website" placeholder=" ">
-                    <label for="agency_website">Website</label>
-                    <span class="form-message"></span>
-                </div>
+        Each generated contact will submit data using:
 
-                <!-- OPTIONAL FACEBOOK -->
-                <div class="floating-group" data-validate="facebook">
-                    <input type="text" name="agency_fb" id="agency_fb" placeholder=" ">
-                    <label for="agency_fb">Facebook</label>
-                    <span class="form-message"></span>
-                </div>
-            </div>
+        contacts[index][contact_type_id]
+        contacts[index][label]
+        contacts[index][value]
+        contacts[index][is_primary]
+        contacts[index][sort_order]
+    -->
+    <div
+        id="agency-contacts"
+        class="agency-contacts"
+    ></div>
+
+
+    <!--
+        JavaScript uses this button to append another
+        contact entry.
+    -->
+    <button
+        type="button"
+        id="add-contact-btn"
+        class="add-contact-btn"
+    >
+        <i class="ph-light ph-plus"></i>
+        Add Contact
+    </button>
+
+
+    <!--
+        Backend validation errors for the entire contact
+        collection will be displayed here.
+    -->
+    <span
+        id="contacts-form-message"
+        class="form-message"
+    ></span>
+
+</div>
 
             <!-- ================= OFFICE HOURS ================= -->
             <div class="form-card">
+
                 <label>Office Hours</label>
 
-                <!-- ⚠️ DEPENDS ON BACKEND -->
-                <!-- If required in DB, keep "required" -->
-                <!-- If optional, change to optional-text -->
+                <div
+                    class="floating-group"
+                    data-validate="required"
+                >
 
-                <div class="floating-group" data-validate="optional-text">
-                    <textarea name="office_hours" id="office_hours" placeholder=" "></textarea>
-                    <label for="office_hours">Office Hours</label>
+                    <textarea
+                        name="office_hours"
+                        id="office_hours"
+                        placeholder=" "
+                        required
+                    ></textarea>
+
+                    <label for="office_hours">
+                        Office Hours
+                    </label>
+
                     <span class="form-message"></span>
+
                 </div>
+
             </div>
 
             <!-- ================= LOCATION ================= -->
@@ -540,13 +862,25 @@
 
 @push('scripts')
 
-<script src="{{ asset('jsfiles/components/modal-system.js') }}"></script>
+<script>
+    /*
+     * Contact types are loaded from the database by the controller.
+     *
+     * toJson() converts the Laravel collection into JSON that
+     * JavaScript can safely consume.
+     */
+    window.agencyContactTypes = {!! $contactTypes->values()->toJson() !!};
+</script>
+
+
 <script src="{{ asset('jsfiles/admin/nga-management.js') }}"></script>
 
 @if(session('success'))
 <script>
     window.__FLASH_SUCCESS__ = @json(session('success'));
 </script>
+
+
 @endif
 
 @endpush

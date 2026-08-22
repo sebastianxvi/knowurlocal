@@ -1,531 +1,1614 @@
+/* =========================================================
+   KNOWURLOCAL — PUBLIC AUTHENTICATION
+   ========================================================= */
+
+
+/* =========================================================
+   1. DESIGN TOKENS
+   ========================================================= */
+
 :root {
-    --blue-main: #1F3A5F;
-    --red-main: #f06277;
-    --red-hover: #e2556a;
-    --bg-color: #e9edf3;
 
-    --panel-width: 55%;
+    --color-primary: #315fbd;
+
+    --color-primary-dark: #274f9f;
+
+    --color-primary-soft: #eef4ff;
+
+    --color-accent: #6b5fd3;
+
+    --color-text: #172033;
+
+    --color-text-secondary: #61708a;
+
+    --color-text-muted: #8a96a8;
+
+    --color-border: #dfe5ee;
+
+    --color-border-soft: #e8edf4;
+
+    --color-surface: #ffffff;
+
+    --color-surface-soft: #f7f9fc;
+
+    --color-page: #f2f5f9;
+
+    --color-danger: #c84d61;
+
+
+    --auth-width: 980px;
+
+    --auth-height: 620px;
+
+    --panel-width: 52%;
+
+
+    --radius-container: 24px;
+
+    --radius-input: 10px;
+
+    --radius-button: 10px;
+
+
+    --transition-fast: 160ms ease;
+
+    --transition-normal: 280ms ease;
+
+    --transition-panel:
+        650ms cubic-bezier(
+            0.22,
+            1,
+            0.36,
+            1
+        );
 }
 
-/* RESET */
+
+/* =========================================================
+   2. RESET
+   ========================================================= */
+
 * {
+
     margin: 0;
+
     padding: 0;
+
     box-sizing: border-box;
-    font-family: "Inter", sans-serif;
+
 }
 
-/* BODY */
+
+html {
+
+    min-height: 100%;
+
+}
+
+
 body {
-    height: 100vh;
-    background: var(--bg-color);
+
+    min-height: 100vh;
+
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    color: var(--color-text);
+
+    background:
+        radial-gradient(
+            circle at 10% 10%,
+            rgba(
+                49,
+                95,
+                189,
+                0.07
+            ),
+            transparent 32%
+        ),
+        var(--color-page);
+
     display: flex;
+
     justify-content: center;
+
     align-items: center;
+
+    padding: 24px;
+
+    -webkit-font-smoothing: antialiased;
+
+    text-rendering: optimizeLegibility;
+
 }
 
-/* CONTAINER */
-.container {
-    width: 950px;
-    height: 600px;
-    background: #fff;
-    border-radius: 24px;
-    box-shadow: 0 30px 60px rgba(0,0,0,0.12);
-    position: relative;
+
+/* =========================================================
+   3. ACCESSIBILITY HELPERS
+   ========================================================= */
+
+/*
+ * Labels remain available to screen readers while being
+ * visually hidden from the normal interface.
+ */
+.sr-only {
+
+    position: absolute;
+
+    width: 1px;
+
+    height: 1px;
+
+    padding: 0;
+
+    margin: -1px;
+
     overflow: hidden;
+
+    clip: rect(
+        0,
+        0,
+        0,
+        0
+    );
+
+    white-space: nowrap;
+
+    border: 0;
+
 }
 
-/* =========================================
-   CURVED PANEL
-========================================= */
-.overlay-panel {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: var(--panel-width);
-    height: 100%;
-    background: var(--blue-main);
-    color: #fff;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    transition: all 0.7s ease;
 
-    clip-path: ellipse(85% 100% at 0% 50%);
+/* =========================================================
+   4. AUTH CONTAINER
+   ========================================================= */
 
-    box-shadow: 
-        inset -15px 0 40px rgba(0,0,0,0.2),
-        0 10px 40px rgba(0,0,0,0.1);
+.container {
+
+    position: relative;
+
+    width: min(
+        var(--auth-width),
+        100%
+    );
+
+    height: var(--auth-height);
+
+    background: var(--color-surface);
+
+    border: 1px solid rgba(
+        223,
+        229,
+        238,
+        0.9
+    );
+
+    border-radius: var(--radius-container);
+
+    overflow: hidden;
+
+    box-shadow:
+        0 24px 70px rgba(
+            23,
+            32,
+            51,
+            0.10
+        ),
+        0 4px 16px rgba(
+            23,
+            32,
+            51,
+            0.04
+        );
+
 }
 
-.container.is-register .overlay-panel {
-    left: calc(100% - var(--panel-width));
-    clip-path: ellipse(85% 100% at 100% 50%);
-}
 
-/* =========================================
-   FORM SIDES
-========================================= */
+/* =========================================================
+   5. FORM SIDES
+   ========================================================= */
+
 .form-side {
+
     position: absolute;
+
     top: 0;
-    height: 100%;
+
     width: 50%;
-    padding: 60px;
+
+    height: 100%;
+
+    padding:
+        48px
+        64px;
+
     display: flex;
-    justify-content: center;
+
     align-items: center;
+
+    justify-content: center;
+
+    background: var(--color-surface);
+
+    transition:
+        opacity var(--transition-normal),
+        transform var(--transition-normal);
+
 }
 
-.register-side {
-    left: 0;
-    opacity: 0;
-    z-index: 1;
-}
 
 .login-side {
+
     right: 0;
+
     z-index: 5;
+
 }
+
+
+.register-side {
+
+    left: 0;
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    z-index: 1;
+
+}
+
 
 .container.is-register .login-side {
+
     opacity: 0;
+
     pointer-events: none;
+
+    transform: translateX(12px);
+
 }
+
 
 .container.is-register .register-side {
+
     opacity: 1;
+
+    pointer-events: auto;
+
     z-index: 5;
+
+    transform: translateX(0);
+
 }
 
-/* =========================================
-   PANEL CONTENT
-========================================= */
-.panel-content {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 0 80px;
-    opacity: 0;
-    transition: 0.4s;
-}
 
-.panel-content.active {
-    opacity: 1;
-    transition-delay: 0.3s;
-}
+/* =========================================================
+   6. FORM
+   ========================================================= */
 
-.login-content {
-    align-items: flex-start;
-    text-align: left;
-}
-
-.register-content {
-    align-items: flex-end;
-    text-align: right;
-}
-
-.panel-content h1 {
-    font-size: 2rem;
-    margin-bottom: 15px;
-}
-
-.panel-content p {
-    font-size: 0.95rem;
-    opacity: 0.8;
-    margin-bottom: 30px;
-}
-
-.features {
-    list-style: none;
-}
-
-.features li {
-    font-size: 0.85rem;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.register-content .features li {
-    justify-content: flex-end;
-}
-
-.features i {
-    color: var(--red-main);
-}
-
-/* =========================================
-   FORM
-========================================= */
 .form {
+
     width: 100%;
-    max-width: 380px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-height: 100%;
+
+    max-width: 350px;
+
 }
+
+
+.form-heading {
+
+    margin-bottom: 28px;
+
+}
+
+
+.form-eyebrow {
+
+    display: block;
+
+    margin-bottom: 7px;
+
+    color: var(--color-primary);
+
+    font-size: 0.66rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.11em;
+
+}
+
 
 .form h2 {
-    font-size: 1.8rem;
-    margin-bottom: 10px;
-    color: var(--blue-main);
+
+    margin-bottom: 7px;
+
+    color: var(--color-text);
+
+    font-size: 1.65rem;
+
+    line-height: 1.2;
+
+    font-weight: 700;
+
+    letter-spacing: -0.025em;
+
 }
+
 
 .subtitle {
-    font-size: 0.85rem;
-    color: #777;
-    margin-bottom: 30px;
+
+    color: var(--color-text-secondary);
+
+    font-size: 0.82rem;
+
+    line-height: 1.5;
+
 }
 
-/* ROW */
+
+/* =========================================================
+   7. NAME ROW
+   ========================================================= */
+
 .row {
+
     display: flex;
-    gap: 12px;
+
+    gap: 10px;
+
 }
+
 
 .input-group.half {
+
     width: 50%;
+
 }
 
-/* INPUTS */
+
+/* =========================================================
+   8. INPUT GROUP
+   ========================================================= */
+
 .input-group {
+
     position: relative;
-    margin-bottom: 18px;
+
+    margin-bottom: 14px;
+
 }
 
-/* LEFT ICON ONLY */
+
 .input-group > i {
+
     position: absolute;
-    left: 15px;
+
+    left: 14px;
+
     top: 50%;
+
+    z-index: 2;
+
     transform: translateY(-50%);
-    color: #aaa;
+
+    color: var(--color-text-muted);
+
+    font-size: 17px;
+
+    line-height: 1;
+
+    pointer-events: none;
+
+    transition:
+        color var(--transition-fast);
+
 }
+
 
 .input-group input {
+
     width: 100%;
-    padding: 14px 45px;
-    border-radius: 14px;
-    border: 1px solid #eee;
-    background: #f9f9f9;
-    font-size: 0.9rem;
-    transition: 0.3s;
+
+    height: 46px;
+
+    padding:
+        0
+        44px;
+
+    border: 1px solid var(--color-border);
+
+    border-radius: var(--radius-input);
+
+    outline: none;
+
+    background: var(--color-surface-soft);
+
+    color: var(--color-text);
+
+    font-family: inherit;
+
+    font-size: 0.86rem;
+
+    transition:
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        box-shadow var(--transition-fast);
+
 }
+
+
+.input-group input::placeholder {
+
+    color: #9aa5b5;
+
+}
+
+
+.input-group input:hover {
+
+    border-color: #cbd4e1;
+
+}
+
 
 .input-group input:focus {
-    border-color: var(--blue-main);
-    background: #fff;
-    outline: none;
+
+    border-color: var(--color-primary);
+
+    background: var(--color-surface);
+
+    box-shadow:
+        0 0 0 3px rgba(
+            49,
+            95,
+            189,
+            0.10
+        );
+
 }
 
-/* PASSWORD TOGGLE */
-.toggle-password {
-    position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    color: #aaa;
-    transition: 0.3s;
+
+.input-group:focus-within > i {
+
+    color: var(--color-primary);
+
 }
+
+
+/* =========================================================
+   9. PASSWORD TOGGLE
+   ========================================================= */
+
+.toggle-password {
+
+    position: absolute;
+
+    right: 10px;
+
+    top: 50%;
+
+    width: 30px;
+
+    height: 30px;
+
+    transform: translateY(-50%);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border: 0;
+
+    border-radius: 7px;
+
+    background: transparent;
+
+    color: var(--color-text-muted);
+
+    cursor: pointer;
+
+    transition:
+        color var(--transition-fast),
+        background-color var(--transition-fast);
+
+}
+
 
 .toggle-password:hover {
-    color: var(--blue-main);
+
+    color: var(--color-primary);
+
+    background:
+        var(--color-primary-soft);
+
 }
 
-/* CHECKBOX */
-.checkbox-group {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    font-size: 0.8rem;
-    color: #666;
-    margin: 10px 0 20px;
-    cursor: pointer;
+
+.toggle-password:focus-visible {
+
+    outline: 2px solid #91afe8;
+
+    outline-offset: 1px;
+
 }
+
+
+.toggle-password i {
+
+    font-size: 16px;
+
+}
+
+
+/* =========================================================
+   10. TERMS
+   ========================================================= */
+
+.checkbox-group {
+
+    display: flex;
+
+    align-items: flex-start;
+
+    gap: 9px;
+
+    margin:
+        7px
+        0
+        20px;
+
+    color: var(--color-text-secondary);
+
+    font-size: 0.75rem;
+
+    line-height: 1.5;
+
+    cursor: pointer;
+
+}
+
 
 .checkbox-group input {
-    margin-top: 3px;
+
+    width: 15px;
+
+    height: 15px;
+
+    margin-top: 2px;
+
+    flex-shrink: 0;
+
+    accent-color:
+        var(--color-primary);
+
     cursor: pointer;
+
 }
+
 
 .checkbox-group a {
-    color: var(--red-main);
-    text-decoration: none;
+
+    color: var(--color-primary);
+
     font-weight: 600;
+
+    text-decoration: none;
+
 }
+
 
 .checkbox-group a:hover {
+
     text-decoration: underline;
+
 }
 
-/* BUTTON */
-.btn {
-    width: 100%;
-    padding: 14px;
-    border-radius: 14px;
-    border: none;
-    background: var(--red-main);
-    color: #fff;
-    font-weight: 700;
-    cursor: pointer;
-    transition: 0.3s;
+
+.checkbox-group a:focus-visible {
+
+    outline: 2px solid #91afe8;
+
+    outline-offset: 2px;
+
 }
+
+
+/* =========================================================
+   11. PRIMARY BUTTON
+   ========================================================= */
+
+.btn {
+
+    width: 100%;
+
+    height: 46px;
+
+    border: 1px solid transparent;
+
+    border-radius: var(--radius-button);
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--color-primary),
+            #416fca
+        );
+
+    color: #ffffff;
+
+    font-family: inherit;
+
+    font-size: 0.84rem;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 5px 12px rgba(
+            49,
+            95,
+            189,
+            0.18
+        );
+
+    transition:
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast),
+        filter var(--transition-fast);
+
+}
+
 
 .btn:hover {
-    background: var(--red-hover);
+
+    filter: brightness(1.04);
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 8px 18px rgba(
+            49,
+            95,
+            189,
+            0.22
+        );
+
 }
 
-/* GOOGLE BUTTON */
-.google-btn {
-    margin-top: 15px;
-    width: 100%;
-    padding: 13px;
-    border-radius: 14px;
-    border: 1px solid #ddd;
-    background: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
+
+.btn:active {
+
+    transform: translateY(0);
+
+    box-shadow:
+        0 3px 8px rgba(
+            49,
+            95,
+            189,
+            0.16
+        );
+
 }
 
-.google-btn:hover {
-    background: #f7f7f7;
-    border-color: #ccc;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+
+.btn:focus-visible {
+
+    outline: 2px solid #91afe8;
+
+    outline-offset: 3px;
+
 }
 
-.google-btn:active {
-    transform: scale(0.97);
-}
 
-/* DIVIDER */
-.divider {
-    text-align: center;
-    margin: 20px 0;
-    font-size: 0.75rem;
-    color: #aaa;
-    position: relative;
-}
+/* =========================================================
+   12. LOGIN / REGISTER SWITCH
+   ========================================================= */
 
-.divider::before {
-    content: "";
-    position: absolute;
-    width: 100%;
-    height: 1px;
-    background: #eee;
-    top: 50%;
-    left: 0;
-}
-
-.divider span {
-    background: #fff;
-    padding: 0 10px;
-    position: relative;
-}
-
-/* SWITCH */
 .switch {
-    margin-top: 20px;
+
+    margin-top: 19px;
+
     text-align: center;
+
+    color: var(--color-text-secondary);
+
+    font-size: 0.76rem;
+
 }
 
-.switch span {
-    color: var(--red-main);
-    cursor: pointer;
+
+.switch-button {
+
+    margin-left: 3px;
+
+    padding: 0;
+
+    border: 0;
+
+    background: transparent;
+
+    color: var(--color-primary);
+
+    font-family: inherit;
+
+    font-size: inherit;
+
     font-weight: 600;
+
+    cursor: pointer;
+
 }
 
-/* MOBILE */
+
+.switch-button:hover {
+
+    color: var(--color-primary-dark);
+
+    text-decoration: underline;
+
+}
+
+
+.switch-button:focus-visible {
+
+    outline: 2px solid #91afe8;
+
+    outline-offset: 3px;
+
+    border-radius: 2px;
+
+}
+
+
+/* =========================================================
+   13. BRAND PANEL
+   ========================================================= */
+
+.overlay-panel {
+
+    position: absolute;
+
+    top: 0;
+
+    left: 0;
+
+    width: var(--panel-width);
+
+    height: 100%;
+
+    z-index: 10;
+
+    display: flex;
+
+    align-items: center;
+
+    overflow: hidden;
+
+    color: #ffffff;
+
+    background:
+        radial-gradient(
+            circle at 15% 20%,
+            rgba(
+                255,
+                255,
+                255,
+                0.10
+            ),
+            transparent 30%
+        ),
+        linear-gradient(
+            145deg,
+            #274f9f,
+            #315fbd 58%,
+            #426fc8
+        );
+
+    clip-path:
+        ellipse(
+            88%
+            105%
+            at
+            0%
+            50%
+        );
+
+    box-shadow:
+        12px 0 40px rgba(
+            23,
+            32,
+            51,
+            0.10
+        );
+
+    transition:
+        left var(--transition-panel),
+        clip-path var(--transition-panel);
+
+}
+
+
+.container.is-register .overlay-panel {
+
+    left:
+        calc(
+            100% - var(--panel-width)
+        );
+
+    clip-path:
+        ellipse(
+            88%
+            105%
+            at
+            100%
+            50%
+        );
+
+}
+
+
+/* =========================================================
+   14. PANEL CONTENT
+   ========================================================= */
+
+.panel-content {
+
+    position: absolute;
+
+    width: 100%;
+
+    height: 100%;
+
+    padding:
+        0
+        72px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    transition:
+        opacity 260ms ease;
+
+}
+
+
+.panel-content.active {
+
+    opacity: 1;
+
+    pointer-events: auto;
+
+    transition-delay: 180ms;
+
+}
+
+
+.login-content {
+
+    align-items: flex-start;
+
+    text-align: left;
+
+}
+
+
+.register-content {
+
+    align-items: flex-end;
+
+    text-align: right;
+
+}
+
+
+/* =========================================================
+   15. BRAND MARK
+   ========================================================= */
+
+.brand-mark {
+
+    width: 38px;
+
+    height: 38px;
+
+    margin-bottom: 18px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border: 1px solid rgba(
+        255,
+        255,
+        255,
+        0.20
+    );
+
+    border-radius: 10px;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.10
+        );
+
+    color: #ffffff;
+
+    font-size: 0.68rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.04em;
+
+}
+
+
+.panel-eyebrow {
+
+    margin-bottom: 7px;
+
+    color: rgba(
+        255,
+        255,
+        255,
+        0.70
+    );
+
+    font-size: 0.65rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.12em;
+
+}
+
+
+.panel-content h1 {
+
+    max-width: 300px;
+
+    margin-bottom: 12px;
+
+    font-size: 1.9rem;
+
+    line-height: 1.12;
+
+    font-weight: 700;
+
+    letter-spacing: -0.03em;
+
+}
+
+
+.panel-content h1 span {
+
+    display: block;
+
+    color: rgba(
+        255,
+        255,
+        255,
+        0.72
+    );
+
+}
+
+
+.panel-content p {
+
+    max-width: 285px;
+
+    margin-bottom: 28px;
+
+    color: rgba(
+        255,
+        255,
+        255,
+        0.76
+    );
+
+    font-size: 0.81rem;
+
+    line-height: 1.65;
+
+}
+
+
+/* =========================================================
+   16. FEATURE LIST
+   ========================================================= */
+
+.features {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+
+    list-style: none;
+
+}
+
+
+.features li {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    color: rgba(
+        255,
+        255,
+        255,
+        0.92
+    );
+
+    font-size: 0.78rem;
+
+    font-weight: 500;
+
+}
+
+
+.register-content .features li {
+
+    justify-content: flex-end;
+
+}
+
+
+.feature-icon {
+
+    width: 30px;
+
+    height: 30px;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border: 1px solid rgba(
+        255,
+        255,
+        255,
+        0.16
+    );
+
+    border-radius: 8px;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.08
+        );
+
+}
+
+
+.feature-icon i {
+
+    font-size: 16px;
+
+    color: rgba(
+        255,
+        255,
+        255,
+        0.92
+    );
+
+}
+
+
+/* =========================================================
+   17. TABLET
+   ========================================================= */
+
 @media (max-width: 850px) {
 
     body {
+
+        min-height: 100vh;
+
         align-items: flex-start;
+
         padding: 0;
+
     }
 
-    /* =========================================
-       CONTAINER (VERTICAL FLOW)
-    ========================================= */
+
     .container {
+
         width: 100%;
+
+        min-height: 100vh;
+
         height: auto;
+
+        border: 0;
+
         border-radius: 0;
+
         box-shadow: none;
+
         overflow: visible;
 
         display: flex;
+
         flex-direction: column;
+
     }
 
-    /* =========================================
-       HEADER (STATIC CURVED PANEL)
-    ========================================= */
+
     .overlay-panel {
-        position: relative !important;
+
+        position: relative;
+
         top: auto;
-        left: 0 !important;
-        transform: none !important;
 
-        order: -1;
+        left: auto !important;
 
-        width: 100% !important;
-        height: 200px;
+        width: 100%;
 
-        background: var(--blue-main);
+        height: 215px;
 
-        display: flex;
+        flex-shrink: 0;
+
         justify-content: center;
-        align-items: center;
 
-        padding: 0;
+        clip-path:
+            ellipse(
+                125%
+                100%
+                at
+                50%
+                0%
+            );
 
-        clip-path: ellipse(120% 100% at 50% 0%);
-        z-index: 1;
+        box-shadow: none;
+
+        transition: none;
+
     }
 
-    /* =========================================
-       PANEL CONTENT (CENTERED PROPERLY)
-    ========================================= */
+
+    .container.is-register .overlay-panel {
+
+        left: auto !important;
+
+        clip-path:
+            ellipse(
+                125%
+                100%
+                at
+                50%
+                0%
+            );
+
+    }
+
+
     .panel-content {
-        position: relative;
-        height: auto !important;
 
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        position: absolute;
 
-        opacity: 1 !important;
+        height: 100%;
+
+        padding:
+            0
+            24px;
 
         align-items: center !important;
-        text-align: center !important;
 
-        padding: 0 20px;
-    }
-
-    /* FIX REGISTER ALIGNMENT */
-    .register-content {
-        display: none;
-        align-items: center !important;
-        text-align: center !important;
-    }
-
-    .container.is-register .login-content {
-        display: none;
-    }
-
-    .container.is-register .register-content {
-        display: block;
-    }
-
-    .register-content .features li {
-        justify-content: center !important;
-    }
-
-    /* =========================================
-       FORM SECTION
-    ========================================= */
-    .form-side {
-        position: relative;
-        width: 100%;
-        padding: 20px 20px 40px;
-        opacity: 1 !important;
-
-        margin-top: 0;
-        z-index: 2;
-    }
-
-    /* SWITCH FORMS (NO ANIMATION) */
-    .register-side {
-        display: none;
-    }
-
-    .container.is-register .register-side {
-        display: block;
-    }
-
-    .container.is-register .login-side {
-        display: none;
-    }
-
-    .form {
-        max-width: 100%;
-    }
-
-    /* =========================================
-       ROW + INPUT SPACING (FIXED PROPERLY)
-    ========================================= */
-    .row {
-        flex-direction: column;
-        gap: 0;
-    }
-
-    .row .input-group {
-        margin-bottom: 18px;
-    }
-
-
-    .input-group.half {
-        width: 100%;
-    }
-
-    /* CENTER FORM HEADER ON MOBILE */
-    .form h2,
-    .subtitle {
-        text-align: center;
-    }
-
-    /* CENTER TERMS SECTION */
-    .checkbox-group {
         justify-content: center;
-        text-align: center;
+
+        text-align: center !important;
+
+        transition: none;
+
     }
 
-    /* =========================================
-       TEXT SCALE
-    ========================================= */
+
     .panel-content h1 {
-        font-size: 1.4rem;
-        margin-bottom: 10px;
+
+        font-size: 1.55rem;
+
     }
+
 
     .panel-content p {
-        font-size: 0.8rem;
+
+        margin-bottom: 20px;
+
+        font-size: 0.76rem;
+
     }
 
-    /* =========================================
-       REMOVE DESKTOP ANIMATION
-    ========================================= */
-    .overlay-panel,
-    .panel-content {
-        transition: none !important;
+
+    .features {
+
+        flex-direction: row;
+
+        gap: 8px;
+
     }
 
-    /* HARD RESET DESKTOP BEHAVIOR */
-    .container.is-register .overlay-panel {
-        left: 0 !important;
-        width: 100% !important;
+
+    .features li {
+
+        flex-direction: column;
+
+        gap: 5px;
+
+        font-size: 0.67rem;
+
+    }
+
+
+    .register-content .features li {
+
+        justify-content: center !important;
+
+    }
+
+
+    .form-side {
+
+        position: relative;
+
+        left: auto;
+
+        right: auto;
+
+        width: 100%;
+
+        min-height:
+            calc(
+                100vh - 215px
+            );
+
+        height: auto;
+
+        padding:
+            36px
+            24px
+            48px;
+
+        display: flex;
+
+        opacity: 1;
+
         transform: none !important;
-        clip-path: ellipse(120% 100% at 50% 0%) !important;
+
     }
-    
+
+
+    .login-side {
+
+        display: flex;
+
+        order: 1;
+
+    }
+
+
+    .register-side {
+
+        display: none;
+
+        order: 1;
+
+    }
+
+
+    .container.is-register .login-side {
+
+        display: none;
+
+    }
+
+
+    .container.is-register .register-side {
+
+        display: flex;
+
+    }
+
+
+    .form {
+
+        max-width: 430px;
+
+    }
+
+}
+
+
+/* =========================================================
+   18. MOBILE
+   ========================================================= */
+
+@media (max-width: 520px) {
+
+    /*
+     * Give the brand panel enough vertical space for:
+     *
+     * - KNOWURLOCAL label
+     * - heading
+     * - description
+     * - three feature icons
+     *
+     * The previous 195px height was too small, causing
+     * the feature icons to overlap the curved boundary.
+     */
     .overlay-panel {
-        box-shadow: none;
+
+        height: 225px;
+
     }
+
+
+    /*
+     * Keep the form height synchronized with the new
+     * mobile header height.
+     */
+    .form-side {
+
+        min-height:
+            calc(
+                100vh - 225px
+            );
+
+        padding:
+            30px
+            18px
+            40px;
+
+    }
+
+
+    /*
+     * Stack first and last name fields vertically on
+     * narrow screens.
+     */
+    .row {
+
+        flex-direction: column;
+
+        gap: 0;
+
+    }
+
+
+    /*
+     * Each name field receives the full available width.
+     */
+    .input-group.half {
+
+        width: 100%;
+
+    }
+
+
+    /*
+     * Make the brand content more compact so the entire
+     * introduction fits comfortably inside the panel.
+     */
+    .panel-content {
+
+        padding:
+            20px
+            18px
+            28px;
+
+        justify-content: flex-start;
+
+    }
+
+
+    /*
+     * The small KL mark is unnecessary on a very narrow
+     * screen and consumes valuable vertical space.
+     */
+    .brand-mark {
+
+        width: 32px;
+
+        height: 32px;
+
+        margin-bottom: 8px;
+
+        border-radius: 8px;
+
+        font-size: 0.58rem;
+
+    }
+
+
+    /*
+     * Keep the KNOWURLOCAL label compact.
+     */
+    .panel-eyebrow {
+
+        margin-bottom: 4px;
+
+        font-size: 0.58rem;
+
+    }
+
+
+    /*
+     * Reduce heading size slightly for small screens.
+     */
+    .panel-content h1 {
+
+        max-width: 250px;
+
+        margin-bottom: 7px;
+
+        font-size: 1.35rem;
+
+        line-height: 1.08;
+
+    }
+
+
+    /*
+     * Shorter description spacing prevents the feature
+     * row from being pushed too far downward.
+     */
+    .panel-content p {
+
+        max-width: 270px;
+
+        margin-bottom: 12px;
+
+        font-size: 0.68rem;
+
+        line-height: 1.45;
+
+    }
+
+
+    /*
+     * Keep the three features horizontal.
+     */
+    .features {
+
+        flex-direction: row;
+
+        gap: 10px;
+
+    }
+
+
+    /*
+     * Stack each icon above its label.
+     */
+    .features li {
+
+        min-width: 62px;
+
+        flex-direction: column;
+
+        gap: 4px;
+
+        font-size: 0.62rem;
+
+    }
+
+
+    /*
+     * Make the feature icons slightly smaller while
+     * retaining the lightweight SaaS appearance.
+     */
+    .feature-icon {
+
+        width: 27px;
+
+        height: 27px;
+
+        border-radius: 7px;
+
+    }
+
+
+    .feature-icon i {
+
+        font-size: 14px;
+
+    }
+
+
+    /*
+     * Registration-side features remain centered on mobile.
+     */
+    .register-content .features li {
+
+        justify-content: center !important;
+
+    }
+
+
+    /*
+     * Slightly reduce the form heading size.
+     */
+    .form h2 {
+
+        font-size: 1.4rem;
+
+    }
+
+
+    /*
+     * Keep inputs comfortable for touch interaction.
+     */
+    .input-group input {
+
+        height: 48px;
+
+    }
+
+
+    /*
+     * Keep the primary action comfortable on mobile.
+     */
+    .btn {
+
+        height: 48px;
+
+    }
+
+}
+
+
+/* =========================================================
+   19. REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+
+        scroll-behavior: auto !important;
+
+        transition-duration:
+            0.01ms !important;
+
+        animation-duration:
+            0.01ms !important;
+
+        animation-iteration-count:
+            1 !important;
+
+    }
+
 }

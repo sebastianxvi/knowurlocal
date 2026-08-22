@@ -2,31 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\UserLog;
-use App\Models\Agency; // ✅ IMPORTANT
+use App\Models\Agency;
 
 class PageController extends Controller
 {
-    public function map(Request $request)
+    public function map()
     {
-        // 🔒 Only log if user is logged in
-        if (Auth::check()) {
-            UserLog::create([
-                'user_id' => Auth::id(),
-                'action' => 'view_map',
-                'page' => 'map',
-                'ip_address' => $request->ip(),
-                'device' => $request->userAgent(),
-            ]);
-        }
-
         return view('public_user.map');
     }
 
-    // 🔥 ADD THIS METHOD
-    public function agencies(Request $request)
+    public function agencies()
     {
         // 🔒 Log page visit
         if (Auth::check()) {
@@ -34,15 +21,22 @@ class PageController extends Controller
                 'user_id' => Auth::id(),
                 'action' => 'view_agencies',
                 'page' => 'agencies_list',
-                'ip_address' => $request->ip(),
-                'device' => $request->userAgent(),
+                'ip_address' => request()->ip(),
+                'device' => substr(
+                    request()->userAgent(),
+                    0,
+                    255
+                ),
+                'role' => Auth::user()->role,
             ]);
         }
 
         // 📦 Fetch agencies from DB
         $agencies = Agency::all();
 
-        // 🎯 Pass to view
-        return view('public_user.agencies', compact('agencies'));
+        return view(
+            'public_user.agencies',
+            compact('agencies')
+        );
     }
 }

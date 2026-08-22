@@ -1,291 +1,226 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>KNOWURLOCAL | My Inquiries</title>
+    <meta charset="UTF-8">
 
-<!-- Phosphor Icons -->
-<script src="https://unpkg.com/phosphor-icons"></script>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="{{ asset('cssfiles/theme.css') }}">
+    <meta
+        name="csrf-token"
+        content="{{ csrf_token() }}"
+    >
 
-<style>
+    <title>KNOWURLOCAL | My Inquiries</title>
 
-/* ================= BASE ================= */
-body{
-    font-family:"Inter", sans-serif;
-    background:var(--bg-color);
-    color:var(--text-main);
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/phosphor-icons"></script>
 
-    margin:0;
-    padding:16px;
-}
+    <!-- Global theme -->
+    <link rel="stylesheet" href="{{ asset('cssfiles/theme.css') }}">
 
-/* ================= TOP BAR ================= */
-.top-bar{
-    position:sticky;
-    top:0;
-    z-index:50;
+    <!-- Page-specific styles -->
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/inquiries.css') }}">
 
-    display:flex;
-    align-items:center;
-    gap:10px;
-
-    padding:10px 0;
-    margin-bottom:10px;
-
-    background:var(--bg-color);
-}
-
-.top-bar h2{
-    font-size:18px;
-    font-weight:600;
-}
-
-/* ================= BACK BUTTON ================= */
-.back-btn{
-    width:36px;
-    height:36px;
-    border-radius:999px;
-    border:none;
-    background:#fff;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    cursor:pointer;
-    box-shadow:0 2px 6px rgba(0,0,0,0.05);
-}
-
-.back-btn i{
-    font-size:16px;
-}
-
-/* ================= CONTENT ================= */
-.content{
-    padding-bottom:40px;
-}
-
-/* ================= HEADER TEXT ================= */
-.page-header p{
-    font-size:12px;
-    color:var(--text-muted);
-}
-
-/* ================= FILTER ================= */
-.filter-bar{
-    display:flex;
-    gap:8px;
-    margin-top:10px;
-}
-
-.filter-btn{
-    padding:6px 12px;
-    border-radius:999px;
-    border:1px solid var(--border-light);
-    background:#fff;
-    cursor:pointer;
-    font-size:12px;
-    transition:all 0.2s ease;
-}
-
-.filter-btn.active{
-    background:var(--blue-main);
-    color:#fff;
-    border-color:var(--blue-main);
-}
-
-/* ================= CARD ================= */
-.card{
-    background:#fff;
-    border:1px solid var(--border-light);
-    border-radius:14px;
-    padding:14px;
-    margin-top:12px;
-
-    box-shadow:0 2px 6px rgba(0,0,0,0.04);
-    transition:all 0.2s ease;
-}
-
-.card:active{
-    transform:scale(0.98);
-}
-
-/* ================= TOP ================= */
-.card-top{
-    display:flex;
-    justify-content:space-between;
-    margin-bottom:8px;
-}
-
-/* ================= STATUS ================= */
-.status{
-    font-size:11px;
-    padding:4px 10px;
-    border-radius:999px;
-}
-
-.status.pending{
-    background:#fef3c7;
-    color:#92400e;
-}
-
-.status.answered{
-    background:#d1fae5;
-    color:#065f46;
-}
-
-/* ================= QUESTION ================= */
-.question{
-    font-size:14px;
-    margin-bottom:6px;
-}
-
-/* ================= ANSWER ================= */
-.answer{
-    background:#f9fafb;
-    border-left:3px solid #10b981;
-    padding:10px;
-    font-size:13px;
-    border-radius:6px;
-    color:#374151;
-}
-
-/* ================= PENDING ================= */
-.pending-text{
-    font-size:12px;
-    color:var(--text-muted);
-    font-style:italic;
-}
-
-/* ================= EMPTY ================= */
-.empty{
-    text-align:center;
-    margin-top:60px;
-    color:var(--text-muted);
-}
-
-.empty i{
-    font-size:28px;
-    opacity:0.7;
-}
-
-.empty a{
-    display:inline-block;
-    margin-top:10px;
-    padding:8px 16px;
-    border-radius:999px;
-    background:var(--blue-main);
-    color:#fff;
-    font-size:12px;
-    text-decoration:none;
-}
-
-</style>
 </head>
 
 <body>
 
-<!-- ================= TOP BAR ================= -->
-<div class="top-bar">
-    <button onclick="history.back()" class="back-btn">
-        <i class="ph-light ph-arrow-left"></i>
-    </button>
+<div class="inquiries-page">
 
-    <h2>My Inquiries</h2>
-</div>
+    <!-- ================= TOP BAR ================= -->
+    <header class="inquiries-header">
 
-<!-- ================= CONTENT ================= -->
-<div class="content">
+        <button
+            type="button"
+            onclick="history.back()"
+            class="back-btn"
+            aria-label="Go back"
+        >
+            <i class="ph-light ph-arrow-left"></i>
+        </button>
 
-    <div class="page-header">
-        <p>Track your submitted questions and responses</p>
-
-        <div class="filter-bar">
-            <button class="filter-btn active" data-filter="all">All</button>
-            <button class="filter-btn" data-filter="pending">Pending</button>
-            <button class="filter-btn" data-filter="answered">Answered</button>
+        <div class="header-copy">
+            <h1>My Inquiries</h1>
+            <p>Track your submitted questions and responses</p>
         </div>
+
+    </header>
+
+
+    <!-- ================= FILTERS ================= -->
+    <div class="filter-bar" role="group" aria-label="Filter inquiries">
+
+        <button
+            type="button"
+            class="filter-btn active"
+            data-filter="all"
+        >
+            All
+        </button>
+
+        <button
+            type="button"
+            class="filter-btn"
+            data-filter="pending"
+        >
+            Pending
+        </button>
+
+        <button
+            type="button"
+            class="filter-btn"
+            data-filter="answered"
+        >
+            Answered
+        </button>
+
     </div>
 
-    {{-- ================= LIST ================= --}}
-    @forelse($requests as $req)
 
-    <div class="card" data-status="{{ $req->status }}">
+    <!-- ================= INQUIRIES ================= -->
+    <main class="inquiries-list">
 
-        <div class="card-top">
-            <span class="status {{ $req->status }}">
-                {{ ucfirst($req->status) }}
-            </span>
+        @forelse($requests as $req)
 
-            <span>
-                {{ $req->created_at->format('M d, Y') }}
-            </span>
+            <article
+    class="inquiry-card"
+    data-id="{{ $req->id }}"
+    data-status="{{ $req->status }}"
+>
+
+    <!-- ================= COLLAPSED HEADER ================= -->
+
+    <button
+        type="button"
+        class="inquiry-toggle"
+        aria-expanded="false"
+    >
+
+        <div class="inquiry-summary">
+
+            <div class="card-header">
+
+                <span class="status {{ $req->status }}">
+
+    @if($req->status === 'answered')
+        <i class="ph-light ph-check"></i>
+    @else
+        <i class="ph-light ph-clock"></i>
+    @endif
+
+    {{ ucfirst($req->status) }}
+
+    @if(
+        $req->status === 'answered' &&
+        is_null($req->answer_seen_at)
+    )
+        <span
+            class="unread-inquiry-dot"
+            aria-label="New response"
+        ></span>
+    @endif
+
+</span>
+
+                <time
+                    datetime="{{ $req->created_at->toIso8601String() }}"
+                    class="inquiry-date"
+                >
+                    {{ $req->created_at->format('M d, Y') }}
+                </time>
+
+            </div>
+
+
+            <p class="question-preview">
+                {{ $req->question }}
+            </p>
+
         </div>
 
-        <div class="question">
-            {{ $req->question }}
-        </div>
+
+        <i
+            class="ph-light ph-caret-down inquiry-chevron"
+            aria-hidden="true"
+        ></i>
+
+    </button>
+
+
+    <!-- ================= EXPANDABLE CONTENT ================= -->
+
+    <div class="inquiry-details">
+
+    <div class="inquiry-details-inner">
+
 
         @if($req->status === 'answered')
-            <div class="answer">
-                {{ $req->answer }}
+
+            <div class="answer-block">
+
+                <div class="answer-header">
+                    <i class="ph-light ph-chat-centered-text"></i>
+                    <span>Administrator response</span>
+                </div>
+
+                <p class="answer">
+                    {{ $req->answer }}
+                </p>
+
             </div>
+
         @else
-            <div class="pending-text">
-                Waiting for response...
+
+            <div class="pending-message">
+
+                <i class="ph-light ph-hourglass"></i>
+
+                <span>
+                    Waiting for an administrator's response
+                </span>
+
             </div>
+
         @endif
 
     </div>
 
-    @empty
-
-    <div class="empty">
-        <i class="ph-light ph-chat-centered-dots"></i>
-        <p>No inquiries yet</p>
-        <a href="{{ route('map') }}">Ask a question</a>
-    </div>
-
-    @endforelse
-
 </div>
 
-<!-- ================= JS ================= -->
-<script>
-document.addEventListener("DOMContentLoaded", () => {
+</article>
 
-    const buttons = document.querySelectorAll(".filter-btn");
-    const cards = document.querySelectorAll(".card");
+        @empty
 
-    buttons.forEach(btn => {
+            <div class="empty-state">
 
-        btn.addEventListener("click", () => {
+                <div class="empty-icon">
+                    <i class="ph-light ph-chat-circle-dots"></i>
+                </div>
 
-            buttons.forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
+                <h2>No inquiries yet</h2>
 
-            const filter = btn.dataset.filter;
+                <p>
+                    Ask a question and track the response here.
+                </p>
 
-            cards.forEach(card => {
-                const status = card.dataset.status;
+                <a
+                    href="{{ route('map') }}"
+                    class="ask-btn"
+                >
+                    <i class="ph-light ph-paper-plane-tilt"></i>
+                    Ask a question
+                </a>
 
-                if(filter === "all" || filter === status){
-                    card.style.display = "block";
-                } else {
-                    card.style.display = "none";
-                }
-            });
+            </div>
 
-        });
+        @endforelse
 
-    });
+    </main>
 
-});
-</script>
-
+</div>
+<script src="{{ asset('jsfiles/public_user/inquiries.js') }}"></script>
 </body>
 </html>

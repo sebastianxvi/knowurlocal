@@ -55,9 +55,21 @@
         </div>
 
 
-        <button class="menu-toggle" id="menuToggle">
-            <i class="ph-light ph-list"></i>
-        </button>
+        <button
+    type="button"
+    class="menu-toggle"
+    id="menuToggle"
+    aria-label="Open navigation menu"
+>
+    <i class="ph-light ph-list"></i>
+
+    @if($hasUnreadInquiry ?? false)
+        <span
+            class="menu-notification-dot"
+            aria-label="You have an unread inquiry response"
+        ></span>
+    @endif
+</button>
 
         <nav class="nav-drawer" id="navDrawer">
 
@@ -88,16 +100,38 @@
             <div class="nav-link account-wrapper">
 
                 <div class="account-toggle" id="accountToggle">
-                    <i class="ph-light ph-user"></i>
-                    Account
-                    <i class="ph-light ph-caret-down"></i>
-                </div>
+
+    <span class="account-label">
+        <i class="ph-light ph-user"></i>
+        Account
+    </span>
+
+    @if($hasUnreadInquiry ?? false)
+        <span
+            class="account-notification-dot"
+            aria-label="You have an unread inquiry response"
+        ></span>
+    @endif
+
+    <i class="ph-light ph-caret-down account-chevron"></i>
+
+</div>
 
                 <div class="account-dropdown" id="accountDropdown">
 
-                    <a href="{{ route('user.inquiries') }}" class="dropdown-item">
-                        My Inquiries
-                    </a>
+                    <a
+    href="{{ route('user.inquiries') }}"
+    class="dropdown-item inquiry-link"
+>
+    <span>My Inquiries</span>
+
+    @if($hasUnreadInquiry ?? false)
+        <span
+            class="inquiry-notification-dot"
+            aria-label="You have an unread inquiry response"
+        ></span>
+    @endif
+</a>
 
                     <form action="{{ route('logout') }}" method="POST">
                         @csrf

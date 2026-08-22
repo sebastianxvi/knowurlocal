@@ -1,122 +1,858 @@
-/* ================= PAGE ================= */
+/* =========================================================
+   KNOWURLOCAL — MY INQUIRIES
+   ========================================================= */
+
+   /* =========================================================
+   BOX SIZING & MOBILE OVERFLOW
+   ========================================================= */
+
+html{
+    box-sizing:border-box;
+    overflow-x:hidden;
+}
+
+body{
+    font-family: "Inter", sans-serif;
+    margin:0;
+    overflow-x:hidden;
+}
+
+*,
+*::before,
+*::after{
+    box-sizing:inherit;
+}
+
+/* =========================================================
+   PAGE
+   ========================================================= */
+
 .inquiries-page{
-    max-width:900px;
-    margin:40px auto;
-    padding:0 16px;
+    width:100%;
+    max-width:1080px;
+
+    margin:0 auto;
+    padding:32px 24px 60px;
 }
 
-/* ================= HEADER ================= */
-.page-header h1{
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.inquiries-header{
+    position:static;
+
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+
+    margin-bottom:24px;
+}
+
+
+/* =========================================================
+   BACK BUTTON
+   ========================================================= */
+
+.back-btn{
+    flex:0 0 38px;
+
+    width:38px;
+    height:38px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border:1px solid #e2e8f0;
+    border-radius:50%;
+
+    background:#ffffff;
+    color:#334155;
+
+    cursor:pointer;
+
+    box-shadow:
+        0 2px 6px rgba(15,23,42,0.05);
+
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/*
+ * Slightly move the button toward the left when
+ * the user hovers over it.
+ */
+.back-btn:hover{
+    background:#f8fafc;
+    border-color:#cbd5e1;
+
+    transform:translateX(-2px);
+
+    box-shadow:
+        0 5px 12px rgba(15,23,42,0.08);
+}
+
+
+/*
+ * Gives the button a small press effect.
+ */
+.back-btn:active{
+    transform:translateX(-1px) scale(0.96);
+}
+
+
+/*
+ * Keeps the Phosphor arrow visually balanced
+ * with the button.
+ */
+.back-btn i{
+    font-size:18px;
+}
+
+
+/* =========================================================
+   HEADER COPY
+   ========================================================= */
+
+.header-copy{
+    min-width:0;
+}
+
+
+.header-copy h1{
+    margin:1px 0 4px;
+
     font-size:22px;
+    line-height:1.25;
+
     font-weight:600;
-    color:#111827;
+
+    color:#0f172a;
 }
 
-.page-header p{
+
+.header-copy p{
+    margin:0;
+
     font-size:13px;
-    color:#6b7280;
-    margin-top:4px;
+    line-height:1.5;
+
+    color:#64748b;
 }
 
-/* ================= FILTER ================= */
+
+/* =========================================================
+   FILTER BAR
+   ========================================================= */
+
 .filter-bar{
     display:flex;
+    align-items:center;
     gap:8px;
-    margin:20px 0;
+
+    margin-bottom:18px;
 }
+
+
+/* =========================================================
+   FILTER BUTTON
+   ========================================================= */
 
 .filter-btn{
-    padding:6px 14px;
+    height:34px;
+
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+
+    padding:0 14px;
+
+    border:1px solid #e2e8f0;
     border-radius:999px;
-    border:1px solid #e5e7eb;
-    background:#f9fafb;
+
+    background:#ffffff;
+    color:#475569;
+
     font-size:12px;
+    font-weight:500;
+
     cursor:pointer;
-    transition:all 0.2s ease;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
+
+/*
+ * Gives inactive filters a subtle interactive
+ * response without making them visually heavy.
+ */
+.filter-btn:hover{
+    background:#f8fafc;
+    border-color:#cbd5e1;
+
+    transform:translateY(-1px);
+}
+
+
+/*
+ * The active filter uses the same primary blue
+ * language used throughout KNOWURLOCAL.
+ */
 .filter-btn.active{
-    background:#111827;
-    color:#fff;
-    border-color:#111827;
+    background:var(--blue-main);
+    border-color:var(--blue-main);
+
+    color:#ffffff;
+
+    box-shadow:
+        0 4px 10px rgba(31,58,95,0.16);
 }
 
-/* ================= CARD ================= */
+
+/* =========================================================
+   INQUIRY LIST
+   ========================================================= */
+
+.inquiries-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+
+/* =========================================================
+   INQUIRY CARD
+   ========================================================= */
+
 .inquiry-card{
-    background:#fff;
-    border:1px solid #e5e7eb;
-    border-radius:14px;
-    padding:16px;
-    margin-bottom:12px;
+    background:#ffffff;
 
-    transition:all 0.2s ease;
+    border:1px solid #e2e8f0;
+    border-radius:16px;
+
+    padding:18px 20px;
+
+    box-shadow:
+        0 2px 8px rgba(15,23,42,0.04);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
 }
 
+
+/*
+ * The hover effect provides feedback while keeping
+ * the card visually stable.
+ */
 .inquiry-card:hover{
+    border-color:#d8e0ea;
+
     transform:translateY(-2px);
-    box-shadow:0 8px 20px rgba(0,0,0,0.05);
+
+    box-shadow:
+        0 10px 24px rgba(15,23,42,0.07);
 }
 
-/* ================= HEADER ================= */
+
+/*
+ * The browser hides elements with the hidden attribute.
+ *
+ * This explicit rule makes the intended behavior clear
+ * and prevents another stylesheet from accidentally
+ * overriding it.
+ */
+.inquiry-card[hidden]{
+    display:none;
+}
+
+
+/* =========================================================
+   CARD HEADER
+   ========================================================= */
+
 .card-header{
     display:flex;
+    align-items:center;
     justify-content:space-between;
+
+    gap:16px;
+
+    margin-bottom:14px;
+}
+
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.status{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+
+    padding:5px 9px;
+
+    border-radius:999px;
+
+    font-size:11px;
+    font-weight:600;
+
+    line-height:1;
+}
+
+
+/*
+ * Keeps the status icon proportional to the label.
+ */
+.status i{
+    font-size:13px;
+}
+
+
+/* ================= PENDING ================= */
+
+.status.pending{
+    background:#fff7d6;
+    color:#a16207;
+}
+
+
+/* ================= ANSWERED ================= */
+
+.status.answered{
+    background:#dcfce7;
+    color:#15803d;
+}
+
+
+/* =========================================================
+   DATE
+   ========================================================= */
+
+.inquiry-date{
+    flex-shrink:0;
+
+    font-size:12px;
+
+    color:#64748b;
+}
+
+/* =========================================================
+   ANSWER BLOCK
+   ========================================================= */
+
+.answer-block{
+    margin-top:15px;
+
+    padding:13px 15px;
+
+    border:1px solid #dbeafe;
+    border-radius:12px;
+
+    background:#f8fbff;
+}
+
+
+/* =========================================================
+   ANSWER HEADER
+   ========================================================= */
+
+.answer-header{
+    display:flex;
+    align-items:center;
+    gap:7px;
+
+    margin-bottom:7px;
+
+    font-size:11px;
+    font-weight:600;
+
+    color:#2563eb;
+}
+
+
+.answer-header i{
+    font-size:15px;
+}
+
+
+/* =========================================================
+   ANSWER TEXT
+   ========================================================= */
+
+.answer{
+    margin:0;
+
+    font-size:13px;
+    line-height:1.65;
+
+    color:#334155;
+}
+
+
+/* =========================================================
+   PENDING MESSAGE
+   ========================================================= */
+
+.pending-message{
+    display:flex;
+    align-items:center;
+    gap:7px;
+
+    margin-top:14px;
+
+    font-size:12px;
+    font-style:italic;
+
+    color:#94a3b8;
+}
+
+
+/*
+ * Prevents the icon from inheriting the italic
+ * styling of the surrounding message.
+ */
+.pending-message i{
+    font-size:15px;
+}
+
+/* =========================================================
+   INQUIRY TOGGLE
+   ========================================================= */
+
+.inquiry-toggle{
+    min-width:0;
+    width:100%;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    gap:16px;
+
+    padding:0;
+
+    border:0;
+    background:transparent;
+
+    color:inherit;
+    font:inherit;
+
+    text-align:left;
+
+    cursor:pointer;
+}
+
+
+/*
+ * Prevent the summary from becoming wider than the
+ * available card space.
+ */
+.inquiry-summary{
+    min-width:0;
+    flex:1;
+}
+
+
+/*
+ * Remove the default bottom spacing because the header
+ * belongs to the clickable summary.
+ */
+.inquiry-toggle .card-header{
     margin-bottom:10px;
 }
 
-/* STATUS */
-.status{
-    font-size:11px;
-    padding:4px 10px;
-    border-radius:999px;
-}
 
-/* COLORS */
-.status.pending{
-    background:#fef3c7;
-    color:#92400e;
-}
+/* =========================================================
+   QUESTION PREVIEW
+   ========================================================= */
 
-.status.answered{
-    background:#d1fae5;
-    color:#065f46;
-}
+.question-preview{
+    margin:0;
 
-/* ================= QUESTION ================= */
-.question{
     font-size:14px;
-    color:#111827;
-    margin-bottom:8px;
+    line-height:1.5;
+
+    color:#172033;
+
+    /*
+     * Keep the collapsed card compact even when a user
+     * submits a very long question.
+     */
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    overflow:hidden;
 }
 
-/* ================= ANSWER ================= */
-.answer{
-    background:#f9fafb;
-    border-left:3px solid #10b981;
-    padding:10px;
-    font-size:13px;
-    color:#374151;
-    border-radius:6px;
+
+/* =========================================================
+   CHEVRON
+   ========================================================= */
+
+.inquiry-chevron{
+    flex:0 0 auto;
+
+    font-size:18px;
+
+    color:#94a3b8;
+
+    transition:
+        transform 0.25s ease,
+        color 0.2s ease;
 }
 
-/* ================= EMPTY ================= */
+
+/*
+ * Give users a subtle indication that the card is
+ * interactive.
+ */
+.inquiry-toggle:hover .inquiry-chevron{
+    color:#475569;
+}
+
+
+/* =========================================================
+   EXPANDABLE DETAILS
+   ========================================================= */
+
+/* =========================================================
+   EXPANDABLE DETAILS
+   ========================================================= */
+
+.inquiry-details{
+    display:grid;
+
+    grid-template-rows:0fr;
+
+    opacity:0;
+
+    overflow:hidden;
+
+    transition:
+        grid-template-rows 0.3s ease,
+        opacity 0.2s ease,
+        margin-top 0.3s ease;
+}
+
+
+/*
+ * This wrapper is the element that actually collapses.
+ *
+ * Keeping the expandable content inside one wrapper makes
+ * the CSS grid animation predictable even when the answer
+ * contains a large amount of text.
+ */
+.inquiry-details-inner{
+    min-height:0;
+
+    overflow:hidden;
+}
+
+
+/* =========================================================
+   EXPANDED STATE
+   ========================================================= */
+
+.inquiry-card.expanded .inquiry-details{
+    grid-template-rows:1fr;
+
+    opacity:1;
+
+    margin-top:15px;
+}
+
+
+/*
+ * Rotate the arrow when the inquiry is open.
+ */
+.inquiry-card.expanded .inquiry-chevron{
+    transform:rotate(180deg);
+
+    color:#475569;
+}
+
+
+/* =========================================================
+   EXPANDED STATE
+   ========================================================= */
+
+.inquiry-card.expanded .inquiry-details{
+    grid-template-rows:1fr;
+
+    opacity:1;
+
+    margin-top:15px;
+}
+
+
+/*
+ * Rotate the arrow to communicate the expanded state.
+ */
+.inquiry-card.expanded .inquiry-chevron{
+    transform:rotate(180deg);
+
+    color:#475569;
+}
+
+
+/*
+ * Slightly separate the clickable summary from the
+ * expanded content.
+ */
+.inquiry-card.expanded .inquiry-toggle{
+    padding-bottom:0;
+}
+
+
+/* =========================================================
+   FOCUS
+   ========================================================= */
+
+.inquiry-toggle:focus-visible{
+    outline:2px solid #93c5fd;
+    outline-offset:4px;
+
+    border-radius:8px;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
 .empty-state{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+
+    min-height:360px;
+
+    padding:40px 20px;
+
     text-align:center;
-    margin-top:60px;
-    color:#6b7280;
 }
 
-.empty-state i{
-    font-size:28px;
-    opacity:0.6;
+
+/* =========================================================
+   EMPTY STATE ICON
+   ========================================================= */
+
+.empty-icon{
+    width:48px;
+    height:48px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    margin-bottom:12px;
+
+    border:1px solid #dbe3ed;
+    border-radius:14px;
+
+    background:#f8fafc;
+    color:#94a3b8;
 }
+
+
+.empty-icon i{
+    font-size:23px;
+}
+
+
+/* =========================================================
+   EMPTY STATE TEXT
+   ========================================================= */
+
+.empty-state h2{
+    margin:0 0 5px;
+
+    font-size:15px;
+    font-weight:600;
+
+    color:#475569;
+}
+
+
+.empty-state p{
+    margin:0;
+
+    font-size:12px;
+
+    color:#94a3b8;
+}
+
+
+/* =========================================================
+   ASK BUTTON
+   ========================================================= */
 
 .ask-btn{
-    display:inline-block;
-    margin-top:10px;
-    padding:8px 16px;
-    background:#111827;
-    color:#fff;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+
+    margin-top:18px;
+
+    min-height:36px;
+
+    padding:0 15px;
+
     border-radius:999px;
+
+    background:var(--blue-main);
+    color:#ffffff;
+
     font-size:12px;
+    font-weight:500;
+
+    text-decoration:none;
+
+    box-shadow:
+        0 5px 12px rgba(31,58,95,0.16);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+}
+
+
+/*
+ * Lift the button slightly when the pointer enters.
+ */
+.ask-btn:hover{
+    transform:translateY(-1px);
+
+    box-shadow:
+        0 8px 16px rgba(31,58,95,0.2);
+}
+
+
+/*
+ * Gives the button a subtle physical press effect.
+ */
+.ask-btn:active{
+    transform:translateY(0) scale(0.98);
+}
+
+
+.ask-btn i{
+    font-size:14px;
+}
+
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+.filter-btn:focus-visible,
+.back-btn:focus-visible,
+.ask-btn:focus-visible{
+    outline:2px solid #93c5fd;
+    outline-offset:3px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width:640px){
+
+    /*
+     * Reduce page padding on smaller screens so the
+     * inquiry cards have more usable horizontal space.
+     */
+    .inquiries-page{
+        padding:20px 16px 40px;
+    }
+
+
+    /*
+     * Reduce the spacing around the mobile header.
+     */
+    .inquiries-header{
+        margin-bottom:20px;
+    }
+
+
+    /*
+     * Slightly reduce the title size on narrow screens.
+     */
+    .header-copy h1{
+        font-size:19px;
+    }
+
+
+    /*
+     * Keep the filters compact on mobile.
+     */
+    .filter-bar{
+        margin-bottom:14px;
+    }
+
+
+    /*
+     * Reduce card padding while keeping enough breathing
+     * room for the question and response.
+     */
+    .inquiry-card{
+        padding:15px;
+        border-radius:14px;
+    }
+
+
+    .card-header{
+        margin-bottom:12px;
+    }
+
+
+    /*
+     * Slightly reduce text sizes so long questions
+     * remain comfortable to read on narrow screens.
+     */
+    .question{
+        font-size:13px;
+    }
+
+
+    .answer{
+        font-size:12px;
+    }
+
+}
+
+.unread-inquiry-dot{
+    display:inline-block;
+
+    width:6px;
+    height:6px;
+
+    margin-left:5px;
+
+    vertical-align:middle;
+
+    border-radius:50%;
+
+    background:#ef4444;
+
+    box-shadow:
+        0 0 0 2px rgba(239,68,68,0.10);
 }

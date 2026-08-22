@@ -27,6 +27,188 @@
     <!-- Map Container (fills entire page) -->
     <div id="map"></div>
 
+    <!-- ================= AGENCY DETAILS ================= -->
+
+<aside
+    id="agencyDetails"
+    class="agency-details"
+    aria-hidden="true"
+>
+
+    <!-- PANEL HEADER -->
+
+    <div class="agency-details-header">
+
+        <div class="agency-details-actions">
+
+            <!-- Navigate -->
+            <a
+                id="agencyNavigate"
+                class="agency-action-button agency-navigate-button"
+                href="#"
+                aria-label="Navigate to this agency"
+                title="Navigate to this agency"
+            >
+                <i class="ph-light ph-navigation-arrow"></i>
+
+                <span class="agency-navigate-label">
+                    Navigate
+                </span>
+            </a>
+
+            <!-- Close -->
+            <button
+                id="agencyDetailsClose"
+                class="agency-action-button agency-close-button"
+                type="button"
+                aria-label="Close agency details"
+                title="Close"
+            >
+                <i class="ph-light ph-x"></i>
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- AGENCY CONTENT -->
+
+    <div class="agency-details-content">
+
+        <!-- COVER -->
+
+        <div class="agency-details-cover">
+
+            <img
+                id="agencyDetailsImage"
+                src="{{ asset('images/default-agency.png') }}"
+                alt=""
+            >
+
+        </div>
+
+
+        <!-- BASIC INFORMATION -->
+
+        <div class="agency-details-main">
+
+            <div class="agency-details-title-row">
+
+                <div>
+
+                    <h2 id="agencyDetailsName">
+                        Agency Name
+                    </h2>
+
+                    <div class="agency-details-badges">
+
+                        <span
+                            id="agencyDetailsAbbreviation"
+                            class="agency-details-abbr"
+                        ></span>
+
+                        <span
+                            id="agencyDetailsCategory"
+                            class="agency-details-category"
+                        ></span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- LOCATION -->
+
+            <div
+                id="agencyDetailsLocation"
+                class="agency-detail-location"
+            >
+                <i class="ph-light ph-map-pin"></i>
+
+                <span></span>
+            </div>
+
+
+            <!-- TYPE -->
+
+            <div
+                id="agencyDetailsType"
+                class="agency-detail-meta"
+            >
+                <i class="ph-light ph-buildings"></i>
+
+                <span></span>
+            </div>
+
+
+            <!-- ABOUT -->
+
+            <section
+                id="agencyAboutSection"
+                class="agency-detail-section"
+            >
+
+                <h3>About</h3>
+
+                <p id="agencyDetailsDescription"></p>
+
+            </section>
+
+
+            <!-- SERVICES -->
+
+            <section
+                id="agencyServicesSection"
+                class="agency-detail-section"
+            >
+
+                <h3>Services</h3>
+
+                <p id="agencyDetailsServices"></p>
+
+            </section>
+
+
+            <!-- OFFICE HOURS -->
+
+            <section
+                id="agencyHoursSection"
+                class="agency-detail-section"
+            >
+
+                <h3>Office Hours</h3>
+
+                <p id="agencyDetailsHours"></p>
+
+            </section>
+
+
+            <!-- CONTACT -->
+
+<section
+    id="agencyContactSection"
+    class="agency-detail-section"
+>
+
+    <h3>Contact</h3>
+
+    <div
+        id="agencyDetailsContacts"
+        class="agency-contact-list"
+    ></div>
+
+</section>
+
+        </div>
+
+    </div>
+
+</aside>
+
+
     <!-- Chatbot placeholder -->
     <div id="chat-toggle">
         <img src="{{asset('images/chatbot-icon.png')}}">
@@ -80,9 +262,13 @@
 
             <div id="inputArea">
                 <input type="text" id="message" class="chatbot-input" placeholder="Type a message...">
-                <button onclick="sendMessage()" class="chatbot-btn">
-                    <img src="{{asset('images/logo.png')}}">
-                </button>
+                <button
+    type="button"
+    class="chatbot-btn"
+    aria-label="Send message"
+>
+    <i class="ph-light ph-paper-plane-tilt"></i>
+</button>
             </div>
 
         </div>
