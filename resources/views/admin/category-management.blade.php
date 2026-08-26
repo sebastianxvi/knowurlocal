@@ -16,68 +16,136 @@
 @section('content')
 
 <div class="logs-page">
+    {{-- =========================================================
+     CATEGORY STATUS CONTROLS
+     =========================================================
 
-    @if ($errors->any())
-<div style="background:red;color:white;padding:10px;margin-bottom:15px;border-radius:8px;">
-    <strong>Validation Errors:</strong>
+     Only Superadmins can switch between Active and Trashed.
 
-    <ul>
-        @foreach ($errors->all() as $error)
-            <li>{{ $error }}</li>
-        @endforeach
-    </ul>
-</div>
-@endif
+     The backend must still enforce authorization.
+     This only controls what is displayed in the interface.
+     ========================================================= --}}
 
-<form method="GET" action="{{ route('admin.categories') }}">
+{{-- =========================================================
+     STICKY CATEGORY CONTROLS
+     =========================================================
 
-    <div class="filter-card">
+     Keeps the status tabs and filter bar visible while the
+     administrator scrolls through the category table.
+     ========================================================= --}}
 
-        <div class="filter-bar">
+<div class="category-controls">
 
-            <input
-                type="text"
-                name="search"
-                placeholder="Search category"
-                value="{{ request('search') }}"
+    @if(auth()->user()->role === 'superadmin')
+
+        <div class="category-status-tabs">
+
+            {{-- ACTIVE --}}
+            <a
+                href="{{ route('admin.categories', array_merge(
+                    request()->except('page', 'status'),
+                    ['status' => 'active']
+                )) }}"
+                class="category-status-tab {{ ($status ?? 'active') === 'active' ? 'active' : '' }}"
             >
+                <i class="ph-light ph-folders"></i>
 
-            <select name="sort">
-    <option
-        value="latest"
-        {{ request('sort', 'latest') === 'latest' ? 'selected' : '' }}
-    >
-        Newest First
-    </option>
+                <span>Active</span>
 
-    <option
-        value="oldest"
-        {{ request('sort') === 'oldest' ? 'selected' : '' }}
-    >
-        Oldest First
-    </option>
-</select>
+                <span class="status-count">
+                    {{ $activeCount ?? 0 }}
+                </span>
+            </a>
 
-            <button type="submit">
-                Filter
-            </button>
 
-        </div>
+            {{-- TRASHED --}}
+            <a
+                href="{{ route('admin.categories', array_merge(
+                    request()->except('page', 'status'),
+                    ['status' => 'trashed']
+                )) }}"
+                class="category-status-tab {{ ($status ?? 'active') === 'trashed' ? 'active' : '' }}"
+            >
+                <i class="ph-light ph-trash"></i>
 
-        <div>
+                <span>Trashed</span>
 
-            <button
-                type="button"
-                class="add-agencybtn"
-                onclick="openModal()">
-
-                + Add Category
-
-            </button>
+                <span class="status-count">
+                    {{ $trashedCount ?? 0 }}
+                </span>
+            </a>
 
         </div>
 
-    </div>
+    @endif
+
+
+    <form method="GET" action="{{ route('admin.categories') }}">
+
+        <input
+            type="hidden"
+            name="status"
+            value="{{ $status ?? 'active' }}"
+        >
+
+        <div class="filter-card">
+
+            <div class="filter-bar">
+
+                <input
+                    type="text"
+                    name="search"
+                    placeholder="Search category"
+                    value="{{ request('search') }}"
+                >
+
+                <select name="sort">
+
+                    <option
+                        value="latest"
+                        {{ request('sort', 'latest') === 'latest' ? 'selected' : '' }}
+                    >
+                        Newest First
+                    </option>
+
+                    <option
+                        value="oldest"
+                        {{ request('sort') === 'oldest' ? 'selected' : '' }}
+                    >
+                        Oldest First
+                    </option>
+
+                </select>
+
+                <button type="submit">
+                    Filter
+                </button>
+
+            </div>
+
+
+            @if(($status ?? 'active') === 'active')
+
+                <div>
+
+                    <button
+                        type="button"
+                        class="add-agencybtn"
+                        onclick="openModal()"
+                    >
+                        <i class="ph-light ph-plus"></i>
+                        Add Category
+                    </button>
+
+                </div>
+
+            @endif
+
+        </div>
+
+    </form>
+
+</div>
 
 </form>
 
@@ -134,39 +202,122 @@
 
 <td>
 
-<div class="tablebtn">
+    <div class="tablebtn">
 
-<button
-    type="button"
-    class="btn btn-primary edit-category"
+        {{-- =================================================
+             ACTIVE CATEGORY
+             ================================================= --}}
 
-    data-id="{{ $category->id }}"
-    data-name="{{ $category->category_name }}"
-    data-color="{{ $category->display_color }}"
-    data-update="{{ route('admin.categories.update', $category) }}">
+        @if(($status ?? 'active') === 'active')
 
-    Edit
+            {{-- EDIT --}}
+            <button
+                type="button"
+                class="btn btn-primary edit-category"
 
-</button>
+                data-id="{{ $category->id }}"
+                data-name="{{ $category->category_name }}"
+                data-color="{{ $category->display_color }}"
 
-<form
-action="{{ route('admin.categories.destroy',$category) }}"
-method="POST">
+                data-update="{{ route(
+                    'admin.categories.update',
+                    $category
+                ) }}"
+            >
+                <i class="ph-light ph-pencil-simple"></i>
+                Edit
+            </button>
 
-@csrf
-@method('DELETE')
 
-<button
-    type="submit"
-    class="btn btn-danger delete-category">
+            {{-- MOVE TO TRASH --}}
+            <form
+                action="{{ route(
+                    'admin.categories.destroy',
+                    $category
+                ) }}"
+                method="POST"
+                class="delete-category-form"
+            >
 
-    Delete
+                @csrf
+                @method('DELETE')
 
-</button>
+                <button
+                    type="button"
+                    class="btn btn-danger delete-category"
+                    data-category-name="{{ $category->category_name }}"
+                >
+                    <i class="ph-light ph-trash"></i>
+                    Trash
+                </button>
 
-</form>
+            </form>
 
-</div>
+
+        {{-- =================================================
+             TRASHED CATEGORY
+             =================================================
+             Only Superadmins should reach this branch.
+             The controller must enforce this server-side too.
+             ================================================= --}}
+
+        @elseif(
+            ($status ?? 'active') === 'trashed'
+            && auth()->user()->role === 'superadmin'
+        )
+
+            {{-- RESTORE --}}
+            <form
+                action="{{ route(
+                    'admin.categories.restore',
+                    $category
+                ) }}"
+                method="POST"
+                class="restore-category-form"
+            >
+
+                @csrf
+                @method('PATCH')
+
+                <button
+                    type="button"
+                    class="btn btn-restore restore-category"
+                    data-category-name="{{ $category->category_name }}"
+                >
+                    <i class="ph-light ph-arrow-counter-clockwise"></i>
+                    Restore
+                </button>
+
+            </form>
+
+
+            {{-- PERMANENT DELETE --}}
+            <form
+                action="{{ route(
+                    'admin.categories.force-delete',
+                    $category
+                ) }}"
+                method="POST"
+                class="force-delete-category-form"
+            >
+
+                @csrf
+                @method('DELETE')
+
+                <button
+                    type="button"
+                    class="btn btn-danger force-delete-category"
+                    data-category-name="{{ $category->category_name }}"
+                >
+                    <i class="ph-light ph-trash"></i>
+                    Delete Permanently
+                </button>
+
+            </form>
+
+        @endif
+
+    </div>
 
 </td>
 
@@ -176,11 +327,19 @@ method="POST">
 
 <tr>
 
-<td colspan="5">
+    <td colspan="5" class="empty">
 
-No categories found.
+        @if(($status ?? 'active') === 'trashed')
 
-</td>
+            No deleted categories found.
+
+        @else
+
+            No categories found.
+
+        @endif
+
+    </td>
 
 </tr>
 
@@ -451,6 +610,12 @@ window.categoryRoutes = {
 @if(session('success'))
 <script>
 window.__FLASH_SUCCESS__=@json(session('success'));
+</script>
+@endif
+
+@if(session('error'))
+<script>
+window.__FLASH_ERROR__ = @json(session('error'));
 </script>
 @endif
 

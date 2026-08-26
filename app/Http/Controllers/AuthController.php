@@ -377,6 +377,18 @@ public function resendOtp(Request $request)
 
             $request->session()->regenerate();
 
+            /*
+            * Record the most recent successful login.
+            *
+            * This is intentionally updated only after
+            * authentication succeeds.
+            */
+            $user = Auth::user();
+
+            $user->update([
+                'last_login_at' => now(),
+            ]);
+
             UserLog::create([
                 'user_id' => Auth::id(),
                 'action' => 'login',

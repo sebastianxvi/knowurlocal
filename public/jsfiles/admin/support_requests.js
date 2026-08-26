@@ -480,68 +480,189 @@ async function checkSimilarFaqs(faqBtn) {
         return;
     }
 
-    // ================= DELETE SUPPORT REQUEST =================
-const deleteBtn = e.target.closest(".delete-btn");
+    // ================= SUPPORT REQUEST LIFECYCLE =================
 
-if (deleteBtn) {
+/*
+ * Handle all destructive/recovery actions through the same
+ * confirmation system.
+ *
+ * We intentionally submit the original Laravel form instead
+ * of manually making a fetch() request.
+ *
+ * This preserves:
+ * - CSRF protection
+ * - Laravel method spoofing
+ * - server-side authorization
+ * - the existing route definitions
+ */
+const lifecycleBtn = e.target.closest(
+    ".delete-btn, .restore-btn, .permanent-delete-btn"
+);
+
+if (lifecycleBtn) {
 
     /*
-     * Stop the browser from immediately submitting
-     * the DELETE form.
+     * Prevent the browser from submitting the form
+     * before the administrator confirms the action.
      */
     e.preventDefault();
 
-    /*
-     * Find the actual form containing this button.
-     *
-     * We submit this exact form after confirmation
-     * instead of manually constructing a DELETE request.
-     */
-    const deleteForm = deleteBtn.closest("form");
 
     /*
-     * Fail safely if the expected form is missing.
+     * Locate the exact form containing the clicked button.
      */
-    if (!deleteForm) {
-        console.error("Delete form not found.");
+    const lifecycleForm =
+        lifecycleBtn.closest("form");
+
+
+    /*
+     * Fail safely if the button is not inside a form.
+     */
+    if (!lifecycleForm) {
+
+        console.error(
+            "Support request lifecycle form not found."
+        );
+
         return;
     }
 
+
     /*
-     * Ask the administrator for explicit confirmation.
+     * Determine which lifecycle operation was requested.
      *
-     * This uses the existing KNOWURLOCAL alert modal,
-     * keeping destructive-action UI consistent.
+     * We use the button's existing CSS class rather than
+     * trusting a value supplied by the browser.
+     */
+    let config;
+
+
+    /*
+     * MOVE TO TRASH
+     */
+    if (lifecycleBtn.classList.contains("delete-btn")) {
+
+        config = {
+
+            title:
+                "Move Support Request to Trash",
+
+            text:
+                "Are you sure you want to move this support request to trash? You can restore it later.",
+
+            icon:
+                "!",
+
+            variant:
+                "danger",
+
+            confirmText:
+                "Move to Trash"
+
+        };
+
+    }
+
+
+    /*
+     * RESTORE
+     */
+    else if (
+        lifecycleBtn.classList.contains("restore-btn")
+    ) {
+
+        config = {
+
+            title:
+                "Restore Support Request",
+
+            text:
+                "Are you sure you want to restore this support request?",
+
+            icon:
+                "↶",
+
+            variant:
+                "success",
+
+            confirmText:
+                "Restore"
+
+        };
+
+    }
+
+
+    /*
+     * PERMANENT DELETE
+     */
+    else if (
+        lifecycleBtn.classList.contains(
+            "permanent-delete-btn"
+        )
+    ) {
+
+        config = {
+
+            title:
+                "Delete Support Request Permanently",
+
+            text:
+                "This action permanently deletes the support request and cannot be undone. Are you sure you want to continue?",
+
+            icon:
+                "!",
+
+            variant:
+                "danger",
+
+            confirmText:
+                "Delete Permanently"
+
+        };
+
+    }
+
+
+    /*
+     * Show the appropriate confirmation dialog.
      */
     showAlertModal({
-        title: "Delete Support Request",
-        text: "Are you sure you want to delete this support request? This action cannot be undone.",
-        icon: "!",
-        variant: "danger",
-        confirmText: "Delete Request",
-        showCancel: true,
+
+        title:
+            config.title,
+
+        text:
+            config.text,
+
+        icon:
+            config.icon,
+
+        variant:
+            config.variant,
+
+        confirmText:
+            config.confirmText,
+
+        showCancel:
+            true,
+
 
         /*
-         * Only submit the form after the administrator
-         * explicitly confirms the deletion.
+         * Only submit the original Laravel form after
+         * explicit administrator confirmation.
          */
         onConfirm: () => {
 
-            /*
-             * Submit the original Laravel form.
-             *
-             * This preserves:
-             * - CSRF protection
-             * - DELETE method spoofing
-             * - Laravel route handling
-             */
-            deleteForm.submit();
+            lifecycleForm.submit();
+
         }
+
     });
 
+
     /*
-     * Stop this click from reaching the other
-     * action handlers.
+     * Stop the event from reaching other click handlers.
      */
     return;
 }

@@ -1,8 +1,509 @@
 /* ================= PAGE WRAPPER ================= */
-.logs-page{
-    max-width:1200px;
-    margin:20px auto;
-    padding:0 10px;
+
+
+/* =========================================================
+   FAQ MANAGEMENT CONTROLS
+   ========================================================= */
+
+.faq-controls {
+    /*
+     * Keeps the status tabs and filters visible while the
+     * administrator scrolls through a long FAQ list.
+     *
+     * The 60px offset matches the global admin topbar.
+     */
+    position: sticky;
+
+    top: 60px;
+
+    /*
+     * Keeps the controls above the table while remaining
+     * below the global navigation.
+     */
+    z-index: 90;
+
+    /*
+     * Small vertical breathing room prevents the controls
+     * from touching surrounding content.
+     */
+    padding: 4px 0 10px;
+
+    /*
+     * Covers table content while scrolling underneath.
+     */
+    background: rgba(246, 247, 251, 0.96);
+
+    /*
+     * Gives the sticky area the same polished SaaS-style
+     * glass appearance used by the NGA/NGO page.
+     */
+    backdrop-filter: blur(10px);
+
+    border-radius: 14px;
+}
+
+/* =========================================================
+   FAQ STATUS TABS
+   ========================================================= */
+
+.faq-status-tabs {
+    /*
+     * Keeps Active and Trashed together as one compact
+     * segmented control.
+     */
+    display: flex;
+
+    align-items: center;
+
+    width: fit-content;
+
+    max-width: 100%;
+
+    flex-shrink: 0;
+
+    padding: 4px;
+
+    margin-bottom: 12px;
+
+    background: #f3f4f6;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 12px;
+}
+
+
+/* =========================================================
+   FAQ STATUS TAB
+   ========================================================= */
+
+.faq-status-tab {
+    /*
+     * Places icon, label, and count on one line.
+     */
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 7px;
+
+    min-height: 34px;
+
+    padding: 0 13px;
+
+    /*
+     * Prevents labels such as "Trashed" from wrapping.
+     */
+    white-space: nowrap;
+
+    flex-shrink: 0;
+
+    border-radius: 9px;
+
+    text-decoration: none;
+
+    font-size: 12px;
+
+    font-weight: 500;
+
+    color: #6b7280;
+
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+/* =========================================================
+   STATUS ICON
+   ========================================================= */
+
+.faq-status-tab i {
+    font-size: 16px;
+
+    opacity: 0.85;
+
+    transition: opacity 0.2s ease;
+}
+
+
+/* =========================================================
+   STATUS COUNT
+   ========================================================= */
+
+.faq-status-tab .status-count {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    min-width: 22px;
+
+    height: 20px;
+
+    padding: 0 6px;
+
+    border-radius: 999px;
+
+    background: #e5e7eb;
+
+    color: #6b7280;
+
+    font-size: 10px;
+
+    font-weight: 600;
+
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease;
+}
+
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.faq-status-tab:hover {
+    color: #374151;
+
+    background: rgba(255, 255, 255, 0.7);
+
+    transform: translateY(-1px);
+}
+
+
+.faq-status-tab:hover i {
+    opacity: 1;
+}
+
+
+/* =========================================================
+   ACTIVE TAB
+   ========================================================= */
+
+.faq-status-tab.active {
+    background: #ffffff;
+
+    color: #1f3a5f;
+
+    box-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+
+.faq-status-tab.active i {
+    opacity: 1;
+}
+
+
+.faq-status-tab.active .status-count {
+    background: #e8eef6;
+
+    color: #1f3a5f;
+}
+
+
+
+/* =========================================================
+   FAQ TABLE LAYOUT
+   ========================================================= */
+
+.logs-page .table {
+    width: 100%;
+    max-width: 100%;
+
+    /*
+     * Let the browser calculate column widths naturally.
+     *
+     * This prevents long FAQ content from forcing every
+     * column into an artificial percentage.
+     */
+    table-layout: auto;
+}
+
+
+/* =========================================================
+   COMPACT COLUMNS
+   ========================================================= */
+
+/*
+ * ID should only consume the space it actually needs.
+ */
+.logs-page .table th:nth-child(1),
+.logs-page .table td:nth-child(1) {
+    width: 1%;
+
+    text-align: center;
+
+    white-space: nowrap;
+}
+
+
+/*
+ * Date is also a compact, non-flexible column.
+ */
+.logs-page .table th:nth-child(5),
+.logs-page .table td:nth-child(5) {
+    width: 1%;
+
+    text-align: left;
+
+    white-space: nowrap;
+}
+
+
+/*
+ * Action is intentionally protected.
+ *
+ * width: 1% tells the browser:
+ * "Keep this column as compact as possible while still
+ * fitting its contents."
+ *
+ * Because the buttons use white-space: nowrap, the browser
+ * will reserve enough room for them instead of allowing the
+ * Question/Answer columns to squeeze them.
+ */
+.logs-page .table th:nth-child(6),
+.logs-page .table td:nth-child(6) {
+    width: 1%;
+
+    text-align: center;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   FLEXIBLE CONTENT COLUMNS
+   ========================================================= */
+
+/*
+ * These columns are allowed to absorb the remaining
+ * horizontal space.
+ */
+.logs-page .table th:nth-child(2),
+.logs-page .table td:nth-child(2) {
+    width: 25%;
+
+    text-align: left;
+}
+
+
+.logs-page .table th:nth-child(3),
+.logs-page .table td:nth-child(3) {
+    width: 30%;
+
+    text-align: left;
+}
+
+
+.logs-page .table th:nth-child(4),
+.logs-page .table td:nth-child(4) {
+    width: 35%;
+
+    text-align: left;
+}
+
+/* =========================================================
+   FAQ TABLE WRAPPER
+   ========================================================= */
+
+.logs-page .table-wrapper {
+    width: 100%;
+
+    max-width: 100%;
+
+    max-height: none;
+
+    overflow: visible;
+}
+
+
+/* =========================================================
+   FAQ ROW
+   ========================================================= */
+
+.faq-row {
+    cursor: pointer;
+
+    transition:
+        background-color 0.18s ease;
+}
+
+
+.faq-row:hover {
+    background: #f8fafc;
+}
+
+/* =========================================================
+   TRASHED FAQ ACTIONS
+   ========================================================= */
+
+/*
+ * Restore is a positive recovery action.
+ *
+ * The pale green treatment makes it visually distinct from
+ * destructive actions without making it look like a primary
+ * button.
+ */
+.logs-page .tablebtn .btn-restore {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 5px;
+
+    background: #ecfdf5;
+
+    color: #047857;
+
+    border: 1px solid #d1fae5;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+/*
+ * Slightly stronger green on hover provides clear feedback
+ * without becoming visually aggressive.
+ */
+.logs-page .tablebtn .btn-restore:hover {
+    background: #d1fae5;
+
+    border-color: #a7f3d0;
+
+    color: #047857;
+
+    transform: translateY(-1px);
+}
+
+
+/*
+ * Phosphor Light keeps the icon visually consistent with
+ * the rest of KNOWURLOCAL.
+ */
+.logs-page .tablebtn .btn-restore i {
+    font-size: 14px;
+
+    opacity: 0.9;
+}
+
+
+/* =========================================================
+   PERMANENT DELETE
+   ========================================================= */
+
+/*
+ * Permanent deletion is intentionally destructive.
+ *
+ * A very light red background communicates danger while
+ * keeping the button consistent with the compact SaaS UI.
+ */
+.logs-page .tablebtn .force-delete-btn {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 5px;
+
+    background: #fef2f2;
+
+    color: #dc2626;
+
+    border: 1px solid #fecaca;
+
+    white-space: nowrap;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/*
+ * Hover makes the destructive intent slightly more obvious.
+ */
+.logs-page .tablebtn .force-delete-btn:hover {
+    background: #fee2e2;
+
+    border-color: #fca5a5;
+
+    color: #b91c1c;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 4px 10px rgba(220, 38, 38, 0.08);
+}
+
+
+/*
+ * Keep the trash icon lightweight and proportional.
+ */
+.logs-page .tablebtn .force-delete-btn i {
+    font-size: 14px;
+
+    opacity: 0.9;
+}
+
+
+/* =========================================================
+   ACTIVE FAQ TRASH BUTTON
+   ========================================================= */
+
+/*
+ * This is the normal "move to trash" action.
+ *
+ * Keep it consistent with the permanent-delete color family,
+ * but slightly less aggressive because the action is reversible.
+ */
+.logs-page .tablebtn .delete-btn {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 5px;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   ACTION PRESS FEEDBACK
+   ========================================================= */
+
+.logs-page .tablebtn .btn-restore:active,
+.logs-page .tablebtn .force-delete-btn:active,
+.logs-page .tablebtn .delete-btn:active {
+    transform: translateY(0);
+}
+
+/* =========================================================
+   FAQ ACTION BUTTONS
+   ========================================================= */
+
+.logs-page .tablebtn .btn {
+    flex-shrink: 0;
+
+    white-space: nowrap;
 }
 
 /* ================= FILTER CARD ================= */
@@ -107,10 +608,109 @@
     -webkit-appearance:none;
 }
 
-/* ================= AGENCY CELL (MATCH NGA) ================= */
-.actor-cell{
-    display:flex;
-    flex-direction:column;
+/* =========================================================
+   FAQ AGENCY CELL
+   ========================================================= */
+
+.logs-page .actor-cell {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    justify-content: flex-start;
+
+    gap: 5px;
+
+    min-width: 0;
+
+    width: 100%;
+}
+
+
+/* =========================================================
+   FAQ AGENCY NAME
+   ========================================================= */
+
+.logs-page .actor-name {
+    display: -webkit-box;
+
+    width: 100%;
+
+    min-width: 0;
+
+    overflow: hidden;
+
+    /*
+     * Keep very long agency names from creating huge rows.
+     */
+    -webkit-line-clamp: 3;
+
+    -webkit-box-orient: vertical;
+
+    text-overflow: ellipsis;
+
+    color: #1f2937;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    line-height: 1.35;
+
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+/* =========================================================
+   FAQ TEXT CELLS
+   ========================================================= */
+
+.logs-page .faq-table-text {
+    display: -webkit-box;
+
+    width: 100%;
+    min-width: 0;
+
+    overflow: hidden;
+
+    -webkit-box-orient: vertical;
+
+    text-overflow: ellipsis;
+
+    line-height: 1.45;
+
+    /*
+     * Allows unusually long strings to wrap instead of
+     * increasing the table's minimum content width.
+     */
+    overflow-wrap: anywhere;
+
+    word-break: normal;
+}
+
+/* QUESTION */
+
+.logs-page .faq-question-text {
+    /*
+     * Questions usually need a little more visual space
+     * because they are the primary identifying content.
+     */
+    -webkit-line-clamp: 2;
+}
+
+
+/* ANSWER */
+
+.logs-page .faq-answer-text {
+    /*
+     * Answers are secondary table information.
+     *
+     * Keep them compact so a long answer cannot make the
+     * table row excessively tall.
+     */
+    -webkit-line-clamp: 2;
 }
 
 .type-badge{
@@ -392,6 +992,110 @@ select[readonly]:hover{
     text-align:center;
     z-index:1;
     transition:opacity 0.2s ease;
+}
+
+/* =========================================================
+   FAQ AUTO-GROW TEXTAREAS
+   ========================================================= */
+
+/*
+ * FAQ textareas inherit the same base field dimensions
+ * used by the global form system.
+ *
+ * This keeps Keywords and Answers visually consistent
+ * with the Agency field and other KNOWURLOCAL forms.
+ */
+#faq_keywords,
+#faq_answer,
+#faq_answer_fil {
+    width: 100%;
+
+    /*
+     * Match the standard 54px form-system field height.
+     *
+     * JavaScript may increase this height when the content
+     * requires additional space.
+     */
+    min-height: 54px;
+
+    /*
+     * Prevent manual resizing from breaking the modal layout.
+     *
+     * JavaScript is responsible for controlled expansion.
+     */
+    resize: none;
+
+    /*
+     * Hide the scrollbar while the field is still growing.
+     *
+     * JavaScript enables scrolling only after the maximum
+     * height has been reached.
+     */
+    overflow-y: hidden;
+
+    /*
+     * Keep typography consistent with the global form system.
+     */
+    font-family: inherit;
+
+    line-height: 1.4;
+
+    box-sizing: border-box;
+
+    transition:
+        height 0.15s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/*
+ * Keywords should behave like a normal 54px field at first,
+ * but can expand when the administrator enters many keywords.
+ */
+#faq_keywords {
+    max-height: 110px;
+}
+
+
+/*
+ * Answers are naturally longer than keywords, so allow
+ * them to expand further.
+ */
+#faq_answer,
+#faq_answer_fil {
+    max-height: 180px;
+}
+
+
+/*
+ * Keep the existing Question fields controlled by the
+ * global form system.
+ *
+ * They remain regular inputs rather than being converted
+ * into textareas.
+ */
+#faq_question,
+#faq_question_fil {
+    min-height: 54px;
+}
+
+
+/*
+ * Consistent focus treatment.
+ *
+ * The base border, padding, font size, and field dimensions
+ * continue to come from form-system.css.
+ */
+#faq_keywords:focus,
+#faq_answer:focus,
+#faq_answer_fil:focus {
+    outline: none;
+
+    border-color: #3b82f6;
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.08);
 }
 
 /* ================= KEYWORD SUGGESTIONS ================= */
@@ -742,4 +1446,131 @@ select[readonly]:hover{
 
     font-size: 10px;
     font-weight: 500;
+}
+
+/* =========================================================
+   FAQ EDIT / TRASH BUTTONS
+   ========================================================= */
+
+/*
+ * Keep both active FAQ actions compact and visually balanced.
+ *
+ * These selectors are intentionally scoped to the FAQ table
+ * so they cannot unexpectedly modify buttons elsewhere.
+ */
+.logs-page .tablebtn .edit-btn,
+.logs-page .tablebtn .delete-btn {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 5px;
+
+    min-height: 30px;
+
+    padding: 5px 11px;
+
+    border-radius: 999px;
+
+    font-size: 11px;
+    font-weight: 500;
+
+    line-height: 1;
+
+    white-space: nowrap;
+
+    flex-shrink: 0;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/* =========================================================
+   EDIT
+   ========================================================= */
+
+.logs-page .tablebtn .edit-btn {
+    background: #eff6ff;
+
+    color: #2563eb;
+
+    border: 1px solid #dbeafe;
+}
+
+.logs-page .tablebtn .edit-btn:hover {
+    background: #dbeafe;
+
+    border-color: #bfdbfe;
+
+    color: #1d4ed8;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 4px 10px rgba(37, 99, 235, 0.10);
+}
+
+
+/* =========================================================
+   TRASH
+   ========================================================= */
+
+.logs-page .tablebtn .delete-btn {
+    background: #fef2f2;
+
+    color: #dc2626;
+
+    border: 1px solid #fecaca;
+}
+
+.logs-page .tablebtn .delete-btn:hover {
+    background: #fee2e2;
+
+    border-color: #fca5a5;
+
+    color: #b91c1c;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 4px 10px rgba(220, 38, 38, 0.10);
+}
+
+
+/* =========================================================
+   ICONS
+   ========================================================= */
+
+.logs-page .tablebtn .edit-btn i,
+.logs-page .tablebtn .delete-btn i {
+    font-size: 13px;
+
+    opacity: 0.9;
+
+    transition: opacity 0.2s ease;
+}
+
+.logs-page .tablebtn .edit-btn:hover i,
+.logs-page .tablebtn .delete-btn:hover i {
+    opacity: 1;
+}
+
+
+/* =========================================================
+   PRESS FEEDBACK
+   ========================================================= */
+
+.logs-page .tablebtn .edit-btn:active,
+.logs-page .tablebtn .delete-btn:active {
+    transform: translateY(0);
+
+    box-shadow: none;
 }

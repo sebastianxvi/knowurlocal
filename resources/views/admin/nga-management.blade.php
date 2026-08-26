@@ -9,7 +9,7 @@
 
 @section('title', 'KNOWURLOCAL | ' . ucfirst(auth()->user()->role) . ' Module')
 
-@section('page-title', 'Agency Management')
+@section('page-title', 'NGA & NGO Management')
 @section('page-subtitle', 'Manage agencies and organizations')
 
 @section('content')
@@ -630,8 +630,19 @@
 
                 <!-- REQUIRED -->
                 <div class="floating-group" data-validate="required">
-                    <input type="text" name="agency_name" id="agency_name" placeholder=" " required>
-                    <label for="agency_name">Agency Name</label>
+                    <textarea
+                        name="agency_name"
+                        id="agency_name"
+                        placeholder=" "
+                        rows="2"
+                        required
+                        maxlength="255"
+                    ></textarea>
+
+                    <label for="agency_name">
+                        Agency Name
+                    </label>
+
                     <span class="form-message"></span>
                 </div>
 

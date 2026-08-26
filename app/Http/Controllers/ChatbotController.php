@@ -405,35 +405,115 @@ private function logChat(
 
 public function submitSupportRequest(Request $request)
 {
-    // 🔒 VALIDATION
+    /*
+     * Validate all browser-supplied values.
+     *
+     * Validation happens before any database operation.
+     */
     $validated = $request->validate([
-        'question' => 'required|string|max:500', // 🔥 reduced limit
-        'agency_id' => 'nullable|exists:agencies,id'
+        'question' => [
+            'required',
+            'string',
+            'max:500',
+        ],
+
+        'agency_id' => [
+            'nullable',
+            'exists:agencies,id',
+        ],
     ]);
 
-    // 🛡️ BASIC SPAM PROTECTION (IP throttling)
-    $recentCount = SupportRequest::where('ip_address', $request->ip())
-        ->where('created_at', '>=', now()->subMinutes(1))
-        ->count();
 
-    if ($recentCount >= 3) {
+    /*
+     * Normalize whitespace so that trivial formatting
+     * differences do not bypass duplicate detection.
+     *
+     * Example:
+     *
+     * "What are the requirements?"
+     *
+     * and
+     *
+     * "  What are the requirements?  "
+     *
+     * are treated as the same question.
+     */
+    $question = trim(
+        preg_replace(
+            '/\s+/',
+            ' ',
+            $validated['question']
+        )
+    );
+
+
+    /*
+     * Prevent duplicate pending requests.
+     *
+     * The authenticated user's ID comes from Laravel's
+     * authentication system rather than browser input.
+     */
+    $duplicatePendingRequest =
+        SupportRequest::where(
+            'user_id',
+            auth()->id()
+        )
+        ->where(
+            'question',
+            $question
+        )
+        ->where(
+            'status',
+            'pending'
+        )
+        ->exists();
+
+
+    /*
+     * Do not create another support request when the
+     * same question is already waiting for an answer.
+     */
+    if ($duplicatePendingRequest) {
+
         return response()->json([
             'success' => false,
-            'message' => 'Too many requests. Please wait a moment.'
-        ], 429);
+
+            'message' =>
+                'You already have a pending request with the same question.',
+        ], 422);
     }
 
-    // ✅ STORE REQUEST
+
+    /*
+     * Create the support request only after:
+     *
+     * 1. Validation succeeds.
+     * 2. Rate limiting succeeds at the route level.
+     * 3. Duplicate protection succeeds.
+     */
     SupportRequest::create([
-        'user_id' => auth()->id(), // null if guest
-        'agency_id' => $validated['agency_id'] ?? null,
-        'question' => $validated['question'],
-        'ip_address' => $request->ip(),
+        'user_id' =>
+            auth()->id(),
+
+        'agency_id' =>
+            $validated['agency_id'] ?? null,
+
+        'question' =>
+            $question,
+
+        'ip_address' =>
+            $request->ip(),
     ]);
 
+
+    /*
+     * Return a successful response to the chatbot frontend.
+     */
     return response()->json([
         'success' => true,
-        'message' => 'Your question has been sent to a human assistant.'
+
+        'message' =>
+            'Your question has been sent to a human assistant.',
     ]);
 }
 

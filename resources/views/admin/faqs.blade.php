@@ -15,70 +15,184 @@
 
 <div class="logs-page">
 
-    <!-- ================= HEADER ================= -->
-    <form method="GET" action="{{ route('faqs.index') }}">
-        <div class="filter-card">
+    {{-- =========================================================
+         FAQ STATUS CONTROLS
+         =========================================================
 
-            <div class="filter-bar">
+         Only Superadmins can switch between Active and Trashed.
 
-                <!-- 🔍 SEARCH -->
-                <input 
-                    type="text" 
-                    name="search" 
-                    placeholder="Search FAQ..."
-                    value="{{ request('search') }}"
+         The backend still controls authorization. This Blade
+         condition only controls what the current user sees.
+         ========================================================= --}}
+
+    <div class="faq-controls">
+
+        @if(auth()->user()->role === 'superadmin')
+
+            <div class="faq-status-tabs">
+
+                {{-- ACTIVE --}}
+                <a
+                    href="{{ route('faqs.index', array_merge(
+                        request()->except('page', 'status'),
+                        ['status' => 'active']
+                    )) }}"
+                    class="faq-status-tab {{ $status === 'active' ? 'active' : '' }}"
                 >
+                    <i class="ph-light ph-chat-circle-text"></i>
 
-                <!-- 🏢 AGENCY FILTER -->
-                <select name="agency">
-                    <option value="">All Agencies</option>
-                    @foreach($agencies as $agency)
-                        <option 
-                            value="{{ $agency->id }}"
-                            {{ request('agency') == $agency->id ? 'selected' : '' }}
-                        >
-                            {{ $agency->agency_name }}
-                        </option>
-                    @endforeach
-                </select>
+                    <span>Active</span>
 
-                <!-- 📅 DATE -->
-                <select name="date">
-                    <option value="">All Dates</option>
+                    <span class="status-count">
+                        {{ $activeCount }}
+                    </span>
+                </a>
 
-                    @foreach($availableDates as $date)
-                        <option 
-                            value="{{ $date }}"
-                            {{ request('date') == $date ? 'selected' : '' }}
-                        >
-                            {{ \Carbon\Carbon::parse($date)->format('M d, Y') }}
-                        </option>
-                    @endforeach
-                </select>
 
-                <!-- 🔃 SORT -->
-                <select name="sort">
-                    <option value="latest" {{ request('sort') == 'latest' ? 'selected' : '' }}>
-                        Newest First
-                    </option>
-                    <option value="oldest" {{ request('sort') == 'oldest' ? 'selected' : '' }}>
-                        Oldest First
-                    </option>
-                </select>
+                {{-- TRASHED --}}
+                <a
+                    href="{{ route('faqs.index', array_merge(
+                        request()->except('page', 'status'),
+                        ['status' => 'trashed']
+                    )) }}"
+                    class="faq-status-tab trashed-tab {{ $status === 'trashed' ? 'active' : '' }}"
+                >
+                    <i class="ph-light ph-trash"></i>
 
-                <!-- 🚀 SUBMIT -->
-                <button type="submit">Filter</button>
+                    <span>Trashed</span>
+
+                    <span class="status-count">
+                        {{ $trashedCount }}
+                    </span>
+                </a>
 
             </div>
 
-            <!-- ➕ ADD -->
-            <div>
-                <button type="button" class="add-agencybtn" onclick="openFaqModal('add')">
-                    + Add FAQ
-                </button>
+        @endif
+
+
+        {{-- =====================================================
+             FILTER BAR
+             ===================================================== --}}
+
+        <form
+            method="GET"
+            action="{{ route('faqs.index') }}"
+        >
+
+            {{-- Preserve the current Active / Trashed state. --}}
+            <input
+                type="hidden"
+                name="status"
+                value="{{ $status }}"
+            >
+
+            <div class="filter-card">
+
+                <div class="filter-bar">
+
+                    {{-- SEARCH --}}
+                    <input
+                        type="text"
+                        name="search"
+                        placeholder="Search FAQ..."
+                        value="{{ request('search') }}"
+                    >
+
+
+                    {{-- AGENCY --}}
+                    <select name="agency">
+
+                        <option value="">
+                            All Agencies
+                        </option>
+
+                        @foreach($agencies as $agency)
+
+                            <option
+                                value="{{ $agency->id }}"
+                                {{ request('agency') == $agency->id ? 'selected' : '' }}
+                            >
+                                {{ $agency->agency_name }}
+                            </option>
+
+                        @endforeach
+
+                    </select>
+
+
+                    {{-- DATE --}}
+                    <select name="date">
+
+                        <option value="">
+                            All Dates
+                        </option>
+
+                        @foreach($availableDates as $date)
+
+                            <option
+                                value="{{ $date }}"
+                                {{ request('date') == $date ? 'selected' : '' }}
+                            >
+                                {{ \Carbon\Carbon::parse($date)->format('M d, Y') }}
+                            </option>
+
+                        @endforeach
+
+                    </select>
+
+
+                    {{-- SORT --}}
+                    <select name="sort">
+
+                        <option
+                            value="latest"
+                            {{ request('sort') === 'latest' ? 'selected' : '' }}
+                        >
+                            Newest First
+                        </option>
+
+                        <option
+                            value="oldest"
+                            {{ request('sort') === 'oldest' ? 'selected' : '' }}
+                        >
+                            Oldest First
+                        </option>
+
+                    </select>
+
+
+                    {{-- FILTER --}}
+                    <button type="submit">
+                        Filter
+                    </button>
+
+                </div>
+
+
+                {{-- ADD FAQ ONLY EXISTS IN ACTIVE MODE --}}
+                <div>
+
+                    @if($status === 'active')
+
+    <button
+        type="button"
+        class="add-agencybtn"
+        onclick="openFaqModal('add')"
+    >
+        <i class="ph-light ph-plus"></i>
+        Add FAQ
+    </button>
+
+@endif
+
+                </div>
+
             </div>
 
-        </div>
+        </form>
+
+    </div>
     </form>
 
     <!-- ================= TABLE ================= -->
@@ -136,50 +250,161 @@
                         </div>
                     </td>
 
-                    <td>{{ $faq->question }}</td>
-                    <td>{{ Str::limit($faq->answer, 80) }}</td>
                     <td>
-                        {{ $faq->created_at->format('M d, Y') }}
+                        <span class="faq-table-text faq-question-text">
+                            {{ $faq->question }}
+                        </span>
                     </td>
 
                     <td>
-                        <div class="tablebtn">
-
-                            <button 
-    type="button"
-    class="btn btn-primary edit-btn"
-
-                                data-id="{{ $faq->id }}"
-                                data-agency="{{ $faq->agency_id }}"
-
-                                data-question="{{ $faq->question }}"
-                                data-answer="{{ $faq->answer }}"
-
-                                data-question-fil="{{ $faq->question_fil }}"
-                                data-answer-fil="{{ $faq->answer_fil }}"
-
-                                data-keywords="{{ e($faq->keywords ?? '') }}"
-                                data-image="{{ $faq->image }}"
-                            >
-                                Edit
-                            </button>
-
-                            <form method="POST" action="/faqs/{{ $faq->id }}" class="delete-form">
-                                @csrf
-                                @method('DELETE')
-
-                                <button type="button" class="btn btn-danger delete-btn">
-                                    Delete
-                                </button>
-                            </form>
-
-                        </div>
+                        <span class="faq-table-text faq-answer-text">
+                            {{ Str::limit($faq->answer, 80) }}
+                        </span>
                     </td>
+                    <td>
+                        @if($status === 'trashed')
+
+                            {{ $faq->deleted_at?->format('M d, Y') ?? '—' }}
+
+                        @else
+
+                            {{ $faq->created_at?->format('M d, Y') ?? '—' }}
+
+                        @endif
+                    </td>
+
+                    <td>
+
+    <div class="tablebtn">
+
+        {{-- =================================================
+             ACTIVE FAQ
+             =================================================
+             Normal Admin + Superadmin
+             ================================================= --}}
+
+        @if($status === 'active')
+
+            {{-- EDIT --}}
+            <button
+                type="button"
+                class="btn btn-primary edit-btn"
+
+                data-id="{{ $faq->id }}"
+                data-agency="{{ $faq->agency_id }}"
+
+                data-question="{{ $faq->question }}"
+                data-answer="{{ $faq->answer }}"
+
+                data-question-fil="{{ $faq->question_fil }}"
+                data-answer-fil="{{ $faq->answer_fil }}"
+
+                data-keywords="{{ e($faq->keywords ?? '') }}"
+                data-image="{{ $faq->image }}"
+            >
+                <i class="ph-light ph-pencil-simple"></i>
+                Edit
+            </button>
+
+
+            {{-- SOFT DELETE --}}
+            <form
+                method="POST"
+                action="{{ route('faqs.destroy', $faq->id) }}"
+                class="delete-form"
+            >
+
+                @csrf
+                @method('DELETE')
+
+                <button
+                    type="button"
+                    class="btn btn-danger delete-btn"
+                    data-faq-question="{{ $faq->question }}"
+                >
+                    <i class="ph-light ph-trash"></i>
+                    Trash
+                </button>
+
+            </form>
+
+
+        {{-- =================================================
+             TRASHED FAQ
+             =================================================
+             Superadmin only.
+             ================================================= --}}
+
+        @elseif(
+            $status === 'trashed'
+            && auth()->user()->role === 'superadmin'
+        )
+
+            {{-- RESTORE --}}
+            <form
+                method="POST"
+                action="{{ route(
+                    'admin.faqs.restore',
+                    $faq->id
+                ) }}"
+                class="restore-form"
+            >
+
+                @csrf
+                @method('PATCH')
+
+                <button
+                    type="button"
+                    class="btn btn-restore restore-btn"
+                    data-faq-question="{{ $faq->question }}"
+                >
+                    <i class="ph-light ph-arrow-counter-clockwise"></i>
+                    Restore
+                </button>
+
+            </form>
+
+
+            {{-- PERMANENT DELETE --}}
+            <form
+                method="POST"
+                action="{{ route(
+                    'admin.faqs.force-delete',
+                    $faq->id
+                ) }}"
+                class="force-delete-form"
+            >
+
+                @csrf
+                @method('DELETE')
+
+                <button
+                    type="button"
+                    class="btn btn-danger force-delete-btn"
+                    data-faq-question="{{ $faq->question }}"
+                >
+                    <i class="ph-light ph-trash"></i>
+                    Delete Permanently
+                </button>
+
+            </form>
+
+        @endif
+
+    </div>
+
+</td>
 
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="empty">No FAQs found.</td>
+                    <td colspan="6" class="empty">
+                        @if($status === 'trashed')
+                            No deleted FAQs found.
+                        @else
+                            No FAQs found.
+                        @endif
+                    </td>
                 </tr>
                 @endforelse
             </tbody>
@@ -268,9 +493,17 @@
                     <label>Agency</label>
                 </div>
 
-                <div class="floating-group">
-                    <input type="text" name="keywords" id="faq_keywords" placeholder=" ">
+                <div class="floating-group keyword-field-group">
+
+                    <textarea
+                        name="keywords"
+                        id="faq_keywords"
+                        placeholder=" "
+                        rows="1"
+                    ></textarea>
+
                     <label>Keywords</label>
+
                 </div>
 
                 <div
@@ -284,13 +517,26 @@
                             AI keyword suggestions
                         </span>
 
-                        <button
-                            type="button"
-                            id="addKeywordSuggestions"
-                            disabled
-                        >
-                            Add selected (0)
-                        </button>
+                        <div class="keyword-suggestion-actions">
+
+                            <button
+                                type="button"
+                                id="regenerateKeywordSuggestions"
+                                class="btn-regenerate-keywords"
+                            >
+                                <i class="ph-light ph-arrows-clockwise"></i>
+                                Regenerate
+                            </button>
+
+                            <button
+                                type="button"
+                                id="addKeywordSuggestions"
+                                disabled
+                            >
+                                Add selected (0)
+                            </button>
+
+                        </div>
 
                     </div>
 
@@ -422,6 +668,9 @@
      */
     window.FAQ_TRANSLATE_URL =
         @json(route('faqs.translate'));
+
+    window.FAQ_KEYWORDS_URL =
+        @json(route('admin.faqs.generateKeywords'));
 
     /*
      * Support Request → FAQ conversion data.

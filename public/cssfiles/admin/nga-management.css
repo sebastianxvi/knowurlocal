@@ -7,21 +7,7 @@
    PAGE CONTAINER
    ========================================================= */
 
-.logs-page {
-    /*
-     * Keeps the agency management content centered while
-     * preventing the page container itself from becoming
-     * a horizontal scrolling region.
-     */
-    width: 100%;
-    max-width: 1200px;
 
-    margin: 20px auto;
-
-    padding: 0 10px;
-
-    min-width: 0;
-}
 
 
 /* =========================================================
@@ -37,8 +23,7 @@
     align-items: center;
 
     /*
-     * The tabs themselves must NEVER become horizontally
-     * scrollable.
+     * Prevent the tabs from becoming horizontally scrollable.
      */
     overflow: visible;
 
@@ -48,8 +33,7 @@
     flex-shrink: 0;
 
     /*
-     * Keep the tab group compact instead of stretching
-     * across the entire page.
+     * Keep the segmented control compact.
      */
     width: fit-content;
 
@@ -73,7 +57,7 @@
 
 .agency-status-tab {
     /*
-     * Allows the icon, label, and count to sit horizontally.
+     * Keeps icon, text, and count horizontally aligned.
      */
     display: inline-flex;
 
@@ -81,27 +65,27 @@
 
     justify-content: center;
 
-    /*
-     * Prevents the tab text from wrapping.
-     */
-    white-space: nowrap;
-
-    /*
-     * Prevents the browser from shrinking the tab.
-     */
-    flex-shrink: 0;
-
     gap: 7px;
 
+    /*
+     * Matches the compact Category Management tabs.
+     */
     min-height: 34px;
 
     padding: 0 13px;
 
-    border-radius: 9px;
+    /*
+     * Prevent text from wrapping.
+     */
+    white-space: nowrap;
 
     /*
-     * Remove default anchor styling.
+     * Prevent the browser from shrinking the tab.
      */
+    flex-shrink: 0;
+
+    border-radius: 9px;
+
     text-decoration: none;
 
     font-size: 12px;
@@ -111,15 +95,15 @@
     color: #6b7280;
 
     transition:
-        background-color 0.2s ease,
-        color 0.2s ease,
-        box-shadow 0.2s ease,
-        transform 0.2s ease;
+        background-color .2s ease,
+        color .2s ease,
+        box-shadow .2s ease,
+        transform .2s ease;
 }
 
 
 /* =========================================================
-   STATUS TAB ICON
+   STATUS ICON
    ========================================================= */
 
 .agency-status-tab i {
@@ -128,9 +112,11 @@
     /*
      * Slightly muted while inactive.
      */
-    opacity: 0.85;
+    opacity: .85;
 
-    transition: opacity 0.2s ease;
+    transition:
+        opacity .2s ease,
+        color .2s ease;
 }
 
 
@@ -162,8 +148,8 @@
     font-weight: 600;
 
     transition:
-        background-color 0.2s ease,
-        color 0.2s ease;
+        background-color .2s ease,
+        color .2s ease;
 }
 
 
@@ -174,7 +160,7 @@
 .agency-status-tab:hover {
     color: #374151;
 
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, .7);
 
     transform: translateY(-1px);
 }
@@ -186,16 +172,16 @@
 
 
 /* =========================================================
-   ACTIVE STATUS TAB
+   ACTIVE STATUS
    ========================================================= */
 
 .agency-status-tab.active {
-    background: #ffffff;
+    background: #fff;
 
     color: #1f3a5f;
 
     box-shadow:
-        0 2px 6px rgba(0, 0, 0, 0.06);
+        0 2px 6px rgba(0, 0, 0, .06);
 }
 
 
@@ -212,13 +198,35 @@
 
 
 /* =========================================================
+   TRASHED / RECOVERY ACTIVE STATE
+   ========================================================= */
+
+.agency-status-tab.trashed-tab.active {
+    color: #b42318;
+}
+
+
+.agency-status-tab.trashed-tab.active i {
+    color: #dc2626;
+
+    opacity: 1;
+}
+
+
+.agency-status-tab.trashed-tab.active .status-count {
+    background: #fef2f2;
+
+    color: #dc2626;
+}
+
+
+/* =========================================================
    FILTER CARD
    ========================================================= */
 
 .filter-card {
     /*
-     * Keeps the filter controls and Add Agency button
-     * aligned horizontally on larger screens.
+     * Keeps filters and Add Agency aligned.
      */
     display: flex;
 
@@ -232,19 +240,15 @@
 
     margin-bottom: 14px;
 
-    background: #ffffff;
+    background: #fff;
 
     border: 1px solid #e5e7eb;
 
     border-radius: 14px;
 
     box-shadow:
-        0 6px 18px rgba(0, 0, 0, 0.04);
+        0 6px 18px rgba(0, 0, 0, .04);
 
-    /*
-     * Controls may wrap on smaller screens, but this card
-     * itself never becomes a horizontal scrolling area.
-     */
     flex-wrap: wrap;
 
     overflow: visible;
@@ -289,9 +293,9 @@
     font-size: 13px;
 
     transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        background-color 0.2s ease;
+        border-color .2s ease,
+        box-shadow .2s ease,
+        background-color .2s ease;
 }
 
 
@@ -301,17 +305,14 @@
 
 .filter-bar input:focus,
 .filter-bar select:focus {
-    /*
-     * Remove the browser's default focus outline.
-     */
     outline: none;
 
     border-color: #3b82f6;
 
-    background: #ffffff;
+    background: #fff;
 
     box-shadow:
-        0 0 0 3px rgba(59, 130, 246, 0.08);
+        0 0 0 3px rgba(59, 130, 246, .08);
 }
 
 
@@ -340,16 +341,16 @@
 
     background: #f06277;
 
-    color: #ffffff;
+    color: #fff;
 
     font-size: 13px;
 
     cursor: pointer;
 
     transition:
-        background-color 0.2s ease,
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
+        background-color .2s ease,
+        transform .2s ease,
+        box-shadow .2s ease;
 }
 
 
@@ -359,7 +360,7 @@
     transform: translateY(-1px);
 
     box-shadow:
-        0 6px 14px rgba(240, 98, 119, 0.25);
+        0 6px 14px rgba(240, 98, 119, .25);
 }
 
 
@@ -373,6 +374,14 @@
    ========================================================= */
 
 .add-agencybtn {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 6px;
+
     height: 36px;
 
     padding: 0 16px;
@@ -383,16 +392,16 @@
 
     background: #3b82f6;
 
-    color: #ffffff;
+    color: #fff;
 
     font-size: 13px;
 
     cursor: pointer;
 
     transition:
-        background-color 0.2s ease,
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
+        background-color .2s ease,
+        transform .2s ease,
+        box-shadow .2s ease;
 }
 
 
@@ -402,12 +411,19 @@
     transform: translateY(-1px);
 
     box-shadow:
-        0 6px 14px rgba(59, 130, 246, 0.25);
+        0 6px 14px rgba(59, 130, 246, .25);
 }
 
 
 .add-agencybtn:active {
     transform: translateY(0);
+}
+
+
+.add-agencybtn i {
+    font-size: 15px;
+
+    opacity: .9;
 }
 
 
@@ -422,71 +438,33 @@
 
     min-width: 0;
 }
-/*
- * The global table stylesheet controls the general
- * appearance of .table-wrapper.
- *
- * This page only defines agency-specific behavior.
- */
+
 
 /* =========================================================
    STICKY NGA & NGO CONTROLS
    ========================================================= */
 
-/*
- * Keeps the Active / Trashed tabs and filter controls
- * visible while the administrator scrolls down the page.
- *
- * The 60px offset matches the height of the global
- * admin header (.topbar).
- */
 .agency-controls {
     position: sticky;
 
-    /*
-     * Keep the controls directly below the sticky header.
-     */
     top: 60px;
 
-    /*
-     * Stay above normal page content, but below the
-     * global header.
-     */
     z-index: 90;
 
-    /*
-     * Slight vertical breathing room.
-     */
-    padding: 4px 0 10px;
+    padding: 0px 0 10px;
 
-    /*
-     * Opaque enough to hide table content while scrolling
-     * underneath the sticky controls.
-     */
-    background: rgba(246, 247, 251, 0.96);
+    background: rgba(246, 247, 251, .96);
 
-    /*
-     * Modern glass effect.
-     */
     backdrop-filter: blur(10px);
 
-    /*
-     * Keeps the sticky area visually grouped.
-     */
     border-radius: 14px;
 }
+
 
 /* =========================================================
    TABLE WRAPPER
    ========================================================= */
 
-/*
- * The page itself handles vertical scrolling.
- *
- * Keeping the wrapper non-scrollable prevents nested
- * scrolling areas that are difficult to use with a mouse,
- * trackpad, and touch input.
- */
 .logs-page .table-wrapper {
     width: 100%;
 
@@ -501,11 +479,6 @@
 /* =========================================================
    AGENCY TABLE COLUMN WIDTHS
    ========================================================= */
-
-/*
- * These widths belong here because they describe the
- * structure of the Agency Management table specifically.
- */
 
 
 /* ID */
@@ -579,13 +552,10 @@
    ========================================================= */
 
 .agency-row {
-    /*
-     * The row can be clicked to inspect the agency.
-     */
     cursor: pointer;
 
     transition:
-        background-color 0.18s ease;
+        background-color .18s ease;
 }
 
 
@@ -694,7 +664,7 @@
 /* NGA */
 
 .type-badge.nga {
-    background: rgba(59, 130, 246, 0.09);
+    background: rgba(59, 130, 246, .09);
 
     color: #2563eb;
 }
@@ -703,7 +673,7 @@
 /* NGO */
 
 .type-badge.ngo {
-    background: rgba(16, 185, 129, 0.09);
+    background: rgba(16, 185, 129, .09);
 
     color: #059669;
 }
@@ -712,7 +682,7 @@
 /* LGU */
 
 .type-badge.lgu {
-    background: rgba(139, 92, 246, 0.09);
+    background: rgba(139, 92, 246, .09);
 
     color: #7c3aed;
 }
@@ -755,17 +725,14 @@
         white
     );
 
-    /*
-     * Category names are allowed to wrap if they are long.
-     */
     white-space: normal;
 
     flex-shrink: 0;
 
     transition:
-        background-color 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease;
+        background-color .2s ease,
+        border-color .2s ease,
+        transform .2s ease;
 }
 
 
@@ -781,31 +748,147 @@
 
 
 /* =========================================================
-   ACTION BUTTON GROUP
+   TABLE ACTION BUTTONS
    ========================================================= */
 
 /*
- * .tablebtn itself is already provided by the global
- * table stylesheet.
+ * The Agency Blade uses the existing shared button classes:
  *
- * Only agency-specific constraints are added here.
+ * btn-primary  = Edit
+ * btn-danger   = Trash / Delete Permanently
+ * btn-restore  = Restore
+ *
+ * These rules intentionally style those existing classes
+ * instead of introducing new button classes.
  */
 
 .logs-page .tablebtn .btn {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 5px;
+
     flex-shrink: 0;
 
     white-space: nowrap;
+
+    min-height: 27px;
+
+    padding: 5px 11px;
+
+    border-radius: 999px;
+
+    font-size: 11px;
+
+    font-weight: 500;
+
+    line-height: 1;
+
+    transition:
+        background-color .2s ease,
+        border-color .2s ease,
+        color .2s ease,
+        transform .2s ease,
+        box-shadow .2s ease;
 }
 
 
 /* =========================================================
-   TRASHED RECORD ACTIONS
+   EDIT BUTTON
    ========================================================= */
 
+.logs-page .tablebtn .btn-primary {
+    background: #e0f2fe;
 
-/* RESTORE */
+    color: #0284c7;
 
-.btn-restore {
+    border: 1px solid #bae6fd;
+}
+
+
+.logs-page .tablebtn .btn-primary:hover {
+    background: #dbeafe;
+
+    border-color: #7dd3fc;
+
+    color: #0369a1;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 5px 12px rgba(14, 165, 233, .10);
+}
+
+
+.logs-page .tablebtn .btn-primary:active {
+    transform: translateY(0);
+
+    box-shadow: none;
+}
+
+
+/* =========================================================
+   TRASH / DANGER BUTTON
+   ========================================================= */
+
+.logs-page .tablebtn .btn-danger {
+    background: #fef2f2;
+
+    color: #dc2626;
+
+    border: 1px solid #fecaca;
+}
+
+
+.logs-page .tablebtn .btn-danger:hover {
+    background: #fee2e2;
+
+    border-color: #fca5a5;
+
+    color: #b91c1c;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 5px 12px rgba(239, 68, 68, .12);
+}
+
+
+.logs-page .tablebtn .btn-danger:active {
+    transform: translateY(0);
+
+    box-shadow: none;
+}
+
+
+/* =========================================================
+   ACTION BUTTON ICONS
+   ========================================================= */
+
+.logs-page .tablebtn .btn i {
+    font-size: 13px;
+
+    opacity: .9;
+
+    transition:
+        opacity .2s ease,
+        transform .2s ease;
+}
+
+
+.logs-page .tablebtn .btn:hover i {
+    opacity: 1;
+}
+
+
+/* =========================================================
+   RESTORE BUTTON
+   ========================================================= */
+
+.logs-page .tablebtn .btn-restore {
     display: inline-flex;
 
     align-items: center;
@@ -818,36 +901,36 @@
 
     color: #047857;
 
-    border: 1px solid #d1fae5;
-
-    transition:
-        background-color 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease;
+    border: 1px solid #a7f3d0;
 }
 
 
-.btn-restore:hover {
+.logs-page .tablebtn .btn-restore:hover {
     background: #d1fae5;
 
-    border-color: #a7f3d0;
+    border-color: #6ee7b7;
+
+    color: #065f46;
 
     transform: translateY(-1px);
+
+    box-shadow:
+        0 5px 12px rgba(16, 185, 129, .12);
 }
 
 
-.btn-restore i {
-    font-size: 14px;
+.logs-page .tablebtn .btn-restore:active {
+    transform: translateY(0);
 
-    opacity: 0.9;
+    box-shadow: none;
 }
 
 
 /* =========================================================
-   PERMANENT DELETE
+   PERMANENT DELETE BUTTON
    ========================================================= */
 
-.force-delete-btn {
+.logs-page .tablebtn .force-delete-btn {
     display: inline-flex;
 
     align-items: center;
@@ -857,22 +940,17 @@
     gap: 5px;
 
     white-space: nowrap;
-
-    transition:
-        background-color 0.2s ease,
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
 }
 
 
-.force-delete-btn i {
-    font-size: 14px;
+.logs-page .tablebtn .force-delete-btn i {
+    font-size: 13px;
 
-    opacity: 0.9;
+    opacity: .9;
 }
 
 
-.force-delete-btn:hover {
+.logs-page .tablebtn .force-delete-btn:hover {
     transform: translateY(-1px);
 }
 
@@ -917,15 +995,8 @@ select[readonly]:hover {
 
     inset: 0;
 
-    /*
-     * Dark translucent layer keeps the user's attention
-     * on the modal.
-     */
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(0, 0, 0, .35);
 
-    /*
-     * Modern SaaS-style glass blur.
-     */
     backdrop-filter: blur(6px);
 
     display: flex;
@@ -934,14 +1005,11 @@ select[readonly]:hover {
 
     align-items: center;
 
-    /*
-     * Hidden by default.
-     */
     opacity: 0;
 
     pointer-events: none;
 
-    transition: opacity 0.25s ease;
+    transition: opacity .25s ease;
 
     z-index: 1000;
 }
@@ -969,7 +1037,7 @@ select[readonly]:hover {
 
     max-height: 90vh;
 
-    background: #ffffff;
+    background: #fff;
 
     border-radius: 16px;
 
@@ -978,26 +1046,19 @@ select[readonly]:hover {
     flex-direction: column;
 
     box-shadow:
-        0 20px 50px rgba(0, 0, 0, 0.15);
+        0 20px 50px rgba(0, 0, 0, .15);
 
-    /*
-     * Keeps the header and body inside the rounded
-     * container.
-     */
     overflow: hidden;
 
-    /*
-     * Initial animation state.
-     */
     transform:
         translateY(20px)
-        scale(0.96);
+        scale(.96);
 
     opacity: 0;
 
     transition:
-        transform 0.25s cubic-bezier(.16, 1, .3, 1),
-        opacity 0.2s ease;
+        transform .25s cubic-bezier(.16, 1, .3, 1),
+        opacity .2s ease;
 }
 
 
@@ -1019,9 +1080,6 @@ select[readonly]:hover {
    ========================================================= */
 
 .modal-header {
-    /*
-     * Keeps the header visible while the form body scrolls.
-     */
     position: sticky;
 
     top: 0;
@@ -1036,7 +1094,7 @@ select[readonly]:hover {
 
     padding: 16px 20px;
 
-    background: #ffffff;
+    background: #fff;
 
     border-bottom: 1px solid #f1f5f9;
 }
@@ -1084,13 +1142,13 @@ select[readonly]:hover {
     cursor: pointer;
 
     transition:
-        background-color 0.2s ease,
-        transform 0.2s ease;
+        background-color .2s ease,
+        transform .2s ease;
 }
 
 
 .btn-save:disabled {
-    opacity: 0.5;
+    opacity: .5;
 
     cursor: not-allowed;
 }
@@ -1102,7 +1160,7 @@ select[readonly]:hover {
 
 
 .btn-save:active:not(:disabled) {
-    transform: scale(0.97);
+    transform: scale(.97);
 }
 
 
@@ -1126,8 +1184,8 @@ select[readonly]:hover {
     cursor: pointer;
 
     transition:
-        background-color 0.2s ease,
-        transform 0.2s ease;
+        background-color .2s ease,
+        transform .2s ease;
 }
 
 
@@ -1137,7 +1195,7 @@ select[readonly]:hover {
 
 
 .btn-cancel:active {
-    transform: scale(0.97);
+    transform: scale(.97);
 }
 
 
@@ -1146,10 +1204,6 @@ select[readonly]:hover {
    ========================================================= */
 
 #agencyForm {
-    /*
-     * The form itself is the vertical scrolling area of
-     * the modal.
-     */
     overflow-y: auto;
 
     overflow-x: hidden;
@@ -1162,10 +1216,6 @@ select[readonly]:hover {
 
     gap: 22px;
 
-    /*
-     * Prevent flexbox children from forcing horizontal
-     * overflow.
-     */
     min-width: 0;
 }
 
@@ -1198,8 +1248,8 @@ select[readonly]:hover {
     cursor: pointer;
 
     transition:
-        border-color 0.2s ease,
-        background-color 0.2s ease;
+        border-color .2s ease,
+        background-color .2s ease;
 }
 
 
@@ -1232,7 +1282,7 @@ select[readonly]:hover {
 .upload-content i {
     font-size: 26px;
 
-    opacity: 0.85;
+    opacity: .85;
 }
 
 
@@ -1251,6 +1301,31 @@ select[readonly]:hover {
     font-size: 12px;
 
     color: #6b7280;
+}
+
+
+/* =========================================================
+   AGENCY NAME TEXTAREA
+   ========================================================= */
+
+#agency_name,
+#agency_description,
+#services_offered,
+#office_hours {
+    resize: none;
+
+    overflow-y: hidden;
+
+    box-sizing: border-box;
+}
+
+
+#agency_name {
+    min-height: 64px;
+
+    resize: vertical;
+
+    line-height: 1.45;
 }
 
 
@@ -1328,7 +1403,7 @@ select[readonly]:hover {
 
     font-weight: 500;
 
-    transition: color 0.2s ease;
+    transition: color .2s ease;
 }
 
 
@@ -1399,7 +1474,7 @@ select[readonly]:hover {
 
     background: #2563eb;
 
-    color: #ffffff;
+    color: #fff;
 
     border: none;
 
@@ -1412,8 +1487,8 @@ select[readonly]:hover {
     cursor: pointer;
 
     transition:
-        background-color 0.2s ease,
-        transform 0.2s ease;
+        background-color .2s ease,
+        transform .2s ease;
 }
 
 
@@ -1463,17 +1538,11 @@ select[readonly]:hover {
     min-width: 0;
 }
 
+
 /* =========================================================
    CONTACT INFORMATION
    ========================================================= */
 
-/*
- * Main contact section.
- *
- * The contact system is intentionally visually separated
- * from the other agency information because an agency may
- * have multiple contact records.
- */
 .agency-contacts {
     display: flex;
 
@@ -1491,12 +1560,6 @@ select[readonly]:hover {
    CONTACT ROW
    ========================================================= */
 
-/*
- * Each contact is treated as an independent record.
- *
- * This makes multiple hotlines, emails, mobile numbers,
- * social links, etc. easy to distinguish.
- */
 .agency-contact-row {
     position: relative;
 
@@ -1510,30 +1573,27 @@ select[readonly]:hover {
 
     padding: 14px;
 
-    background: #ffffff;
+    background: #fff;
 
     border: 1px solid #e5e7eb;
 
     border-radius: 12px;
 
     box-shadow:
-        0 2px 6px rgba(0, 0, 0, 0.025);
+        0 2px 6px rgba(0, 0, 0, .025);
 
     transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        transform 0.2s ease;
+        border-color .2s ease,
+        box-shadow .2s ease,
+        transform .2s ease;
 }
 
 
-/*
- * Subtle interaction feedback.
- */
 .agency-contact-row:hover {
     border-color: #dbe3ee;
 
     box-shadow:
-        0 5px 14px rgba(0, 0, 0, 0.045);
+        0 5px 14px rgba(0, 0, 0, .045);
 
     transform: translateY(-1px);
 }
@@ -1543,9 +1603,6 @@ select[readonly]:hover {
    CONTACT HEADER
    ========================================================= */
 
-/*
- * Contains the contact type and remove button.
- */
 .agency-contact-header {
     display: flex;
 
@@ -1572,13 +1629,6 @@ select[readonly]:hover {
 }
 
 
-/*
- * Contact type selector.
- *
- * The available options come from the contact_types table,
- * so this styling deliberately does not depend on a
- * particular contact type such as Email or Hotline.
- */
 .contact-type-select {
     width: 100%;
 
@@ -1605,26 +1655,26 @@ select[readonly]:hover {
     outline: none;
 
     transition:
-        border-color 0.2s ease,
-        background-color 0.2s ease,
-        box-shadow 0.2s ease;
+        border-color .2s ease,
+        background-color .2s ease,
+        box-shadow .2s ease;
 }
 
 
 .contact-type-select:hover {
     border-color: #d1d5db;
 
-    background: #ffffff;
+    background: #fff;
 }
 
 
 .contact-type-select:focus {
     border-color: #3b82f6;
 
-    background: #ffffff;
+    background: #fff;
 
     box-shadow:
-        0 0 0 3px rgba(59, 130, 246, 0.08);
+        0 0 0 3px rgba(59, 130, 246, .08);
 }
 
 
@@ -1651,24 +1701,24 @@ select[readonly]:hover {
 
     border-radius: 8px;
 
-    background: #ffffff;
+    background: #fff;
 
     color: #9ca3af;
 
     cursor: pointer;
 
     transition:
-        color 0.2s ease,
-        background-color 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease;
+        color .2s ease,
+        background-color .2s ease,
+        border-color .2s ease,
+        transform .2s ease;
 }
 
 
 .remove-contact-btn i {
     font-size: 15px;
 
-    opacity: 0.9;
+    opacity: .9;
 }
 
 
@@ -1689,7 +1739,7 @@ select[readonly]:hover {
 
 
 .remove-contact-btn:disabled {
-    opacity: 0.4;
+    opacity: .4;
 
     cursor: not-allowed;
 
@@ -1701,10 +1751,6 @@ select[readonly]:hover {
    CONTACT LABEL
    ========================================================= */
 
-/*
- * The generated contact fields use the same floating-label
- * pattern as the rest of the agency form.
- */
 .agency-contact-row .floating-group {
     width: 100%;
 
@@ -1723,12 +1769,6 @@ select[readonly]:hover {
    CONTACT PRIMARY
    ========================================================= */
 
-/*
- * Primary contact is intentionally understated.
- *
- * It is metadata about the contact rather than the main
- * action of the form.
- */
 .contact-primary {
     display: inline-flex;
 
@@ -1767,16 +1807,16 @@ select[readonly]:hover {
 
     border-radius: 4px;
 
-    background: #ffffff;
+    background: #fff;
 
     cursor: pointer;
 
     position: relative;
 
     transition:
-        border-color 0.2s ease,
-        background-color 0.2s ease,
-        box-shadow 0.2s ease;
+        border-color .2s ease,
+        background-color .2s ease,
+        box-shadow .2s ease;
 }
 
 
@@ -1791,7 +1831,7 @@ select[readonly]:hover {
     border-color: #3b82f6;
 
     box-shadow:
-        0 0 0 3px rgba(59, 130, 246, 0.08);
+        0 0 0 3px rgba(59, 130, 246, .08);
 }
 
 
@@ -1802,9 +1842,6 @@ select[readonly]:hover {
 }
 
 
-/*
- * Lightweight check mark.
- */
 .contact-primary-checkbox:checked::after {
     content: "";
 
@@ -1818,16 +1855,16 @@ select[readonly]:hover {
 
     height: 8px;
 
-    border-right: 1.5px solid #ffffff;
+    border-right: 1.5px solid #fff;
 
-    border-bottom: 1.5px solid #ffffff;
+    border-bottom: 1.5px solid #fff;
 
     transform: rotate(45deg);
 }
 
 
 .contact-primary-checkbox:disabled {
-    opacity: 0.5;
+    opacity: .5;
 
     cursor: not-allowed;
 }
@@ -1837,11 +1874,6 @@ select[readonly]:hover {
    ADD CONTACT BUTTON
    ========================================================= */
 
-/*
- * Secondary action rather than a large primary button.
- *
- * The main form action remains Save.
- */
 .add-contact-btn {
     display: inline-flex;
 
@@ -1863,7 +1895,7 @@ select[readonly]:hover {
 
     border-radius: 9px;
 
-    background: #ffffff;
+    background: #fff;
 
     color: #475569;
 
@@ -1876,21 +1908,21 @@ select[readonly]:hover {
     cursor: pointer;
 
     transition:
-        color 0.2s ease,
-        background-color 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
+        color .2s ease,
+        background-color .2s ease,
+        border-color .2s ease,
+        transform .2s ease,
+        box-shadow .2s ease;
 }
 
 
 .add-contact-btn i {
     font-size: 15px;
 
-    opacity: 0.9;
+    opacity: .9;
 
     transition:
-        transform 0.2s ease;
+        transform .2s ease;
 }
 
 
@@ -1902,7 +1934,7 @@ select[readonly]:hover {
     border-color: #93c5fd;
 
     box-shadow:
-        0 4px 10px rgba(37, 99, 235, 0.07);
+        0 4px 10px rgba(37, 99, 235, .07);
 
     transform: translateY(-1px);
 }
@@ -1924,10 +1956,6 @@ select[readonly]:hover {
    CONTACT VALIDATION
    ========================================================= */
 
-/*
- * Invalid contact type/value fields use the same visual
- * language as the rest of the form.
- */
 .agency-contact-row .is-invalid {
     border-color: #ef4444 !important;
 
@@ -1937,7 +1965,7 @@ select[readonly]:hover {
 
 .agency-contact-row .is-invalid:focus {
     box-shadow:
-        0 0 0 3px rgba(239, 68, 68, 0.08) !important;
+        0 0 0 3px rgba(239, 68, 68, .08) !important;
 }
 
 
@@ -1964,10 +1992,6 @@ select[readonly]:hover {
    CONTACT VIEW MODE
    ========================================================= */
 
-/*
- * View mode should visually communicate that the fields
- * are no longer editable.
- */
 .agency-contact-row input[readonly],
 .agency-contact-row select[readonly] {
     background: #f8fafc;
@@ -1980,7 +2004,7 @@ select[readonly]:hover {
 
 .agency-contact-row input:disabled,
 .agency-contact-row select:disabled {
-    opacity: 0.75;
+    opacity: .75;
 
     cursor: not-allowed;
 }
@@ -1992,9 +2016,6 @@ select[readonly]:hover {
 
 @media (max-width: 600px) {
 
-    /*
-     * Reduce the contact card padding on narrow screens.
-     */
     .agency-contact-row {
         padding: 12px;
 
@@ -2004,10 +2025,6 @@ select[readonly]:hover {
     }
 
 
-    /*
-     * Keep the contact header horizontal because the
-     * selector and remove button still fit comfortably.
-     */
     .agency-contact-header {
         gap: 8px;
     }
@@ -2032,5 +2049,102 @@ select[readonly]:hover {
 
         align-self: stretch;
     }
+}
 
+
+/* =========================================================
+   AGENCY STATUS / FILTER RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    /*
+     * Keep the status control compact and aligned exactly
+     * like the Category Management page.
+     */
+    .agency-status-tabs {
+        width: 100%;
+    }
+
+
+    .agency-status-tab {
+        flex: 1;
+
+        padding: 0 10px;
+    }
+
+
+    /*
+     * Allow the filter card to stack naturally.
+     */
+    .filter-card {
+        align-items: stretch;
+    }
+
+
+    .filter-bar {
+        width: 100%;
+    }
+
+
+    .filter-bar input,
+    .filter-bar select {
+        width: 100%;
+    }
+
+
+    .filter-bar > button {
+        width: 100%;
+    }
+
+
+    .add-agencybtn {
+        width: 100%;
+    }
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 420px) {
+
+    .agency-status-tab {
+        gap: 5px;
+
+        padding: 0 8px;
+
+        font-size: 11px;
+    }
+
+
+    .agency-status-tab i {
+        font-size: 15px;
+    }
+
+
+    .agency-status-tab .status-count {
+        min-width: 20px;
+
+        height: 19px;
+
+        padding: 0 5px;
+    }
+
+
+    /*
+     * Slightly compact table action buttons on very
+     * narrow screens.
+     */
+    .logs-page .tablebtn .btn {
+        padding: 5px 9px;
+
+        font-size: 10.5px;
+    }
+
+
+    .logs-page .tablebtn .btn i {
+        font-size: 12px;
+    }
 }

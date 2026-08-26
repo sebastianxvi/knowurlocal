@@ -7,10 +7,10 @@
 
     <div class="header-right">
 
-        <div class="notification">
+        {{-- <div class="notification">
             <i class="ph-light ph-bell"></i>
             <span class="notif-dot"></span>
-        </div>
+        </div> --}}
 
         <div class="profile-text">
 

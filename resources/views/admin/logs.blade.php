@@ -35,6 +35,7 @@
     };
 @endphp
 
+
 <div class="logs-page">
 
     <!-- FILTER -->
@@ -118,6 +119,20 @@
             <tbody>
 
                 @forelse($logs as $log)
+
+                {{-- @php
+    /*
+     * Resolve the human-readable label for THIS log entry.
+     *
+     * This must be inside the loop because $log only exists
+     * after @forelse creates the current log record.
+     */
+    $displayActionLabel = $actionLabels[$log->action]
+        ?? ucfirst(
+            str_replace('_', ' ', $log->action)
+        );
+@endphp --}}
+
                 <tr class="log-row"
     data-action="{{ $log->action }}"
                     data-old='@json(
@@ -206,103 +221,86 @@
 
                     </td>
 
+                    
                     <!-- ACTION -->
-                    <td>
-                        <span class="badge action {{ $log->action }}">
-                            <i class="ph-light 
-    @switch($log->action)
+<td>
+    <span class="badge action {{ $log->action }}">
 
-        {{-- AUTH --}}
-        @case('login') ph-sign-in @break
-        @case('logout') ph-sign-out @break
-        @case('admin_login') ph-shield-check @break
-        @case('admin_logout') ph-shield-slash @break
+        <i class="ph-light 
+            @switch($log->action)
 
-        {{-- PUBLIC USER ACTIVITY --}}
-        @case('view_map') ph-map-trifold @break
-        @case('view_agencies') ph-buildings @break
-        @case('view_agency') ph-building @break
-        @case('search_agency') ph-magnifying-glass @break
-        @case('get_directions') ph-navigation-arrow @break
-        @case('contact_agency') ph-address-book @break
-        @case('filter_category') ph-funnel-simple @break
-        @case('navigate') ph-compass @break
+                {{-- AUTH --}}
+                @case('login') ph-sign-in @break
+                @case('logout') ph-sign-out @break
+                @case('admin_login') ph-shield-check @break
+                @case('admin_logout') ph-shield-slash @break
 
-        {{-- CREATE --}}
-        @case('create_agency')
-            ph-plus-circle
-            @break
+                {{-- PUBLIC USER ACTIVITY --}}
+                @case('view_map') ph-map-trifold @break
+                @case('view_agencies') ph-buildings @break
+                @case('view_agency') ph-building @break
+                @case('search_agency') ph-magnifying-glass @break
+                @case('get_directions') ph-navigation-arrow @break
+                @case('contact_agency') ph-address-book @break
+                @case('filter_category') ph-funnel-simple @break
+                @case('navigate') ph-compass @break
 
-        @case('create_faq')
-            ph-chat-centered-dots
-            @break
+                {{-- CREATE --}}
+                @case('create_agency') ph-plus-circle @break
+                @case('create_faq') ph-chat-centered-dots @break
+                @case('create_category') ph-tag @break
 
-        @case('create_category')
-            ph-tag
-            @break
+                {{-- UPDATE --}}
+                @case('update_agency') ph-pencil-simple @break
+                @case('update_faq') ph-pencil-simple-line @break
+                @case('update_category') ph-pencil-simple @break
 
+                {{-- AGENCY LIFECYCLE --}}
+                @case('trash_agency') ph-trash @break
+                @case('restore_agency') ph-arrow-counter-clockwise @break
+                @case('force_delete_agency') ph-trash-simple @break
 
-        {{-- UPDATE --}}
-        @case('update_agency')
-            ph-pencil-simple
-            @break
+                {{-- FAQ LIFECYCLE --}}
+                @case('delete_faq') ph-trash @break
+                @case('restore_faq') ph-arrow-counter-clockwise @break
+                @case('force_delete_faq') ph-trash-simple @break
 
-        @case('update_faq')
-            ph-pencil-simple-line
-            @break
+                {{-- CATEGORY LIFECYCLE --}}
+                @case('delete_category') ph-trash @break
+                @case('restore_category') ph-arrow-counter-clockwise @break
+                @case('force_delete_category') ph-trash-simple @break
 
-        @case('update_category')
-            ph-pencil-simple
-            @break
+                {{-- OTHER DELETE ACTIONS --}}
+                @case('delete_agency') ph-trash @break
+                @case('delete_support_request') ph-trash @break
+                @case('restore_support_request') ph-arrow-counter-clockwise @break
+                @case('force_delete_support_request') ph-trash-simple @break
+                
 
+                {{-- ADMIN --}}
+                @case('approve_admin') ph-check @break
+                @case('promote_admin') ph-arrow-up-right @break
+                @case('demote_admin') ph-arrow-down-right @break
+                @case('deactivate_admin') ph-user-minus @break
+                @case('reactivate_admin') ph-user-check @break
+                @case('delete_admin') ph-user-minus @break
+                @case('invite_admin') ph-paper-plane-tilt @break
 
-        {{-- AGENCY LIFECYCLE --}}
-        @case('trash_agency')
-            ph-trash
-            @break
+                {{-- PUBLIC USER MANAGEMENT --}}
+                @case('deactivate_user') ph-user-minus @break
+                @case('reactivate_user') ph-user-check @break
+                @case('delete_user') ph-trash @break
 
-        @case('restore_agency')
-            ph-arrow-counter-clockwise
-            @break
+                {{-- DEFAULT --}}
+                @default ph-lightning
 
-        @case('force_delete_agency')
-            ph-trash-simple
-            @break
+            @endswitch
+        "></i>
 
+        {{ $log->action_label }}
 
-        {{-- DELETE --}}
-        @case('delete_agency')
-            ph-trash
-            @break
-
-        @case('delete_faq')
-            ph-trash
-            @break
-
-        @case('delete_support_request')
-            ph-trash
-            @break
-
-        @case('delete_category')
-            ph-trash
-            @break
-
-        {{-- ADMIN --}}
-        @case('approve_admin') ph-check @break
-        @case('promote_admin') ph-arrow-up-right @break
-        @case('demote_admin') ph-arrow-down-right @break
-        @case('delete_admin') ph-user-minus @break
-        @case('invite_admin') ph-paper-plane-tilt @break
-
-        {{-- DEFAULT --}}
-        @default ph-lightning
-
-    @endswitch
-"></i>
-
-                            {{ $log->action_label }}
-                        </span>
-                    </td>
+    </span>
+</td>
 
                     
 
@@ -330,55 +328,118 @@
 </span>
 
     @elseif(in_array($log->action, [
+    /*
+     * FAQ lifecycle
+     */
     'delete_faq',
+    'restore_faq',
+    'force_delete_faq',
+
+    /*
+     * Agency lifecycle
+     */
     'delete_agency',
-    'delete_support_request',
-    'delete_category',
     'trash_agency',
     'restore_agency',
-    'force_delete_agency'
+    'force_delete_agency',
+
+    /*
+     * Category lifecycle
+     */
+    'delete_category',
+    'restore_category',
+    'force_delete_category',
+
+    /*
+ * Support Request lifecycle
+ */
+'delete_support_request',
+'restore_support_request',
+'force_delete_support_request'
 ], true))
 
-        {{-- Deletion actions represent the removal of an existing record. --}}
-        <span class="change-status {{ 
-    $log->action === 'restore_agency'
-        ? 'created'
-        : 'deleted'
-}}">
+    @php
+        /*
+         * Determine whether this is a restoration action.
+         *
+         * Restoring a record is not destructive, so it uses
+         * the same positive visual style as creation actions.
+         */
+        $isRestore = in_array($log->action, [
+    'restore_faq',
+    'restore_agency',
+    'restore_category',
+    'restore_support_request'
+], true);
 
-    @switch($log->action)
+        /*
+         * Convert the internal action code into a clear
+         * administrator-facing description.
+         */
+        $changeLabel = match ($log->action) {
 
-        @case('delete_faq')
-            Deleted FAQ
-            @break
+    /*
+     * FAQ
+     */
+    'delete_faq'
+        => 'FAQ moved to trash',
 
-        @case('delete_agency')
-            Deleted Agency
-            @break
+    'restore_faq'
+        => 'FAQ restored',
 
-        @case('delete_category')
-            Deleted Category
-            @break
+    'force_delete_faq'
+        => 'FAQ permanently deleted',
 
-        @case('delete_support_request')
-            Deleted Support Request
-            @break
 
-        @case('trash_agency')
-            Agency Trashed
-            @break
+    /*
+     * Agency
+     */
+    'delete_agency'
+        => 'Agency deleted',
 
-        @case('restore_agency')
-            Agency Restored
-            @break
+    'trash_agency'
+        => 'Agency moved to trash',
 
-        @case('force_delete_agency')
-            Agency Permanently Deleted
-            @break
+    'restore_agency'
+        => 'Agency restored',
 
-    @endswitch
+    'force_delete_agency'
+        => 'Agency permanently deleted',
 
-</span>
+
+    /*
+     * Category
+     */
+    'delete_category'
+        => 'Category moved to trash',
+
+    'restore_category'
+        => 'Category restored',
+
+    'force_delete_category'
+        => 'Category permanently deleted',
+
+
+    /*
+ * Support Request
+ */
+'delete_support_request'
+    => 'Support Request moved to trash',
+
+'restore_support_request'
+    => 'Support Request restored',
+
+'force_delete_support_request'
+    => 'Support Request permanently deleted',
+
+    default
+        => 'Record updated',
+};
+    @endphp
+
+    <span class="change-status {{ $isRestore ? 'created' : 'deleted' }}">
+        {{ $changeLabel }}
+    </span>
 
     @elseif(in_array($log->action, [
     'update_faq',
@@ -483,95 +544,167 @@
         @endif
 
     @elseif(in_array($log->action, [
-        'approve_admin',
-        'promote_admin',
-        'demote_admin'
-    ], true))
+    'approve_admin',
+    'promote_admin',
+    'demote_admin',
+    'deactivate_admin',
+    'reactivate_admin',
 
-        @php
-            /*
-             * Admin-management actions also use structured
-             * old/new audit snapshots.
-             */
-            $oldValues = $log->old_values ?? [];
-            $newValues = $log->new_values ?? [];
+    /*
+     * PUBLIC USER MANAGEMENT
+     */
+    'deactivate_user',
+    'reactivate_user'
+], true))
 
-            /*
-             * Safely support older JSON-string records.
-             */
-            if (is_string($oldValues)) {
-                $decoded = json_decode($oldValues, true);
-                $oldValues = is_array($decoded) ? $decoded : [];
-            }
+    @php
+        /*
+         * Admin Management logs store the exact value
+         * before and after the action.
+         *
+         * Role actions:
+         * promote / demote → role
+         *
+         * Status actions:
+         * approve / deactivate / reactivate → status
+         */
+        $oldValues = $log->old_values ?? [];
+        $newValues = $log->new_values ?? [];
 
-            if (is_string($newValues)) {
-                $decoded = json_decode($newValues, true);
-                $newValues = is_array($decoded) ? $decoded : [];
-            }
 
-            /*
-             * Admin actions currently record one changed field:
-             *
-             * promote/demote → role
-             * approve        → status
-             */
-            $field = array_key_first($oldValues)
-                ?? array_key_first($newValues);
+        /*
+         * Support older logs where the audit snapshots
+         * were stored as JSON strings.
+         */
+        if (is_string($oldValues)) {
 
-            $oldValue = $field !== null
-                ? ($oldValues[$field] ?? null)
-                : null;
+            $decoded = json_decode(
+                $oldValues,
+                true
+            );
 
-            $newValue = $field !== null
-                ? ($newValues[$field] ?? null)
-                : null;
+            $oldValues = is_array($decoded)
+                ? $decoded
+                : [];
+        }
 
-            /*
-             * Convert technical values into readable labels.
-             *
-             * Example:
-             * superadmin → Superadmin
-             */
-            $oldLabel = $oldValue !== null
-                ? ucfirst(str_replace('_', ' ', (string) $oldValue))
-                : 'No previous value';
 
-            $newLabel = $newValue !== null
-                ? ucfirst(str_replace('_', ' ', (string) $newValue))
-                : 'No new value';
+        if (is_string($newValues)) {
 
-            /*
-             * Describe the actual field that changed.
-             */
-            $changeLabel = match ($log->action) {
-                'approve_admin' => 'Status changed',
-                'promote_admin' => 'Role changed',
-                'demote_admin' => 'Role changed',
-                default => 'Admin updated',
-            };
-        @endphp
+            $decoded = json_decode(
+                $newValues,
+                true
+            );
 
-        <div class="audit-summary">
+            $newValues = is_array($decoded)
+                ? $decoded
+                : [];
+        }
 
-            <span class="audit-summary-count">
-                {{ $changeLabel }}
+
+        /*
+         * Determine which field actually changed.
+         *
+         * Example:
+         *
+         * ['role' => 'superadmin']
+         *
+         * gives us:
+         *
+         * $field = 'role'
+         */
+        $field = array_key_first($oldValues)
+            ?? array_key_first($newValues);
+
+
+        /*
+         * Get the value before the action.
+         */
+        $oldValue = $field !== null
+            ? ($oldValues[$field] ?? null)
+            : null;
+
+
+        /*
+         * Get the value after the action.
+         */
+        $newValue = $field !== null
+            ? ($newValues[$field] ?? null)
+            : null;
+
+
+        /*
+         * Convert database values into readable text.
+         *
+         * superadmin → Superadmin
+         * deactivated → Deactivated
+         */
+        $oldLabel = $oldValue !== null
+            ? ucfirst(
+                str_replace(
+                    '_',
+                    ' ',
+                    (string) $oldValue
+                )
+            )
+            : 'No previous value';
+
+
+        $newLabel = $newValue !== null
+            ? ucfirst(
+                str_replace(
+                    '_',
+                    ' ',
+                    (string) $newValue
+                )
+            )
+            : 'No new value';
+
+
+        /*
+         * The heading is based on the field that changed.
+         *
+         * role   → Role changed
+         * status → Status changed
+         */
+        $changeLabel = match ($field) {
+
+            'role' =>
+                'Role changed',
+
+            'status' =>
+                'Status changed',
+
+            default =>
+                'Admin updated',
+        };
+    @endphp
+
+
+    <div class="audit-summary">
+
+        <span class="audit-summary-count">
+            {{ $changeLabel }}
+        </span>
+
+
+        <div class="change-box">
+
+            <span class="old">
+                {{ $oldLabel }}
             </span>
 
-            <div class="change-box">
 
-                <span class="old">
-                    {{ $oldLabel }}
-                </span>
+            <i class="ph-light ph-arrow-right"></i>
 
-                <i class="ph-light ph-arrow-right"></i>
 
-                <span class="new">
-                    {{ $newLabel }}
-                </span>
-
-            </div>
+            <span class="new">
+                {{ $newLabel }}
+            </span>
 
         </div>
+
+    </div>
 
         @elseif(in_array($log->action, [
     'search_agency',
@@ -609,11 +742,82 @@
 
     </span>
 
-    @elseif($log->action === 'delete_admin')
+    @elseif(in_array($log->action, [
+    'delete_admin',
+    'delete_user'
+], true))
 
-        <span class="change-status deleted">
-            Deleted Admin
+    @php
+        /*
+         * Retrieve the status that existed immediately
+         * before the account was permanently deleted.
+         *
+         * The deletion log stores this snapshot because
+         * the actual User record no longer exists afterward.
+         */
+        $oldValues = $log->old_values ?? [];
+
+        /*
+         * Support older logs where the snapshot may still
+         * be stored as a JSON string.
+         */
+        if (is_string($oldValues)) {
+
+            $decoded = json_decode(
+                $oldValues,
+                true
+            );
+
+            $oldValues = is_array($decoded)
+                ? $decoded
+                : [];
+        }
+
+
+        /*
+         * Determine the user's previous account status.
+         *
+         * If unavailable, use a neutral historical label
+         * rather than inventing a state.
+         */
+        $oldStatus =
+            $oldValues['status'] ?? null;
+
+
+        $oldStatusLabel =
+            $oldStatus !== null
+                ? ucfirst(
+                    str_replace(
+                        '_',
+                        ' ',
+                        (string) $oldStatus
+                    )
+                )
+                : 'Previous status';
+    @endphp
+
+
+    <div class="audit-summary">
+
+        <span class="audit-summary-count">
+            Status changed
         </span>
+
+        <div class="change-box">
+
+            <span class="old">
+                {{ $oldStatusLabel }}
+            </span>
+
+            <i class="ph-light ph-arrow-right"></i>
+
+            <span class="new">
+                Deleted
+            </span>
+
+        </div>
+
+    </div>
 
     @elseif($log->action === 'invite_admin')
 
@@ -1315,44 +1519,71 @@ document.addEventListener('DOMContentLoaded', () => {
              */
             if (
                 row.dataset.action === 'delete_faq' ||
+                row.dataset.action === 'force_delete_faq' ||
+
                 row.dataset.action === 'delete_agency' ||
+                row.dataset.action === 'trash_agency' ||
+                row.dataset.action === 'force_delete_agency' ||
+
                 row.dataset.action === 'delete_category' ||
+                row.dataset.action === 'force_delete_category' ||
+
                 row.dataset.action === 'delete_admin' ||
                 row.dataset.action === 'delete_support_request' ||
-                row.dataset.action === 'trash_agency' ||
-                row.dataset.action === 'force_delete_agency'
+                row.dataset.action === 'force_delete_support_request'
             ) {
 
                 modalNew.innerHTML = `
                     <div class="data-value">
 
                         ${
-                            row.dataset.action === 'trash_agency'
-                                ? 'Agency moved to trash'
-                                : row.dataset.action === 'force_delete_agency'
-                                    ? 'Agency permanently deleted'
-                                    : 'Data deleted'
+                            {
+                                delete_faq: 'FAQ moved to trash',
+                                force_delete_faq: 'FAQ permanently deleted',
+
+                                delete_agency: 'Agency deleted',
+                                trash_agency: 'Agency moved to trash',
+                                force_delete_agency: 'Agency permanently deleted',
+
+                                delete_category: 'Category moved to trash',
+                                force_delete_category: 'Category permanently deleted',
+
+                                delete_admin: 'Admin deleted',
+                                delete_support_request: 'Support Request moved to trash',
+                                force_delete_support_request: 'Support Request permanently deleted'
+                            }[row.dataset.action] || 'Data deleted'
                         }
 
                     </div>
                 `;
 
             } else if (
-                row.dataset.action === 'restore_agency'
-            ) {
+    row.dataset.action === 'restore_agency' ||
+    row.dataset.action === 'restore_faq' ||
+    row.dataset.action === 'restore_category' ||
+    row.dataset.action === 'restore_support_request'
+) {
 
-                modalOld.innerHTML = `
-                    <div class="data-value">
-                        Agency was in trash
-                    </div>
-                `;
+    const recordName =
+    row.dataset.action === 'restore_faq'
+        ? 'FAQ'
+        : row.dataset.action === 'restore_category'
+            ? 'Category'
+            : row.dataset.action === 'restore_support_request'
+                ? 'Support Request'
+                : 'Agency';
 
-                modalNew.innerHTML = `
-                    <div class="data-value">
-                        Agency restored to active records
-                    </div>
-                `;
+    modalOld.innerHTML = `
+        <div class="data-value">
+            ${recordName} was in trash
+        </div>
+    `;
 
+    modalNew.innerHTML = `
+        <div class="data-value">
+            ${recordName} restored to active records
+        </div>
+    `;
             } else if (
                 row.dataset.action === 'create_faq' ||
                 row.dataset.action === 'create_agency' ||

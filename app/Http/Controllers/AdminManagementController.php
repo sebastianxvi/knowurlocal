@@ -10,40 +10,228 @@ use Illuminate\Support\Facades\Hash;
 class AdminManagementController extends Controller
 {
     /**
-     * 📄 DISPLAY ADMINS
+ * 📄 DISPLAY ADMINS
+ *
+ * Displays administrator accounts and provides the status
+ * counts used by the status navigation tabs.
+ */
+public function admins(Request $request)
+{
+
+/*
+     * Default Admin Management to the Active tab.
      */
-    public function admins(Request $request)
-    {
-        $query = User::whereIn('role', ['admin', 'superadmin']);
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-
-            $query->where(function ($q) use ($search) {
-                $q->where('first_name', 'LIKE', "%{$search}%")
-                  ->orWhere('last_name', 'LIKE', "%{$search}%")
-                  ->orWhere('email', 'LIKE', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('role')) {
-            $query->where('role', $request->role);
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $sort = in_array($request->get('sort'), ['asc','desc'])
-            ? $request->sort
-            : 'desc';
-
-        $query->orderBy('created_at', $sort);
-
-        $admins = $query->paginate(10)->withQueryString();
-
-        return view('admin.admins', compact('admins'));
+    if (!$request->filled('status')) {
+        $request->merge([
+            'status' => 'active',
+        ]);
     }
+    /*
+     * Define the administrator roles once.
+     *
+     * This prevents regular public users from appearing in
+     * Admin Management and keeps all status counts scoped
+     * to administrator accounts only.
+     */
+    $adminRoles = [
+        'admin',
+        'superadmin',
+    ];
+
+
+    /*
+     * Create the base administrator query.
+     *
+     * We will clone this query when calculating the
+     * individual status counts.
+     */
+    $baseQuery = User::whereIn(
+        'role',
+        $adminRoles
+    );
+
+
+    /*
+     * =====================================================
+     * STATUS COUNTS
+     * =====================================================
+     *
+     * These counts are independent of search, role, and sort.
+     *
+     * They represent the total number of administrator
+     * accounts currently in each lifecycle state.
+     */
+
+    $activeCount = (clone $baseQuery)
+        ->where('status', 'active')
+        ->count();
+
+
+    $pendingCount = (clone $baseQuery)
+        ->where('status', 'pending')
+        ->count();
+
+
+    $deactivatedCount = (clone $baseQuery)
+        ->where('status', 'deactivated')
+        ->count();
+
+
+    /*
+     * =====================================================
+     * TABLE QUERY
+     * =====================================================
+     *
+     * Clone the base query so the table can independently
+     * apply search, role, status, and sorting.
+     */
+    $query = clone $baseQuery;
+
+
+    /*
+     * SEARCH
+     *
+     * Search by first name, last name, or email.
+     */
+    if ($request->filled('search')) {
+
+        $search = $request->search;
+
+        $query->where(function ($q) use ($search) {
+
+            $q->where(
+                'first_name',
+                'LIKE',
+                "%{$search}%"
+            )
+
+            ->orWhere(
+                'last_name',
+                'LIKE',
+                "%{$search}%"
+            )
+
+            ->orWhere(
+                'email',
+                'LIKE',
+                "%{$search}%"
+            );
+        });
+    }
+
+
+    /*
+     * ROLE FILTER
+     *
+     * Only allow the two administrator roles that this
+     * page is designed to manage.
+     */
+    if ($request->filled('role')) {
+
+        $allowedRoles = [
+            'admin',
+            'superadmin',
+        ];
+
+        if (
+            in_array(
+                $request->role,
+                $allowedRoles,
+                true
+            )
+        ) {
+
+            $query->where(
+                'role',
+                $request->role
+            );
+        }
+    }
+
+
+    /*
+     * STATUS FILTER
+     *
+     * The status is now controlled by the separate status tabs.
+     *
+     * We still receive it through the GET request, but it is
+     * no longer represented as a dropdown inside the filter bar.
+     */
+    if ($request->filled('status')) {
+
+        $allowedStatuses = [
+            'pending',
+            'active',
+            'deactivated',
+        ];
+
+        if (
+            in_array(
+                $request->status,
+                $allowedStatuses,
+                true
+            )
+        ) {
+
+            $query->where(
+                'status',
+                $request->status
+            );
+        }
+    }
+
+
+    /*
+     * SORT
+     *
+     * Only allow explicitly supported sort directions.
+     *
+     * This prevents arbitrary request values from being used
+     * in the ORDER BY clause.
+     */
+    $sort = in_array(
+        $request->get('sort'),
+        ['asc', 'desc'],
+        true
+    )
+        ? $request->sort
+        : 'desc';
+
+
+    /*
+     * Apply the selected creation-date ordering.
+     */
+    $query->orderBy(
+        'created_at',
+        $sort
+    );
+
+
+    /*
+     * Paginate the administrator results.
+     *
+     * withQueryString() preserves search, role, status,
+     * and sorting when navigating between pages.
+     */
+    $admins = $query
+        ->paginate(10)
+        ->withQueryString();
+
+
+    /*
+     * Send both the table results and status counts to the
+     * Blade view.
+     */
+    return view(
+        'admin.admins',
+        compact(
+            'admins',
+            'activeCount',
+            'pendingCount',
+            'deactivatedCount'
+        )
+    );
+}
 
     /**
      * 📧 INVITE ADMIN
@@ -142,6 +330,143 @@ public function approve($id)
     return back()->with(
         'success',
         'Admin approved.'
+    );
+}
+
+
+/**
+ * ⛔ DEACTIVATE ADMIN
+ *
+ * Disables the administrator account without deleting it.
+ *
+ * The account remains in the database so it can be
+ * reactivated later by a Super Admin.
+ */
+public function deactivate($id)
+{
+    /*
+     * Find the administrator account being deactivated.
+     */
+    $user = User::findOrFail($id);
+
+    /*
+     * Prevent an account that is already deactivated
+     * from being processed again.
+     */
+    if ($user->status === 'deactivated') {
+
+        return back()->with(
+            'error',
+            'This admin account is already deactivated.'
+        );
+    }
+
+    /*
+     * Capture the state before the change.
+     */
+    $oldValues = [
+        'status' => $user->status,
+    ];
+
+    /*
+     * Change only the account's access state.
+     *
+     * The role remains unchanged.
+     */
+    $user->update([
+        'status' => 'deactivated',
+    ]);
+
+    /*
+     * Refresh so the audit record reflects the actual
+     * value persisted by the database.
+     */
+    $user->refresh();
+
+    $newValues = [
+        'status' => $user->status,
+    ];
+
+    /*
+     * Record the administrative action.
+     */
+    $this->logAdminAction(
+        $user,
+        'deactivate_admin',
+        $oldValues,
+        $newValues,
+        'Deactivated admin: ' . $user->email
+    );
+
+    return back()->with(
+        'success',
+        'Admin account deactivated.'
+    );
+}
+
+
+/**
+ * ♻️ REACTIVATE ADMIN
+ *
+ * Restores a previously deactivated administrator account
+ * to the active state.
+ */
+public function reactivate($id)
+{
+    /*
+     * Find the administrator account.
+     */
+    $user = User::findOrFail($id);
+
+    /*
+     * Prevent an already-active account from being
+     * unnecessarily processed.
+     */
+    if ($user->status === 'active') {
+
+        return back()->with(
+            'error',
+            'This admin account is already active.'
+        );
+    }
+
+    /*
+     * Capture the state before reactivation.
+     */
+    $oldValues = [
+        'status' => $user->status,
+    ];
+
+    /*
+     * Restore the account's access.
+     */
+    $user->update([
+        'status' => 'active',
+    ]);
+
+    /*
+     * Confirm the value actually persisted.
+     */
+    $user->refresh();
+
+    $newValues = [
+        'status' => $user->status,
+    ];
+
+    /*
+     * Record the administrative action.
+     */
+    $this->logAdminAction(
+        $user,
+        'reactivate_admin',
+        $oldValues,
+        $newValues,
+        'Reactivated admin: ' . $user->email
+    );
+
+    return back()->with(
+        'success',
+        'Admin account reactivated.'
     );
 }
 

@@ -147,11 +147,15 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     // Chatbot
     Route::post('/chat', [ChatbotController::class, 'ask'])
         ->middleware('throttle:chatbot');
-    Route::post('/chat/support', [ChatbotController::class, 'submitSupportRequest']);
+        
+    Route::post(
+    '/chat/support',
+    [ChatbotController::class, 'submitSupportRequest']
+)->middleware('throttle:support-request');
 
-    // FAQ (IMPORTANT — protect this too)
-    // FAQ
-    Route::resource('faqs', FaqController::class);
+    // ================= FAQ =================
+
+Route::resource('faqs', FaqController::class);
 
     // AI FAQ translation
     Route::post('/faqs/translate', [FaqController::class, 'translate'])
@@ -278,6 +282,11 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::post('/faqs/translate', [FaqController::class, 'translate'])
         ->name('admin.faqs.translate');
 
+        Route::post(
+    '/faqs/generate-keywords',
+    [FaqController::class, 'generateKeywords']
+)->name('admin.faqs.generateKeywords');
+
     
 
     // LOGOUT
@@ -300,6 +309,33 @@ Route::delete(
     [AgencyController::class, 'forceDestroy']
 )->name('admin.agencies.force-delete');
 
+
+// ================= FAQ DATA RECOVERY =================
+
+Route::patch(
+    '/faqs/{id}/restore',
+    [FaqController::class, 'restore']
+)->name('admin.faqs.restore');
+
+Route::delete(
+    '/faqs/{id}/force-delete',
+    [FaqController::class, 'forceDestroy']
+)->name('admin.faqs.force-delete');
+
+
+// ================= CATEGORY DATA RECOVERY =================
+
+Route::patch(
+    '/categories/{id}/restore',
+    [CategoryController::class, 'restore']
+)->name('admin.categories.restore');
+
+Route::delete(
+    '/categories/{id}/force-delete',
+    [CategoryController::class, 'forceDestroy']
+)->name('admin.categories.force-delete');
+
+
     // ADMIN MANAGEMENT PAGE
     Route::get('/admins', [AdminManagementController::class, 'admins'])
         ->name('admin.admins');
@@ -315,11 +351,69 @@ Route::delete(
     Route::post('/admins/demote/{id}', [AdminManagementController::class, 'demote'])
         ->name('admin.demote');
 
+        // DEACTIVATE ADMIN
+
+/*
+ * Deactivate an administrator account without deleting it.
+ *
+ * This route is protected by the superadmin.only middleware
+ * because changing another administrator's account access
+ * is a privileged operation.
+ */
+Route::post(
+    '/admins/deactivate/{id}',
+    [AdminManagementController::class, 'deactivate']
+)->name('admin.deactivate');
+
+
+// REACTIVATE ADMIN
+
+/*
+ * Restore a previously deactivated administrator account.
+ *
+ * This is also Super Admin-only because it changes the
+ * account's ability to access the administrative system.
+ */
+Route::post(
+    '/admins/reactivate/{id}',
+    [AdminManagementController::class, 'reactivate']
+)->name('admin.reactivate');
+
     Route::delete('/admins/delete/{id}', [AdminManagementController::class, 'delete'])
         ->name('admin.delete');
 
     Route::delete('/support-requests/{id}', [SupportRequestController::class, 'destroy'])
         ->name('admin.support.delete');
+
+        /*
+|--------------------------------------------------------------------------
+| SUPPORT REQUEST DATA RECOVERY
+|--------------------------------------------------------------------------
+*/
+
+/*
+ * Restore a Support Request from the trash.
+ *
+ * Only Superadmins can access this route because it is located
+ * inside the superadmin.only middleware group.
+ */
+Route::patch(
+    '/support-requests/{id}/restore',
+    [SupportRequestController::class, 'restore']
+)->name('admin.support.restore');
+
+
+/*
+ * Permanently delete a Support Request.
+ *
+ * This is intentionally separate from the normal DELETE route.
+ * The normal DELETE performs a soft delete, while this route
+ * performs the irreversible force deletion.
+ */
+Route::delete(
+    '/support-requests/{id}/force-delete',
+    [SupportRequestController::class, 'forceDestroy']
+)->name('admin.support.forceDelete');
 
     /*
 |--------------------------------------------------------------------------
@@ -376,8 +470,43 @@ Route::post(
     Route::post('/invite', [AdminInviteController::class, 'sendInvite'])
         ->name('admin.invite');
 
-    Route::delete('/admin/users/{id}', [UserController::class, 'destroy'])
-        ->name('admin.users.delete');
+    /*
+|--------------------------------------------------------------------------
+| PUBLIC USER ACCOUNT MANAGEMENT
+|--------------------------------------------------------------------------
+*/
+
+/*
+ * Deactivate a public-user account.
+ *
+ * This keeps the account in the database while preventing
+ * it from remaining in the active-user list.
+ */
+Route::post(
+    '/admin/users/{id}/deactivate',
+    [UserController::class, 'deactivate']
+)->name('admin.users.deactivate');
+
+
+/*
+ * Reactivate a previously deactivated public-user account.
+ */
+Route::post(
+    '/admin/users/{id}/reactivate',
+    [UserController::class, 'reactivate']
+)->name('admin.users.reactivate');
+
+
+/*
+ * Permanently delete a public-user account.
+ *
+ * This remains DELETE because it is an irreversible
+ * destructive operation.
+ */
+Route::delete(
+    '/admin/users/{id}',
+    [UserController::class, 'destroy']
+)->name('admin.users.delete');
 
 });
 });

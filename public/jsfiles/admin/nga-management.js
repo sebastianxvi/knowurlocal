@@ -37,6 +37,114 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let contactIndex = 0;
 
+        // =====================================================
+    // AUTO-GROWING AGENCY TEXTAREAS
+    // =====================================================
+
+    /*
+     * These fields can contain long administrative information.
+     *
+     * Instead of forcing the administrator to scroll inside
+     * a small textarea, the field expands vertically as
+     * its content grows.
+     *
+     * JavaScript controls the height so the browser does
+     * not create a second internal scrolling area.
+     */
+    const agencyTextareas = [
+        "agency_name",
+        "agency_description",
+        "services_offered",
+        "office_hours"
+    ];
+
+
+    /*
+     * Resize one textarea according to its current content.
+     */
+    function autoResizeTextarea(textarea) {
+
+        if (!textarea) {
+            return;
+        }
+
+
+        /*
+         * Reset the height first.
+         *
+         * This is important when text is deleted because
+         * scrollHeight needs to be recalculated from the
+         * textarea's natural content height.
+         */
+        textarea.style.height = "auto";
+
+
+        /*
+         * scrollHeight represents the complete height
+         * required to display the textarea's content.
+         */
+        textarea.style.height =
+            `${textarea.scrollHeight}px`;
+
+    }
+
+
+    /*
+     * Resize every agency textarea currently present
+     * in the form.
+     */
+    function resizeAgencyTextareas() {
+
+        agencyTextareas.forEach(
+            id => {
+
+                const textarea =
+                    document.getElementById(id);
+
+
+                autoResizeTextarea(
+                    textarea
+                );
+
+            }
+        );
+
+    }
+
+        // =====================================================
+    // AGENCY TEXTAREA INPUT EVENTS
+    // =====================================================
+
+    /*
+     * Resize the corresponding field whenever the
+     * administrator types, pastes, or removes text.
+     */
+    agencyTextareas.forEach(
+        id => {
+
+            const textarea =
+                document.getElementById(id);
+
+
+            if (!textarea) {
+                return;
+            }
+
+
+            textarea.addEventListener(
+                "input",
+                function () {
+
+                    autoResizeTextarea(
+                        this
+                    );
+
+                }
+            );
+
+        }
+    );
+
 
     /*
      * Contact types are provided by Laravel through Blade.
@@ -1847,6 +1955,12 @@ document.addEventListener("DOMContentLoaded", function () {
         ).value =
             data.lng || "";
 
+                    /*
+         * Database values have now been inserted into
+         * the form, so recalculate the textarea heights.
+         */
+        resizeAgencyTextareas();
+
     }
 
 
@@ -2220,6 +2334,8 @@ document.addEventListener("DOMContentLoaded", function () {
             enableInputs(true);
 
             enableContactInputs(true);
+
+            resizeAgencyTextareas();
 
         }
 

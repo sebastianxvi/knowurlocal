@@ -506,20 +506,168 @@ class DashboardController extends Controller
 
 
         /*
-         * =====================================================
-         * RECENT SYSTEM ACTIVITY
-         * =====================================================
-         */
+        * =====================================================
+        * RECENT SYSTEM ACTIVITY
+        * =====================================================
+        *
+        * The dashboard follows the same visibility rule as the
+        * dedicated Activity Logs page.
+        *
+        * Regular administrators:
+        *
+        * - Can see their own administrative activity.
+        * - Can see normal public-user activity.
+        * - Cannot see another administrator's activity.
+        *
+        * Superadmins:
+        *
+        * - Can see all activity.
+        */
+        $adminActions = [
 
-        $recentActivity = UserLog::with([
+            /*
+            * Authentication
+            */
+            'admin_login',
+            'admin_logout',
+
+            /*
+            * Agency management
+            */
+            'create_agency',
+            'update_agency',
+            'trash_agency',
+            'restore_agency',
+            'force_delete_agency',
+            'delete_agency',
+
+            /*
+            * FAQ management
+            */
+            'create_faq',
+            'update_faq',
+            'delete_faq',
+            'restore_faq',
+            'force_delete_faq',
+
+            /*
+            * Category management
+            */
+            'create_category',
+            'update_category',
+            'delete_category',
+            'restore_category',
+            'force_delete_category',
+
+            /*
+            * Support Request management
+            */
+            'delete_support_request',
+            'restore_support_request',
+            'force_delete_support_request',
+
+            /*
+            * Administrator management
+            */
+            'approve_admin',
+            'invite_admin',
+            'promote_admin',
+            'demote_admin',
+            'deactivate_admin',
+            'reactivate_admin',
+            'delete_admin',
+
+            /*
+            * Public User Management
+            */
+            'deactivate_user',
+            'reactivate_user',
+            'delete_user',
+        ];
+
+
+        /*
+        * Start with the complete audit-log query.
+        *
+        * Eager loading prevents additional queries when the Blade
+        * accesses related users, agencies, categories, or targets.
+        */
+        $recentActivityQuery = UserLog::with([
             'user',
             'agency',
             'category',
             'targetUser',
-        ])
-        ->latest()
-        ->limit(8)
-        ->get();
+        ]);
+
+
+        /*
+        * Apply the same visibility boundary used by the
+        * dedicated Activity Logs page.
+        */
+        if (auth()->user()->role === 'admin') {
+
+            $currentAdminId = auth()->id();
+
+            $recentActivityQuery->where(function ($query) use (
+                $currentAdminId,
+                $adminActions
+            ) {
+
+                /*
+                * The administrator can always see their own logs.
+                */
+                $query->where(
+                    'user_id',
+                    $currentAdminId
+                )
+
+                /*
+                * Normal public-user activity remains visible.
+                *
+                * Administrative actions are excluded from this
+                * branch so a normal admin cannot see another
+                * administrator's logs.
+                */
+                ->orWhere(function ($subQuery) use (
+                    $adminActions
+                ) {
+
+                    $subQuery->whereHas(
+                        'user',
+                        function ($userQuery) {
+
+                            $userQuery->where(
+                                'role',
+                                'user'
+                            );
+                        }
+                    )
+
+                    ->whereNotIn(
+                        'action',
+                        $adminActions
+                    );
+                });
+            });
+        }
+
+
+        /*
+        * Get only the latest eight records AFTER applying the
+        * authorization filter.
+        *
+        * This is important.
+        *
+        * We must filter first and limit second.
+        *
+        * Otherwise a Superadmin's recent activity could occupy
+        * the eight newest records and cause the dashboard to
+        * appear empty for a regular administrator.
+        */
+        $recentActivity = $recentActivityQuery
+            ->latest()
+            ->limit(8)
+            ->get();
 
 
         /*

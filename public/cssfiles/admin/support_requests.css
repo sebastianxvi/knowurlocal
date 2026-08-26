@@ -1,130 +1,379 @@
+/* =========================================================
+   SUPPORT REQUEST STATUS TABS
+   ========================================================= */
+
+.support-status-tabs{
+
+    position:sticky;
+
+    top:62px;
+
+    z-index:90;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:4px;
+
+    width:max-content;
+
+    margin-bottom:10px;
+
+    padding:4px;
+
+    background:#f3f4f6;
+
+    border:1px solid #e5e7eb;
+
+    border-radius:13px;
+
+    box-shadow:
+        0 4px 12px rgba(15,23,42,0.04);
+}
+
+
+/* =========================================================
+   STATUS TAB
+   ========================================================= */
+
+.support-status-tab{
+
+    display:inline-flex;
+
+    align-items:center;
+    justify-content:center;
+
+    gap:6px;
+
+    min-height:34px;
+
+    padding:6px 12px;
+
+    border-radius:10px;
+
+    color:#64748b;
+
+    background:transparent;
+
+    font-size:13px;
+
+    font-weight:500;
+
+    text-decoration:none;
+
+    white-space:nowrap;
+
+    transition:
+        background-color .2s ease,
+        color .2s ease,
+        box-shadow .2s ease,
+        transform .2s ease;
+}
+
+
+/* ICON */
+
+.support-status-tab i{
+
+    font-size:14px;
+
+    line-height:1;
+
+    opacity:.85;
+
+    transition:
+        opacity .2s ease;
+}
+
+
+/* HOVER */
+
+.support-status-tab:hover{
+
+    color:#334155;
+
+    background:#ffffff;
+}
+
+
+/* ACTIVE */
+
+.support-status-tab.active{
+
+    color:#172554;
+
+    background:#ffffff;
+
+    box-shadow:
+        0 2px 7px rgba(15,23,42,.08);
+}
+
+
+.support-status-tab.active i{
+
+    opacity:1;
+}
+
+
+/* =========================================================
+   STATUS COUNT
+   ========================================================= */
+
+.status-count{
+
+    display:inline-flex;
+
+    align-items:center;
+    justify-content:center;
+
+    min-width:22px;
+
+    height:22px;
+
+    padding:0 6px;
+
+    border-radius:999px;
+
+    background:#e8edf5;
+
+    color:#64748b;
+
+    font-size:11px;
+
+    font-weight:600;
+
+    line-height:1;
+}
+
+
+.support-status-tab.active .status-count{
+
+    background:#edf2f7;
+
+    color:#334155;
+}
+
+
+/* KEYBOARD ACCESSIBILITY */
+
+.support-status-tab:focus-visible{
+
+    outline:none;
+
+    box-shadow:
+        0 0 0 3px rgba(59,130,246,.14);
+}
+
+/* ================= HOVER ================= */
+
+.support-status-tab:hover{
+    color:#374151;
+
+    background:rgba(255,255,255,.7);
+
+    transform:translateY(-1px);
+}
+
+.support-status-tab:hover i{
+    opacity:1;
+}
+
 /* ================= FILTER CARD ================= */
+
 .filter-card{
+
     display:flex;
     justify-content:space-between;
     align-items:center;
+
     gap:16px;
 
     padding:14px 18px;
 
     background:#fff;
+
     border-radius:14px;
+
     border:1px solid #e5e7eb;
 
-    box-shadow:0 6px 18px rgba(0,0,0,0.04);
+    box-shadow:
+        0 6px 18px rgba(0,0,0,0.04);
 
     margin-bottom:14px;
+
     flex-wrap:wrap;
 }
 
+
 /* ================= FILTER BAR ================= */
+
 .filter-bar{
+
     display:flex;
     align-items:center;
+
     gap:10px;
-    flex-wrap:nowrap; 
+
+    flex-wrap:nowrap;
 }
 
+
 /* INPUT */
+
 .filter-bar input[name="search"]{
+
     flex:1;
+
     min-width:180px;
 }
 
+
 .filter-bar select{
+
     width:150px;
 }
 
+
 /* ================= FILTER INPUTS ================= */
+
 .filter-bar input,
 .filter-bar select{
+
     height:36px;
+
     padding:0 12px;
 
     border-radius:10px;
+
     border:1px solid #e5e7eb;
 
     background:#f9fafb;
+
     font-size:13px;
 
-    transition:all 0.2s ease;
+    transition:
+        all 0.2s ease;
 }
+
 
 /* FOCUS */
+
 .filter-bar input:focus,
 .filter-bar select:focus{
+
     border-color:#3b82f6;
-    box-shadow:0 0 0 3px rgba(59,130,246,0.08);
+
+    box-shadow:
+        0 0 0 3px rgba(59,130,246,0.08);
 }
 
+
 /* HOVER */
+
 .filter-bar input:hover,
 .filter-bar select:hover{
+
     border-color:#d1d5db;
 }
 
+
 /* BUTTON */
+
 .filter-bar > button{
+
     height:36px;
+
     padding:0 14px;
 
     border:none;
+
     border-radius:999px;
 
     background:#f06277;
+
     color:white;
+
     font-size:13px;
 
     cursor:pointer;
-    transition:all 0.2s ease;
+
+    transition:
+        all 0.2s ease;
 }
+
 
 .filter-bar > button:hover{
+
     background:#e11d48;
+
     transform:translateY(-1px);
-    box-shadow:0 6px 14px rgba(240,98,119,0.25);
+
+    box-shadow:
+        0 6px 14px rgba(240,98,119,0.25);
 }
 
+
 /* ================= MODAL BACKDROP ================= */
+
 .back{
+
     position:fixed;
+
     inset:0;
 
     background:rgba(0,0,0,0.35);
+
     backdrop-filter:blur(6px);
 
     display:flex;
+
     justify-content:center;
     align-items:center;
 
     opacity:0;
+
     pointer-events:none;
 
-    transition:opacity 0.25s ease;
+    transition:
+        opacity 0.25s ease;
+
     z-index:1000;
 }
 
+
 .back.active{
+
     opacity:1;
+
     pointer-events:auto;
 }
 
+
 /* ================= MODAL ================= */
+
 .modal{
+
     width:560px;
+
     max-height:90vh;
 
     background:#ffffff;
+
     border-radius:16px;
 
     display:flex;
+
     flex-direction:column;
 
-    box-shadow:0 20px 50px rgba(0,0,0,0.15);
+    box-shadow:
+        0 20px 50px rgba(0,0,0,0.15);
 
     overflow:hidden;
 
-    transform:translateY(20px) scale(0.96);
+    transform:
+        translateY(20px) scale(0.96);
+
     opacity:0;
 
     transition:
@@ -132,135 +381,485 @@
         opacity 0.2s ease;
 }
 
+
 .back.active .modal{
-    transform:translateY(0) scale(1);
+
+    transform:
+        translateY(0) scale(1);
+
     opacity:1;
 }
 
+
 /* ================= MODAL HEADER ================= */
+
 .modal-header{
+
     position:sticky;
+
     top:0;
+
     z-index:10;
 
     display:flex;
+
     justify-content:space-between;
+
     align-items:center;
 
     padding:16px 20px;
 
     background:#fff;
+
     border-bottom:1px solid #f1f5f9;
 }
 
+
 .modal-header h2{
+
     font-size:15px;
+
     font-weight:600;
+
     color:#111827;
 }
 
+
 /* ================= ACTIONS ================= */
+
 .modal-actions{
+
     display:flex;
+
     gap:10px;
+
     align-items:center;
 }
 
+
 /* SAVE BUTTON */
+
 .btn-save{
+
     background:#d1fae5;
+
     color:#065f46;
+
     border:none;
+
     padding:6px 14px;
+
     border-radius:999px;
+
     font-size:12px;
+
     cursor:pointer;
-    transition:all 0.2s ease;
+
+    transition:
+        all 0.2s ease;
 }
 
+
 .btn-save:hover{
+
     background:#bbf7d0;
+
     transform:translateY(-1px);
 }
 
+
 /* CANCEL BUTTON */
+
 .btn-cancel{
+
     background:#f3f4f6;
+
     border:none;
+
     padding:6px 14px;
+
     border-radius:999px;
+
     font-size:12px;
+
     cursor:pointer;
-    transition:all 0.2s ease;
+
+    transition:
+        all 0.2s ease;
 }
 
+
 .btn-cancel:hover{
+
     background:#e5e7eb;
 }
 
+
 /* ================= FORM CONTAINER ================= */
+
 .modal .form-card{
+
     display:flex;
+
     flex-direction:column;
+
     gap:14px;
 
     padding:18px;
 
     border-radius:14px;
+
     border:1px solid #f1f5f9;
 
     background:#fafafa;
 }
 
+
 /* ================= INPUT SYSTEM FIX ================= */
+
 .modal input,
 .modal textarea,
 .modal select{
+
     width:100%;
+
     font-size:13px;
 }
 
+
 /* ================= TEXTAREA ================= */
+
 .modal textarea{
+
     min-height:90px;
+
     resize:vertical;
+
     line-height:1.5;
 }
 
+
 /* Specific tuning */
+
 #sr-question{
+
     min-height:80px;
 }
 
+
 #sr-reply{
+
     min-height:120px;
 }
 
+
 /* ================= SCROLL HANDLING ================= */
+
 .modal{
+
     overflow:hidden;
 }
 
+
 .modal .form-card{
+
     overflow-y:auto;
-    max-height:calc(90vh - 70px);
+
+    max-height:
+        calc(90vh - 70px);
 }
 
+
 /* ================= MICRO POLISH ================= */
+
 .modal textarea:focus,
 .modal input:focus{
+
     outline:none;
 }
 
-/* smoother feel */
+
+/*
+ * Gives textareas a smoother focus transition.
+ */
 .modal textarea{
-    transition:border 0.2s ease, box-shadow 0.2s ease;
+
+    transition:
+        border 0.2s ease,
+        box-shadow 0.2s ease;
 }
+
 
 /* =========================================================
    SUPPORT REQUEST ACTION BUTTONS
    ========================================================= */
 
+/*
+ * All support-request table actions use the same compact
+ * pill-shaped design used by Category Management.
+ *
+ * The buttons are inline-flex so the Phosphor icon and
+ * text remain vertically aligned.
+ */
+.tablebtn .btn,
+.tablebtn .faq-btn{
+
+    display:inline-flex;
+
+    align-items:center;
+    justify-content:center;
+
+    gap:5px;
+
+    min-height:28px;
+
+    padding:5px 11px;
+
+    border-radius:999px;
+
+    border:1px solid transparent;
+
+    font-size:11px;
+
+    font-weight:500;
+
+    line-height:1;
+
+    white-space:nowrap;
+
+    flex-shrink:0;
+
+    cursor:pointer;
+
+    text-decoration:none;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/* ================= ACTION ICONS ================= */
+
+/*
+ * Phosphor Light keeps the icons thin and consistent
+ * with the KNOWURLOCAL visual language.
+ */
+.tablebtn .btn i,
+.tablebtn .faq-btn i{
+
+    font-size:13px;
+
+    line-height:1;
+
+    opacity:0.9;
+
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+/* ================= MANAGE ================= */
+
+/*
+ * Blue represents a normal management action.
+ */
+.tablebtn .view-btn{
+
+    background:#e0f2fe;
+
+    color:#0284c7;
+
+    border-color:#bae6fd;
+}
+
+
+.tablebtn .view-btn:hover{
+
+    background:#bae6fd;
+
+    border-color:#7dd3fc;
+
+    color:#0369a1;
+
+    transform:translateY(-1px);
+
+    box-shadow:
+        0 5px 12px rgba(14,165,233,0.12);
+}
+
+
+.tablebtn .view-btn:active{
+
+    transform:translateY(0);
+}
+
+
+/* ================= MOVE TO TRASH ================= */
+
+/*
+ * Trash is reversible, so it uses a softer danger color.
+ */
+.tablebtn .delete-btn{
+
+    background:#fee2e2;
+
+    color:#ef4444;
+
+    border-color:#fecaca;
+}
+
+
+.tablebtn .delete-btn:hover{
+
+    background:#fecaca;
+
+    border-color:#fca5a5;
+
+    color:#dc2626;
+
+    transform:translateY(-1px);
+
+    box-shadow:
+        0 5px 12px rgba(239,68,68,0.12);
+}
+
+
+.tablebtn .delete-btn:active{
+
+    transform:translateY(0);
+}
+
+
+/* ================= TO FAQ ================= */
+
+/*
+ * Purple separates the FAQ/knowledge-base action from
+ * ordinary record-management actions.
+ */
+.tablebtn .faq-btn{
+
+    background:#f3e8ff;
+
+    color:#7c3aed;
+
+    border-color:#e9d5ff;
+}
+
+
+.tablebtn .faq-btn:hover{
+
+    background:#e9d5ff;
+
+    border-color:#d8b4fe;
+
+    color:#6d28d9;
+
+    transform:translateY(-1px);
+
+    box-shadow:
+        0 5px 12px rgba(124,58,237,0.10);
+}
+
+
+.tablebtn .faq-btn:active{
+
+    transform:translateY(0);
+}
+
+
+/* ================= RESTORE ================= */
+
+/*
+ * Green represents successful recovery.
+ */
+.tablebtn .restore-btn{
+
+    background:#ecfdf5;
+
+    color:#047857;
+
+    border-color:#a7f3d0;
+}
+
+
+.tablebtn .restore-btn:hover{
+
+    background:#d1fae5;
+
+    border-color:#6ee7b7;
+
+    color:#065f46;
+
+    transform:translateY(-1px);
+
+    box-shadow:
+        0 5px 12px rgba(16,185,129,0.12);
+}
+
+
+.tablebtn .restore-btn:active{
+
+    transform:translateY(0);
+}
+
+
+/* ================= PERMANENT DELETE ================= */
+
+/*
+ * Permanent deletion is irreversible, so it receives
+ * the strongest danger treatment.
+ */
+.tablebtn .permanent-delete-btn{
+
+    background:#fef2f2;
+
+    color:#dc2626;
+
+    border-color:#fecaca;
+}
+
+
+.tablebtn .permanent-delete-btn:hover{
+
+    background:#fee2e2;
+
+    border-color:#fca5a5;
+
+    color:#b91c1c;
+
+    transform:translateY(-1px);
+
+    box-shadow:
+        0 5px 12px rgba(239,68,68,0.12);
+}
+
+
+.tablebtn .permanent-delete-btn:active{
+
+    transform:translateY(0);
+}
+
+
+/* ================= KEYBOARD ACCESSIBILITY ================= */
+
+/*
+ * :focus-visible displays the focus indicator primarily
+ * for keyboard navigation without creating an unnecessary
+ * outline during normal mouse interaction.
+ */
+.tablebtn .btn:focus-visible,
+.tablebtn .faq-btn:focus-visible{
+
+    outline:none;
+
+    box-shadow:
+        0 0 0 3px rgba(59,130,246,0.14);
+}
 
 
 /* =========================================================
@@ -271,44 +870,52 @@
  * Full-screen backdrop for the similarity dialog.
  *
  * It starts invisible and non-interactive.
- * JavaScript will add the "active" class when the modal
- * needs to be displayed.
+ * JavaScript adds the "active" class when the modal opens.
  */
-.similar-faq-modal-back {
-    position: fixed;
-    inset: 0;
+.similar-faq-modal-back{
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position:fixed;
 
-    padding: 24px;
+    inset:0;
 
-    background: rgba(15, 23, 42, 0.38);
+    display:flex;
 
-    backdrop-filter: blur(7px);
-    -webkit-backdrop-filter: blur(7px);
+    align-items:center;
+    justify-content:center;
 
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
+    padding:24px;
+
+    background:
+        rgba(15,23,42,0.38);
+
+    backdrop-filter:blur(7px);
+
+    -webkit-backdrop-filter:blur(7px);
+
+    opacity:0;
+
+    visibility:hidden;
+
+    pointer-events:none;
 
     transition:
         opacity 0.22s ease,
         visibility 0.22s ease;
 
-    z-index: 1100;
+    z-index:1100;
 }
+
 
 /*
  * Active state used by JavaScript.
- *
- * The modal becomes visible and accepts pointer interaction.
  */
-.similar-faq-modal-back.active {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
+.similar-faq-modal-back.active{
+
+    opacity:1;
+
+    visibility:visible;
+
+    pointer-events:auto;
 }
 
 
@@ -316,43 +923,47 @@
    SIMILAR FAQ DIALOG
    ========================================================= */
 
-/*
- * Main modal container.
- *
- * The max-height prevents a large number of FAQ matches
- * from pushing the dialog outside the viewport.
- */
-.similar-faq-modal {
-    width: min(620px, 100%);
-    max-height: min(720px, 90vh);
+.similar-faq-modal{
 
-    display: flex;
-    flex-direction: column;
+    width:min(620px,100%);
 
-    overflow: hidden;
+    max-height:min(720px,90vh);
 
-    background: #ffffff;
+    display:flex;
 
-    border: 1px solid #e5e7eb;
-    border-radius: 18px;
+    flex-direction:column;
+
+    overflow:hidden;
+
+    background:#ffffff;
+
+    border:1px solid #e5e7eb;
+
+    border-radius:18px;
 
     box-shadow:
-        0 24px 70px rgba(15, 23, 42, 0.18);
+        0 24px 70px rgba(15,23,42,0.18);
 
-    transform: translateY(18px) scale(0.97);
-    opacity: 0;
+    transform:
+        translateY(18px) scale(0.97);
+
+    opacity:0;
 
     transition:
-        transform 0.25s cubic-bezier(.16, 1, .3, 1),
+        transform 0.25s cubic-bezier(.16,1,.3,1),
         opacity 0.2s ease;
 }
+
 
 /*
  * Opening animation.
  */
-.similar-faq-modal-back.active .similar-faq-modal {
-    transform: translateY(0) scale(1);
-    opacity: 1;
+.similar-faq-modal-back.active .similar-faq-modal{
+
+    transform:
+        translateY(0) scale(1);
+
+    opacity:1;
 }
 
 
@@ -360,80 +971,95 @@
    MODAL HEADER
    ========================================================= */
 
-.similar-faq-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+.similar-faq-header{
 
-    gap: 18px;
+    display:flex;
 
-    padding: 18px 20px;
+    align-items:center;
 
-    border-bottom: 1px solid #f1f5f9;
+    justify-content:space-between;
 
-    background: #ffffff;
+    gap:18px;
+
+    padding:18px 20px;
+
+    border-bottom:1px solid #f1f5f9;
+
+    background:#ffffff;
 }
+
 
 /*
- * Groups the contextual icon and heading together.
+ * Groups the contextual icon and heading.
  */
-.similar-faq-heading {
-    display: flex;
-    align-items: center;
+.similar-faq-heading{
 
-    gap: 12px;
+    display:flex;
 
-    min-width: 0;
+    align-items:center;
+
+    gap:12px;
+
+    min-width:0;
 }
+
 
 /*
- * Small contextual icon container.
- *
- * The purple tone visually communicates that this is
- * a recommendation/check rather than an error.
+ * Contextual icon container.
  */
-.similar-faq-icon {
-    width: 34px;
-    height: 34px;
+.similar-faq-icon{
 
-    flex: 0 0 34px;
+    width:34px;
+    height:34px;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    flex:0 0 34px;
 
-    border: 1px solid #ddd6fe;
-    border-radius: 10px;
+    display:flex;
 
-    background: #f5f3ff;
-    color: #7c3aed;
+    align-items:center;
+    justify-content:center;
 
-    font-size: 17px;
+    border:1px solid #ddd6fe;
+
+    border-radius:10px;
+
+    background:#f5f3ff;
+
+    color:#7c3aed;
+
+    font-size:17px;
 }
+
 
 /*
  * Main modal heading.
  */
-.similar-faq-heading h2 {
-    margin: 0;
+.similar-faq-heading h2{
 
-    color: #111827;
+    margin:0;
 
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.35;
+    color:#111827;
+
+    font-size:15px;
+
+    font-weight:600;
+
+    line-height:1.35;
 }
 
+
 /*
- * Small explanatory text underneath the heading.
+ * Supporting text.
  */
-.similar-faq-heading p {
-    margin: 3px 0 0;
+.similar-faq-heading p{
 
-    color: #64748b;
+    margin:3px 0 0;
 
-    font-size: 12px;
-    line-height: 1.45;
+    color:#64748b;
+
+    font-size:12px;
+
+    line-height:1.45;
 }
 
 
@@ -441,41 +1067,50 @@
    CLOSE BUTTON
    ========================================================= */
 
-.similar-faq-close {
-    width: 30px;
-    height: 30px;
+.similar-faq-close{
 
-    flex: 0 0 30px;
+    width:30px;
+    height:30px;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    flex:0 0 30px;
 
-    border: none;
-    border-radius: 8px;
+    display:flex;
 
-    background: transparent;
-    color: #64748b;
+    align-items:center;
+    justify-content:center;
 
-    font-size: 17px;
+    border:none;
 
-    cursor: pointer;
+    border-radius:8px;
+
+    background:transparent;
+
+    color:#64748b;
+
+    font-size:17px;
+
+    cursor:pointer;
 
     transition:
         background-color 0.2s ease,
         color 0.2s ease;
 }
 
-.similar-faq-close:hover {
-    background: #f3f4f6;
-    color: #111827;
+
+.similar-faq-close:hover{
+
+    background:#f3f4f6;
+
+    color:#111827;
 }
 
-.similar-faq-close:focus-visible {
-    outline: none;
+
+.similar-faq-close:focus-visible{
+
+    outline:none;
 
     box-shadow:
-        0 0 0 3px rgba(59, 130, 246, 0.12);
+        0 0 0 3px rgba(59,130,246,0.12);
 }
 
 
@@ -483,17 +1118,21 @@
    DESCRIPTION
    ========================================================= */
 
-.similar-faq-description {
-    padding: 14px 20px 4px;
+.similar-faq-description{
+
+    padding:14px 20px 4px;
 }
 
-.similar-faq-description p {
-    margin: 0;
 
-    color: #475569;
+.similar-faq-description p{
 
-    font-size: 13px;
-    line-height: 1.55;
+    margin:0;
+
+    color:#475569;
+
+    font-size:13px;
+
+    line-height:1.55;
 }
 
 
@@ -501,23 +1140,19 @@
    MATCH RESULTS
    ========================================================= */
 
-/*
- * The results area can scroll independently.
- *
- * This keeps the modal header and footer visible even when
- * several similar FAQs are returned.
- */
-.similar-faq-results {
-    display: flex;
-    flex-direction: column;
+.similar-faq-results{
 
-    gap: 10px;
+    display:flex;
 
-    padding: 14px 20px;
+    flex-direction:column;
 
-    overflow-y: auto;
+    gap:10px;
 
-    min-height: 0;
+    padding:14px 20px;
+
+    overflow-y:auto;
+
+    min-height:0;
 }
 
 
@@ -525,21 +1160,21 @@
    INDIVIDUAL FAQ MATCH
    ========================================================= */
 
-/*
- * Each FAQ candidate is presented as a lightweight card.
- */
-.similar-faq-item {
-    display: flex;
-    align-items: flex-start;
+.similar-faq-item{
 
-    gap: 12px;
+    display:flex;
 
-    padding: 13px 14px;
+    align-items:flex-start;
 
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    gap:12px;
 
-    background: #fafafa;
+    padding:13px 14px;
+
+    border:1px solid #e5e7eb;
+
+    border-radius:12px;
+
+    background:#fafafa;
 
     transition:
         border-color 0.2s ease,
@@ -547,16 +1182,15 @@
         box-shadow 0.2s ease;
 }
 
-/*
- * Slightly emphasize the card when the administrator
- * moves the cursor over it.
- */
-.similar-faq-item:hover {
-    border-color: #d8dee8;
-    background: #ffffff;
+
+.similar-faq-item:hover{
+
+    border-color:#d8dee8;
+
+    background:#ffffff;
 
     box-shadow:
-        0 4px 14px rgba(15, 23, 42, 0.05);
+        0 4px 14px rgba(15,23,42,0.05);
 }
 
 
@@ -564,26 +1198,25 @@
    SIMILARITY SCORE
    ========================================================= */
 
-/*
- * The percentage is visually separated from the FAQ content
- * so the administrator can quickly scan the candidates.
- */
-.similar-faq-score {
-    min-width: 54px;
+.similar-faq-score{
 
-    padding: 5px 7px;
+    min-width:54px;
 
-    border-radius: 8px;
+    padding:5px 7px;
 
-    background: #eff6ff;
-    color: #2563eb;
+    border-radius:8px;
 
-    font-size: 11px;
-    font-weight: 600;
+    background:#eff6ff;
 
-    line-height: 1.2;
+    color:#2563eb;
 
-    text-align: center;
+    font-size:11px;
+
+    font-weight:600;
+
+    line-height:1.2;
+
+    text-align:center;
 }
 
 
@@ -591,30 +1224,39 @@
    FAQ MATCH CONTENT
    ========================================================= */
 
-.similar-faq-content {
-    min-width: 0;
-    flex: 1;
+.similar-faq-content{
+
+    min-width:0;
+
+    flex:1;
 }
 
-.similar-faq-question {
-    margin: 0;
 
-    color: #1f2937;
+.similar-faq-question{
 
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.45;
+    margin:0;
 
-    overflow-wrap: anywhere;
+    color:#1f2937;
+
+    font-size:13px;
+
+    font-weight:500;
+
+    line-height:1.45;
+
+    overflow-wrap:anywhere;
 }
 
-.similar-faq-agency {
-    margin: 5px 0 0;
 
-    color: #64748b;
+.similar-faq-agency{
 
-    font-size: 11px;
-    line-height: 1.4;
+    margin:5px 0 0;
+
+    color:#64748b;
+
+    font-size:11px;
+
+    line-height:1.4;
 }
 
 
@@ -622,44 +1264,47 @@
    FOOTER
    ========================================================= */
 
-.similar-faq-footer {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
+.similar-faq-footer{
 
-    gap: 18px;
+    display:flex;
 
-    padding: 14px 20px;
+    align-items:flex-end;
 
-    border-top: 1px solid #f1f5f9;
+    justify-content:space-between;
 
-    background: #ffffff;
+    gap:18px;
+
+    padding:14px 20px;
+
+    border-top:1px solid #f1f5f9;
+
+    background:#ffffff;
 }
 
-/*
- * Explain that the similarity system is advisory.
- *
- * This is important because 76% similarity does not mean
- * the questions are definitely duplicates.
- */
-.similar-faq-note {
-    max-width: 330px;
 
-    margin: 0;
+.similar-faq-note{
 
-    color: #64748b;
+    max-width:330px;
 
-    font-size: 11px;
-    line-height: 1.5;
+    margin:0;
+
+    color:#64748b;
+
+    font-size:11px;
+
+    line-height:1.5;
 }
 
-.similar-faq-actions {
-    display: flex;
-    align-items: center;
 
-    gap: 8px;
+.similar-faq-actions{
 
-    flex-shrink: 0;
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
+
+    flex-shrink:0;
 }
 
 
@@ -667,26 +1312,21 @@
    SIMILAR FAQ BUTTON OVERRIDES
    ========================================================= */
 
-/*
- * The similarity modal uses the existing KNOWURLOCAL
- * save/cancel button language, but gives the buttons
- * enough size for the larger dialog.
- */
 .similar-faq-actions .btn-save,
-.similar-faq-actions .btn-cancel {
-    min-height: 34px;
+.similar-faq-actions .btn-cancel{
 
-    padding: 7px 14px;
+    min-height:34px;
 
-    font-size: 12px;
+    padding:7px 14px;
+
+    font-size:12px;
 }
 
-/*
- * Give the Continue action a slightly stronger hover state.
- */
-.similar-faq-actions .btn-save:hover {
+
+.similar-faq-actions .btn-save:hover{
+
     box-shadow:
-        0 5px 12px rgba(16, 185, 129, 0.12);
+        0 5px 12px rgba(16,185,129,0.12);
 }
 
 
@@ -694,25 +1334,23 @@
    EMPTY / NO-MATCH STATE
    ========================================================= */
 
-/*
- * Used when the similarity endpoint returns no candidates.
- *
- * JavaScript can place this class inside the results container.
- */
-.similar-faq-empty {
-    padding: 24px 16px;
+.similar-faq-empty{
 
-    border: 1px dashed #dbe1ea;
-    border-radius: 12px;
+    padding:24px 16px;
 
-    background: #fafafa;
+    border:1px dashed #dbe1ea;
 
-    color: #64748b;
+    border-radius:12px;
 
-    font-size: 13px;
-    line-height: 1.5;
+    background:#fafafa;
 
-    text-align: center;
+    color:#64748b;
+
+    font-size:13px;
+
+    line-height:1.5;
+
+    text-align:center;
 }
 
 
@@ -720,19 +1358,19 @@
    LOADING STATE
    ========================================================= */
 
-/*
- * Used while the similarity endpoint is being requested.
- */
-.similar-faq-loading {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.similar-faq-loading{
 
-    min-height: 120px;
+    display:flex;
 
-    color: #64748b;
+    align-items:center;
 
-    font-size: 13px;
+    justify-content:center;
+
+    min-height:120px;
+
+    color:#64748b;
+
+    font-size:13px;
 }
 
 
@@ -740,53 +1378,70 @@
    RESPONSIVE BEHAVIOR
    ========================================================= */
 
-@media (max-width: 640px) {
-    .similar-faq-header {
-    gap: 10px;
-    padding: 14px 16px;
-}
+@media (max-width:640px){
 
-.similar-faq-heading {
-    gap: 9px;
-}
+    .similar-faq-header{
 
-.similar-faq-heading p {
-    display: none;
-}
+        gap:10px;
 
-.similar-faq-actions {
-    gap: 5px;
-}
+        padding:14px 16px;
+    }
 
-.similar-faq-actions .btn-save,
-.similar-faq-actions .btn-cancel {
-    min-height: 32px;
-    padding: 6px 10px;
-    font-size: 11px;
-}   
+
+    .similar-faq-heading{
+
+        gap:9px;
+    }
+
+
+    .similar-faq-heading p{
+
+        display:none;
+    }
+
+
+    .similar-faq-actions{
+
+        gap:5px;
+    }
+
+
+    .similar-faq-actions .btn-save,
+    .similar-faq-actions .btn-cancel{
+
+        min-height:32px;
+
+        padding:6px 10px;
+
+        font-size:11px;
+    }
+
 
     /*
      * Reduce outer spacing on smaller screens so the dialog
      * has more usable width.
      */
-    .similar-faq-modal-back {
-        padding: 12px;
-    }
+    .similar-faq-modal-back{
 
+        padding:12px;
+    }
 
 
     /*
      * Let the explanatory note use the full available width.
      */
-    .similar-faq-note {
-        max-width: none;
+    .similar-faq-note{
+
+        max-width:none;
     }
 
+
     /*
-     * Make both footer actions share the available width.
+     * Keep footer actions aligned to the right.
      */
-    .similar-faq-actions {
-        justify-content: flex-end;
+    .similar-faq-actions{
+
+        justify-content:flex-end;
     }
 
 }

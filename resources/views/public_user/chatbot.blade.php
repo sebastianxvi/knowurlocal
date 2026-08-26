@@ -34,12 +34,18 @@
                 </div>
             </div>
 
-            <div id="inputArea">
-                <input type="text" id="message" class="chatbot-input" placeholder="Type a message...">
-                <button onclick="sendMessage()" class="chatbot-btn">
-                    <img src="{{asset('images/logo.png')}}">
-                </button>
-            </div>
+            <button
+                type="button"
+                id="chat-send"
+                class="chatbot-btn"
+                aria-label="Send message"
+            >
+                <img
+                    src="{{ asset('images/logo.png') }}"
+                    alt=""
+                    aria-hidden="true"
+                >
+            </button>
 
         </div>
     </div>

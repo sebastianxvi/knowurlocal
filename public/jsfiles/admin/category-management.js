@@ -184,8 +184,8 @@ document.addEventListener("click", function (e) {
     e.preventDefault();
 
     showAlertModal({
-        title: "Delete this category?",
-        text: "This action cannot be undone.",
+        title: "Move category to Trash?",
+        text: "This category will be moved to the Trashed records.",
         icon: "!",
         variant: "danger",
         confirmText: "Delete",
@@ -196,4 +196,160 @@ document.addEventListener("click", function (e) {
         }
     });
 
+});
+
+// ================= RESTORE WITH MODAL =================
+document.addEventListener("click", function (e) {
+
+    /*
+     * Detect a click on the Restore button.
+     *
+     * closest() also works when the administrator clicks
+     * the icon inside the button.
+     */
+    const btn = e.target.closest(".restore-category");
+
+    /*
+     * Ignore clicks that are unrelated to restoration.
+     */
+    if (!btn) return;
+
+    /*
+     * Find the form containing the Restore button.
+     *
+     * The form already contains the correct route,
+     * CSRF token, and PATCH method from Blade.
+     */
+    const form = btn.closest("form");
+
+    /*
+     * Safety check before attempting submission.
+     */
+    if (!form) return;
+
+    /*
+     * Prevent the browser from submitting automatically.
+     */
+    e.preventDefault();
+
+    /*
+     * Get the category name supplied by Blade.
+     *
+     * This gives the administrator useful context
+     * in the confirmation dialog.
+     */
+    const categoryName =
+        btn.dataset.categoryName || "this category";
+
+    /*
+     * Show a confirmation dialog before restoring.
+     */
+    showAlertModal({
+
+        title: "Restore this category?",
+
+        text:
+            `"${categoryName}" will be restored and returned to the active category list.`,
+
+        icon: "↶",
+
+        variant: "success",
+
+        confirmText: "Restore",
+
+        showCancel: true,
+
+        /*
+         * Submit only after explicit confirmation.
+         */
+        onConfirm: () => {
+            form.submit();
+        }
+
+    });
+
+});
+
+
+// ================= PERMANENT DELETE WITH MODAL =================
+document.addEventListener("click", function (e) {
+
+    /*
+     * Detect a click on the permanent-delete button.
+     */
+    const btn = e.target.closest(".force-delete-category");
+
+    /*
+     * Ignore unrelated clicks.
+     */
+    if (!btn) return;
+
+    /*
+     * Find the form containing the button.
+     */
+    const form = btn.closest("form");
+
+    /*
+     * Safety check before submitting.
+     */
+    if (!form) return;
+
+    /*
+     * Prevent immediate form submission.
+     */
+    e.preventDefault();
+
+    /*
+     * Retrieve the category name for the confirmation dialog.
+     */
+    const categoryName =
+        btn.dataset.categoryName || "this category";
+
+    /*
+     * Permanent deletion is irreversible,
+     * so use the danger confirmation style.
+     */
+    showAlertModal({
+
+        title: "Delete this category permanently?",
+
+        text:
+            `"${categoryName}" will be permanently deleted. This action cannot be undone.`,
+
+        icon: "!",
+
+        variant: "danger",
+
+        confirmText: "Delete Permanently",
+
+        showCancel: true,
+
+        /*
+         * Only submit the form after confirmation.
+         */
+        onConfirm: () => {
+            form.submit();
+        }
+
+    });
+
+});
+
+// ================= FLASH ERROR =================
+document.addEventListener("DOMContentLoaded", () => {
+
+    if (!window.__FLASH_ERROR__) return;
+
+    showAlertModal({
+        title: "Cannot delete category",
+        text: window.__FLASH_ERROR__,
+        icon: "!",
+        variant: "danger",
+        confirmText: "OK",
+        showCancel: false,
+
+        onConfirm: closeAlertModal
+    });
+
+    window.__FLASH_ERROR__ = null;
 });

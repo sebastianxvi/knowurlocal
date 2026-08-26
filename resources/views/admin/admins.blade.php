@@ -16,66 +16,172 @@
 
 <div class="admin-page">
 
-    <!-- ================= FILTER + ACTION BAR ================= -->
-    <div class="filter-card">
+    {{-- STATUS TABS --}}
+@if(auth()->user()->role === 'superadmin')
 
-        <!-- LEFT: FILTER -->
-        <form method="GET" action="{{ route('admin.admins') }}" class="filter-bar">
+<div class="admin-status-tabs">
 
-            <!-- SEARCH -->
-            <input 
-                type="text" 
-                name="search"
-                placeholder="Search admin..."
-                value="{{ request('search') }}"
-            >
+    {{-- ACTIVE --}}
+    <a
+        href="{{ route(
+            'admin.admins',
+            array_merge(
+                request()->except('page'),
+                ['status' => 'active']
+            )
+        ) }}"
+        class="admin-status-tab {{ request('status') === 'active' ? 'active' : '' }}"
+    >
+        <i class="ph-light ph-user-check"></i>
 
-            <!-- ROLE FILTER -->
-            <select name="role">
-                <option value="">All Roles</option>
-                <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>Admin</option>
-                <option value="superadmin" {{ request('role') == 'superadmin' ? 'selected' : '' }}>Superadmin</option>
-            </select>
+        <span>Active</span>
 
-            <!-- SORT -->
-            <select name="sort">
-                <option value="desc" {{ request('sort') == 'desc' ? 'selected' : '' }}>Newest First</option>
-                <option value="asc" {{ request('sort') == 'asc' ? 'selected' : '' }}>Oldest First</option>
-            </select>
-
-            <!-- KEEP STATUS -->
-            <input type="hidden" name="status" value="{{ request('status') }}">
-
-            <!-- SUBMIT -->
-            <button type="submit">Filter</button>
-
-        </form>
-
-        <!-- RIGHT: TABS + ACTION -->
-        <div class="log-tabs">
-
-    <a href="{{ route('admin.admins', array_merge(request()->all(), ['status' => ''])) }}"
-       class="tab {{ request('status') == '' ? 'active' : '' }}">
-        All
+        <span class="status-count">
+            {{ $activeCount }}
+        </span>
     </a>
 
-    <a href="{{ route('admin.admins', array_merge(request()->all(), ['status' => 'pending'])) }}"
-       class="tab {{ request('status') == 'pending' ? 'active' : '' }}">
-        Pending
+
+    {{-- PENDING --}}
+    <a
+        href="{{ route(
+            'admin.admins',
+            array_merge(
+                request()->except('page'),
+                ['status' => 'pending']
+            )
+        ) }}"
+        class="admin-status-tab {{ request('status') === 'pending' ? 'active' : '' }}"
+    >
+        <i class="ph-light ph-user-plus"></i>
+
+        <span>Pending</span>
+
+        <span class="status-count">
+            {{ $pendingCount }}
+        </span>
     </a>
 
-    <a href="{{ route('admin.admins', array_merge(request()->all(), ['status' => 'active'])) }}"
-       class="tab {{ request('status') == 'active' ? 'active' : '' }}">
-        Active
-    </a>
 
-    <button type="button" class="add-agencybtn" onclick="openInviteModal()">
-        + Invite
-    </button>
+    {{-- DEACTIVATED --}}
+    <a
+        href="{{ route(
+            'admin.admins',
+            array_merge(
+                request()->except('page'),
+                ['status' => 'deactivated']
+            )
+        ) }}"
+        class="admin-status-tab {{ request('status') === 'deactivated' ? 'active' : '' }}"
+    >
+        <i class="ph-light ph-user-minus"></i>
+
+        <span>Deactivated</span>
+
+        <span class="status-count">
+            {{ $deactivatedCount }}
+        </span>
+    </a>
 
 </div>
 
-    </div>
+@endif
+
+    <!-- ================= FILTER + ACTION BAR ================= -->
+
+<div class="filter-card">
+
+    <form
+        method="GET"
+        action="{{ route('admin.admins') }}"
+        class="filter-bar"
+    >
+
+        {{-- SEARCH --}}
+        <input
+            type="text"
+            name="search"
+            placeholder="Search admin..."
+            value="{{ request('search') }}"
+        >
+
+
+        {{-- ROLE FILTER --}}
+        <select name="role">
+
+            <option value="">
+                All Roles
+            </option>
+
+            <option
+                value="admin"
+                {{ request('role') === 'admin' ? 'selected' : '' }}
+            >
+                Admin
+            </option>
+
+            <option
+                value="superadmin"
+                {{ request('role') === 'superadmin' ? 'selected' : '' }}
+            >
+                Superadmin
+            </option>
+
+        </select>
+
+
+        {{-- SORT --}}
+        <select name="sort">
+
+            <option
+                value="desc"
+                {{ request('sort', 'desc') === 'desc' ? 'selected' : '' }}
+            >
+                Newest First
+            </option>
+
+            <option
+                value="asc"
+                {{ request('sort') === 'asc' ? 'selected' : '' }}
+            >
+                Oldest First
+            </option>
+
+        </select>
+
+
+        {{-- PRESERVE CURRENT STATUS TAB --}}
+        <input
+            type="hidden"
+            name="status"
+            value="{{ request('status') }}"
+        >
+
+
+        {{-- FILTER --}}
+        <button type="submit">
+            Filter
+        </button>
+
+    </form>
+
+
+    {{-- INVITE --}}
+    <button
+        type="button"
+        class="add-agencybtn"
+        onclick="openInviteModal()"
+    >
+
+        <i class="ph-light ph-user-plus"></i>
+
+        <span>
+            Invite
+        </span>
+
+    </button>
+
+</div>
 
     @if(session('success'))
 <script>
@@ -135,61 +241,164 @@
                         {{ $admin->created_at->format('M d, Y') }}
                     </td>
 
+
                     <td class="tablebtn">
 
-                        @if(auth()->user()->role === 'superadmin')
+    @if(auth()->user()->role === 'superadmin')
 
-                            @php 
-                                $isSelf = $admin->id === auth()->id(); 
-                            @endphp
+        @php
+            /*
+             * Prevent the currently authenticated Super Admin
+             * from modifying or deleting their own account.
+             */
+            $isSelf = $admin->id === auth()->id();
+        @endphp
 
-                            {{-- ================= APPROVE ================= --}}
-                            @if($admin->status === 'pending')
-                                <form method="POST" action="{{ route('admin.approve', $admin->id) }}">
-                                    @csrf
-                                    <button type="button" class="btn btn-primary approve-btn">
-                                        Approve
-                                    </button>
-                                </form>
-                            @endif
 
-                            {{-- ================= PROMOTE ================= --}}
-                            @if($admin->status === 'active' && $admin->role === 'admin')
-                                <form method="POST" action="{{ route('admin.promote', $admin->id) }}">
-                                    @csrf
-                                    <button type="button" class="btn btn-primary promote-btn">
-                                        Promote
-                                    </button>
-                                </form>
-                            @endif
+        {{-- =================================================
+             PENDING
+             ================================================= --}}
+        @if($admin->status === 'pending')
 
-                            {{-- ================= DEMOTE ================= --}}
-                            @if($admin->role === 'superadmin' && !$isSelf)
-                                <form method="POST" action="{{ route('admin.demote', $admin->id) }}">
-                                    @csrf
-                                    <button type="button" class="btn btn-danger demote-btn">
-                                        Demote
-                                    </button>
-                                </form>
-                            @endif
+            <form
+                method="POST"
+                action="{{ route('admin.approve', $admin->id) }}"
+            >
+                @csrf
 
-                            {{-- ================= DELETE ================= --}}
-                            @if(!$isSelf)
-                                <form method="POST" action="{{ route('admin.delete', $admin->id) }}">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="button" class="btn btn-danger delete-admin-btn">
-                                        Delete
-                                    </button>
-                                </form>
-                            @endif
+                <button
+                    type="button"
+                    class="btn btn-primary approve-btn"
+                >
+                    <i class="ph-light ph-user-check"></i>
+                    Approve
+                </button>
+            </form>
 
-                        @else
-                            <span style="font-size:12px; color:var(--text-muted);">—</span>
-                        @endif
+        @endif
 
-                    </td>
 
+        {{-- =================================================
+             ACTIVE
+             ================================================= --}}
+        @if($admin->status === 'active')
+
+            {{-- Promote normal Admin → Super Admin --}}
+            @if($admin->role === 'admin')
+
+                <form
+                    method="POST"
+                    action="{{ route('admin.promote', $admin->id) }}"
+                >
+                    @csrf
+
+                    <button
+                        type="button"
+                        class="btn btn-primary promote-btn"
+                    >
+                        <i class="ph-light ph-arrow-up"></i>
+                        Promote
+                    </button>
+                </form>
+
+            @endif
+
+
+            {{-- Demote Super Admin → Admin --}}
+            @if($admin->role === 'superadmin' && !$isSelf)
+
+                <form
+                    method="POST"
+                    action="{{ route('admin.demote', $admin->id) }}"
+                >
+                    @csrf
+
+                    <button
+                        type="button"
+                        class="btn btn-danger demote-btn"
+                    >
+                        <i class="ph-light ph-arrow-down"></i>
+                        Demote
+                    </button>
+                </form>
+
+            @endif
+
+
+            {{-- Deactivate --}}
+            @if(!$isSelf)
+
+                <form
+                    method="POST"
+                    action="{{ route('admin.deactivate', $admin->id) }}"
+                >
+                    @csrf
+
+                    <button
+                        type="button"
+                        class="btn btn-danger deactivate-admin-btn"
+                    >
+                        <i class="ph-light ph-user-minus"></i>
+                        Deactivate
+                    </button>
+                </form>
+
+            @endif
+
+        @endif
+
+
+        {{-- =================================================
+             DEACTIVATED
+             ================================================= --}}
+        @if($admin->status === 'deactivated' && !$isSelf)
+
+            {{-- Reactivate --}}
+            <form
+                method="POST"
+                action="{{ route('admin.reactivate', $admin->id) }}"
+            >
+                @csrf
+
+                <button
+                    type="button"
+                    class="btn btn-primary reactivate-admin-btn"
+                >
+                    <i class="ph-light ph-user-check"></i>
+                    Reactivate
+                </button>
+            </form>
+
+
+            {{-- Permanent Delete --}}
+            <form
+                method="POST"
+                action="{{ route('admin.delete', $admin->id) }}"
+            >
+                @csrf
+                @method('DELETE')
+
+                <button
+                    type="button"
+                    class="btn btn-danger delete-admin-btn"
+                >
+                    <i class="ph-light ph-trash"></i>
+                    Delete Permanently
+                </button>
+            </form>
+
+        @endif
+
+
+    @else
+
+        <span style="font-size:12px; color:var(--text-muted);">
+            —
+        </span>
+
+    @endif
+
+</td>
                 </tr>
                 @empty
                 <tr>

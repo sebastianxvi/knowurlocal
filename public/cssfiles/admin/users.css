@@ -84,3 +84,569 @@
     font-size:12px;
     color:#999;
 }
+
+/* =========================================================
+   USER DETAILS MODAL
+   ========================================================= */
+
+.user-details-modal {
+
+    width: 620px;
+
+    max-width: calc(100% - 32px);
+
+    max-height: calc(100vh - 48px);
+
+    overflow: hidden;
+
+    display: flex;
+
+    flex-direction: column;
+}
+
+
+/* ================= MODAL BODY ================= */
+
+.user-modal-body {
+
+    padding: 18px;
+
+    overflow-y: auto;
+
+    min-height: 0;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 18px;
+}
+
+
+/* ================= USER PROFILE ================= */
+
+.user-profile-section {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 16px;
+}
+
+
+.user-profile-main {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    min-width: 0;
+}
+
+
+.user-profile-icon {
+
+    width: 40px;
+
+    height: 40px;
+
+    flex-shrink: 0;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 10px;
+
+    background: #f1f5f9;
+
+    color: #475569;
+
+    font-size: 19px;
+}
+
+
+.user-profile-copy {
+
+    min-width: 0;
+}
+
+
+.user-profile-copy h3 {
+
+    margin: 0;
+
+    color: #1e293b;
+
+    font-size: 15px;
+
+    font-weight: 600;
+}
+
+
+.user-profile-copy p {
+
+    margin: 3px 0 0;
+
+    color: #64748b;
+
+    font-size: 12px;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+}
+
+
+/* ================= STATUS ================= */
+
+.user-account-status {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    flex-shrink: 0;
+
+    color: #166534;
+
+    font-size: 12px;
+
+    font-weight: 600;
+}
+
+
+.user-account-status i {
+
+    font-size: 14px;
+}
+
+
+.user-account-status.deactivated {
+
+    color: #b91c1c;
+}
+
+
+/* ================= ACCOUNT META ================= */
+
+.user-meta-grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 10px;
+}
+
+
+.user-meta-item {
+
+    padding: 12px 14px;
+
+    border: 1px solid #e2e8f0;
+
+    border-radius: 10px;
+
+    background: #fafafa;
+}
+
+
+.user-meta-label {
+
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: #64748b;
+
+    font-size: 11px;
+}
+
+
+.user-meta-item strong {
+
+    color: #334155;
+
+    font-size: 12px;
+
+    font-weight: 600;
+}
+
+
+/* ================= SECTION HEADING ================= */
+
+.user-section-heading {
+
+    display: flex;
+
+    align-items: flex-end;
+
+    justify-content: space-between;
+
+    margin-bottom: 10px;
+}
+
+
+.user-section-eyebrow {
+
+    display: block;
+
+    margin-bottom: 2px;
+
+    color: #64748b;
+
+    font-size: 10px;
+
+    font-weight: 500;
+
+    text-transform: uppercase;
+
+    letter-spacing: .06em;
+}
+
+
+.user-section-heading h3 {
+
+    margin: 0;
+
+    color: #1e293b;
+
+    font-size: 14px;
+
+    font-weight: 600;
+}
+
+
+/* ================= INQUIRY SUMMARY ================= */
+
+.inquiry-summary {
+
+    display: grid;
+
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    margin-bottom: 10px;
+
+    border: 1px solid #e2e8f0;
+
+    border-radius: 10px;
+
+    overflow: hidden;
+
+    background: #fff;
+}
+
+
+.inquiry-stat {
+
+    padding: 10px 12px;
+
+    text-align: center;
+}
+
+
+.inquiry-stat + .inquiry-stat {
+
+    border-left: 1px solid #e2e8f0;
+}
+
+
+.inquiry-stat-label {
+
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #64748b;
+
+    font-size: 10px;
+}
+
+
+.inquiry-stat strong {
+
+    color: #334155;
+
+    font-size: 15px;
+
+    font-weight: 600;
+}
+
+
+/* ================= INQUIRY LIST ================= */
+
+#user-inquiries-container {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+
+.user-inquiry-card {
+
+    padding: 13px 14px;
+
+    border: 1px solid #e2e8f0;
+
+    border-radius: 10px;
+
+    background: #fff;
+
+    transition:
+        border-color .2s ease,
+        box-shadow .2s ease,
+        transform .2s ease;
+}
+
+
+.user-inquiry-card:hover {
+
+    border-color: #cbd5e1;
+
+    box-shadow: 0 4px 12px rgba(15, 23, 42, .05);
+
+    transform: translateY(-1px);
+}
+
+
+/* ================= INQUIRY HEADER ================= */
+
+.user-inquiry-header {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 12px;
+
+    margin-bottom: 9px;
+}
+
+
+.user-inquiry-status {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    color: #64748b;
+
+    font-size: 10px;
+
+    font-weight: 600;
+}
+
+
+.user-inquiry-status i {
+
+    font-size: 13px;
+}
+
+
+.user-inquiry-status.answered {
+
+    color: #15803d;
+}
+
+
+.user-inquiry-status.pending {
+
+    color: #a16207;
+}
+
+
+.user-inquiry-header time {
+
+    color: #94a3b8;
+
+    font-size: 10px;
+
+    white-space: nowrap;
+}
+
+
+/* ================= QUESTION ================= */
+
+.user-inquiry-question {
+
+    color: #334155;
+
+    font-size: 12px;
+
+    line-height: 1.6;
+
+    font-weight: 500;
+}
+
+
+/* ================= ANSWER ================= */
+
+.user-inquiry-answer {
+
+    margin-top: 10px;
+
+    padding-top: 10px;
+
+    border-top: 1px solid #f1f5f9;
+
+    color: #64748b;
+
+    font-size: 11px;
+
+    line-height: 1.6;
+}
+
+
+/* ================= PENDING ================= */
+
+.user-inquiry-pending {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    margin-top: 10px;
+
+    padding-top: 10px;
+
+    border-top: 1px solid #f1f5f9;
+
+    color: #94a3b8;
+
+    font-size: 11px;
+}
+
+
+.user-inquiry-pending i {
+
+    font-size: 13px;
+}
+
+
+/* ================= EMPTY ================= */
+
+.user-inquiries-empty {
+
+    min-height: 150px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 5px;
+
+    color: #94a3b8;
+
+    text-align: center;
+}
+
+
+.user-inquiries-empty i {
+
+    margin-bottom: 3px;
+
+    font-size: 25px;
+}
+
+
+.user-inquiries-empty strong {
+
+    color: #64748b;
+
+    font-size: 12px;
+
+    font-weight: 500;
+}
+
+
+.user-inquiries-empty span {
+
+    font-size: 10px;
+}
+
+
+/* ================= LOADING ================= */
+
+.user-inquiries-loading {
+
+    padding: 30px 0;
+
+    color: #94a3b8;
+
+    font-size: 11px;
+
+    text-align: center;
+}
+
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 600px) {
+
+    .user-details-modal {
+
+        max-width: calc(100% - 20px);
+
+        max-height: calc(100vh - 24px);
+    }
+
+
+    .user-modal-body {
+
+        padding: 14px;
+
+        gap: 14px;
+    }
+
+
+    .user-profile-section {
+
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+
+    .user-meta-grid {
+
+        grid-template-columns: 1fr;
+    }
+
+
+    .inquiry-summary {
+
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+
+    .inquiry-stat {
+
+        padding: 9px 6px;
+    }
+
+}

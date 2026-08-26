@@ -1,15 +1,60 @@
-const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+const csrfToken =
+    document
+        .querySelector('meta[name="csrf-token"]')
+        ?.getAttribute('content') || "";
+
 
 let greeted = false;
-let chatbox=document.getElementById("chatbox");
+
+let chatbox =
+    document.getElementById("chatbox");
+
 let lastUserMessage = "";
 
-document.getElementById("message").addEventListener("keydown",function(e){
-    if(e.key==="Enter"){
-        e.preventDefault();
-        sendMessage();
-    }
-});
+
+/*
+ * Connect the paper-plane button to the
+ * existing sendMessage() function.
+ *
+ * We use addEventListener instead of inline
+ * onclick attributes so the chatbot follows
+ * one consistent JavaScript event pattern.
+ */
+const sendButton =
+    document.querySelector(".chatbot-btn");
+
+
+if (sendButton) {
+
+    sendButton.addEventListener(
+        "click",
+        sendMessage
+    );
+
+}
+
+const messageInput =
+    document.getElementById("message");
+
+
+if (messageInput) {
+
+    messageInput.addEventListener(
+        "keydown",
+        function (e) {
+
+            if (e.key !== "Enter") {
+                return;
+            }
+
+            e.preventDefault();
+
+            sendMessage();
+
+        }
+    );
+
+}
 
 function escapeHTML(str){
     return str
@@ -477,13 +522,13 @@ const chatbot = document.getElementById("chatbot");
 const overlay = document.getElementById("chat-overlay");
 
 
-let agencyId = null;
-let agencyName = chatbot?.dataset.agencyName || null;
+let agencyId =
+    chatbot?.dataset.agency
+        ? Number(chatbot.dataset.agency)
+        : null;
 
-if(chatbot){
-    agencyId = chatbot.dataset.agency;
-    let agencyName = chatbot?.dataset.agencyName || null;
-}
+let agencyName =
+    chatbot?.dataset.agencyName || null;
 
 
 
@@ -606,10 +651,10 @@ askBtn.addEventListener("click", async () => {
     let data = await sendToHuman(question);
 
     if(data?.success){
-        addMessage("✅ Your question has been sent to a human assistant.", "bot");
+        addMessage("Your question has been sent to a human assistant.", "bot");
         input.value = "";
     }else{
-        addMessage("❌ Failed to send your request.", "bot");
+        addMessage("Failed to send your request.", "bot");
     }
 
     askBtn.disabled = false; // 🔓 re-enable

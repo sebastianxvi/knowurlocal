@@ -155,7 +155,8 @@ body{
 
     gap: 6px;
 
-    max-width: 100%;
+    min-width:0;
+    max-width:100%;
 
     white-space: nowrap;
 
@@ -272,15 +273,6 @@ body{
     color:#92400e;
 }
 
-/* ================= DELETE ================= */
-.badge.delete_agency,
-.badge.delete_faq,
-.badge.delete_category,
-.badge.delete_support_request{
-    background:#fee2e2;
-    color:#b91c1c;
-}
-
 /* ================= VIEW / NAVIGATION ================= */
 
 .badge.view_agency,
@@ -347,56 +339,142 @@ body{
     color:#92400e;
 }
 
+/* DEACTIVATE */
+.badge.deactivate_admin{
+    background:#fee2e2;
+    color:#b91c1c;
+}
+
+/* REACTIVATE */
+.badge.reactivate_admin{
+    background:#dcfce7;
+    color:#166534;
+}
+
 /* DELETE ADMIN */
 .badge.delete_admin{
     background:#fee2e2;
     color:#b91c1c;
 }
 
+/* ================= PUBLIC USER MANAGEMENT ================= */
+
+/*
+ * Public User Management actions use the same lightweight
+ * capsule treatment as Admin Management actions.
+ *
+ * The color communicates the operation:
+ *
+ * Deactivate → destructive / warning
+ * Reactivate → positive
+ * Delete     → destructive
+ */
+
+
+/* -------------------------
+   DEACTIVATE USER
+   ------------------------- */
+
+.badge.deactivate_user{
+    background:#fee2e2;
+    color:#b91c1c;
+}
+
+
+/* -------------------------
+   REACTIVATE USER
+   ------------------------- */
+
+.badge.reactivate_user{
+    background:#dcfce7;
+    color:#166534;
+}
+
+
+/* -------------------------
+   DELETE USER
+   ------------------------- */
+
+.badge.delete_user{
+    background:#ffe4e6;
+    color:#be123c;
+}
 
 /* =========================================================
-   NGA / NGO LIFECYCLE ACTIONS
+   RECORD LIFECYCLE ACTIONS
 ========================================================= */
 
 /*
- * TRASH
+ * MOVE TO TRASH
  *
- * The organization is removed from the active dataset,
- * but can still be recovered.
+ * These actions remove a record from the active dataset
+ * while keeping it recoverable.
  *
- * Red communicates a destructive action while the
- * relatively soft background distinguishes it from
- * permanent deletion.
+ * Agency:
+ *     trash_agency
+ *
+ * FAQ:
+ *     delete_faq
+ *
+ * Category:
+ *     delete_category
+ *
+ * All three represent the same business operation, so they
+ * intentionally share the same destructive-but-recoverable
+ * visual treatment.
  */
-.badge.trash_agency{
-    background:#fee2e2;
-    color:#b91c1c;
+.badge.trash_agency,
+.badge.delete_faq,
+.badge.delete_category {
+    background: #fee2e2;
+    color: #b91c1c;
 }
 
 
 /*
  * RESTORE
  *
- * Restores a previously trashed organization to the
- * active dataset.
+ * Restores a previously trashed record back into the active
+ * dataset.
+ *
+ * All resource types use the same positive visual language.
  */
-.badge.restore_agency{
-    background:#dcfce7;
-    color:#166534;
+.badge.restore_agency,
+.badge.restore_faq,
+.badge.restore_category {
+    background: #dcfce7;
+    color: #166534;
 }
 
 
 /*
- * FORCE DELETE
+ * PERMANENT DELETE
  *
- * Permanent deletion cannot be undone.
+ * These actions permanently remove a record and cannot be
+ * recovered through the normal application workflow.
  *
- * A stronger red treatment makes this visually distinct
- * from ordinary trashing.
+ * The slightly stronger red/pink treatment distinguishes
+ * permanent deletion from ordinary "Move to Trash".
  */
-.badge.force_delete_agency{
-    background:#ffe4e6;
-    color:#be123c;
+.badge.force_delete_agency,
+.badge.force_delete_faq,
+.badge.force_delete_category {
+    background: #ffe4e6;
+    color: #be123c;
+}
+
+
+/*
+ * OTHER DESTRUCTIVE ACTIONS
+ *
+ * These actions are destructive but do not belong to the
+ * standard trash → restore → permanent-delete lifecycle.
+ */
+.badge.delete_agency,
+.badge.delete_support_request,
+.badge.delete_admin {
+    background: #fee2e2;
+    color: #b91c1c;
 }
 
 /* ================= CHANGE BOX ================= */
@@ -413,25 +491,7 @@ body{
     max-width:100%;
 }
 
-.change-box .old{
-    background:#f3f4f6;
-    padding:4px 10px;
-    border-radius:999px;
-    font-size:12px;
-}
 
-.change-box .new{
-    background:#dbeafe;
-    color:#1d4ed8;
-    padding:4px 10px;
-    border-radius:999px;
-    font-size:12px;
-}
-
-.change-box i{
-    font-size:14px;
-    opacity:0.6;
-}
 
 /* ================= FAQ AUDIT SUMMARY ================= */
 
@@ -480,7 +540,7 @@ body{
 
     flex-direction: column;
 
-    align-items: flex-start;
+    align-items: center;
 
     justify-content: center;
 
@@ -1344,4 +1404,102 @@ body{
     border-radius: 8px;
 
     background: #f8fafc;
+}
+
+/* =========================================================
+   ADMIN MANAGEMENT — MINIMAL STATE TRANSITIONS
+   ========================================================= */
+
+/*
+ * Admin Management state changes intentionally use plain
+ * typography instead of pills or colored backgrounds.
+ *
+ * The Action column communicates the operation with color.
+ * The Changes column communicates the resulting state.
+ */
+
+
+/* -------------------------
+   STATE TRANSITION LAYOUT
+   ------------------------- */
+
+.log-row[data-action="approve_admin"] .change-box,
+.log-row[data-action="promote_admin"] .change-box,
+.log-row[data-action="demote_admin"] .change-box,
+.log-row[data-action="deactivate_admin"] .change-box,
+.log-row[data-action="reactivate_admin"] .change-box{
+
+    display:inline-flex;
+
+    align-items:center;
+
+    gap:8px;
+
+    max-width:100%;
+}
+
+
+/* -------------------------
+   PREVIOUS STATE
+   ------------------------- */
+
+.log-row[data-action="approve_admin"] .change-box .old,
+.log-row[data-action="promote_admin"] .change-box .old,
+.log-row[data-action="demote_admin"] .change-box .old,
+.log-row[data-action="deactivate_admin"] .change-box .old,
+.log-row[data-action="reactivate_admin"] .change-box .old{
+
+    background:transparent;
+
+    padding:0;
+
+    border-radius:0;
+
+    color:#64748b;
+
+    font-size:12px;
+
+    font-weight:500;
+}
+
+
+/* -------------------------
+   TRANSITION ARROW
+   ------------------------- */
+
+.log-row[data-action="approve_admin"] .change-box i,
+.log-row[data-action="promote_admin"] .change-box i,
+.log-row[data-action="demote_admin"] .change-box i,
+.log-row[data-action="deactivate_admin"] .change-box i,
+.log-row[data-action="reactivate_admin"] .change-box i{
+
+    font-size:13px;
+
+    color:#94a3b8;
+
+    opacity:1;
+}
+
+
+/* -------------------------
+   NEW STATE
+   ------------------------- */
+
+.log-row[data-action="approve_admin"] .change-box .new,
+.log-row[data-action="promote_admin"] .change-box .new,
+.log-row[data-action="demote_admin"] .change-box .new,
+.log-row[data-action="deactivate_admin"] .change-box .new,
+.log-row[data-action="reactivate_admin"] .change-box .new{
+
+    background:transparent;
+
+    padding:0;
+
+    border-radius:0;
+
+    color:#334155;
+
+    font-size:12px;
+
+    font-weight:600;
 }

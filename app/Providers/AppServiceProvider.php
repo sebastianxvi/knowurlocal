@@ -39,6 +39,54 @@ class AppServiceProvider extends ServiceProvider
 
     });
 
+    /*
+ * Limit "Talk to Human" submissions separately
+ * from normal chatbot questions.
+ *
+ * The public chatbot is allowed more frequent requests
+ * because users may legitimately ask several questions.
+ *
+ * Human-support requests are more expensive because each
+ * submission creates a database record that may require
+ * human attention.
+ */
+RateLimiter::for('support-request', function ($request) {
+
+    /*
+     * Authenticated users receive a limit based on their
+     * account ID.
+     *
+     * This is preferable to IP-only limiting because
+     * KNOWURLOCAL users are authenticated.
+     */
+    $userLimit = Limit::perMinute(3)
+        ->by(
+            'user:' . ($request->user()?->id ?? 'guest')
+        );
+
+    /*
+     * Add a second IP-based limit as defense in depth.
+     *
+     * This protects against unusual cases where multiple
+     * accounts are used from the same machine/network.
+     */
+    $ipLimit = Limit::perMinute(10)
+        ->by(
+            'ip:' . $request->ip()
+        );
+
+    /*
+     * Laravel evaluates all returned limits.
+     *
+     * Therefore a request must satisfy BOTH limits.
+     */
+    return [
+        $userLimit,
+        $ipLimit,
+    ];
+
+});
+
 
     /*
      * Share unread inquiry information with public-user
