@@ -477,13 +477,15 @@ class UserLogController extends Controller
                 }
             )
 
-            ->select('action')
+            ->reorder()
 
-            ->distinct()
+->select('action')
 
-            ->orderBy('action')
+->distinct()
 
-            ->pluck('action');
+->orderBy('action')
+
+->pluck('action');
 
 
         /**
@@ -538,20 +540,22 @@ class UserLogController extends Controller
                 }
             )
 
-            ->selectRaw(
-                'DATE(created_at) as date'
-            )
+            ->reorder()
 
-            ->distinct()
+->selectRaw(
+    'DATE(created_at) as date'
+)
 
-            ->orderBy(
-                'date',
-                'desc'
-            )
+->distinct()
 
-            ->limit(15)
+->orderBy(
+    'date',
+    'desc'
+)
 
-            ->pluck('date');
+->limit(15)
+
+->pluck('date');
 
 
         /**
