@@ -1803,109 +1803,274 @@ if (
      */
 
     function generateKeywords() {
+    /*
+     * =========================================================
+     * 1. READ THE CURRENT FAQ DATA
+     * =========================================================
+     *
+     * The generator uses only information already present
+     * in the FAQ form.
+     */
+
+    const selectedAgency =
+        agencySelect.options[agencySelect.selectedIndex];
+
+    const abbreviation =
+        selectedAgency?.dataset?.abbr?.trim() || "";
+
+    const question =
+        questionInput.value?.trim() || "";
+
+
+    /*
+     * =========================================================
+     * 2. STOP IF THERE IS NO QUESTION
+     * =========================================================
+     */
+
+    if (!question) {
+        keywordsInput.value = "";
+        keywordsInput.dataset.auto = "true";
+
+        autoResizeTextarea(keywordsInput);
+
+        return;
+    }
+
+
+    /*
+     * =========================================================
+     * 3. NORMALIZE THE QUESTION
+     * =========================================================
+     *
+     * Punctuation becomes spaces so words do not accidentally
+     * join together.
+     */
+
+    const normalizedQuestion = question
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+
+    /*
+     * =========================================================
+     * 4. REMOVE COMMON QUESTION / GRAMMAR WORDS
+     * =========================================================
+     *
+     * These words are useful for understanding a sentence,
+     * but usually poor standalone search keywords.
+     */
+
+    const stopwords = new Set([
+        "a",
+        "an",
+        "and",
+        "ang",
+        "are",
+        "ba",
+        "can",
+        "do",
+        "does",
+        "for",
+        "from",
+        "how",
+        "i",
+        "in",
+        "is",
+        "it",
+        "ko",
+        "may",
+        "my",
+        "ng",
+        "of",
+        "on",
+        "pwede",
+        "sa",
+        "the",
+        "to",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "why",
+        "with",
+        "need"
+    ]);
+
+
+    /*
+     * =========================================================
+     * 5. CREATE CLEAN WORDS
+     * =========================================================
+     */
+
+    const words = normalizedQuestion
+        .split(/\s+/)
+        .map(word =>
+            word.replace(/^-+|-+$/g, "")
+        )
+        .filter(Boolean)
+        .filter(word => !stopwords.has(word))
+        .filter(word => word.length >= 3);
+
+
+    /*
+     * =========================================================
+     * 6. IDENTIFY POSSIBLE CONCEPT WORDS
+     * =========================================================
+     *
+     * Longer words are generally more informative than
+     * very short grammatical words.
+     */
+
+    const conceptWords = words.filter(
+        word => word.length >= 5
+    );
+
+
+    /*
+     * =========================================================
+     * 7. GENERATE PHRASES
+     * =========================================================
+     *
+     * We create phrases only when they contain meaningful
+     * concept words.
+     *
+     * This prevents weak phrases such as:
+     *
+     * "title applying"
+     * "applying private"
+     *
+     * from dominating the keyword list.
+     */
+
+    const phrases = [];
+
+    for (let i = 0; i < words.length; i++) {
+
+        const current = words[i];
 
         /*
-         * Do not overwrite administrator-entered keywords.
+         * Two-word phrase.
          */
+        if (i + 1 < words.length) {
 
-        if (
-            userEditedKeywords
-        ) {
+            const next = words[i + 1];
 
-            return;
-
+            if (
+                current.length >= 5 ||
+                next.length >= 5
+            ) {
+                phrases.push(
+                    `${current} ${next}`
+                );
+            }
         }
 
-
-        const selectedOption =
-            agencySelect.options[
-                agencySelect.selectedIndex
-            ];
-
-
-        const agencyText =
-            selectedOption?.text || "";
-
-
-        const agencyAbbr =
-            selectedOption?.dataset.abbr || "";
-
-
-        const questionText =
-            questionInput.value || "";
-
-
         /*
-         * Build a basic keyword source from:
+         * Three-word phrase.
          *
-         * Agency name
-         * Agency abbreviation
-         * Question
+         * Require at least two meaningful words so that
+         * purely grammatical combinations are avoided.
          */
+        if (i + 2 < words.length) {
 
-        const raw =
-            `${agencyText} ${agencyAbbr} ${questionText}`
-                .toLowerCase()
-                .replace(
-                    /[^\w\s]/g,
-                    ''
-                )
-                .replace(
-                    /\b(how|what|where|when|why|is|are|to|for|the)\b/g,
-                    ''
-                )
-                .replace(
-                    /\s+/g,
-                    ' '
-                )
-                .trim();
+            const next = words[i + 1];
+            const afterNext = words[i + 2];
 
+            const meaningfulCount = [
+                current,
+                next,
+                afterNext
+            ].filter(word => word.length >= 5).length;
 
-        const words =
-            raw.split(" ");
-
-
-        const unique =
-            [...new Set(words)];
-
-
-        keywordsInput.value =
-            unique.join(", ");
-
-
-        /*
-         * Mark this value as automatically generated.
-         */
-
-        keywordsInput.dataset.auto =
-            "true";
-
-
-        /*
-         * Trigger the standard input pipeline.
-         *
-         * This handles textarea resizing.
-         */
-
-        keywordsInput.dispatchEvent(
-            new Event("input", {
-                bubbles: true
-            })
-        );
-
-
-        /*
-         * The generated value should not count as
-         * a deliberate manual edit.
-         */
-
-        userEditedKeywords =
-            false;
-
-        keywordsInput.dataset.auto =
-            "true";
-
+            if (meaningfulCount >= 2) {
+                phrases.push(
+                    `${current} ${next} ${afterNext}`
+                );
+            }
+        }
     }
+
+
+    /*
+     * =========================================================
+     * 8. BUILD CANDIDATES
+     * =========================================================
+     *
+     * Agency abbreviation comes first because it is a useful
+     * search term and is already known from the selected agency.
+     *
+     * Then we prioritize phrases before individual words.
+     */
+
+    const candidates = [
+        abbreviation,
+        ...phrases,
+        ...conceptWords
+    ];
+
+
+    /*
+     * =========================================================
+     * 9. REMOVE DUPLICATES
+     * =========================================================
+     */
+
+    const unique = [];
+    const seen = new Set();
+
+    for (const candidate of candidates) {
+
+        const keyword = candidate
+            .replace(/\s+/g, " ")
+            .trim();
+
+        if (!keyword) {
+            continue;
+        }
+
+        const normalized =
+            keyword.toLowerCase();
+
+        if (seen.has(normalized)) {
+            continue;
+        }
+
+        seen.add(normalized);
+
+        unique.push(keyword);
+    }
+
+
+    /*
+     * =========================================================
+     * 10. LIMIT AUTOMATIC KEYWORDS
+     * =========================================================
+     *
+     * Automatic generation remains conservative.
+     */
+
+    const finalKeywords =
+        unique.slice(0, 15);
+
+
+    /*
+     * =========================================================
+     * 11. UPDATE THE FORM
+     * =========================================================
+     */
+
+    keywordsInput.value =
+        finalKeywords.join(", ");
+
+    keywordsInput.dataset.auto = "true";
+
+    autoResizeTextarea(keywordsInput);
+}
 
 
     /*

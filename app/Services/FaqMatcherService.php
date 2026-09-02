@@ -7,71 +7,245 @@ use Illuminate\Support\Collection;
 
 class FaqMatcherService
 {
+    /*
+     * =========================================================
+     * GENERIC TEXT NORMALIZATION
+     * =========================================================
+     *
+     * These synonym groups are intentionally domain-neutral.
+     *
+     * They help the matcher understand that words such as
+     * "documents", "papers", and "dokumento" refer to the
+     * same general concept.
+     *
+     * Government-specific terminology must come from the
+     * actual FAQ question and administrator-provided keywords.
+     */
+    private const GENERIC_SYNONYMS = [
+        'service' => [
+            'service',
+            'services',
+            'serbisyo',
+        ],
 
-/*
- * Controlled vocabulary used only when retrieving
- * possible FAQ candidates from the database.
- *
- * These synonyms do NOT decide whether an FAQ is correct.
- * They only help the retrieval layer find equivalent wording.
- */
-private const RETRIEVAL_SYNONYMS = [
+        'document' => [
+            'document',
+            'documents',
+            'doc',
+            'docs',
+            'paper',
+            'papers',
+            'papeles',
+            'dokumento',
+            'dokuments',
+        ],
 
-    'papers' => [
-        'documents',
-    ],
+        'requirement' => [
+            'requirement',
+            'requirements',
+            'required',
+            'need',
+            'needs',
+            'needed',
+            'kailangan',
+            'mga kailangan',
+        ],
 
-    'paper' => [
-        'document',
-    ],
+        'apply' => [
+            'apply',
+            'applying',
+            'application',
+            'mag-apply',
+            'mag apply',
+            'nag-aapply',
+            'nag aapply',
+            'pag-apply',
+            'pag apply',
+        ],
 
-    'docs' => [
-        'documents',
-    ],
+        'request' => [
+            'request',
+            'requests',
+            'requested',
+            'mag-request',
+            'mag request',
+            'humingi',
+            'hiling',
+        ],
 
-    'doc' => [
-        'document',
-    ],
+        'file' => [
+            'file',
+            'filing',
+            'submit',
+            'submission',
+            'mag-file',
+            'mag file',
+            'mag-submit',
+            'mag submit',
+        ],
 
-    'papeles' => [
-        'documents',
-    ],
-];
+        'assistance' => [
+            'assistance',
+            'help',
+            'tulong',
+            'ayuda',
+        ],
+    ];
 
-public function __construct(
+
+    /*
+     * =========================================================
+     * GENERIC STOP WORDS
+     * =========================================================
+     *
+     * These words normally contribute very little meaning
+     * during FAQ comparison.
+     */
+    private const STOP_WORDS = [
+        /*
+         * English.
+         */
+        'the',
+        'a',
+        'an',
+        'and',
+        'or',
+        'is',
+        'are',
+        'am',
+        'i',
+        'me',
+        'my',
+        'you',
+        'your',
+        'do',
+        'does',
+        'did',
+        'how',
+        'what',
+        'where',
+        'when',
+        'why',
+        'who',
+        'can',
+        'could',
+        'would',
+        'should',
+        'to',
+        'for',
+        'of',
+        'in',
+        'on',
+        'at',
+        'with',
+        'from',
+        'about',
+        'under',
+        'this',
+        'that',
+        'it',
+        'be',
+        'have',
+        'has',
+        'had',
+
+        /*
+         * Filipino / Taglish.
+         */
+        'ang',
+        'ng',
+        'mga',
+        'sa',
+        'para',
+        'kay',
+        'at',
+        'o',
+        'ay',
+        'ako',
+        'ko',
+        'mo',
+        'niya',
+        'ito',
+        'iyon',
+        'kung',
+        'ba',
+        'po',
+        'opo',
+        'bang',
+        'raw',
+        'daw',
+    ];
+
+
+    /*
+     * =========================================================
+     * SCORE THRESHOLDS
+     * =========================================================
+     *
+     * Government information should use conservative matching.
+     *
+     * A FAQ must have enough evidence before it can be treated
+     * as a direct rule-based answer.
+     */
+    private const MIN_RULE_MATCH_SCORE = 35;
+
+    /*
+     * A very weak candidate is removed before the controller
+     * considers semantic fallback.
+     */
+    private const MIN_CANDIDATE_SCORE = 8;
+
+
+    /*
+     * =========================================================
+     * SCORE LIMITS
+     * =========================================================
+     *
+     * These constants make the scoring system easier to tune
+     * without scattering unexplained numbers throughout the
+     * calculation code.
+     */
+    private const MAX_SPECIFIC_TERM_SCORE = 24;
+
+    private const SPECIFIC_TERM_WEIGHT = 4;
+
+    private const MAX_CONCEPT_SCORE = 18;
+
+    private const CONCEPT_WEIGHT = 6;
+
+    private const MAX_KEYWORD_PHRASE_SCORE = 20;
+
+    private const MAX_QUESTION_PHRASE_SCORE = 30;
+
+    /*
+     * Maximum penalty for candidate-specific details
+     * that the user did not mention.
+     *
+     * This prevents a narrow FAQ from outranking a broader
+     * FAQ simply because it contains additional details.
+     */
+    private const MAX_UNMENTIONED_SPECIFICITY_PENALTY = 18;
+
+    /*
+     * Penalty applied for each meaningful candidate-specific
+     * phrase that is absent from the user's question.
+     */
+    private const UNMENTIONED_SPECIFIC_PHRASE_PENALTY = 6;
+
+
+    public function __construct(
         private FaqSemanticMatcherService $semanticMatcher,
         private FaqIntentService $intentService
     ) {
     }
 
-    /*
-     * Minimum confidence required before an FAQ can
-     * be returned to the chatbot.
-     *
-     * This prevents weak matches from producing
-     * potentially misleading government information.
-     */
-    private const MIN_MATCH_SCORE = 35;
 
-    /*
- * Minimum score required for a purely rule-based
- * match to be trusted without semantic verification.
- */
-private const MIN_RULE_MATCH_SCORE = 35;
-
-/*
- * Minimum amount of meaningful evidence required
- * before an FAQ is even considered a candidate
- * for semantic matching.
- */
-private const MIN_CANDIDATE_SCORE = 8;
-
-    /*
-     * Find the most relevant approved FAQs.
+    /**
+     * Find the strongest approved FAQ candidates.
      *
-     * This service ONLY retrieves existing FAQ records.
+     * This method performs retrieval and rule-based scoring.
      *
-     * It never generates an answer.
+     * It does NOT generate an answer.
      */
     public function match(
         string $question,
@@ -80,79 +254,74 @@ private const MIN_CANDIDATE_SCORE = 8;
     ): Collection {
 
         /*
-         * Normalize the user's question so that:
-         *
-         * "Paano mag-file?"
-         *
-         * and
-         *
-         * "Paano mag file?"
-         *
-         * are treated consistently.
+         * Normalize the user's question before comparison.
          */
-        $normalizedQuestion = $this->normalize($question);
+        $normalizedQuestion =
+            $this->normalize($question);
 
-/*
- * Determine the information intent of the user's question.
- *
- * Examples:
- *
- * "What documents do I need?"
- *      → requirements
- *
- * "How do I apply?"
- *      → procedure
- *
- * "How much does it cost?"
- *      → fees
- *
- * "Where is the office?"
- *      → location
- */
-$userIntent = $this->intentService->detect(
-    $question
-);
-
-/*
- * Stop immediately when the user submitted
- * an empty or meaningless question.
- */
-if ($normalizedQuestion === '') {
-    return collect();
-}
 
         /*
-         * Extract meaningful words.
-         *
-         * These are used only to find candidate FAQs.
-         *
-         * They do NOT determine the final answer.
+         * Never perform a database search for an empty question.
          */
-        $terms = $this->extractRetrievalTerms(
-    $normalizedQuestion
-);
+        if ($normalizedQuestion === '') {
+            return collect();
+        }
+
 
         /*
-         * Start with all FAQs.
+         * Determine what type of information the user is asking
+         * for using the rule-based intent classifier.
          */
-        $query = Faq::query()
-            ->with('agency');
+        $userIntent =
+            $this->intentService->detect(
+                $normalizedQuestion
+            );
+
 
         /*
-         * Restrict matching to an agency when the
-         * chatbot has an agency context.
+         * Extract generic retrieval terms.
+         *
+         * These terms are used only to reduce the database
+         * search space. They do not determine the final answer.
          */
-        if ($agencyId) {
+        $terms =
+            $this->extractRetrievalTerms(
+                $normalizedQuestion
+            );
+
+
+        /*
+         * Start with approved FAQ records.
+         *
+         * The Faq model uses SoftDeletes, so deleted records
+         * are automatically excluded from this query.
+         */
+        $query =
+            Faq::query()
+                ->with('agency');
+
+
+        /*
+         * If an agency has already been identified, restrict
+         * the search to that agency.
+         */
+        if ($agencyId !== null) {
+
             $query->where(
                 'agency_id',
                 $agencyId
             );
         }
 
+
         /*
-         * Retrieve only possible candidates.
+         * Search the FAQ question and keyword fields.
          *
-         * This is NOT the actual matching decision.
+         * User-controlled terms are escaped before being placed
+         * inside SQL LIKE expressions.
+         *
+         * This prevents %, _, and \ from changing the intended
+         * LIKE pattern.
          */
         if (!empty($terms)) {
 
@@ -160,18 +329,16 @@ if ($normalizedQuestion === '') {
 
                 foreach ($terms as $term) {
 
-                    /*
-                     * Escape SQL LIKE wildcard characters.
-                     *
-                     * This prevents user input such as "%".
-                     * from becoming a wildcard.
-                     */
-                    $safeTerm = addcslashes(
-                        $term,
-                        '%_\\'
-                    );
+                    $safeTerm =
+                        addcslashes(
+                            $term,
+                            '%_\\'
+                        );
 
-                    $like = "%{$safeTerm}%";
+
+                    $like =
+                        "%{$safeTerm}%";
+
 
                     $q->orWhere(
                         'question',
@@ -194,79 +361,74 @@ if ($normalizedQuestion === '') {
             });
         }
 
-        /*
-         * Limit the amount of database data that must
-         * be processed by PHP.
-         */
-        $faqs = $query
-            ->limit(100)
-            ->get();
 
         /*
-         * Score every candidate.
-         */
-        $scored = $faqs->map(
-            function (Faq $faq) use (
-    $normalizedQuestion,
-    $userIntent
-) {
-
-                $result = $this->calculateScore(
-    $normalizedQuestion,
-    $faq,
-    $userIntent
-);
-
-                /*
-                 * Attach the calculated score to the
-                 * model temporarily.
-                 */
-                $faq->match_score =
-                    $result['score'];
-
-                /*
-                 * Store the language selected by the
-                 * matcher.
-                 */
-                $faq->match_language =
-                    $result['language'];
-
-                /*
-                 * Store diagnostic information.
-                 *
-                 * This is useful when debugging why
-                 * an FAQ matched.
-                 */
-                $faq->match_reasons =
-                    $result['reasons'];
-
-                return $faq;
-            }
-        );
-
-        /*
-         * Reject anything below the confidence threshold.
+         * Bound the number of records that PHP must score.
          *
-         * This is the safety gate.
+         * This prevents an unnecessarily large FAQ dataset from
+         * causing expensive application-level processing.
          */
-        /*
- * Keep FAQs that have at least some meaningful
- * evidence.
- *
- * We intentionally do NOT require the full
- * rule-based confidence score yet.
- *
- * The semantic matcher will make the final
- * decision for weaker candidates.
- */
-$scored = $scored->filter(
-    fn (Faq $faq) =>
-        $faq->match_score >=
-        self::MIN_CANDIDATE_SCORE
-);
+        $faqs =
+            $query
+                ->limit(100)
+                ->get();
+
 
         /*
-         * Return the strongest FAQs first.
+         * Calculate a rule-based score for every retrieved FAQ.
+         */
+        $scored =
+            $faqs->map(
+                function (Faq $faq) use (
+                    $normalizedQuestion,
+                    $userIntent
+                ) {
+
+                    $result =
+                        $this->calculateScore(
+                            $normalizedQuestion,
+                            $faq,
+                            $userIntent
+                        );
+
+
+                    /*
+                     * These values exist only during the current
+                     * request.
+                     *
+                     * They are not saved to the database.
+                     */
+                    $faq->match_score =
+                        $result['score'];
+
+                    $faq->match_language =
+                        $result['language'];
+
+                    $faq->match_reasons =
+                        $result['reasons'];
+
+
+                    return $faq;
+                }
+            );
+
+
+        /*
+         * Remove candidates that have almost no evidence.
+         */
+        $scored =
+            $scored->filter(
+                fn (Faq $faq) =>
+                    $faq->match_score >=
+                    self::MIN_CANDIDATE_SCORE
+            );
+
+
+        /*
+         * Return the strongest candidates first.
+         *
+         * The controller can use these candidates later for
+         * direct answering, clarification, or semantic fallback.
          */
         return $scored
             ->sortByDesc('match_score')
@@ -274,89 +436,48 @@ $scored = $scored->filter(
             ->values();
     }
 
+
     /**
-     * Calculate the relevance score for one FAQ.
+     * Calculate the rule-based relevance score for one FAQ.
      */
     private function calculateScore(
-    string $question,
-    Faq $faq,
-    string $userIntent
-): array {
+        string $question,
+        Faq $faq,
+        string $userIntent
+    ): array {
 
         $score = 0;
 
         $reasons = [];
 
-        /*
- * Determine the intent of the stored FAQ.
- *
- * We use the English FAQ question as the primary
- * source because it is the canonical FAQ record.
- *
- * The intent detector is rule-based, so this does
- * not introduce another AI request.
- */
-$faqIntent = $this->intentService->detect(
-    $faq->question ?? ''
-);
-
-/*
- * Store both intents temporarily on this FAQ model.
- *
- * match_user_intent:
- *     The intent of the user's current question.
- *
- * match_intent:
- *     The intent of this particular FAQ.
- *
- * These are temporary runtime properties.
- * They are NOT written to the database.
- */
-$faq->match_user_intent = $userIntent;
-$faq->match_intent = $faqIntent;
-
-/*
- * Intent compatibility is used as a ranking signal.
- *
- * We intentionally do NOT apply a penalty yet.
- *
- * First we record whether the intents agree.
- * This lets us inspect the behavior safely before
- * making intent mismatch affect the final score.
- */
-$intentMatches =
-    $userIntent !== 'other' &&
-    $faqIntent !== 'other' &&
-    $userIntent === $faqIntent;
-
-
-    /*
- * Intent safety boundary.
- *
- * When both the user's intent and the FAQ's intent
- * are known, they must agree.
- *
- * Example:
- *
- * User intent:
- * procedure
- *
- * FAQ intent:
- * requirements
- *
- * These questions may concern the same agency or
- * service, but the FAQ does not answer what the
- * user is asking.
- *
- * Returning a score of zero prevents the FAQ from
- * reaching the semantic matcher as a misleading
- * candidate.
- */
-
-    
 
         /*
-         * Normalize trusted FAQ questions.
+         * Detect the intent of the stored FAQ.
+         */
+        $faqIntent =
+            $this->intentService->detect(
+                $faq->question ?? ''
+            );
+
+
+        /*
+         * Keep the detected intents attached to the model for
+         * diagnostic purposes and later semantic processing.
+         */
+        $faq->match_user_intent =
+            $userIntent;
+
+        $faq->match_intent =
+            $faqIntent;
+
+
+        /*
+         * =====================================================
+         * 1. EXACT QUESTION MATCH
+         * =====================================================
+         *
+         * An exact English or Filipino FAQ question is the
+         * strongest possible rule-based match.
          */
         $englishQuestion =
             $this->normalize(
@@ -368,11 +489,6 @@ $intentMatches =
                 $faq->question_fil ?? ''
             );
 
-        /*
-         * -----------------------------------------------------
-         * 1. EXACT QUESTION MATCH
-         * -----------------------------------------------------
-         */
 
         if (
             $question !== '' &&
@@ -383,10 +499,11 @@ $intentMatches =
                 'score' => 100,
                 'language' => 'en',
                 'reasons' => [
-                    'exact English question'
+                    'exact English question',
                 ],
             ];
         }
+
 
         if (
             $question !== '' &&
@@ -398,95 +515,286 @@ $intentMatches =
                 'score' => 100,
                 'language' => 'fil',
                 'reasons' => [
-                    'exact Filipino question'
+                    'exact Filipino question',
                 ],
             ];
         }
 
-        if (
-    $userIntent !== 'other' &&
-    $faqIntent !== 'other' &&
-    !$intentMatches
-) {
-
-    return [
-        'score' => 0,
-        'language' => 'en',
-        'reasons' => [
-            "intent mismatch: user={$userIntent}, faq={$faqIntent}"
-        ],
-    ];
-}
-
-/*
- * Record matching intent as diagnostic evidence.
- *
- * This does not add points by itself.
- * Intent compatibility is already enforced above.
- */
-if ($intentMatches) {
-
-    $reasons[] =
-        "intent match: {$userIntent}";
-}
 
         /*
-         * -----------------------------------------------------
-         * 2. ADMIN-APPROVED KEYWORD PHRASES
-         * -----------------------------------------------------
+         * =====================================================
+         * 2. INTENT SAFETY BOUNDARY
+         * =====================================================
          *
-         * Only MULTI-WORD keywords are accepted.
-         *
-         * "police"      → ignored
-         * "report"      → ignored
-         * "police report" → accepted
+         * If both intents are known but disagree, this FAQ is
+         * not allowed to directly answer the user's question.
          */
+        $intentKnown =
+            $userIntent !== 'other' &&
+            $faqIntent !== 'other';
 
-        $keywords = $this->extractKeywordPhrases(
-            $faq->keywords ?? ''
-        );
 
-        foreach ($keywords as $keyword) {
+        $intentMatches =
+            $intentKnown &&
+            $userIntent === $faqIntent;
 
-            /*
-             * Count the words in this keyword.
-             */
-            $wordCount = count(
-                preg_split(
-                    '/\s+/u',
-                    $keyword
+
+        if (
+            $intentKnown &&
+            !$intentMatches
+        ) {
+
+            return [
+                'score' => 0,
+                'language' => 'en',
+                'reasons' => [
+                    "intent mismatch: user={$userIntent}, faq={$faqIntent}",
+                ],
+            ];
+        }
+
+
+        /*
+         * Matching intent is useful evidence, but intent alone
+         * can never authorize a direct answer.
+         */
+        if ($intentMatches) {
+
+            $score += 12;
+
+            $reasons[] =
+                "intent match: {$userIntent}";
+        }
+
+
+        /*
+         * =====================================================
+         * 3. BUILD USER SEARCH REPRESENTATION
+         * =====================================================
+         */
+        $userTerms =
+            $this->extractTerms(
+                $question
+            );
+
+
+        $userConcepts =
+            $this->extractConcepts(
+                $question
+            );
+
+
+        $userPhrases =
+            $this->extractPhrases(
+                $question
+            );
+
+
+        /*
+         * =====================================================
+         * 4. BUILD FAQ SEARCH REPRESENTATION
+         * =====================================================
+         */
+        $englishTerms =
+            $this->extractTerms(
+                $englishQuestion
+            );
+
+
+        $filipinoTerms =
+            $this->extractTerms(
+                $filipinoQuestion
+            );
+
+
+        $englishConcepts =
+            $this->extractConcepts(
+                $englishQuestion
+            );
+
+
+        $filipinoConcepts =
+            $this->extractConcepts(
+                $filipinoQuestion
+            );
+
+
+        /*
+         * Administrator-approved keywords provide additional
+         * domain vocabulary.
+         */
+        $keywordPhrases =
+            $this->extractKeywordPhrases(
+                $faq->keywords ?? ''
+            );
+
+
+        /*
+         * =====================================================
+         * 5. SPECIFIC TERM MATCHING
+         * =====================================================
+         *
+         * We still reward specific individual terms, but we
+         * intentionally cap their total contribution.
+         */
+        $faqTerms =
+            array_values(
+                array_unique(
+                    array_merge(
+                        $englishTerms,
+                        $filipinoTerms
+                    )
                 )
             );
 
-            /*
-             * Ignore single-word keywords.
-             */
-            if ($wordCount < 2) {
-                continue;
-            }
+
+        $termHits =
+            array_values(
+                array_intersect(
+                    $userTerms,
+                    $faqTerms
+                )
+            );
+
+
+        /*
+         * Generic terms such as "document", "request", and
+         * "service" should not receive specific-term weight.
+         */
+        $genericConceptTerms =
+            $this->getGenericSynonymTerms();
+
+
+        $specificTermHits =
+            array_values(
+                array_filter(
+                    $termHits,
+                    fn ($term) =>
+                        !in_array(
+                            $term,
+                            $genericConceptTerms,
+                            true
+                        )
+                )
+            );
+
+
+        /*
+         * Every specific term contributes a modest amount.
+         *
+         * The total is capped so that a long question containing
+         * many overlapping words cannot automatically dominate.
+         */
+        $specificTermScore =
+            min(
+                self::MAX_SPECIFIC_TERM_SCORE,
+                count($specificTermHits) *
+                    self::SPECIFIC_TERM_WEIGHT
+            );
+
+
+        $score +=
+            $specificTermScore;
+
+
+        if (!empty($specificTermHits)) {
+
+            $reasons[] =
+                'specific term matches: ' .
+                implode(
+                    ', ',
+                    $specificTermHits
+                );
+        }
+
+
+        /*
+         * =====================================================
+         * 6. GENERIC CONCEPT MATCHING
+         * =====================================================
+         *
+         * Generic concepts help bridge English, Filipino, and
+         * Taglish wording differences.
+         */
+        $faqConcepts =
+            array_values(
+                array_unique(
+                    array_merge(
+                        $englishConcepts,
+                        $filipinoConcepts
+                    )
+                )
+            );
+
+
+        $conceptHits =
+            array_values(
+                array_intersect(
+                    $userConcepts,
+                    $faqConcepts
+                )
+            );
+
+
+        $conceptScore =
+            min(
+                self::MAX_CONCEPT_SCORE,
+                count($conceptHits) *
+                    self::CONCEPT_WEIGHT
+            );
+
+
+        $score +=
+            $conceptScore;
+
+
+        if (!empty($conceptHits)) {
+
+            $reasons[] =
+                'generic concept matches: ' .
+                implode(
+                    ', ',
+                    $conceptHits
+                );
+        }
+
+
+        /*
+         * =====================================================
+         * 7. DISTINCTIVE KEYWORD PHRASE MATCHING
+         * =====================================================
+         *
+         * Administrator-provided keyword phrases can provide
+         * strong evidence when the complete phrase occurs in
+         * the user's question.
+         */
+        $keywordPhraseScore =
+            0;
+
+
+        $keywordPhraseHits =
+            0;
+
+
+        foreach ($keywordPhrases as $keyword) {
 
             /*
-             * Exact approved phrase.
+             * Single-word keywords are handled by term scoring.
              */
-            if (
-                $question === $keyword
-            ) {
-
-                $score += min(
-                    60,
-                    30 + ($wordCount * 10)
+            $phraseWords =
+                $this->wordCount(
+                    $keyword
                 );
 
-                $reasons[] =
-                    'exact keyword phrase: ' .
-                    $keyword;
 
+            if ($phraseWords < 2) {
                 continue;
             }
 
+
             /*
-             * Approved phrase appears inside the
-             * user's question.
+             * Award points only when the complete keyword phrase
+             * appears in the user's question.
              */
             if (
                 $this->containsPhrase(
@@ -495,41 +803,71 @@ if ($intentMatches) {
                 )
             ) {
 
-                $score += min(
-                    50,
-                    20 + ($wordCount * 8)
-                );
+                $keywordPhraseHits++;
+
+
+                /*
+                 * Longer phrases carry more evidence.
+                 */
+                $phraseWeight =
+                    min(
+                        12,
+                        4 + ($phraseWords * 2)
+                    );
+
+
+                $keywordPhraseScore +=
+                    $phraseWeight;
+
 
                 $reasons[] =
-                    'keyword phrase: ' .
+                    'FAQ keyword phrase: ' .
                     $keyword;
             }
         }
 
-        /*
-         * -----------------------------------------------------
-         * 3. QUESTION PHRASE MATCHING
-         * -----------------------------------------------------
-         *
-         * Compare 2-word and 3-word phrases from the
-         * user's question against the stored FAQ questions.
-         *
-         * This helps with natural variations.
-         */
 
-        $questionPhrases =
-            $this->extractPhrases(
-                $question
+        /*
+         * Prevent keyword-heavy FAQs from dominating the score.
+         */
+        $keywordPhraseScore =
+            min(
+                self::MAX_KEYWORD_PHRASE_SCORE,
+                $keywordPhraseScore
             );
 
-        $englishPhraseHits = 0;
-        $filipinoPhraseHits = 0;
 
-        foreach ($questionPhrases as $phrase) {
+        $score +=
+            $keywordPhraseScore;
+
+
+        /*
+         * =====================================================
+         * 8. QUESTION PHRASE OVERLAP
+         * =====================================================
+         *
+         * Compare meaningful phrases from the user's question
+         * against the FAQ's actual questions.
+         */
+        $englishPhraseHits =
+            0;
+
+        $filipinoPhraseHits =
+            0;
+
+
+        foreach ($userPhrases as $phrase) {
 
             /*
-             * English FAQ question.
+             * Ignore phrases that are too short to be useful.
              */
+            if (
+                $this->wordCount($phrase) < 2
+            ) {
+                continue;
+            }
+
+
             if (
                 $this->containsPhrase(
                     $englishQuestion,
@@ -539,16 +877,12 @@ if ($intentMatches) {
 
                 $englishPhraseHits++;
 
-                $score += 8;
-
                 $reasons[] =
-                    'English question phrase: ' .
+                    'English phrase overlap: ' .
                     $phrase;
             }
 
-            /*
-             * Filipino FAQ question.
-             */
+
             if (
                 $filipinoQuestion !== '' &&
                 $this->containsPhrase(
@@ -559,335 +893,684 @@ if ($intentMatches) {
 
                 $filipinoPhraseHits++;
 
-                $score += 8;
-
                 $reasons[] =
-                    'Filipino question phrase: ' .
+                    'Filipino phrase overlap: ' .
                     $phrase;
             }
         }
 
-        /*
- * -----------------------------------------------------
- * 2. INDIVIDUAL CONCEPT MATCHING
- * -----------------------------------------------------
- *
- * Individual words provide weak evidence.
- *
- * They are useful for finding candidates but should
- * never be strong enough to directly answer a question.
- */
-
-/*
- * Use the controlled retrieval vocabulary when calculating
- * weak concept evidence as well.
- *
- * This allows equivalent words such as:
- *
- * papers → documents
- *
- * to contribute a small amount of evidence.
- *
- * This is still only weak evidence. Intent matching and
- * semantic verification remain responsible for the final decision.
- */
-$userTerms = $this->extractRetrievalTerms(
-    $question
-);
-
-$englishTerms = $this->extractTerms(
-    $englishQuestion
-);
-
-$filipinoTerms = $this->extractTerms(
-    $filipinoQuestion
-);
-
-$englishTermHits = count(
-    array_intersect(
-        $userTerms,
-        $englishTerms
-    )
-);
-
-$filipinoTermHits = count(
-    array_intersect(
-        $userTerms,
-        $filipinoTerms
-    )
-);
-
-/*
- * Each shared concept contributes only a small amount.
- */
-$termScore = min(
-    20,
-    ($englishTermHits + $filipinoTermHits) * 3
-);
-
-$score += $termScore;
-
-if ($englishTermHits > 0) {
-
-    $reasons[] =
-        'English concept matches: ' .
-        $englishTermHits;
-}
-
-if ($filipinoTermHits > 0) {
-
-    $reasons[] =
-        'Filipino concept matches: ' .
-        $filipinoTermHits;
-}
 
         /*
-         * -----------------------------------------------------
-         * 4. LANGUAGE DECISION
-         * -----------------------------------------------------
-         *
-         * Determine which FAQ question has stronger
-         * phrase-level evidence.
-         *
-         * Shared single words are intentionally ignored.
+         * Calculate phrase score separately before adding it.
          */
+        $phraseHitCount =
+            $englishPhraseHits +
+            $filipinoPhraseHits;
 
-        if (
-            $filipinoPhraseHits >
-            $englishPhraseHits
-        ) {
 
-            $language = 'fil';
+        $phraseScore =
+            min(
+                self::MAX_QUESTION_PHRASE_SCORE,
+                $phraseHitCount * 5
+            );
 
-        } else {
 
-            $language = 'en';
+        $score +=
+            $phraseScore;
+
+
+        /*
+         * =====================================================
+         * 9. SPECIFICITY BONUS
+         * =====================================================
+         *
+         * A longer phrase directly present in the FAQ is
+         * stronger evidence than several unrelated word matches.
+         */
+        $specificPhraseHits =
+            $this->getSpecificPhraseHits(
+                $userPhrases,
+                $englishQuestion,
+                $filipinoQuestion
+            );
+
+
+        if (!empty($specificPhraseHits)) {
+
+            /*
+             * Give a modest bonus to distinctive multi-word
+             * matches.
+             */
+            $specificityBonus =
+                min(
+                    18,
+                    count($specificPhraseHits) * 6
+                );
+
+
+            $score +=
+                $specificityBonus;
+
+
+            $reasons[] =
+                'distinctive phrase evidence: ' .
+                implode(
+                    ', ',
+                    $specificPhraseHits
+                );
         }
 
+
         /*
-         * -----------------------------------------------------
-         * 5. IMPORTANT SAFETY RULE
-         * -----------------------------------------------------
+         * =====================================================
+         * 10. EVIDENCE SAFETY CHECK
+         * =====================================================
          *
-         * If the match consists ONLY of shared words,
-         * do not allow it to reach the threshold.
-         *
-         * This prevents:
-         *
-         * "Where is the nearest police station?"
-         *
-         * from matching:
-         *
-         * "How do I file a police report?"
-         *
-         * simply because both contain "police".
+         * Generic intent/concept matches must never be enough
+         * to produce a direct answer.
          */
+        $hasSpecificEvidence =
+            !empty($specificTermHits) ||
+            $keywordPhraseHits > 0 ||
+            !empty($specificPhraseHits) ||
+            count($conceptHits) >= 2;
+
+
+        $hasPhraseEvidence =
+            $englishPhraseHits > 0 ||
+            $filipinoPhraseHits > 0 ||
+            $keywordPhraseHits > 0 ||
+            !empty($specificPhraseHits);
+
 
         /*
- * If there are no phrase matches, we may still have
- * useful individual concepts.
- *
- * These are allowed to create a candidate, but they
- * are NOT strong enough to directly answer the user.
- */
-if (
-    $englishPhraseHits === 0 &&
-    $filipinoPhraseHits === 0
-) {
+         * Without specific evidence, the candidate is too weak
+         * for a direct rule-based answer.
+         */
+        if (!$hasSpecificEvidence) {
 
-    /*
-     * Do not completely reject the FAQ here.
-     *
-     * The candidate may still be semantically related.
-     */
-    if ($score < self::MIN_CANDIDATE_SCORE) {
+            $score =
+                min(
+                    $score,
+                    self::MIN_RULE_MATCH_SCORE - 1
+                );
+
+
+            return [
+                'score' => $score,
+                'language' =>
+                    $filipinoPhraseHits >
+                    $englishPhraseHits
+                        ? 'fil'
+                        : 'en',
+                'reasons' => array_merge(
+                    $reasons,
+                    [
+                        'candidate only - insufficient specific evidence',
+                    ]
+                ),
+            ];
+        }
+
+
+        /*
+         * =====================================================
+         * 11. UNMENTIONED SPECIFICITY PENALTY
+         * =====================================================
+         *
+         * A candidate FAQ may contain additional specific
+         * details that the user never mentioned.
+         *
+         * Example:
+         *
+         * User:
+         * "What do I need for a Private Land Timber Permit?"
+         *
+         * Candidate A:
+         * "What documents are required to apply for a Private
+         * Land Timber Permit?"
+         *
+         * Candidate B:
+         * "Do I need to bring my land title when applying for a
+         * Private Land Timber Permit?"
+         *
+         * Candidate B introduces the specific detail
+         * "land title".
+         *
+         * Since the user did not mention that detail, Candidate B
+         * receives a small ranking penalty.
+         *
+         * This is intentionally generic and does not contain
+         * government-specific hardcoded words.
+         */
+        $unmentionedSpecificityPenalty =
+            $this->calculateUnmentionedSpecificityPenalty(
+                $userTerms,
+                $userPhrases,
+                $englishQuestion,
+                $filipinoQuestion
+            );
+
+
+        $score -=
+            $unmentionedSpecificityPenalty;
+
+
+        if (
+            $unmentionedSpecificityPenalty > 0
+        ) {
+
+            $reasons[] =
+                'unmentioned specific detail penalty: ' .
+                $unmentionedSpecificityPenalty;
+        }
+
+
+        /*
+         * =====================================================
+         * 12. FINAL SCORE SAFETY
+         * =====================================================
+         *
+         * Never allow the internal score to exceed 100.
+         */
+        $score =
+            min(
+                100,
+                $score
+            );
+
+
+        /*
+         * Determine the strongest question language evidence.
+         */
+        $language =
+            $filipinoPhraseHits >
+            $englishPhraseHits
+                ? 'fil'
+                : 'en';
+
+
+        /*
+         * Specific terms without any meaningful phrase evidence
+         * are still considered too uncertain for a direct answer.
+         *
+         * They remain available as candidates for semantic
+         * verification.
+         */
+        if (!$hasPhraseEvidence) {
+
+            $score =
+                min(
+                    $score,
+                    self::MIN_RULE_MATCH_SCORE - 1
+                );
+
+
+            $reasons[] =
+                'requires semantic verification';
+        }
+
 
         return [
-            'score' => 0,
-            'language' => 'en',
-            'reasons' => [
-                'insufficient candidate evidence'
-            ],
-        ];
-    }
-
-    return [
-        'score' => min($score, 34),
-        'language' => 'en',
-        'reasons' => array_merge(
-            $reasons,
-            [
-                'candidate only - requires semantic verification'
-            ]
-        ),
-    ];
-}
-
-        return [
-            'score' => min($score, 100),
+            'score' => $score,
             'language' => $language,
             'reasons' => $reasons,
         ];
     }
 
+
     /**
-     * Convert text into a normalized representation.
+     * Find meaningful multi-word phrases that provide
+     * distinctive evidence for a candidate FAQ.
+     */
+    private function getSpecificPhraseHits(
+        array $userPhrases,
+        string $englishQuestion,
+        string $filipinoQuestion
+    ): array {
+
+        $hits = [];
+
+
+        foreach ($userPhrases as $phrase) {
+
+            /*
+             * Two-word phrases are useful, while three-word
+             * phrases are generally stronger.
+             */
+            $wordCount =
+                $this->wordCount(
+                    $phrase
+                );
+
+
+            if ($wordCount < 2) {
+                continue;
+            }
+
+
+            /*
+             * Ignore phrases composed entirely of generic
+             * synonym terms.
+             */
+            $phraseTerms =
+                $this->extractTerms(
+                    $phrase
+                );
+
+
+            $genericTerms =
+                $this->getGenericSynonymTerms();
+
+
+            $specificTerms =
+                array_filter(
+                    $phraseTerms,
+                    fn ($term) =>
+                        !in_array(
+                            $term,
+                            $genericTerms,
+                            true
+                        )
+                );
+
+
+            /*
+             * At least one meaningful non-generic term is
+             * required before this becomes distinctive evidence.
+             */
+            if (empty($specificTerms)) {
+                continue;
+            }
+
+
+            /*
+             * Check whether the phrase appears in either
+             * language version of the FAQ.
+             */
+            $matchesEnglish =
+                $this->containsPhrase(
+                    $englishQuestion,
+                    $phrase
+                );
+
+
+            $matchesFilipino =
+                $filipinoQuestion !== '' &&
+                $this->containsPhrase(
+                    $filipinoQuestion,
+                    $phrase
+                );
+
+
+            if (
+                $matchesEnglish ||
+                $matchesFilipino
+            ) {
+
+                $hits[] =
+                    $phrase;
+            }
+        }
+
+
+        return array_values(
+            array_unique(
+                $hits
+            )
+        );
+    }
+
+
+    /**
+ * Calculate a penalty for specific FAQ details that the
+ * user did not mention.
+ *
+ * The penalty considers both the FAQ question and the
+ * administrator-provided keywords.
+ *
+ * This allows the matcher to distinguish a broad FAQ from
+ * a narrower FAQ without hardcoding government-specific terms.
+ */
+private function calculateUnmentionedSpecificityPenalty(
+    array $userTerms,
+    array $userPhrases,
+    string $englishQuestion,
+    string $filipinoQuestion,
+    string $keywords = ''
+): int {
+
+    /*
+     * Generic synonym terms should not be treated as
+     * candidate-specific details.
+     */
+    $genericTerms =
+        $this->getGenericSynonymTerms();
+
+
+    /*
+     * "need" is part of the requirement concept but is not
+     * currently represented as an individual generic synonym.
+     */
+    $genericTerms[] =
+        'need';
+
+
+    /*
+     * Convert the user's individual terms into a lookup set.
+     */
+    $userTermSet = [];
+
+
+    foreach ($userTerms as $term) {
+
+        $userTermSet[$term] =
+            true;
+    }
+
+
+    /*
+     * Convert the user's phrases into a lookup set.
+     */
+    $userPhraseSet = [];
+
+
+    foreach ($userPhrases as $phrase) {
+
+        $userPhraseSet[$phrase] =
+            true;
+    }
+
+
+    /*
+     * Combine the English and Filipino FAQ questions.
+     */
+    $faqText =
+        trim(
+            $englishQuestion . ' ' . $filipinoQuestion
+        );
+
+
+    /*
+     * Generate meaningful phrases from the FAQ questions.
+     */
+    $faqPhrases =
+        $this->extractPhrases(
+            $faqText
+        );
+
+
+    /*
+     * Administrator-provided keywords can contain important
+     * domain-specific phrases such as "land title".
+     */
+    $keywordPhrases =
+        $this->extractKeywordPhrases(
+            $keywords
+        );
+
+
+    /*
+     * Combine question phrases and administrator keywords.
+     */
+    $candidatePhrases =
+        array_values(
+            array_unique(
+                array_merge(
+                    $faqPhrases,
+                    $keywordPhrases
+                )
+            )
+        );
+
+
+    /*
+     * Start with no penalty.
+     */
+    $penalty =
+        0;
+
+
+    /*
+     * Examine every candidate-specific phrase.
+     */
+    foreach ($candidatePhrases as $phrase) {
+
+        /*
+         * Ignore single-word phrases.
+         */
+        if (
+            $this->wordCount($phrase) < 2
+        ) {
+            continue;
+        }
+
+
+        /*
+         * Extract the individual words from the phrase.
+         */
+        $phraseTerms =
+            $this->extractTerms(
+                $phrase
+            );
+
+
+        /*
+         * Remove generic words.
+         */
+        $specificTerms =
+            array_values(
+                array_filter(
+                    $phraseTerms,
+                    fn ($term) =>
+                        !in_array(
+                            $term,
+                            $genericTerms,
+                            true
+                        )
+                )
+            );
+
+
+        /*
+         * Require at least two specific words.
+         *
+         * This prevents ordinary phrases from creating
+         * unnecessary penalties.
+         */
+        if (
+            count($specificTerms) < 2
+        ) {
+            continue;
+        }
+
+
+        /*
+         * If the complete phrase was explicitly mentioned
+         * by the user, it is relevant and should not be penalized.
+         */
+        if (
+            isset(
+                $userPhraseSet[$phrase]
+            )
+        ) {
+            continue;
+        }
+
+
+        /*
+         * Check whether the user already mentioned every
+         * important word contained in this phrase.
+         */
+        $allSpecificTermsMentioned =
+            true;
+
+
+        foreach ($specificTerms as $term) {
+
+            if (
+                !isset(
+                    $userTermSet[$term]
+                )
+            ) {
+
+                $allSpecificTermsMentioned =
+                    false;
+
+                break;
+            }
+        }
+
+
+        /*
+         * If the user already supplied all the specific
+         * vocabulary, this is not an unmentioned detail.
+         */
+        if (
+            $allSpecificTermsMentioned
+        ) {
+            continue;
+        }
+
+
+        /*
+         * Apply the penalty.
+         */
+        $penalty +=
+            self::UNMENTIONED_SPECIFIC_PHRASE_PENALTY;
+
+
+        /*
+         * Keep the penalty bounded.
+         */
+        if (
+            $penalty >=
+            self::MAX_UNMENTIONED_SPECIFICITY_PENALTY
+        ) {
+
+            return
+                self::MAX_UNMENTIONED_SPECIFICITY_PENALTY;
+        }
+    }
+
+
+    return $penalty;
+}
+
+
+    /**
+     * Normalize text consistently.
      */
     private function normalize(
         string $text
     ): string {
 
         /*
-         * Convert everything to lowercase.
+         * Convert uppercase characters to lowercase.
          */
-        $text = mb_strtolower(
-            $text,
-            'UTF-8'
-        );
+        $text =
+            mb_strtolower(
+                $text,
+                'UTF-8'
+            );
+
 
         /*
-         * Normalize common punctuation.
+         * Normalize common punctuation variants.
          */
-        $text = str_replace(
-            [
-                '–',
-                '—',
-                '’',
-                '“',
-                '”'
-            ],
-            [
-                '-',
-                '-',
-                "'",
-                '"',
-                '"'
-            ],
-            $text
-        );
+        $text =
+            str_replace(
+                [
+                    '–',
+                    '—',
+                    '’',
+                    '“',
+                    '”',
+                ],
+                [
+                    '-',
+                    '-',
+                    "'",
+                    '"',
+                    '"',
+                ],
+                $text
+            );
+
 
         /*
          * Convert punctuation into spaces.
          *
-         * This allows:
-         *
-         * "mag-file"
-         *
-         * and
-         *
-         * "mag file"
-         *
-         * to behave consistently.
+         * This keeps words from accidentally being joined.
          */
-        $text = preg_replace(
-            '/[^\p{L}\p{N}\s-]+/u',
-            ' ',
-            $text
-        );
+        $text =
+            preg_replace(
+                '/[^\p{L}\p{N}\s-]+/u',
+                ' ',
+                $text
+            );
+
 
         /*
-         * Normalize repeated whitespace.
+         * Collapse repeated whitespace.
          */
-        $text = preg_replace(
-            '/\s+/u',
-            ' ',
-            $text
-        );
+        $text =
+            preg_replace(
+                '/\s+/u',
+                ' ',
+                $text
+            );
+
 
         return trim($text);
     }
 
+
     /**
-     * Extract meaningful individual terms.
-     *
-     * These terms are used ONLY for database candidate
-     * retrieval.
+     * Extract useful terms from text.
      */
     private function extractTerms(
-        string $question
+        string $text
     ): array {
 
-        $words = preg_split(
-            '/\s+/u',
-            $question
-        );
+        $words =
+            preg_split(
+                '/\s+/u',
+                $text
+            );
 
-        /*
-         * Common words that are not useful for retrieving
-         * candidate FAQs.
-         */
-        $stopWords = [
-
-            /*
-             * English.
-             */
-            'the',
-            'a',
-            'an',
-            'and',
-            'or',
-            'is',
-            'are',
-            'am',
-            'i',
-            'me',
-            'my',
-            'do',
-            'does',
-            'did',
-            'how',
-            'what',
-            'where',
-            'when',
-            'why',
-            'who',
-            'can',
-            'could',
-            'would',
-            'should',
-            'to',
-            'for',
-            'of',
-            'in',
-            'on',
-            'at',
-            'with',
-
-            /*
-             * Filipino/Taglish.
-             *
-             * Notice that "paano" is NOT removed.
-             *
-             * It is useful for language detection and
-             * question intent.
-             */
-            'ang',
-            'ng',
-            'mga',
-            'sa',
-            'na',
-            'ay',
-            'ako',
-            'ko',
-            'mo',
-            'ito',
-            'iyon',
-            'kung',
-            'at',
-            'o',
-            'ba',
-            'po',
-            'opo',
-        ];
 
         $terms = [];
 
+
         foreach ($words as $word) {
 
-            $word = trim($word);
+            $word =
+                trim(
+                    $word
+                );
+
 
             /*
-             * Ignore very short terms.
+             * Remove leading/trailing hyphens.
+             */
+            $word =
+                trim(
+                    $word,
+                    '-'
+                );
+
+
+            /*
+             * Ignore empty tokens.
+             */
+            if ($word === '') {
+                continue;
+            }
+
+
+            /*
+             * Ignore extremely short tokens.
              */
             if (
                 mb_strlen(
@@ -898,218 +1581,455 @@ if (
                 continue;
             }
 
+
             /*
-             * Ignore common filler words.
+             * Ignore generic grammatical words.
              */
             if (
                 in_array(
                     $word,
-                    $stopWords,
+                    self::STOP_WORDS,
                     true
                 )
             ) {
                 continue;
             }
 
-            $terms[] = $word;
+
+            $terms[] =
+                $word;
         }
 
+
+        /*
+         * Remove duplicate terms.
+         */
         return array_values(
-            array_unique($terms)
+            array_unique(
+                $terms
+            )
         );
     }
 
+
     /**
- * Build terms specifically for database candidate retrieval.
- *
- * This starts with the normal terms and then adds
- * controlled synonyms.
- *
- * The expanded terms are used only to discover
- * possible FAQ candidates. They do not determine
- * the final answer.
- */
-private function extractRetrievalTerms(
-    string $question
-): array {
-
-    /*
-     * Start with the existing term extraction logic.
+     * Extract database retrieval terms.
+     *
+     * This method intentionally performs only generic linguistic
+     * expansion.
      */
-    $terms = $this->extractTerms(
-        $question
-    );
+    private function extractRetrievalTerms(
+        string $question
+    ): array {
 
-    /*
-     * Keep the original terms.
-     */
-    $expandedTerms = $terms;
+        $terms =
+            $this->extractTerms(
+                $question
+            );
 
-    /*
-     * Add approved synonyms when available.
-     */
-    foreach ($terms as $term) {
 
-        /*
-         * Skip terms that have no configured synonym.
-         */
-        if (
-            !isset(
-                self::RETRIEVAL_SYNONYMS[$term]
-            )
-        ) {
-            continue;
+        $expanded =
+            $terms;
+
+
+        foreach ($terms as $term) {
+
+            foreach (
+                self::GENERIC_SYNONYMS
+                as $variants
+            ) {
+
+                /*
+                 * Normalize every synonym before comparison.
+                 */
+                $normalizedVariants =
+                    array_map(
+                        fn ($value) =>
+                            $this->normalize(
+                                $value
+                            ),
+                        $variants
+                    );
+
+
+                /*
+                 * Expand only when the user's term belongs
+                 * to a generic synonym group.
+                 */
+                if (
+                    in_array(
+                        $term,
+                        $normalizedVariants,
+                        true
+                    )
+                ) {
+
+                    foreach (
+                        $normalizedVariants
+                        as $variant
+                    ) {
+
+                        $expanded[] =
+                            $variant;
+                    }
+                }
+            }
         }
 
+
         /*
-         * Add every approved synonym.
+         * Add meaningful phrases to improve database retrieval.
          */
         foreach (
-            self::RETRIEVAL_SYNONYMS[$term]
-            as $synonym
+            $this->extractPhrases(
+                $question
+            ) as $phrase
         ) {
 
-            $expandedTerms[] =
-                $synonym;
+            $expanded[] =
+                $phrase;
         }
+
+
+        /*
+         * Remove duplicates before constructing the query.
+         */
+        return array_values(
+            array_unique(
+                $expanded
+            )
+        );
     }
 
-    /*
-     * Remove duplicate terms and reset array indexes.
-     */
-    return array_values(
-        array_unique(
-            $expandedTerms
-        )
-    );
-}
 
     /**
-     * Convert keyword storage into clean phrases.
+     * Convert generic synonym matches into concept identifiers.
+     */
+    private function extractConcepts(
+        string $text
+    ): array {
+
+        $text =
+            $this->normalize(
+                $text
+            );
+
+
+        $concepts = [];
+
+
+        foreach (
+            self::GENERIC_SYNONYMS
+            as $concept => $variants
+        ) {
+
+            foreach ($variants as $variant) {
+
+                $normalizedVariant =
+                    $this->normalize(
+                        $variant
+                    );
+
+
+                if (
+                    $this->containsPhrase(
+                        $text,
+                        $normalizedVariant
+                    )
+                ) {
+
+                    $concepts[] =
+                        $concept;
+
+                    break;
+                }
+            }
+        }
+
+
+        return array_values(
+            array_unique(
+                $concepts
+            )
+        );
+    }
+
+
+    /**
+     * Return individual words belonging to generic synonym
+     * groups.
+     */
+    private function getGenericSynonymTerms(): array
+    {
+        $terms = [];
+
+
+        foreach (
+            self::GENERIC_SYNONYMS
+            as $variants
+        ) {
+
+            foreach ($variants as $variant) {
+
+                $normalized =
+                    $this->normalize(
+                        $variant
+                    );
+
+
+                /*
+                 * Only individual words belong in this list.
+                 */
+                if (
+                    !str_contains(
+                        $normalized,
+                        ' '
+                    )
+                ) {
+
+                    $terms[] =
+                        $normalized;
+                }
+            }
+        }
+
+
+        return array_values(
+            array_unique(
+                $terms
+            )
+        );
+    }
+
+
+    /**
+     * Extract administrator-provided keyword phrases.
      */
     private function extractKeywordPhrases(
         string $keywords
     ): array {
 
         /*
-         * Treat line breaks and semicolons as separators.
+         * Treat commas, semicolons, and line breaks as separators.
          */
-        $keywords = str_replace(
-            [
-                "\r\n",
-                "\r",
-                "\n",
-                ';'
-            ],
-            ',',
-            $keywords
-        );
+        $keywords =
+            str_replace(
+                [
+                    "\r\n",
+                    "\r",
+                    "\n",
+                    ';',
+                ],
+                ',',
+                $keywords
+            );
 
-        $items = explode(
-            ',',
-            $keywords
-        );
+
+        $items =
+            explode(
+                ',',
+                $keywords
+            );
+
 
         $result = [];
 
+
         foreach ($items as $item) {
 
-            $item = $this->normalize(
-                $item
-            );
+            $item =
+                $this->normalize(
+                    $item
+                );
+
 
             if ($item === '') {
                 continue;
             }
 
-            $result[] = $item;
+
+            $result[] =
+                $item;
         }
 
+
         return array_values(
-            array_unique($result)
+            array_unique(
+                $result
+            )
         );
     }
 
+
     /**
-     * Generate 2-word and 3-word phrases.
+     * Generate meaningful two-word and three-word phrases.
      */
-    /**
- * Generate meaningful 2-word and 3-word phrases.
- *
- * Unlike the previous implementation, this method
- * removes common stop words before creating phrases.
- *
- * This prevents generic phrases such as:
- *
- * "how do"
- * "do i"
- * "for a"
- *
- * from being treated as meaningful FAQ evidence.
- */
-private function extractPhrases(
-    string $question
-): array {
+    private function extractPhrases(
+        string $question
+    ): array {
 
-    /*
-     * Reuse the same stop-word rules used by
-     * individual concept matching.
-     */
-    $words = $this->extractTerms(
-        $question
-    );
+        /*
+         * Stopwords are removed before phrase generation.
+         */
+        $words =
+            $this->extractTerms(
+                $question
+            );
 
-    $phrases = [];
 
-    $count = count($words);
+        $phrases = [];
 
-    /*
-     * Generate 2-word phrases from meaningful terms.
-     */
-    for (
-        $i = 0;
-        $i < $count - 1;
-        $i++
-    ) {
 
-        $phrases[] =
-            $words[$i] . ' ' .
-            $words[$i + 1];
+        $count =
+            count(
+                $words
+            );
+
+
+        /*
+         * Generate adjacent two-word phrases.
+         */
+        for (
+            $i = 0;
+            $i < $count - 1;
+            $i++
+        ) {
+
+            $phrase =
+                $words[$i] . ' ' .
+                $words[$i + 1];
+
+
+            /*
+             * Both words should contain enough information.
+             */
+            if (
+                mb_strlen(
+                    $words[$i],
+                    'UTF-8'
+                ) >= 4 &&
+                mb_strlen(
+                    $words[$i + 1],
+                    'UTF-8'
+                ) >= 4
+            ) {
+
+                $phrases[] =
+                    $phrase;
+            }
+        }
+
+
+        /*
+         * Generate adjacent three-word phrases.
+         */
+        for (
+            $i = 0;
+            $i < $count - 2;
+            $i++
+        ) {
+
+            $phraseWords = [
+                $words[$i],
+                $words[$i + 1],
+                $words[$i + 2],
+            ];
+
+
+            /*
+             * At least two words must be reasonably informative.
+             */
+            $meaningfulCount =
+                count(
+                    array_filter(
+                        $phraseWords,
+                        fn ($word) =>
+                            mb_strlen(
+                                $word,
+                                'UTF-8'
+                            ) >= 5
+                    )
+                );
+
+
+            if (
+                $meaningfulCount >= 2
+            ) {
+
+                $phrases[] =
+                    implode(
+                        ' ',
+                        $phraseWords
+                    );
+            }
+        }
+
+
+        return array_values(
+            array_unique(
+                $phrases
+            )
+        );
     }
 
-    /*
-     * Generate 3-word phrases from meaningful terms.
-     */
-    for (
-        $i = 0;
-        $i < $count - 2;
-        $i++
-    ) {
-
-        $phrases[] =
-            $words[$i] . ' ' .
-            $words[$i + 1] . ' ' .
-            $words[$i + 2];
-    }
-
-    /*
-     * Remove duplicate phrases.
-     */
-    return array_values(
-        array_unique(
-            $phrases
-        )
-    );
-}
 
     /**
-     * Check whether a complete phrase exists.
+     * Count words in a normalized phrase.
+     */
+    private function wordCount(
+        string $text
+    ): int {
+
+        $words =
+            preg_split(
+                '/\s+/u',
+                trim($text)
+            );
+
+
+        return count(
+            array_filter(
+                $words,
+                fn ($word) =>
+                    $word !== ''
+            )
+        );
+    }
+
+
+    /**
+     * Determine whether a complete phrase exists inside text.
      */
     private function containsPhrase(
         string $haystack,
         string $phrase
     ): bool {
 
+        $haystack =
+            $this->normalize(
+                $haystack
+            );
+
+
+        $phrase =
+            $this->normalize(
+                $phrase
+            );
+
+
+        if (
+            $haystack === '' ||
+            $phrase === ''
+        ) {
+            return false;
+        }
+
+
+        /*
+         * Surrounding spaces provide simple word boundaries.
+         *
+         * Therefore "farmer" does not match "farmerhood".
+         */
         return str_contains(
             ' ' . $haystack . ' ',
             ' ' . $phrase . ' '
