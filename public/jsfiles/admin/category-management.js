@@ -28,11 +28,27 @@ const formMethod = document.getElementById('form-method');
 
 const categoryName = document.getElementById('category_name');
 // ================= CURRENT MODE =================
+// ================= CURRENT MODE =================
+
 let currentMode = "add";
+
+/*
+ * Stores the ID of the category currently being edited.
+ *
+ * null means that the modal is currently creating
+ * a new category.
+ */
+let currentCategoryId = null;
 
 // ================= OPEN =================
 function openModal(){
+
     currentMode = "add";
+
+    /*
+     * No existing category is being edited.
+     */
+    currentCategoryId = null;
 
     categoryForm.reset();
 
@@ -49,6 +65,14 @@ function openModal(){
     categoryName.value = "";
 
     colorInput.value = "#3B82F6";
+
+    /*
+ * Check the default color immediately when the
+ * Add Category modal opens.
+ */
+updateColorUsage(
+    colorInput.value
+);
 
     colorChips.forEach(chip => {
 
@@ -70,6 +94,15 @@ function openEditModal(button){
 
     currentMode = "edit";
 
+    /*
+     * Remember which category is being edited.
+     *
+     * Its own color should not be reported as
+     * "already used" by another category.
+     */
+    currentCategoryId =
+        Number(button.dataset.id);
+
     if(window.resetFormValidation){
         resetFormValidation(categoryForm);
     }
@@ -79,6 +112,13 @@ function openEditModal(button){
     categoryName.value = button.dataset.name;
 
     colorInput.value = button.dataset.color;
+
+    /*
+ * Check the category's current color.
+ */
+updateColorUsage(
+    colorInput.value
+);
 
     formMethod.value = "PUT";
 
@@ -117,19 +157,154 @@ modalBack.addEventListener('click', (e) => {
 
 // ================= COLOR PICKER =================
 
-const colorInput = document.getElementById('display_color');
+const colorInput =
+    document.getElementById('display_color');
 
-const colorChips = document.querySelectorAll('.color-chip');
+const colorChips =
+    document.querySelectorAll('.color-chip');
+
+
+/*
+ * Existing category color information supplied by
+ * the Laravel controller.
+ *
+ * This data is used only to inform the administrator
+ * about colors that are already being used.
+ */
+const categoryColorUsage =
+    window.categoryColorUsage || [];
+
+
+
+/*
+ * Check whether the selected color is already being used
+ * by another category.
+ *
+ * This is an informational UX feature only.
+ * It does not prevent the administrator from using the color.
+ */
+function updateColorUsage(selectedColor){
+
+    /*
+     * Normalize the selected color so comparisons are
+     * case-insensitive.
+     *
+     * Example:
+     * #3b82f6 and #3B82F6 are treated as the same color.
+     */
+    const normalizedColor =
+        selectedColor.toUpperCase();
+
+
+    /*
+     * Find all categories that currently use this color.
+     *
+     * The category being edited is excluded because a
+     * category using its own existing color is not a conflict.
+     */
+    const matchingCategories =
+        categoryColorUsage.filter(category => {
+
+            return (
+                category.display_color.toUpperCase() === normalizedColor &&
+                category.id !== currentCategoryId
+            );
+
+        });
+
+
+    /*
+     * Find the small information area underneath
+     * the color palette.
+     */
+    const usageElement =
+        document.getElementById("color-usage");
+
+
+    /*
+     * Stop safely if the indicator has not been added
+     * to the Blade yet.
+     */
+    if(!usageElement){
+        return;
+    }
+
+
+    /*
+     * No other category uses this color.
+     */
+    if(matchingCategories.length === 0){
+
+    /*
+     * No other category uses this color.
+     *
+     * Because duplicate colors are allowed, there is
+     * no need to display an "Available" message.
+     *
+     * Leaving the area empty keeps the color picker
+     * visually clean.
+     */
+    usageElement.innerHTML = "";
+
+    return;
+}
+
+
+    /*
+     * Collect the names of categories using this color.
+     */
+    const categoryNames =
+        matchingCategories
+            .map(category => category.category_name)
+            .join(", ");
+
+
+    /*
+     * Inform the administrator that the color is already
+     * being used.
+     *
+     * This is intentionally NOT treated as an error.
+     */
+    usageElement.innerHTML = `
+        <span class="color-usage-used">
+            <i class="ph-light ph-info"></i>
+            Used by ${categoryNames}
+        </span>
+    `;
+}
 
 colorChips.forEach(chip => {
 
     chip.addEventListener('click', () => {
 
-        colorChips.forEach(c => c.classList.remove('active'));
+        /*
+         * Remove the active state from all color chips.
+         */
+        colorChips.forEach(c =>
+            c.classList.remove('active')
+        );
 
+
+        /*
+         * Mark the selected color as active.
+         */
         chip.classList.add('active');
 
-        colorInput.value = chip.dataset.color;
+
+        /*
+         * Store the selected color in the form.
+         */
+        colorInput.value =
+            chip.dataset.color;
+
+
+        /*
+         * Check whether another category already
+         * uses this color.
+         */
+        updateColorUsage(
+            chip.dataset.color
+        );
 
     });
 

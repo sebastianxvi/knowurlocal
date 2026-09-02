@@ -483,7 +483,6 @@
 
     </label>
 
-    <div class="color-grid">
 
         @php
 
@@ -578,6 +577,13 @@ $colors = [
 
 </div>
 
+<div
+    id="color-usage"
+    class="color-usage"
+    aria-live="polite"
+>
+</div>
+
     </div>
 
                 </div>
@@ -606,7 +612,19 @@ window.categoryRoutes = {
 
 };
 
+
+/*
+ * Existing category colors supplied by Laravel.
+ *
+ * The controller already limits this data to:
+ * ID, category name, and display color.
+ *
+ * JavaScript uses it only for UX feedback.
+ */
+window.categoryColorUsage = @json($categoryColorUsage);
+
 </script>
+
 @if(session('success'))
 <script>
 window.__FLASH_SUCCESS__=@json(session('success'));

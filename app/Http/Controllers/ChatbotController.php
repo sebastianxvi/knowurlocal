@@ -554,7 +554,7 @@ public function submitSupportRequest(Request $request)
  * - Contact information
  * - Agency-specific office information
  */
-private function isRelevant(string $question): bool
+private function isRelevant(string $question): ?bool
 {
     try {
 
@@ -851,21 +851,26 @@ PROMPT
 
     } catch (\Throwable $e) {
 
-        /*
-         * Do not expose provider/API errors to the user.
-         */
-        \Log::warning(
-            'KNOWURLOCAL scope classification failed.',
-            [
-                'error' => $e->getMessage(),
-            ]
-        );
+    /*
+     * The AI classifier failed because of an external
+     * provider, network, timeout, or configuration problem.
+     *
+     * This does NOT mean the user's question is
+     * out of scope.
+     *
+     * null represents:
+     *
+     *      "Unable to determine scope."
+     */
+    \Log::warning(
+        'KNOWURLOCAL scope classification failed.',
+        [
+            'error' => $e->getMessage(),
+        ]
+    );
 
-        /*
-         * Fail closed.
-         */
-        return false;
-    }
+    return null;
+}
 }
 
     /**
@@ -1089,18 +1094,27 @@ Please visit {$mentionedAgency->agency_name} for accurate information.";
  *
  * The scope check prevents that FAQ from being used.
  */
-if (!$this->isRelevant($question)) {
+$scopeResult = $this->isRelevant($question);
+
+/*
+ * Only reject the question when the classifier
+ * explicitly determined that it is out of scope.
+ *
+ * null means the AI classifier was unavailable,
+ * so we do not treat the failure as a user error.
+ */
+if ($scopeResult === false) {
 
     $reply =
         "Sorry, this question is outside the scope of KNOWURLOCAL.";
 
     $this->logChat(
-    $question,
-    $reply,
-    'irrelevant',
-    'none',
-    $agencyId
-);
+        $question,
+        $reply,
+        'irrelevant',
+        'none',
+        $agencyId
+    );
 
     return response()->json([
         "choices" => [[

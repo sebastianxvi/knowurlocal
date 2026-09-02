@@ -122,15 +122,32 @@ class CategoryController extends Controller
          */
         $trashedCount = Category::onlyTrashed()->count();
 
-        return view(
-            'admin.category-management',
-            compact(
-                'categories',
-                'status',
-                'activeCount',
-                'trashedCount'
-            )
-        );
+        /*
+ * Retrieve only the information required by the color picker.
+ *
+ * This query is intentionally separate from the paginated
+ * category table because the color indicator needs to know
+ * about categories on every page.
+ */
+$categoryColorUsage = Category::query()
+    ->select([
+        'id',
+        'category_name',
+        'display_color',
+    ])
+    ->get();
+
+        
+    return view(
+    'admin.category-management',
+    compact(
+        'categories',
+        'status',
+        'activeCount',
+        'trashedCount',
+        'categoryColorUsage'
+    )
+);
     }
 
 

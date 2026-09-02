@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\UserLog;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class AdminManagementController extends Controller
 {
@@ -281,6 +282,8 @@ public function admins(Request $request)
         return back()->with('success', 'Invitation sent.');
     }
 
+ 
+
     /**
  * ✅ APPROVE ADMIN
  */
@@ -288,36 +291,45 @@ public function approve($id)
 {
     /*
      * Find the administrator being approved.
+     *
+     * findOrFail() automatically returns a 404 response
+     * if the supplied ID does not exist.
      */
     $user = User::findOrFail($id);
 
     /*
-     * Capture ONLY the value relevant to this action.
+     * Capture the status before changing it.
      *
-     * We do not need to record email, password, name, etc.
+     * This is used by the audit log so we can see the
+     * exact state transition that occurred.
      */
     $oldValues = [
         'status' => $user->status,
     ];
 
     /*
-     * Perform the actual business operation.
+     * Change the administrator's status to active.
      */
     $user->update([
         'status' => 'active',
     ]);
 
     /*
-     * Read the value that was actually persisted.
+     * Refresh the model so we are working with the value
+     * that was actually persisted to the database.
      */
     $user->refresh();
 
+    /*
+     * Capture the new status for the audit log.
+     */
     $newValues = [
         'status' => $user->status,
     ];
 
     /*
-     * Record the audit event.
+     * Record the approval action before attempting to
+     * communicate with the external mail service.
      */
     $this->logAdminAction(
         $user,
@@ -327,6 +339,62 @@ public function approve($id)
         'Approved admin: ' . $user->email
     );
 
+    /*
+     * Generate the admin login URL using Laravel's named route.
+     *
+     * route() is preferable to hardcoding /admin/login because
+     * the URL will automatically remain correct if the route
+     * definition changes later.
+     */
+    $loginLink = route('admin.login');
+
+    /*
+     * Send the approval notification.
+     *
+     * The email is intentionally handled separately from the
+     * approval operation. A temporary SMTP failure should not
+     * undo an already-approved administrator account.
+     */
+    try {
+
+        Mail::send(
+            'emails.admin-approved',
+            [
+                'firstName' => $user->first_name,
+                'email' => $user->email,
+                'loginLink' => $loginLink,
+            ],
+            function ($message) use ($user) {
+
+                $message
+                    ->to($user->email)
+                    ->subject(
+                        'Your KNOWURLOCAL Admin Account Has Been Approved'
+                    );
+            }
+        );
+
+    } catch (\Throwable $e) {
+
+        /*
+         * Do not expose the mail-server exception to the user.
+         *
+         * The approval has already succeeded, so we simply
+         * record the technical failure in Laravel's log.
+         */
+        \Log::error(
+            'ADMIN APPROVAL EMAIL FAILED',
+            [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+            ]
+        );
+    }
+
+    /*
+     * Return the administrator to the management page.
+     */
     return back()->with(
         'success',
         'Admin approved.'

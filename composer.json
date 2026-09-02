@@ -11,9 +11,10 @@
     "require": {
         "php": "^8.2",
         "barryvdh/laravel-dompdf": "*",
+        "fakerphp/faker": "^1.23",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
-        "fakerphp/faker": "^1.23"
+        "resend/resend-laravel": "*"
     },
     "require-dev": {
         "laravel/boost": "^2.0",

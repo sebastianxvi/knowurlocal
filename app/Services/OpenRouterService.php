@@ -54,12 +54,28 @@ class OpenRouterService
                 ]
             );
 
-        // Never expose the provider's raw response to the user.
         if ($response->failed()) {
-            throw new RuntimeException(
-                'OpenRouter request failed.'
-            );
-        }
+
+    /*
+     * Record the HTTP status and provider response on the server.
+     *
+     * This is useful for diagnosing API failures without exposing
+     * provider details to the browser.
+     */
+    \Log::error('OPENROUTER REQUEST FAILED', [
+        'status' => $response->status(),
+        'body' => $response->body(),
+    ]);
+
+    /*
+     * Keep the exception intentionally generic.
+     *
+     * The provider's response must not be sent to the browser.
+     */
+    throw new RuntimeException(
+        'OpenRouter request failed.'
+    );
+}
 
         // Convert the JSON response into a PHP array.
         $json = $response->json();
