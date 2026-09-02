@@ -473,6 +473,163 @@ html, body{
 
 }
 
+/* ============================================================
+   FAQ CLARIFICATION CHOICES
+   ============================================================ */
+
+/*
+ * Container for the FAQ choices returned when the chatbot
+ * cannot safely determine which FAQ the user means.
+ *
+ * The choices are stacked vertically because FAQ questions
+ * can be long and should remain readable on mobile screens.
+ */
+.chatbot-faq-choices{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+
+    width:100%;
+    max-width:320px;
+
+    margin-top:10px;
+}
+
+
+/*
+ * Individual clickable FAQ capsule.
+ *
+ * A button is used instead of a generic div so the component
+ * is naturally keyboard-accessible and communicates that the
+ * element is interactive.
+ */
+.chatbot-faq-choice{
+    appearance:none;
+
+    width:100%;
+
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+
+    padding:9px 13px;
+
+    border:1px solid #dfe4ea;
+    border-radius:16px;
+
+    background:#f8fafc;
+    color:#1f2937;
+
+    font:inherit;
+    font-size:0.78rem;
+    line-height:1.35;
+    font-weight:500;
+
+    text-align:left;
+
+    cursor:pointer;
+
+    /*
+     * Long FAQ questions must wrap instead of forcing
+     * the chatbot wider than the viewport.
+     */
+    white-space:normal;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+
+    /*
+     * Keep the transition limited to visual properties.
+     * This avoids unnecessary animation work.
+     */
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.2s ease;
+}
+
+
+/*
+ * Subtle hover state gives desktop users clear feedback
+ * that the capsule is clickable.
+ */
+.chatbot-faq-choice:hover{
+    background:#ffffff;
+    border-color:#cfd6df;
+
+    transform:translateY(-1px);
+
+    box-shadow:
+        0 4px 12px rgba(15, 23, 42, 0.07);
+}
+
+
+/*
+ * Slight compression provides tactile feedback when
+ * the user presses the capsule.
+ */
+.chatbot-faq-choice:active{
+    transform:scale(0.985);
+}
+
+
+/*
+ * Keyboard users receive a visible focus indicator.
+ *
+ * This is important because removing the browser's default
+ * focus outline without replacing it harms accessibility.
+ */
+.chatbot-faq-choice:focus-visible{
+    outline:2px solid #93c5fd;
+    outline-offset:2px;
+}
+
+
+/*
+ * Once a choice has been selected, the JavaScript disables
+ * all clarification buttons to prevent duplicate requests.
+ */
+.chatbot-faq-choice:disabled{
+    opacity:0.55;
+
+    cursor:not-allowed;
+
+    transform:none;
+
+    box-shadow:none;
+}
+
+
+/*
+ * On small screens, allow the capsule group to use the
+ * available width without creating horizontal overflow.
+ */
+@media (max-width: 767px){
+
+    .chatbot-faq-choices{
+        max-width:100%;
+    }
+
+    .chatbot-faq-choice{
+        font-size:0.77rem;
+        padding:9px 12px;
+    }
+
+}
+
+
+/*
+ * Respect users who have requested reduced motion
+ * at the operating-system/browser level.
+ */
+@media (prefers-reduced-motion: reduce){
+
+    .chatbot-faq-choice{
+        transition:none;
+    }
+
+}
+
 /* DESKTOP VIEW */
 @media (min-width: 768px){
     
