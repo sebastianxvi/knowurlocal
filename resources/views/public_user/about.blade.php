@@ -183,9 +183,9 @@
 
                     <p class="about-hero-description">
 
-                        KNOWURLOCAL helps citizens discover basic
-                        information about local government agencies
-                        and organizations before making the trip.
+                        KNOWURLOCAL helps citizens find local government agencies and organizations, 
+                        understand the services and information they need, 
+                        and get answers to common questions before making the trip.
 
                     </p>
 
@@ -835,10 +835,9 @@
 
                         <p>
 
-                            The system provides a convenient starting
-                            point where users can explore agency
-                            information, services, locations, office
-                            hours, contact details, FAQs, and questions.
+                            The system provides a convenient starting point where users can explore agency information, 
+                            services, locations, office hours, contact details, FAQs, and 
+                            submit questions when the information they need is not already available.
 
                         </p>
 
@@ -1357,21 +1356,19 @@
 
 
                         <span>
-                            STUDENTS & RESEARCHERS
+                            COMMUNITY MEMBERS
                         </span>
 
 
                         <h3>
-                            People looking for
-                            local information
+                            People who need local government information
                         </h3>
 
 
                         <p>
 
-                            Discover agencies and organizations
-                            operating within the local community
-                            and learn more about them.
+                            Find agencies, services, requirements, locations, 
+                            and other information needed before contacting or visiting an office.
 
                         </p>
 
@@ -1516,8 +1513,7 @@
                         </h3>
 
                         <p>
-                            Discover agencies and organizations
-                            available around San Jose.
+                            Find the local agency or organization that provides the service you need.
                         </p>
 
                     </article>
@@ -2034,8 +2030,8 @@
                         </h3>
 
                         <p>
-                            Review services, office hours, and
-                            available contact information.
+                            Review services, requirements, office hours, 
+                            contact information, and other available guidance before visiting.
                         </p>
 
                     </article>
@@ -2177,8 +2173,7 @@
                                 </h3>
 
                                 <p>
-                                    Learn what an agency or organization
-                                    does and understand its role.
+                                    View basic information about an agency or organization and the services it provides.
                                 </p>
 
                             </div>
@@ -2367,8 +2362,8 @@
                                 </h3>
 
                                 <p>
-                                    Find frequently asked questions
-                                    or submit your own inquiry.
+                                    Find answers to common agency-related questions or 
+                                    submit your own question when the information you need is not already available.
                                 </p>
 
                             </div>
@@ -3253,7 +3248,7 @@
                                 ></i>
 
                                 <span>
-                                    A local information platform
+                                    A local information and helpdesk platform
                                 </span>
 
                             </li>
@@ -3286,8 +3281,7 @@
                                 ></i>
 
                                 <span>
-                                    A starting point before
-                                    visiting an office
+                                    A place to find agency services, locations, office hours, and contact information
                                 </span>
 
                             </li>
@@ -3303,8 +3297,22 @@
                                 ></i>
 
                                 <span>
-                                    A place to check available
-                                    basic information
+                                    A starting point for checking common agency-related questions
+                                </span>
+
+                            </li>
+
+                            <li>
+
+                                <i
+                                    class="
+                                        ph-light
+                                        ph-check-circle
+                                    "
+                                ></i>
+
+                                <span>
+                                    A way to submit questions when available information does not answer what you need
                                 </span>
 
                             </li>
