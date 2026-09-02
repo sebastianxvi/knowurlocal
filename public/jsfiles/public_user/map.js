@@ -8,8 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
      * Base URL used when the user wants to navigate
      * to a selected agency.
      *
-     * The actual URL is supplied by Blade through
-     * window.APP_CONFIG.
+     * Blade supplies this value through window.APP_CONFIG.
      */
     const navigateBaseUrl =
         window.APP_CONFIG.navigateBaseUrl;
@@ -38,8 +37,12 @@ document.addEventListener("DOMContentLoaded", () => {
     /*
      * Create the Leaflet map.
      *
-     * Zoom controls are disabled because the map uses
-     * a custom navigation interface.
+     * The map immediately starts at San Jose with
+     * zoom level 14.
+     *
+     * There is intentionally NO initial flyTo()
+     * animation because the map should become usable
+     * immediately after loading.
      */
     const map =
         L.map('map', {
@@ -53,44 +56,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /*
      * Load OpenStreetMap tiles.
+     *
+     * Leaflet handles loading and positioning the
+     * individual map tiles automatically.
      */
     L.tileLayer(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
             maxZoom: 18,
+
             attribution:
                 '&copy; OpenStreetMap contributors'
         }
     ).addTo(map);
-
-
-    // =========================================================
-    // INTRO MAP ANIMATION
-    // =========================================================
-
-    /*
-     * Once Leaflet has finished initializing,
-     * slightly zoom into San Jose.
-     *
-     * The delay prevents the animation from competing
-     * with the initial map rendering.
-     */
-    map.whenReady(() => {
-
-        setTimeout(() => {
-
-            map.flyTo(
-                sanJose,
-                15,
-                {
-                    duration: 1.8,
-                    easeLinearity: 0.15
-                }
-            );
-
-        }, 400);
-
-    });
 
 
     // =========================================================
@@ -100,7 +78,8 @@ document.addEventListener("DOMContentLoaded", () => {
     /*
      * Stores all agency markers.
      *
-     * The agency name is used as the lookup key.
+     * The lowercase agency name is used as the
+     * lookup key for search functionality.
      */
     const markers = {};
 
@@ -108,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
     /*
      * Stores the ID of the currently selected agency.
      *
-     * This is used by category filtering.
+     * This is used by category filtering and navigation.
      */
     let selectedAgencyId = null;
 
@@ -116,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     /*
      * Stores the currently selected Leaflet marker.
      *
-     * Only one agency should use the selected red marker
+     * Only one marker can use the selected icon
      * at a time.
      */
     let selectedMarker = null;
@@ -127,21 +106,13 @@ document.addEventListener("DOMContentLoaded", () => {
     // =========================================================
 
     /*
- * Traditional red map pin used to identify
- * the currently selected agency.
- *
- * We use the existing marker image supplied
- * through Blade's APP_CONFIG instead of creating
- * another custom marker with HTML/CSS.
- */
-/*
- * Use Leaflet's built-in default marker.
- *
- * Passing no custom icon makes Leaflet use its
- * standard marker design.
- */
-const selectedAgencyIcon =
-    new L.Icon.Default();
+     * Use Leaflet's built-in default marker for
+     * the selected agency.
+     *
+     * No entrance animation is applied.
+     */
+    const selectedAgencyIcon =
+        new L.Icon.Default();
 
 
     // =========================================================
@@ -170,11 +141,12 @@ const selectedAgencyIcon =
             'agencyNavigate'
         );
 
-        /*
-        * Timer used to collapse the Navigate button
-        * after its temporary explanation has been shown.
-        */
-        let navigateHintTimer = null;
+
+    /*
+     * Timer used to collapse the Navigate button
+     * after its temporary explanation has been shown.
+     */
+    let navigateHintTimer = null;
 
 
     const agencyDetailsImage =
@@ -193,6 +165,7 @@ const selectedAgencyIcon =
         document.getElementById(
             'agencyDetailsAbbreviation'
         );
+
 
     const agencyDetailsCategory =
         document.getElementById(
@@ -311,6 +284,7 @@ const selectedAgencyIcon =
 
         }
 
+
         /*
          * Otherwise hide the section.
          */
@@ -327,323 +301,329 @@ const selectedAgencyIcon =
     }
 
 
-    /*
- * =========================================================
- * CREATE CONTACT ITEM
- * =========================================================
- *
- * Builds one contact row using DOM APIs instead of
- * innerHTML. This prevents contact values from being
- * interpreted as HTML.
- */
-function createContactItem(
-    iconClass,
-    label,
-    value,
-    href = null,
-    isPrimary = false
-) {
+    // =========================================================
+    // CREATE CONTACT ITEM
+    // =========================================================
 
     /*
-     * A contact without a value should never be rendered.
-     */
-    if (!value) {
-        return null;
-    }
-
-
-    /*
-     * Create the outer contact row.
-     */
-    const row =
-        document.createElement('div');
-
-    row.className =
-        'agency-contact-item';
-
-
-    /*
-     * Create the icon.
-     */
-    const icon =
-        document.createElement('i');
-
-    icon.className =
-        `ph-light ${iconClass}`;
-
-    icon.setAttribute(
-        'aria-hidden',
-        'true'
-    );
-
-
-    /*
-     * Create the content wrapper.
+     * Builds one contact row using DOM APIs instead of
+     * innerHTML.
      *
-     * Keeping the label and value separate makes the
-     * contact information easier to scan.
+     * This prevents contact values from being interpreted
+     * as HTML.
      */
-    const content =
-        document.createElement('div');
-
-    content.className =
-        'agency-contact-content';
-
-
-    /*
-     * Create the contact label.
-     */
-    const labelElement =
-        document.createElement('span');
-
-    labelElement.className =
-        'agency-contact-label';
-
-    labelElement.textContent =
-        label;
-
-
-    /*
-     * Create the actual contact value.
-     */
-    const valueElement =
-        document.createElement(
-            href
-                ? 'a'
-                : 'span'
-        );
-
-    valueElement.className =
-        'agency-contact-value';
-
-    valueElement.textContent =
-        value;
-
-
-    /*
-     * Only configure link behavior when a safe
-     * destination has been explicitly generated.
-     */
-    if (href) {
-
-        valueElement.href =
-            href;
+    function createContactItem(
+        iconClass,
+        label,
+        value,
+        href = null,
+        isPrimary = false
+    ) {
 
         /*
-         * External websites open in a new tab.
-         *
-         * tel: and mailto: links are handled by the
-         * browser/device and do not need target="_blank".
+         * A contact without a value should never be rendered.
          */
-        if (
-            href.startsWith('https://') ||
-            href.startsWith('http://')
-        ) {
+        if (!value) {
+            return null;
+        }
 
-            valueElement.target =
-                '_blank';
+
+        /*
+         * Create the outer contact row.
+         */
+        const row =
+            document.createElement('div');
+
+        row.className =
+            'agency-contact-item';
+
+
+        /*
+         * Create the icon.
+         */
+        const icon =
+            document.createElement('i');
+
+        icon.className =
+            `ph-light ${iconClass}`;
+
+        icon.setAttribute(
+            'aria-hidden',
+            'true'
+        );
+
+
+        /*
+         * Create the content wrapper.
+         */
+        const content =
+            document.createElement('div');
+
+        content.className =
+            'agency-contact-content';
+
+
+        /*
+         * Create the contact label.
+         */
+        const labelElement =
+            document.createElement('span');
+
+        labelElement.className =
+            'agency-contact-label';
+
+        labelElement.textContent =
+            label;
+
+
+        /*
+         * Create the actual contact value.
+         */
+        const valueElement =
+            document.createElement(
+                href
+                    ? 'a'
+                    : 'span'
+            );
+
+        valueElement.className =
+            'agency-contact-value';
+
+        valueElement.textContent =
+            value;
+
+
+        /*
+         * Only configure link behavior when a safe
+         * destination has been explicitly generated.
+         */
+        if (href) {
+
+            valueElement.href =
+                href;
+
 
             /*
-             * Prevent the opened page from receiving
-             * a reference to KNOWURLOCAL.
+             * External HTTP(S) websites open in a new tab.
+             *
+             * tel: and mailto: links are handled by
+             * the browser/device directly.
              */
-            valueElement.rel =
-                'noopener noreferrer';
+            if (
+                href.startsWith('https://') ||
+                href.startsWith('http://')
+            ) {
+
+                valueElement.target =
+                    '_blank';
+
+
+                /*
+                 * Prevent the opened page from receiving
+                 * a reference to KNOWURLOCAL.
+                 */
+                valueElement.rel =
+                    'noopener noreferrer';
+
+            }
 
         }
 
-    }
 
-
-    /*
-     * Add the label and value to the content wrapper.
-     */
-    content.appendChild(
-        labelElement
-    );
-
-    content.appendChild(
-        valueElement
-    );
-
-
-    /*
-     * Add the icon and content to the row.
-     */
-    row.appendChild(
-        icon
-    );
-
-    row.appendChild(
-        content
-    );
-
-
-    /*
-     * Mark the primary contact without relying
-     * exclusively on color.
-     */
-    if (isPrimary) {
-
-        row.classList.add(
-            'is-primary'
+        /*
+         * Add the label and value to the content wrapper.
+         */
+        content.appendChild(
+            labelElement
         );
-
-
-        const primaryBadge =
-            document.createElement('span');
-
-        primaryBadge.className =
-            'agency-contact-primary';
-
-        primaryBadge.textContent =
-            'Primary';
 
         content.appendChild(
-            primaryBadge
+            valueElement
         );
 
+
+        /*
+         * Add the icon and content to the row.
+         */
+        row.appendChild(
+            icon
+        );
+
+        row.appendChild(
+            content
+        );
+
+
+        /*
+         * Mark the primary contact.
+         */
+        if (isPrimary) {
+
+            row.classList.add(
+                'is-primary'
+            );
+
+
+            const primaryBadge =
+                document.createElement('span');
+
+
+            primaryBadge.className =
+                'agency-contact-primary';
+
+
+            primaryBadge.textContent =
+                'Primary';
+
+
+            content.appendChild(
+                primaryBadge
+            );
+
+        }
+
+
+        return row;
+
     }
 
 
-    return row;
-}
-
-/*
- * =========================================================
- * CONTACT TYPE CONFIGURATION
- * =========================================================
- *
- * Maps database contact-type slugs to presentation rules.
- *
- * The database remains the source of truth for which
- * contact types exist. This object only controls how each
- * known type behaves in the public interface.
- */
-const CONTACT_TYPE_CONFIG = {
-
-    hotline: {
-        icon: 'ph-phone',
-        label: 'Hotline',
-        buildHref: value =>
-            `tel:${value}`
-    },
-
-
-    landline: {
-        icon: 'ph-phone-call',
-        label: 'Landline',
-        buildHref: value =>
-            `tel:${value}`
-    },
-
-
-    email: {
-        icon: 'ph-envelope',
-        label: 'Email',
-        buildHref: value =>
-            `mailto:${value}`
-    },
-
-
-    website: {
-        icon: 'ph-globe',
-        label: 'Website',
-        buildHref: value =>
-            normalizeExternalUrl(value)
-    },
-
-
-    facebook: {
-        icon: 'ph-facebook-logo',
-        label: 'Facebook',
-        buildHref: value =>
-            normalizeExternalUrl(value)
-    }
-
-};
-
-/*
- * =========================================================
- * NORMALIZE EXTERNAL URL
- * =========================================================
- *
- * Ensures website/social-media values become valid
- * absolute URLs before they are assigned to href.
- */
-function normalizeExternalUrl(
-    value
-) {
+    // =========================================================
+    // CONTACT TYPE CONFIGURATION
+    // =========================================================
 
     /*
-     * Remove accidental whitespace.
+     * Maps database contact-type slugs to presentation rules.
+     *
+     * The database remains the source of truth for
+     * contact types.
      */
-    const cleanValue =
-        String(value || '').trim();
+    const CONTACT_TYPE_CONFIG = {
+
+        hotline: {
+            icon: 'ph-phone',
+            label: 'Hotline',
+            buildHref: value =>
+                `tel:${value}`
+        },
 
 
-    if (!cleanValue) {
-        return null;
-    }
+        landline: {
+            icon: 'ph-phone-call',
+            label: 'Landline',
+            buildHref: value =>
+                `tel:${value}`
+        },
 
+
+        email: {
+            icon: 'ph-envelope',
+            label: 'Email',
+            buildHref: value =>
+                `mailto:${value}`
+        },
+
+
+        website: {
+            icon: 'ph-globe',
+            label: 'Website',
+            buildHref: value =>
+                normalizeExternalUrl(value)
+        },
+
+
+        facebook: {
+            icon: 'ph-facebook-logo',
+            label: 'Facebook',
+            buildHref: value =>
+                normalizeExternalUrl(value)
+        }
+
+    };
+
+
+    // =========================================================
+    // NORMALIZE EXTERNAL URL
+    // =========================================================
 
     /*
-     * Only allow HTTP(S) destinations.
-     *
-     * This prevents dangerous schemes such as:
-     *
-     * javascript:
-     * data:
-     * vbscript:
+     * Ensures website and social-media values become
+     * valid absolute HTTP(S) URLs before being assigned
+     * to href.
      */
-    if (
-        cleanValue.startsWith(
-            'https://'
-        ) ||
-        cleanValue.startsWith(
-            'http://'
-        )
+    function normalizeExternalUrl(
+        value
     ) {
 
-        return cleanValue;
-    }
+        /*
+         * Remove accidental whitespace.
+         */
+        const cleanValue =
+            String(value || '').trim();
 
 
-    /*
-     * If the administrator entered:
-     *
-     * www.example.com
-     *
-     * convert it into:
-     *
-     * https://www.example.com
-     */
-    if (
-        cleanValue.startsWith(
-            'www.'
-        )
-    ) {
+        /*
+         * Stop when there is no usable value.
+         */
+        if (!cleanValue) {
+            return null;
+        }
 
+
+        /*
+         * Only allow HTTP(S) destinations.
+         *
+         * This prevents dangerous URL schemes such as:
+         *
+         * javascript:
+         * data:
+         * vbscript:
+         */
+        if (
+            cleanValue.startsWith(
+                'https://'
+            ) ||
+            cleanValue.startsWith(
+                'http://'
+            )
+        ) {
+
+            return cleanValue;
+        }
+
+
+        /*
+         * Convert www.example.com into
+         * https://www.example.com.
+         */
+        if (
+            cleanValue.startsWith(
+                'www.'
+            )
+        ) {
+
+            return `https://${cleanValue}`;
+        }
+
+
+        /*
+         * For other values, prepend HTTPS.
+         */
         return `https://${cleanValue}`;
+
     }
 
-
-    /*
-     * For all other values, prepend HTTPS.
-     *
-     * This gives the public UI a predictable destination
-     * without permitting arbitrary URL schemes.
-     */
-    return `https://${cleanValue}`;
-}
 
     // =========================================================
     // SELECT AGENCY MARKER
     // =========================================================
 
     /*
-     * Change the selected agency's marker into
-     * the red KNOWURLOCAL selected marker.
+     * Change the selected agency marker into
+     * the selected Leaflet marker.
+     *
+     * No CSS animation or forced browser reflow
+     * is performed here.
      */
     function selectAgencyMarker(
         marker
@@ -678,7 +658,7 @@ function normalizeExternalUrl(
 
         /*
          * Replace its normal category marker
-         * with the red selected marker.
+         * with the selected marker.
          */
         marker.setIcon(
             selectedAgencyIcon
@@ -686,369 +666,327 @@ function normalizeExternalUrl(
 
 
         /*
-         * Make sure the selected marker appears
-         * above other agency markers.
+         * Make the selected marker appear above
+         * the other markers.
          */
         marker.setZIndexOffset(
             1000
         );
 
+    }
+
+
+    // =========================================================
+    // NAVIGATE BUTTON HINT
+    // =========================================================
+
+    /*
+     * Temporarily expand the Navigate button so the
+     * user can understand what the navigation icon does.
+     */
+    function showNavigateHint() {
 
         /*
-         * Restart the marker entrance animation.
+         * Stop any previous collapse timer.
          */
-        const element =
-            marker.getElement();
+        if (navigateHintTimer) {
 
-
-        if (element) {
-
-            element.classList.remove(
-                'selected-agency-marker'
+            clearTimeout(
+                navigateHintTimer
             );
 
+        }
+
+
+        /*
+         * Stop if the Navigate button doesn't exist.
+         */
+        if (!agencyNavigate) {
+            return;
+        }
+
+
+        /*
+         * Expand the button.
+         *
+         * CSS handles the actual transition.
+         */
+        agencyNavigate.classList.add(
+            'is-expanded'
+        );
+
+
+        /*
+         * Keep the explanatory text visible
+         * for approximately 2.5 seconds.
+         */
+        navigateHintTimer =
+            setTimeout(
+                () => {
+
+                    agencyNavigate.classList.remove(
+                        'is-expanded'
+                    );
+
+                },
+                2500
+            );
+
+    }
+
+
+    // =========================================================
+    // USER ACTIVITY LOGGING
+    // =========================================================
+
+    /*
+     * Sends a meaningful user interaction to Laravel.
+     *
+     * The browser only sends the action and agency ID.
+     * The server determines the authenticated user,
+     * role, IP address, and device information.
+     */
+    async function logUserActivity(
+        action,
+        agencyId,
+        contactType = null
+    ) {
+
+        /*
+         * Read Laravel's CSRF token from the page.
+         */
+        const csrfToken =
+            document.querySelector(
+                'meta[name="csrf-token"]'
+            )?.getAttribute('content');
+
+
+        /*
+         * Do not attempt the request if the page
+         * doesn't contain a CSRF token.
+         */
+        if (!csrfToken) {
+
+            console.error(
+                'KNOWURLOCAL: CSRF token not found.'
+            );
+
+            return;
+
+        }
+
+
+        try {
 
             /*
-             * Force a browser reflow so the animation
-             * can restart when another agency is selected.
+             * Send the activity asynchronously.
+             *
+             * keepalive allows the request to continue
+             * if the browser navigates immediately afterward.
              */
-            void element.offsetWidth;
+            await fetch(
+                '/user/activity/agency',
+                {
+                    method: 'POST',
+
+                    keepalive: true,
+
+                    headers: {
+                        'Content-Type':
+                            'application/json',
+
+                        'Accept':
+                            'application/json',
+
+                        'X-CSRF-TOKEN':
+                            csrfToken
+                    },
+
+                    body: JSON.stringify({
+
+                        action:
+                            action,
+
+                        agency_id:
+                            agencyId,
+
+                        contact_type:
+                            contactType
+
+                    })
+
+                }
+            );
+
+        }
 
 
-            element.classList.add(
-                'selected-agency-marker'
+        catch (error) {
+
+            /*
+             * Logging failures must never break
+             * agency-details functionality.
+             */
+            console.error(
+                'KNOWURLOCAL: Failed to record user activity.',
+                error
             );
 
         }
 
     }
 
-    /*
- * Temporarily expand the Navigate button so the
- * user can understand what the navigation icon does.
- */
-function showNavigateHint() {
+
+    // =========================================================
+    // NAVIGATE AGENCY
+    // =========================================================
 
     /*
-     * Stop any previous collapse timer.
-     *
-     * This prevents multiple timers from being active
-     * when the user changes agencies quickly.
+     * Record when the user intentionally requests
+     * directions to the currently selected agency.
      */
-    if (navigateHintTimer) {
+    if (agencyNavigate) {
 
-        clearTimeout(
-            navigateHintTimer
-        );
-
-    }
-
-
-    /*
-     * Stop if the Navigate button doesn't exist.
-     */
-    if (!agencyNavigate) {
-        return;
-    }
-
-
-    /*
-     * Expand the button.
-     *
-     * CSS handles the actual animation.
-     */
-    agencyNavigate.classList.add(
-        'is-expanded'
-    );
-
-
-    /*
-     * Keep the explanatory text visible for
-     * approximately 2.5 seconds.
-     */
-    navigateHintTimer =
-        setTimeout(
-            () => {
+        agencyNavigate.addEventListener(
+            'click',
+            event => {
 
                 /*
-                 * Remove the expanded state.
-                 *
-                 * CSS smoothly collapses the button
-                 * back into icon-only mode.
+                 * Prevent navigation before the activity
+                 * request is started.
                  */
-                agencyNavigate.classList.remove(
-                    'is-expanded'
-                );
-
-            },
-            2500
-        );
-
-}
+                event.preventDefault();
 
 
-// =========================================================
-// USER ACTIVITY LOGGING
-// =========================================================
-
-/*
- * Sends a meaningful user interaction to Laravel.
- *
- * The browser only sends the action and agency ID.
- * The server determines the authenticated user, role,
- * IP address, and device information.
- */
-async function logUserActivity(
-    action,
-    agencyId,
-    contactType = null
-) {
-
-    /*
-     * Read Laravel's CSRF token from the page.
-     *
-     * This protects the POST request against
-     * cross-site request forgery.
-     */
-    const csrfToken =
-        document.querySelector(
-            'meta[name="csrf-token"]'
-        )?.getAttribute('content');
+                /*
+                 * Remember the destination URL.
+                 */
+                const destination =
+                    agencyNavigate.href;
 
 
-    /*
-     * Do not attempt the request if the page
-     * doesn't contain a CSRF token.
-     */
-    if (!csrfToken) {
-
-        console.error(
-            'KNOWURLOCAL: CSRF token not found.'
-        );
-
-        return;
-
-    }
+                /*
+                 * Remember the selected agency.
+                 */
+                const agencyId =
+                    selectedAgencyId;
 
 
-    try {
+                /*
+                 * Only log navigation when an agency
+                 * is actually selected.
+                 */
+                if (agencyId !== null) {
 
-        /*
-         * Send the activity asynchronously.
-         *
-         * We intentionally do not make the map wait
-         * for the logging request to finish.
-         */
-        await fetch(
-    '/user/activity/agency',
-    {
-        method: 'POST',
+                    logUserActivity(
+                        'get_directions',
+                        agencyId
+                    );
 
-        /*
-         * Allow the request to continue even if the
-         * browser immediately navigates to another page.
-         */
-        keepalive: true,
-
-        headers: {
-            'Content-Type':
-                'application/json',
-
-            'Accept':
-                'application/json',
-
-            'X-CSRF-TOKEN':
-                csrfToken
-        },
-
-        body: JSON.stringify({
-
-    action: action,
-
-    agency_id: agencyId,
-
-    contact_type: contactType
-
-})
-    }
-);
-
-    }
-
-    catch (error) {
-
-        /*
-         * Logging should never break the actual
-         * agency-details functionality.
-         */
-        console.error(
-            'KNOWURLOCAL: Failed to record user activity.',
-            error
-        );
-
-    }
-
-}
-
-// =========================================================
-// NAVIGATE AGENCY
-// =========================================================
-
-/*
- * Record when the user intentionally requests
- * directions to the currently selected agency.
- */
-if (agencyNavigate) {
-
-    agencyNavigate.addEventListener(
-        'click',
-        event => {
-
-            /*
-             * Prevent the browser from navigating
-             * before our activity request is started.
-             */
-            event.preventDefault();
+                }
 
 
-            /*
-             * Remember the destination URL that
-             * openAgencyDetails() already created.
-             */
-            const destination =
-                agencyNavigate.href;
-
-
-            /*
-             * Remember the selected agency.
-             *
-             * selectedAgencyId is maintained by
-             * openAgencyDetails().
-             */
-            const agencyId =
-                selectedAgencyId;
-
-
-            /*
-             * Only log navigation when an agency
-             * is actually selected.
-             */
-            if (agencyId !== null) {
-
-                logUserActivity(
-                    'get_directions',
-                    agencyId
-                );
+                /*
+                 * Navigate to the directions page.
+                 */
+                window.location.href =
+                    destination;
 
             }
+        );
+
+    }
 
 
-            /*
-             * Navigate to the directions page.
-             *
-             * The logging request uses keepalive,
-             * allowing it to continue during navigation.
-             */
-            window.location.href =
-                destination;
+    // =========================================================
+    // CATEGORY ACTIVITY LOGGING
+    // =========================================================
+
+    /*
+     * Sends a category-filter interaction to Laravel.
+     *
+     * The browser only sends the category ID.
+     */
+    async function logCategoryActivity(
+        categoryId
+    ) {
+
+        /*
+         * Read Laravel's CSRF token from the page.
+         */
+        const csrfToken =
+            document.querySelector(
+                'meta[name="csrf-token"]'
+            )?.getAttribute('content');
+
+
+        /*
+         * Stop if the CSRF token is unavailable.
+         */
+        if (!csrfToken) {
+
+            console.error(
+                'KNOWURLOCAL: CSRF token not found.'
+            );
+
+            return;
 
         }
-    );
-
-}
-
-// =========================================================
-// CATEGORY ACTIVITY LOGGING
-// =========================================================
-
-/*
- * Sends a category-filter interaction to Laravel.
- *
- * The browser only sends the category ID.
- * The server determines the authenticated user,
- * role, IP address, and device information.
- */
-async function logCategoryActivity(
-    categoryId
-) {
-
-    /*
-     * Read Laravel's CSRF token from the page.
-     */
-    const csrfToken =
-        document.querySelector(
-            'meta[name="csrf-token"]'
-        )?.getAttribute('content');
 
 
-    /*
-     * Stop if the CSRF token is unavailable.
-     */
-    if (!csrfToken) {
+        try {
 
-        console.error(
-            'KNOWURLOCAL: CSRF token not found.'
-        );
+            /*
+             * Send the category interaction asynchronously.
+             */
+            await fetch(
+                '/user/activity/category',
+                {
+                    method: 'POST',
 
-        return;
+                    keepalive: true,
 
-    }
+                    headers: {
+                        'Content-Type':
+                            'application/json',
+
+                        'Accept':
+                            'application/json',
+
+                        'X-CSRF-TOKEN':
+                            csrfToken
+                    },
+
+                    body: JSON.stringify({
+
+                        action:
+                            'filter_category',
+
+                        category_id:
+                            categoryId
+
+                    })
+
+                }
+            );
+
+        }
 
 
-    try {
+        catch (error) {
 
-        /*
-         * Send the category interaction asynchronously.
-         *
-         * keepalive allows the request to finish even if
-         * the browser immediately changes state or navigates.
-         */
-        await fetch(
-            '/user/activity/category',
-            {
-                method: 'POST',
+            /*
+             * Logging failures must never interfere
+             * with category filtering.
+             */
+            console.error(
+                'KNOWURLOCAL: Failed to record category activity.',
+                error
+            );
 
-                keepalive: true,
-
-                headers: {
-                    'Content-Type':
-                        'application/json',
-
-                    'Accept':
-                        'application/json',
-
-                    'X-CSRF-TOKEN':
-                        csrfToken
-                },
-
-                body: JSON.stringify({
-
-                    action:
-                        'filter_category',
-
-                    category_id:
-                        categoryId
-
-                })
-            }
-        );
+        }
 
     }
-
-    catch (error) {
-
-        /*
-         * Logging failures must never interfere
-         * with the actual category filtering.
-         */
-        console.error(
-            'KNOWURLOCAL: Failed to record category activity.',
-            error
-        );
-
-    }
-
-}
 
 
     // =========================================================
@@ -1060,7 +998,9 @@ async function logCategoryActivity(
      *
      * This completely replaces the old Leaflet popup.
      */
-    function openAgencyDetails(agency) {
+    function openAgencyDetails(
+        agency
+    ) {
 
         /*
          * Stop if the panel does not exist.
@@ -1069,13 +1009,14 @@ async function logCategoryActivity(
             return;
         }
 
+
         /*
-     * Log the intentional agency view.
-     */
-    logUserActivity(
-        'view_agency',
-        agency.id
-    );
+         * Log the intentional agency view.
+         */
+        logUserActivity(
+            'view_agency',
+            agency.id
+        );
 
 
         /*
@@ -1136,6 +1077,7 @@ async function logCategoryActivity(
 
         }
 
+
         else {
 
             agencyDetailsAbbreviation.textContent =
@@ -1148,81 +1090,79 @@ async function logCategoryActivity(
 
 
         // -----------------------------------------------------
-// CATEGORY
-// -----------------------------------------------------
-
-/*
- * Read the category information returned by the API.
- *
- * The category name and color are both already available
- * because the API eager-loads the category relationship.
- */
-const categoryName =
-    agency.category?.category_name?.trim();
-
-const categoryColor =
-    agency.category?.display_color;
-
-
-/*
- * Only show the category badge when a category exists.
- */
-if (
-    agencyDetailsCategory &&
-    categoryName
-) {
-
-    agencyDetailsCategory.textContent =
-        categoryName;
-
-    agencyDetailsCategory.style.display =
-        'inline-flex';
-
-
-    /*
-     * Only accept a valid six-digit hexadecimal color.
-     *
-     * This prevents arbitrary database values from
-     * becoming CSS values.
-     */
-    if (
-        /^#[0-9A-Fa-f]{6}$/.test(
-            categoryColor
-        )
-    ) {
-
-        agencyDetailsCategory.style
-            .setProperty(
-                '--category-color',
-                categoryColor
-            );
-
-    }
-
-    else {
+        // CATEGORY
+        // -----------------------------------------------------
 
         /*
-         * Fall back to the default blue accent.
+         * Read category information returned by the API.
          */
-        agencyDetailsCategory.style
-            .setProperty(
-                '--category-color',
-                '#3B82F6'
-            );
+        const categoryName =
+            agency.category?.category_name?.trim();
 
-    }
 
-}
+        const categoryColor =
+            agency.category?.display_color;
 
-else if (agencyDetailsCategory) {
 
-    agencyDetailsCategory.textContent =
-        '';
+        /*
+         * Only show the category badge when a category exists.
+         */
+        if (
+            agencyDetailsCategory &&
+            categoryName
+        ) {
 
-    agencyDetailsCategory.style.display =
-        'none';
+            agencyDetailsCategory.textContent =
+                categoryName;
 
-}
+
+            agencyDetailsCategory.style.display =
+                'inline-flex';
+
+
+            /*
+             * Only accept a valid six-digit hexadecimal color.
+             */
+            if (
+                /^#[0-9A-Fa-f]{6}$/.test(
+                    categoryColor
+                )
+            ) {
+
+                agencyDetailsCategory.style
+                    .setProperty(
+                        '--category-color',
+                        categoryColor
+                    );
+
+            }
+
+
+            else {
+
+                /*
+                 * Fall back to the default blue accent.
+                 */
+                agencyDetailsCategory.style
+                    .setProperty(
+                        '--category-color',
+                        '#3B82F6'
+                    );
+
+            }
+
+        }
+
+
+        else if (agencyDetailsCategory) {
+
+            agencyDetailsCategory.textContent =
+                '';
+
+            agencyDetailsCategory.style.display =
+                'none';
+
+        }
 
 
         // -----------------------------------------------------
@@ -1295,201 +1235,164 @@ else if (agencyDetailsCategory) {
 
 
         // -----------------------------------------------------
-// CONTACTS
-// -----------------------------------------------------
+        // CONTACTS
+        // -----------------------------------------------------
 
-/*
- * Remove contact rows belonging to the previous agency
- * before rendering the newly selected agency.
- */
-agencyDetailsContacts.innerHTML =
-    '';
-
-
-/*
- * Read the contacts returned by the API.
- *
- * The backend eager-loads:
- *
- * contacts.contactType
- *
- * so every contact should contain its predefined
- * contact type information.
- */
-
-console.log(
-    'KNOWURLOCAL agency contacts:',
-    agency.agency_name,
-    agency.contacts
-);
+        /*
+         * Remove contact rows belonging to the previous agency.
+         */
+        agencyDetailsContacts.innerHTML =
+            '';
 
 
-const contacts =
-    Array.isArray(
-        agency.contacts
-    )
-        ? agency.contacts
-        : [];
-
-
-/*
- * Render contacts in their database-defined order.
- *
- * The backend already orders contacts using sort_order,
- * but we sort again defensively because the frontend
- * should not depend on response ordering.
- */
-contacts
-    .slice()
-    .sort(
-        (a, b) =>
-            Number(
-                a.sort_order || 0
-            ) -
-            Number(
-                b.sort_order || 0
+        /*
+         * Read contacts returned by the API.
+         */
+        const contacts =
+            Array.isArray(
+                agency.contacts
             )
-    )
-    .forEach(
-        contact => {
-
-            /*
-             * Safely obtain the contact type slug.
-             */
-            const typeSlug =
-    String(
-        contact
-            ?.contact_type
-            ?.slug || ''
-    )
-    .trim()
-    .toLowerCase();
+                ? agency.contacts
+                : [];
 
 
-/*
- * Find the frontend presentation rules for
- * this database contact type.
- *
- * Example:
- *
- * "hotline" → CONTACT_TYPE_CONFIG.hotline
- * "email"   → CONTACT_TYPE_CONFIG.email
- */
-const config =
-    CONTACT_TYPE_CONFIG[typeSlug];
-
-
-console.log(
-    'CONTACT DEBUG:',
-    contact,
-    'typeSlug:',
-    typeSlug,
-    'config:',
-    config
-);
-
-
-if (!config) {
-
-    console.warn(
-        'Unsupported contact type:',
-        typeSlug,
-        contact
-    );
-
-    return;
-
-}
-
-
-            /*
-             * Clean the actual contact value.
-             */
-            const value =
-                String(
-                    contact?.value || ''
-                ).trim();
-
-
-            /*
-             * Ignore empty contact values.
-             */
-            if (!value) {
-                return;
-            }
-
-
-            /*
-             * Use the administrator-provided label when
-             * available.
-             *
-             * Otherwise fall back to the predefined
-             * contact type name.
-             */
-            const label =
-    String(
-        contact?.label ||
-        contact
-            ?.contact_type
-            ?.name ||
-        config.label
-    ).trim();
-
-
-            /*
-             * Build the destination.
-             *
-             * Telephone and email contacts use their
-             * respective browser protocols.
-             *
-             * Website and Facebook are validated through
-             * normalizeExternalUrl().
-             */
-            const href =
-                config.buildHref(
-                    value
-                );
-
-
-            /*
-             * Create the contact row.
-             */
-            const item =
-                createContactItem(
-                    config.icon,
-                    label,
-                    value,
-                    href,
-                    Boolean(
-                        contact?.is_primary
+        /*
+         * Render contacts in database-defined order.
+         *
+         * Sorting defensively prevents the frontend
+         * from depending on response ordering.
+         */
+        contacts
+            .slice()
+            .sort(
+                (a, b) =>
+                    Number(
+                        a.sort_order || 0
+                    ) -
+                    Number(
+                        b.sort_order || 0
                     )
-                );
+            )
+            .forEach(
+                contact => {
+
+                    /*
+                     * Safely obtain the contact type slug.
+                     */
+                    const typeSlug =
+                        String(
+                            contact
+                                ?.contact_type
+                                ?.slug || ''
+                        )
+                        .trim()
+                        .toLowerCase();
 
 
-            /*
-             * Only append successfully constructed
-             * contact elements.
-             */
-            if (item) {
-
-                agencyDetailsContacts.appendChild(
-                    item
-                );
-
-            }
-
-        }
-    );
+                    /*
+                     * Find presentation rules for this
+                     * database contact type.
+                     */
+                    const config =
+                        CONTACT_TYPE_CONFIG[
+                            typeSlug
+                        ];
 
 
-/*
- * Hide the entire Contact section when the agency
- * has no valid contact information.
- */
-agencyContactSection.style.display =
-    agencyDetailsContacts.children.length
-        ? ''
-        : 'none';
+                    /*
+                     * Ignore unsupported contact types.
+                     */
+                    if (!config) {
+
+                        console.warn(
+                            'Unsupported contact type:',
+                            typeSlug,
+                            contact
+                        );
+
+                        return;
+
+                    }
+
+
+                    /*
+                     * Clean the actual contact value.
+                     */
+                    const value =
+                        String(
+                            contact?.value || ''
+                        ).trim();
+
+
+                    /*
+                     * Ignore empty contact values.
+                     */
+                    if (!value) {
+                        return;
+                    }
+
+
+                    /*
+                     * Use administrator-provided label
+                     * when available.
+                     */
+                    const label =
+                        String(
+                            contact?.label ||
+                            contact
+                                ?.contact_type
+                                ?.name ||
+                            config.label
+                        ).trim();
+
+
+                    /*
+                     * Build the safe destination.
+                     */
+                    const href =
+                        config.buildHref(
+                            value
+                        );
+
+
+                    /*
+                     * Create the contact row.
+                     */
+                    const item =
+                        createContactItem(
+                            config.icon,
+                            label,
+                            value,
+                            href,
+                            Boolean(
+                                contact?.is_primary
+                            )
+                        );
+
+
+                    /*
+                     * Only append successfully created elements.
+                     */
+                    if (item) {
+
+                        agencyDetailsContacts.appendChild(
+                            item
+                        );
+
+                    }
+
+                }
+            );
+
+
+        /*
+         * Hide the Contact section when no valid
+         * contact information exists.
+         */
+        agencyContactSection.style.display =
+            agencyDetailsContacts.children.length
+                ? ''
+                : 'none';
 
 
         // -----------------------------------------------------
@@ -1502,11 +1405,11 @@ agencyContactSection.style.display =
         agencyNavigate.href =
             `${navigateBaseUrl}/${agency.id}`;
 
-            /*
-            * Briefly explain the purpose of the navigation
-            * icon whenever a new agency is selected.
-            */
-            showNavigateHint();
+
+        /*
+         * Briefly explain the navigation icon.
+         */
+        showNavigateHint();
 
 
         // -----------------------------------------------------
@@ -1535,11 +1438,17 @@ agencyContactSection.style.display =
      */
     function closeAgencyDetails() {
 
+        /*
+         * Stop when the panel doesn't exist.
+         */
         if (!agencyDetails) {
             return;
         }
 
 
+        /*
+         * Hide the panel.
+         */
         agencyDetails.classList.remove(
             'active'
         );
@@ -1552,8 +1461,8 @@ agencyContactSection.style.display =
 
 
         /*
-         * Restore the selected marker to its
-         * original category color.
+         * Restore the selected marker to
+         * its normal category icon.
          */
         if (selectedMarker) {
 
@@ -1565,13 +1474,6 @@ agencyContactSection.style.display =
             selectedMarker.setZIndexOffset(
                 0
             );
-
-
-            selectedMarker
-                .getElement()
-                ?.classList.remove(
-                    'selected-agency-marker'
-                );
 
 
             selectedMarker =
@@ -1601,9 +1503,6 @@ agencyContactSection.style.display =
         );
 
     }
-
-
-    
 
 
     // =========================================================
@@ -1717,80 +1616,320 @@ agencyContactSection.style.display =
     // =========================================================
 
     /*
-     * Update agency labels according to the
-     * current map zoom level.
+     * Update the text displayed by agency labels.
+     *
+     * IMPORTANT:
+     *
+     * This function does NOT perform collision detection.
+     * It does NOT calculate DOM rectangles.
+     * It does NOT manually move labels.
+     *
+     * Leaflet automatically keeps each permanent tooltip
+     * attached to its corresponding marker.
      */
     function updateAgencyLabels() {
 
-        const zoom =
-            map.getZoom();
+    /*
+     * Get the current zoom level.
+     *
+     * We use abbreviations when zoomed out and
+     * full agency names when zoomed in.
+     */
+    const zoom = map.getZoom();
 
+    /*
+     * Every label already has a fixed width in CSS:
+     *
+     *     width: 110px;
+     *
+     * So we can use that known value instead of
+     * measuring the DOM.
+     */
+    const labelWidth = 110;
 
-        Object.values(markers).forEach(
-            marker => {
+    /*
+     * Three lines at approximately 14.4px line-height
+     * gives us roughly 43px of label height.
+     */
+    const labelHeight = 44;
 
-                const agency =
-                    marker.agencyData;
+    /*
+     * Small gap around labels.
+     *
+     * This prevents labels from touching each other.
+     */
+    const gap = 6;
 
+    /*
+     * These are the only positions a label may use.
+     *
+     * We start with the normal position above
+     * the marker, then try alternative positions.
+     */
+    const positions = [
+        [0, -14],      // top
+        [62, -14],     // top-right
+        [-62, -14],    // top-left
+        [0, 38],       // bottom
+        [62, 38],      // bottom-right
+        [-62, 38]      // bottom-left
+    ];
 
-                /*
-                 * Safety check.
-                 */
-                if (!agency) {
-                    return;
-                }
+    /*
+     * Store the labels that have already been placed.
+     *
+     * Future labels will avoid these rectangles.
+     */
+    const placedLabels = [];
 
+    /*
+     * Process every marker exactly once.
+     */
+    Object.values(markers).forEach(marker => {
 
-                /*
-                 * Full agency name for close zoom.
-                 */
-                const fullName =
-                    escapeHtml(
-                        agency.agency_name ||
-                        ''
-                    );
+    /*
+     * Retrieve the agency associated with
+     * this marker.
+     */
+    const agency = marker.agencyData;
 
+    /*
+     * Ignore invalid markers.
+     */
+    if (!agency) {
+        return;
+    }
 
-                /*
-                 * Shorter abbreviation for
-                 * wider map views.
-                 */
-                const abbreviation =
-                    escapeHtml(
-                        agency.agency_abbreviation ||
-                        agency.agency_name ||
-                        ''
-                    );
+    /*
+     * Retrieve the tooltip attached to the marker.
+     */
+    const tooltip = marker.getTooltip();
 
+    /*
+     * Ignore markers without labels.
+     */
+    if (!tooltip) {
+        return;
+    }
 
-                /*
- * Use abbreviations at wider zoom levels.
- *
- * Full agency names are only shown when the user
- * is sufficiently zoomed in for the map to have
- * enough visual space.
- */
-const label =
-    zoom >= 17
-        ? fullName
-        : abbreviation;
+    /*
+     * Determine whether this agency belongs to
+     * the currently selected category.
+     *
+     * The label must follow the same visibility
+     * rules as its marker.
+     */
+    const agencyCategoryId =
+        agency.category?.id;
 
+    const shouldShow =
+        activeCategoryId === 'all' ||
+        String(agencyCategoryId) ===
+            String(activeCategoryId);
 
-                marker.setTooltipContent(
-                    label
-                );
+    /*
+     * Hide the label when its agency is outside
+     * the active category.
+     *
+     * This is necessary because Leaflet tooltips
+     * are separate layers from markers.
+     */
+    if (!shouldShow) {
 
-            }
-        );
+        tooltip.setOpacity(0);
 
+        return;
+    }
 
         /*
-         * Recalculate label positions after
-         * their content changes.
+         * Decide which text should be displayed.
+         *
+         * At zoom 17 and above we show the full name.
+         * Otherwise we prefer the abbreviation.
          */
-        repositionAgencyLabels();
+        const label =
+            zoom >= 17
+                ? (
+                    agency.agency_name ||
+                    ""
+                )
+                : (
+                    agency.agency_abbreviation ||
+                    agency.agency_name ||
+                    ""
+                );
 
-    }
+        /*
+         * Update the tooltip text.
+         */
+        tooltip.setContent(label);
+
+        /*
+         * Convert the marker's geographic position
+         * into pixels relative to the map container.
+         */
+        const point =
+            map.latLngToContainerPoint(
+                marker.getLatLng()
+            );
+
+        /*
+         * We haven't found a safe position yet.
+         */
+        let selectedPosition = null;
+
+        /*
+         * Try each predefined position.
+         *
+         * There is no endless loop here.
+         */
+        for (
+            const offset of positions
+        ) {
+
+            /*
+             * Calculate the center of the label.
+             */
+            const centerX =
+                point.x +
+                offset[0];
+
+            const centerY =
+                point.y +
+                offset[1];
+
+            /*
+             * Calculate the rectangle boundaries.
+             */
+            const left =
+                centerX -
+                labelWidth / 2;
+
+            const right =
+                centerX +
+                labelWidth / 2;
+
+            const top =
+                centerY -
+                labelHeight / 2;
+
+            const bottom =
+                centerY +
+                labelHeight / 2;
+
+            /*
+             * Assume this position is safe.
+             */
+            let collision = false;
+
+            /*
+             * Compare the candidate rectangle
+             * against labels that were already placed.
+             */
+            for (
+                const placed of placedLabels
+            ) {
+
+                /*
+                 * Standard rectangle collision test.
+                 *
+                 * If the rectangles overlap,
+                 * this position cannot be used.
+                 */
+                const overlaps =
+                    !(
+                        right + gap <
+                        placed.left ||
+
+                        left - gap >
+                        placed.right ||
+
+                        bottom + gap <
+                        placed.top ||
+
+                        top - gap >
+                        placed.bottom
+                    );
+
+                /*
+                 * Stop immediately after finding
+                 * a collision.
+                 */
+                if (overlaps) {
+                    collision = true;
+                    break;
+                }
+            }
+
+            /*
+             * If no collision was found,
+             * this is our selected position.
+             */
+            if (!collision) {
+
+                selectedPosition = {
+                    offset,
+                    left,
+                    right,
+                    top,
+                    bottom
+                };
+
+                break;
+            }
+        }
+
+        /*
+         * If none of the positions are available,
+         * hide the label.
+         *
+         * We do NOT keep calculating positions.
+         */
+        if (!selectedPosition) {
+
+            tooltip.setOpacity(0);
+
+            return;
+        }
+
+        /*
+         * Make sure the label is visible.
+         */
+        tooltip.setOpacity(1);
+
+        /*
+         * Apply the selected offset.
+         */
+        tooltip.options.offset =
+            selectedPosition.offset;
+
+        /*
+         * Update only this tooltip.
+         *
+         * We do not close and reopen every tooltip.
+         */
+        tooltip.update();
+
+        /*
+         * Save this label's rectangle.
+         *
+         * Later labels will avoid it.
+         */
+        placedLabels.push({
+            left:
+                selectedPosition.left,
+
+            right:
+                selectedPosition.right,
+
+            top:
+                selectedPosition.top,
+
+            bottom:
+                selectedPosition.bottom
+        });
+    });
+}
 
 
     // =========================================================
@@ -1801,6 +1940,10 @@ const label =
         data
     ) {
 
+        /*
+         * Stop when the category filter container
+         * does not exist.
+         */
         if (!categoryFilters) {
             return;
         }
@@ -1813,6 +1956,9 @@ const label =
             new Map();
 
 
+        /*
+         * Extract categories from agency data.
+         */
         data.forEach(
             agency => {
 
@@ -1820,6 +1966,9 @@ const label =
                     agency.category;
 
 
+                /*
+                 * Ignore agencies without valid categories.
+                 */
                 if (
                     !category ||
                     !category.id
@@ -1830,6 +1979,9 @@ const label =
                 }
 
 
+                /*
+                 * Store each category only once.
+                 */
                 if (
                     !categories.has(
                         category.id
@@ -1923,7 +2075,7 @@ const label =
 
 
                 /*
-                 * Colored category dot.
+                 * Create the colored category dot.
                  */
                 const colorDot =
                     document.createElement(
@@ -1952,7 +2104,7 @@ const label =
 
 
                 /*
-                 * Category name.
+                 * Create the category name.
                  */
                 const categoryName =
                     document.createElement(
@@ -2007,39 +2159,38 @@ const label =
     // =========================================================
 
     function applyCategoryFilter(
-    categoryId
-) {
-
-    /*
-     * Normalize the category ID.
-     */
-    const normalizedCategoryId =
-        String(categoryId);
-
-
-    /*
-     * Log intentional category selections.
-     *
-     * "All" only clears the current filter, so it
-     * does not represent a meaningful category choice
-     * and therefore is not logged.
-     */
-    if (
-        normalizedCategoryId !== 'all'
+        categoryId
     ) {
 
-        logCategoryActivity(
-            normalizedCategoryId
-        );
+        /*
+         * Normalize the category ID.
+         */
+        const normalizedCategoryId =
+            String(categoryId);
 
-    }
+
+        /*
+         * Log intentional category selections.
+         *
+         * "All" only clears the current filter,
+         * so it is not logged as a category choice.
+         */
+        if (
+            normalizedCategoryId !== 'all'
+        ) {
+
+            logCategoryActivity(
+                normalizedCategoryId
+            );
+
+        }
 
 
-    /*
-     * Remember the active category.
-     */
-    activeCategoryId =
-        normalizedCategoryId;
+        /*
+         * Remember the active category.
+         */
+        activeCategoryId =
+            normalizedCategoryId;
 
 
         /*
@@ -2055,6 +2206,8 @@ const label =
 
         /*
          * Process every marker.
+         *
+         * No tooltip calculations are performed here.
          */
         Object.values(markers).forEach(
             marker => {
@@ -2068,8 +2221,8 @@ const label =
 
 
                 /*
-                 * Determine whether the marker
-                 * belongs to the selected category.
+                 * Determine whether the marker belongs
+                 * to the selected category.
                  */
                 const shouldShow =
                     activeCategoryId === 'all' ||
@@ -2079,7 +2232,10 @@ const label =
 
 
                 /*
-                 * Show or hide the marker.
+                 * Show or hide the marker by opacity.
+                 *
+                 * The marker remains in Leaflet's layer system,
+                 * avoiding unnecessary creation/destruction.
                  */
                 marker.setOpacity(
                     shouldShow
@@ -2087,47 +2243,37 @@ const label =
                         : 0
                 );
 
-
                 /*
-                 * Get the agency label.
-                 */
+                * Agency labels are separate Leaflet tooltip layers,
+                * so their visibility must be updated independently
+                * from the marker itself.
+                */
                 const tooltip =
                     marker.getTooltip();
 
+                if (tooltip) {
 
-                if (shouldShow) {
-
-                    if (tooltip) {
-
-                        marker.openTooltip();
-
-                    }
+                    tooltip.setOpacity(
+                        shouldShow
+                            ? 1
+                            : 0
+                    );
 
                 }
 
-                else {
 
-                    if (tooltip) {
+                /*
+                 * If the selected agency is being hidden
+                 * by the filter, close its details panel.
+                 */
+                if (
+                    !shouldShow &&
+                    selectedAgencyId !== null &&
+                    String(agency.id) ===
+                        String(selectedAgencyId)
+                ) {
 
-                        marker.closeTooltip();
-
-                    }
-
-
-                    /*
-                     * If the selected agency is being
-                     * hidden by this filter, close
-                     * its details panel.
-                     */
-                    if (
-                        selectedAgencyId !== null &&
-                        String(agency.id) ===
-                            String(selectedAgencyId)
-                    ) {
-
-                        closeAgencyDetails();
-
-                    }
+                    closeAgencyDetails();
 
                 }
 
@@ -2140,12 +2286,6 @@ const label =
          */
         updateActiveCategoryButton();
 
-
-        /*
-         * Recalculate label positions.
-         */
-        repositionAgencyLabels();
-
     }
 
 
@@ -2155,6 +2295,9 @@ const label =
 
     function updateActiveCategoryButton() {
 
+        /*
+         * Stop when the filter container doesn't exist.
+         */
         if (!categoryFilters) {
             return;
         }
@@ -2166,6 +2309,9 @@ const label =
             );
 
 
+        /*
+         * Toggle the active state of each button.
+         */
         buttons.forEach(
             button => {
 
@@ -2185,1033 +2331,6 @@ const label =
     }
 
 
-   // =========================================================
-// AGENCY LABEL COLLISION RESOLUTION
-// =========================================================
-
-/*
- * Repositions agency labels around their OWN markers.
- *
- * The important difference from the previous algorithm is
- * that labels are not given a permanent priority based on
- * the order in which they are processed.
- *
- * When two labels collide, BOTH labels are evaluated.
- *
- * The label that has the better alternative position
- * becomes the one that moves.
- *
- * The actual Leaflet markers are NEVER moved.
- */
-function repositionAgencyLabels() {
-
-    /*
-     * Current map zoom.
-     *
-     * We use this to control how far labels are allowed
-     * to move from their markers.
-     */
-    const zoom =
-        map.getZoom();
-
-
-    // =====================================================
-    // COLLECT VISIBLE LABELS
-    // =====================================================
-
-    const labels = [];
-
-
-    Object.values(markers).forEach(
-        marker => {
-
-            const agency =
-                marker.agencyData;
-
-
-            /*
-             * Ignore invalid marker data.
-             */
-            if (!agency) {
-                return;
-            }
-
-
-            /*
-             * Respect the active category filter.
-             */
-            const categoryId =
-                agency.category?.id;
-
-
-            const isVisible =
-                activeCategoryId === 'all' ||
-                String(categoryId) ===
-                    String(activeCategoryId);
-
-
-            if (!isVisible) {
-                return;
-            }
-
-
-            /*
-             * Get the permanent Leaflet tooltip.
-             */
-            const tooltip =
-                marker.getTooltip();
-
-
-            if (!tooltip) {
-                return;
-            }
-
-
-            /*
-             * Make sure Leaflet has created the
-             * tooltip element.
-             */
-            if (!tooltip.getElement()) {
-
-                marker.openTooltip();
-
-            }
-
-
-            const element =
-                tooltip.getElement();
-
-
-            if (!element) {
-                return;
-            }
-
-
-            labels.push({
-
-                marker,
-
-                element
-
-            });
-
-        }
-    );
-
-
-    /*
-     * Nothing to reposition.
-     */
-    if (!labels.length) {
-        return;
-    }
-
-
-    // =====================================================
-    // POSITION CANDIDATES
-    // =====================================================
-
-    /*
-     * At wider zoom levels, keep labels VERY close
-     * to their markers.
-     *
-     * We don't want another DOLE/BIR situation where
-     * the label is technically collision-free but looks
-     * disconnected from its marker.
-     */
-    const closeDistance =
-        zoom < 16
-            ? 18
-            : 22;
-
-
-    /*
-     * First ring of positions.
-     *
-     * The order is not used as priority between agencies.
-     *
-     * It only determines which equally good position
-     * a single label prefers.
-     */
-    const candidates = [
-
-        /*
-         * Default Leaflet position.
-         *
-         * Because the tooltip direction is "top",
-         * this is naturally above the marker.
-         */
-        {
-            x: 0,
-            y: 0
-        },
-
-
-        /*
-         * Directly BELOW the marker.
-         */
-        {
-            x: 0,
-            y: closeDistance
-        },
-
-
-        /*
-         * RIGHT.
-         */
-        {
-            x: closeDistance,
-            y: 0
-        },
-
-
-        /*
-         * LEFT.
-         */
-        {
-            x: -closeDistance,
-            y: 0
-        },
-
-
-        /*
-         * LOWER-RIGHT.
-         */
-        {
-            x: closeDistance,
-            y: closeDistance
-        },
-
-
-        /*
-         * LOWER-LEFT.
-         */
-        {
-            x: -closeDistance,
-            y: closeDistance
-        },
-
-
-        /*
-         * UPPER-RIGHT.
-         */
-        {
-            x: closeDistance,
-            y: -closeDistance
-        },
-
-
-        /*
-         * UPPER-LEFT.
-         */
-        {
-            x: -closeDistance,
-            y: -closeDistance
-        }
-
-    ];
-
-
-    /*
-     * Only allow a second ring when the user is
-     * sufficiently zoomed in.
-     *
-     * At wider views we would rather hide a label
-     * than send it far away from its marker.
-     */
-    if (zoom >= 17) {
-
-        candidates.push(
-
-            {
-                x: 38,
-                y: 0
-            },
-
-            {
-                x: -38,
-                y: 0
-            },
-
-            {
-                x: 0,
-                y: 38
-            },
-
-            {
-                x: 0,
-                y: -38
-            }
-
-        );
-
-    }
-
-
-    // =====================================================
-    // RESET LABEL POSITIONS
-    // =====================================================
-
-    labels.forEach(
-        item => {
-
-            /*
-             * Start from Leaflet's normal tooltip position.
-             */
-            item.element.style.marginLeft =
-                '0px';
-
-            item.element.style.marginTop =
-                '0px';
-
-            /*
-             * Keep labels visible while we calculate
-             * their rectangles.
-             */
-            item.element.style.visibility =
-                'visible';
-
-        }
-    );
-
-
-    // =====================================================
-    // RECTANGLE HELPERS
-    // =====================================================
-
-    /*
-     * Return the current screen rectangle of a label
-     * at a specific candidate position.
-     */
-    function getRect(
-        item,
-        candidate
-    ) {
-
-        item.element.style.marginLeft =
-            `${candidate.x}px`;
-
-        item.element.style.marginTop =
-            `${candidate.y}px`;
-
-
-        return item.element.getBoundingClientRect();
-
-    }
-
-
-    /*
-     * Determine whether two rectangles overlap.
-     */
-    function overlaps(
-        first,
-        second
-    ) {
-
-        return (
-
-            first.left <
-                second.right &&
-
-            first.right >
-                second.left &&
-
-            first.top <
-                second.bottom &&
-
-            first.bottom >
-                second.top
-
-        );
-
-    }
-
-
-    /*
-     * Very small visual breathing room.
-     *
-     * We deliberately keep this low so labels are not
-     * pushed unnecessarily far from their markers.
-     */
-    const padding = 2;
-
-
-    /*
-     * Expand a rectangle by the supplied padding.
-     */
-    function expandRect(
-        rect
-    ) {
-
-        return {
-
-            left:
-                rect.left -
-                padding,
-
-            right:
-                rect.right +
-                padding,
-
-            top:
-                rect.top -
-                padding,
-
-            bottom:
-                rect.bottom +
-                padding
-
-        };
-
-    }
-
-
-    // =====================================================
-    // CURRENT LABEL STATE
-    // =====================================================
-
-    /*
-     * Every label starts at its natural position.
-     */
-    const states =
-        labels.map(
-            item => {
-
-                return {
-
-                    item,
-
-                    position:
-                        candidates[0],
-
-                    rect:
-                        expandRect(
-                            getRect(
-                                item,
-                                candidates[0]
-                            )
-                        )
-
-                };
-
-            }
-        );
-
-
-    // =====================================================
-    // FIND COLLISIONS
-    // =====================================================
-
-    /*
-     * Return all currently overlapping label pairs.
-     */
-    function getCollisions() {
-
-        const collisions = [];
-
-
-        for (
-            let i = 0;
-            i < states.length;
-            i++
-        ) {
-
-            for (
-                let j = i + 1;
-                j < states.length;
-                j++
-            ) {
-
-                if (
-                    overlaps(
-                        states[i].rect,
-                        states[j].rect
-                    )
-                ) {
-
-                    collisions.push({
-
-                        first:
-                            states[i],
-
-                        second:
-                            states[j]
-
-                    });
-
-                }
-
-            }
-
-        }
-
-
-        return collisions;
-
-    }
-
-
-    // =====================================================
-    // FIND THE BEST ALTERNATIVE FOR ONE LABEL
-    // =====================================================
-
-    /*
-     * Evaluate every nearby position around one marker.
-     *
-     * The label is evaluated against ALL OTHER CURRENT
-     * labels, not just the label it happens to collide with.
-     */
-    function findBestPosition(
-        state
-    ) {
-
-        const otherStates =
-            states.filter(
-                other =>
-                    other !== state
-            );
-
-
-        let best = null;
-
-
-        candidates.forEach(
-            candidate => {
-
-                /*
-                 * Get the label's screen rectangle
-                 * at this candidate position.
-                 */
-                const rect =
-                    expandRect(
-                        getRect(
-                            state.item,
-                            candidate
-                        )
-                    );
-
-
-                /*
-                 * Count how many existing labels this
-                 * candidate would collide with.
-                 */
-                let collisionCount =
-                    0;
-
-
-                otherStates.forEach(
-                    other => {
-
-                        if (
-                            overlaps(
-                                rect,
-                                other.rect
-                            )
-                        ) {
-
-                            collisionCount++;
-
-                        }
-
-                    }
-                );
-
-
-                /*
-                 * Calculate how far the label moved
-                 * from its natural position.
-                 */
-                const movement =
-                    Math.sqrt(
-                        (
-                            candidate.x *
-                            candidate.x
-                        ) +
-                        (
-                            candidate.y *
-                            candidate.y
-                        )
-                    );
-
-
-                /*
-                 * Count how many candidate positions
-                 * could completely avoid other labels.
-                 *
-                 * This represents the label's flexibility.
-                 */
-                let freePositions =
-                    0;
-
-
-                candidates.forEach(
-                    alternative => {
-
-                        const alternativeRect =
-                            expandRect(
-                                getRect(
-                                    state.item,
-                                    alternative
-                                )
-                            );
-
-
-                        const hasCollision =
-                            otherStates.some(
-                                other =>
-                                    overlaps(
-                                        alternativeRect,
-                                        other.rect
-                                    )
-                            );
-
-
-                        if (!hasCollision) {
-
-                            freePositions++;
-
-                        }
-
-                    }
-                );
-
-
-                /*
-                 * Build the candidate result.
-                 */
-                const result = {
-
-                    candidate,
-
-                    rect,
-
-                    collisionCount,
-
-                    movement,
-
-                    freePositions
-
-                };
-
-
-                /*
-                 * Determine whether this is better
-                 * than the current best candidate.
-                 */
-                if (!best) {
-
-                    best =
-                        result;
-
-                    return;
-
-                }
-
-
-                /*
-                 * FIRST PRIORITY:
-                 *
-                 * Fewer collisions always wins.
-                 */
-                if (
-                    collisionCount <
-                    best.collisionCount
-                ) {
-
-                    best =
-                        result;
-
-                    return;
-
-                }
-
-
-                if (
-                    collisionCount >
-                    best.collisionCount
-                ) {
-
-                    return;
-
-                }
-
-
-                /*
-                 * SECOND PRIORITY:
-                 *
-                 * If both candidates have the same number
-                 * of collisions, prefer the one requiring
-                 * less movement.
-                 */
-                if (
-                    movement <
-                    best.movement
-                ) {
-
-                    best =
-                        result;
-
-                    return;
-
-                }
-
-
-                if (
-                    movement >
-                    best.movement
-                ) {
-
-                    return;
-
-                }
-
-
-                /*
-                 * THIRD PRIORITY:
-                 *
-                 * If movement is equal, prefer the label
-                 * position that gives the label more
-                 * available alternatives.
-                 */
-                if (
-                    freePositions >
-                    best.freePositions
-                ) {
-
-                    best =
-                        result;
-
-                }
-
-            }
-        );
-
-
-        /*
-         * Restore the currently selected best position.
-         */
-        if (best) {
-
-            state.item.element.style.marginLeft =
-                `${best.candidate.x}px`;
-
-            state.item.element.style.marginTop =
-                `${best.candidate.y}px`;
-
-        }
-
-
-        return best;
-
-    }
-
-
-    // =====================================================
-    // COLLISION RESOLUTION
-    // =====================================================
-
-    /*
-     * Limit the number of iterations so an extremely
-     * crowded map can never create an infinite loop.
-     */
-    const maxIterations =
-        labels.length * 6;
-
-
-    let iteration =
-        0;
-
-
-    while (
-        iteration <
-        maxIterations
-    ) {
-
-        iteration++;
-
-
-        /*
-         * Find the current collisions.
-         */
-        const collisions =
-            getCollisions();
-
-
-        /*
-         * Everything is clean.
-         */
-        if (!collisions.length) {
-            break;
-        }
-
-
-        /*
-         * Resolve the first collision.
-         */
-        const collision =
-            collisions[0];
-
-
-        const firstBest =
-            findBestPosition(
-                collision.first
-            );
-
-
-        const secondBest =
-            findBestPosition(
-                collision.second
-            );
-
-
-        /*
-         * -------------------------------------------------
-         * DECIDE WHICH LABEL SHOULD MOVE
-         * -------------------------------------------------
-         */
-
-        let labelToMove;
-
-
-        /*
-         * If one label can completely eliminate its
-         * collisions while the other cannot, move that one.
-         */
-        if (
-            firstBest.collisionCount === 0 &&
-            secondBest.collisionCount > 0
-        ) {
-
-            labelToMove =
-                collision.first;
-
-        }
-
-        else if (
-            secondBest.collisionCount === 0 &&
-            firstBest.collisionCount > 0
-        ) {
-
-            labelToMove =
-                collision.second;
-
-        }
-
-
-        /*
-         * If both can completely resolve the collision,
-         * compare their movement cost.
-         */
-        else if (
-            firstBest.collisionCount === 0 &&
-            secondBest.collisionCount === 0
-        ) {
-
-            /*
-             * Prefer moving the label whose alternative
-             * requires LESS movement.
-             */
-            if (
-                firstBest.movement <
-                secondBest.movement
-            ) {
-
-                labelToMove =
-                    collision.first;
-
-            }
-
-            else if (
-                secondBest.movement <
-                firstBest.movement
-            ) {
-
-                labelToMove =
-                    collision.second;
-
-            }
-
-            /*
-             * If movement is identical, move the label
-             * with MORE available alternatives.
-             *
-             * This is the important part for cases like
-             * COMELEC vs DILG:
-             *
-             * the label that has more room to maneuver
-             * gives up its current position.
-             */
-            else if (
-                firstBest.freePositions >
-                secondBest.freePositions
-            ) {
-
-                labelToMove =
-                    collision.first;
-
-            }
-
-            else {
-
-                labelToMove =
-                    collision.second;
-
-            }
-
-        }
-
-
-        /*
-         * Neither label can completely eliminate its
-         * collisions from its current state.
-         *
-         * Choose the label that improves the situation
-         * the most.
-         */
-        else {
-
-            if (
-                firstBest.collisionCount <
-                secondBest.collisionCount
-            ) {
-
-                labelToMove =
-                    collision.first;
-
-            }
-
-            else if (
-                secondBest.collisionCount <
-                firstBest.collisionCount
-            ) {
-
-                labelToMove =
-                    collision.second;
-
-            }
-
-            else {
-
-                /*
-                 * Equal collision counts:
-                 *
-                 * prefer the label that can move farther
-                 * without becoming disconnected.
-                 *
-                 * More available positions means more
-                 * flexibility.
-                 */
-                if (
-                    firstBest.freePositions >
-                    secondBest.freePositions
-                ) {
-
-                    labelToMove =
-                        collision.first;
-
-                }
-
-                else {
-
-                    labelToMove =
-                        collision.second;
-
-                }
-
-            }
-
-        }
-
-
-        /*
-         * -------------------------------------------------
-         * APPLY MOVEMENT
-         * -------------------------------------------------
-         */
-
-        if (labelToMove) {
-
-            const best =
-                labelToMove ===
-                    collision.first
-                    ? firstBest
-                    : secondBest;
-
-
-            /*
-             * Apply the selected candidate.
-             */
-            labelToMove.position =
-                best.candidate;
-
-
-            labelToMove.rect =
-                best.rect;
-
-
-            /*
-             * Keep the label visible.
-             */
-            labelToMove.item.element.style.visibility =
-                'visible';
-
-        }
-
-
-        /*
-         * -------------------------------------------------
-         * REFRESH ALL RECTANGLES
-         * -------------------------------------------------
-         *
-         * Other labels may now have a different
-         * relationship to the moved label.
-         */
-        states.forEach(
-            state => {
-
-                state.rect =
-                    expandRect(
-                        getRect(
-                            state.item,
-                            state.position
-                        )
-                    );
-
-            }
-        );
-
-    }
-
-
-    // =====================================================
-    // FINAL CLEANUP
-    // =====================================================
-
-    /*
-     * After collision resolution, make sure every
-     * visible label uses its final calculated position.
-     */
-    states.forEach(
-        state => {
-
-            state.item.element.style.marginLeft =
-                `${state.position.x}px`;
-
-            state.item.element.style.marginTop =
-                `${state.position.y}px`;
-
-            state.item.element.style.visibility =
-                'visible';
-
-        }
-    );
-
-}
-
-
-    
-
-
     // =========================================================
     // LOAD AGENCIES
     // =========================================================
@@ -3222,7 +2341,20 @@ function repositionAgencyLabels() {
             response => {
 
                 /*
-                 * Convert the API response into JSON.
+                 * A non-success HTTP response should not
+                 * be treated as valid agency data.
+                 */
+                if (!response.ok) {
+
+                    throw new Error(
+                        `Agency API request failed with status ${response.status}.`
+                    );
+
+                }
+
+
+                /*
+                 * Convert the response into JSON.
                  */
                 return response.json();
 
@@ -3231,6 +2363,18 @@ function repositionAgencyLabels() {
 
         .then(
             data => {
+
+                /*
+                 * Make sure the API returned an array.
+                 */
+                if (!Array.isArray(data)) {
+
+                    throw new Error(
+                        'Agency API returned an invalid response.'
+                    );
+
+                }
+
 
                 /*
                  * Build the category filter buttons.
@@ -3256,6 +2400,10 @@ function repositionAgencyLabels() {
                                 ?.display_color;
 
 
+                        /*
+                         * Only allow valid six-digit
+                         * hexadecimal colors.
+                         */
                         const categoryColor =
                             /^#[0-9A-Fa-f]{6}$/.test(
                                 rawCategoryColor
@@ -3268,19 +2416,19 @@ function repositionAgencyLabels() {
                         // NORMAL CATEGORY MARKER
                         // -------------------------------------------------
 
+                        /*
+                         * Create a lightweight custom marker.
+                         *
+                         * No permanent label is included inside
+                         * the marker HTML itself.
+                         */
                         const icon =
                             L.divIcon({
 
-                                /*
-                                 * Custom marker wrapper.
-                                 */
                                 className:
                                     'category-map-marker',
 
 
-                                /*
-                                 * Category-colored marker.
-                                 */
                                 html: `
                                     <div
                                         class="category-marker-circle"
@@ -3289,19 +2437,12 @@ function repositionAgencyLabels() {
                                 `,
 
 
-                                /*
-                                 * Marker size.
-                                 */
                                 iconSize: [
                                     24,
                                     24
                                 ],
 
 
-                                /*
-                                 * Center the marker
-                                 * on its coordinate.
-                                 */
                                 iconAnchor: [
                                     12,
                                     12
@@ -3329,9 +2470,6 @@ function repositionAgencyLabels() {
 
                         /*
                          * Remember the marker's normal icon.
-                         *
-                         * This allows us to restore it after
-                         * another agency becomes selected.
                          */
                         marker.normalIcon =
                             icon;
@@ -3378,15 +2516,20 @@ function repositionAgencyLabels() {
                         // -------------------------------------------------
 
                         /*
-                         * Permanent tooltip acts as the agency
-                         * label on the map.
+                         * Create a permanent Leaflet tooltip
+                         * that acts as the agency's map label.
                          *
-                         * This is NOT a Leaflet popup.
+                         * Leaflet automatically moves this tooltip
+                         * together with the marker.
+                         *
+                         * There is intentionally NO collision
+                         * detection or manual positioning.
                          */
                         marker.bindTooltip(
                             '',
                             {
-                                permanent: true,
+                                permanent:
+                                    true,
 
                                 direction:
                                     'top',
@@ -3421,7 +2564,11 @@ function repositionAgencyLabels() {
 
 
                 /*
-                 * Set initial agency labels.
+                 * Set the initial agency labels.
+                 *
+                 * This only sets their text.
+                 *
+                 * It does not reposition them manually.
                  */
                 updateAgencyLabels();
 
@@ -3434,7 +2581,7 @@ function repositionAgencyLabels() {
                 /*
                  * Log the technical error for development.
                  *
-                 * We don't expose internal API details
+                 * Internal API details are not displayed
                  * directly to users.
                  */
                 console.error(
@@ -3451,46 +2598,20 @@ function repositionAgencyLabels() {
     // =========================================================
 
     /*
-     * Update labels when zoom changes.
+     * Update label text only after the zoom level changes.
+     *
+     * We do NOT listen to moveend because dragging the map
+     * does not change whether the label should display the
+     * abbreviation or full agency name.
      */
     map.on(
-    'zoomend',
-    () => {
-
-        /*
-         * Wait one browser frame so Leaflet can
-         * finish updating tooltip positions.
-         */
-        requestAnimationFrame(() => {
+        'zoomend',
+        () => {
 
             updateAgencyLabels();
 
-        });
-
-    }
-);
-
-
-    /*
-     * Recalculate label positions whenever
-     * the map moves.
-     */
-    map.on(
-    'moveend',
-    () => {
-
-        /*
-         * Wait one browser frame before measuring
-         * the label rectangles.
-         */
-        requestAnimationFrame(() => {
-
-            repositionAgencyLabels();
-
-        });
-
-    }
-);
+        }
+    );
 
 
     // =========================================================
@@ -3517,6 +2638,14 @@ function repositionAgencyLabels() {
     ) {
 
         /*
+         * Stop if the search input doesn't exist.
+         */
+        if (!searchInput) {
+            return;
+        }
+
+
+        /*
          * Normalize the query.
          */
         const query =
@@ -3530,8 +2659,12 @@ function repositionAgencyLabels() {
          */
         if (!query) {
 
-            resultsContainer.innerHTML =
-                '';
+            if (resultsContainer) {
+
+                resultsContainer.innerHTML =
+                    '';
+
+            }
 
             return;
 
@@ -3539,8 +2672,8 @@ function repositionAgencyLabels() {
 
 
         /*
-         * Convert marker object into an array
-         * of [name, marker] entries.
+         * Convert marker object into
+         * [name, marker] entries.
          */
         const entries =
             Object.entries(
@@ -3563,8 +2696,7 @@ function repositionAgencyLabels() {
 
 
                     /*
-                     * Search only inside the
-                     * active category.
+                     * Search only inside the active category.
                      */
                     const matchesCategory =
                         activeCategoryId ===
@@ -3623,8 +2755,8 @@ function repositionAgencyLabels() {
 
 
                     /*
-                     * Abbreviation can match
-                     * directly or partially.
+                     * Abbreviation can match directly
+                     * or partially.
                      */
                     const matchesAbbreviation =
                         agencyAbbreviation ===
@@ -3651,8 +2783,12 @@ function repositionAgencyLabels() {
             matches.length === 0
         ) {
 
-            resultsContainer.innerHTML =
-                '<div class="search-item">No results</div>';
+            if (resultsContainer) {
+
+                resultsContainer.innerHTML =
+                    '<div class="search-item">No results</div>';
+
+            }
 
             return;
 
@@ -3663,62 +2799,66 @@ function repositionAgencyLabels() {
         // SUBMIT SEARCH
         // -----------------------------------------------------
 
-        // -----------------------------------------------------
-// SUBMIT SEARCH
-// -----------------------------------------------------
+        if (isSubmit) {
 
-if (isSubmit) {
+            /*
+             * Automatically select the agency only
+             * when exactly one result exists.
+             */
+            if (matches.length === 1) {
 
-    if (matches.length === 1) {
-
-    const [
-        ,
-        marker
-    ] = matches[0];
-
-
-    /*
-     * Record the user's intentional agency search.
-     */
-    logUserActivity(
-        'search_agency',
-        marker.agencyData.id
-    );
+                const [
+                    ,
+                    marker
+                ] = matches[0];
 
 
-    /*
-     * Continue through the existing selection workflow.
-     */
-    focusMarker(
-        marker
-    );
+                /*
+                 * Record the user's intentional
+                 * agency search.
+                 */
+                logUserActivity(
+                    'search_agency',
+                    marker.agencyData.id
+                );
 
 
-    /*
-     * Remove the suggestions because the agency
-     * has already been selected.
-     */
-    resultsContainer.innerHTML =
-        '';
+                /*
+                 * Continue through the normal
+                 * agency-selection workflow.
+                 */
+                focusMarker(
+                    marker
+                );
 
 
-    return;
-}
+                /*
+                 * Remove suggestions after selection.
+                 */
+                if (resultsContainer) {
+
+                    resultsContainer.innerHTML =
+                        '';
+
+                }
+
+                return;
+
+            }
 
 
-    /*
-     * If multiple agencies match the query,
-     * keep the suggestions visible instead of
-     * arbitrarily selecting the first result.
-     */
-    showResults(
-        matches
-    );
+            /*
+             * Keep multiple matching agencies visible
+             * instead of arbitrarily selecting one.
+             */
+            showResults(
+                matches
+            );
 
 
-    return;
+            return;
 
-}
+        }
 
 
         // -----------------------------------------------------
@@ -3733,356 +2873,343 @@ if (isSubmit) {
 
 
     // =========================================================
-// FOCUS SELECTED AGENCY
-// =========================================================
-
-/*
- * Focus the selected agency with one smooth animation.
- *
- * The map simultaneously pans and zooms, but the zoom
- * is mathematically targeted around the selected marker.
- *
- * This prevents the marker from disappearing while the
- * map zooms toward the center of the screen.
- */
-function focusMarker(marker) {
+    // FOCUS SELECTED AGENCY
+    // =========================================================
 
     /*
-     * Get the selected agency's coordinates.
+     * Focus the selected agency with one smooth animation.
+     *
+     * IMPORTANT:
+     *
+     * This is the ONLY automatic flyTo() in this file.
+     *
+     * It happens only after the user intentionally selects
+     * an agency.
      */
-    const latlng = marker.getLatLng();
-
-
-    /*
-     * Highlight the selected marker.
-     */
-    selectAgencyMarker(marker);
-
-
-    /*
-     * Open the agency details panel.
-     */
-    openAgencyDetails(
-        marker.agencyData
-    );
-
-
-    /*
-     * Wait one browser frame so the panel has started
-     * opening before we calculate the final composition.
-     */
-    requestAnimationFrame(() => {
+    function focusMarker(
+        marker
+    ) {
 
         /*
-         * Target zoom level.
+         * Get the selected agency's coordinates.
          */
-        const targetZoom = 17;
+        const latlng =
+            marker.getLatLng();
 
 
         /*
-         * Get the current map dimensions.
+         * Highlight the selected marker.
          */
-        const mapSize =
-            map.getSize();
-
-
-        /*
-         * Determine where the selected marker should
-         * appear in the final composition.
-         */
-        let targetPoint;
-
-
-        // -------------------------------------------------
-        // MOBILE
-        // -------------------------------------------------
-
-        if (window.innerWidth <= 900) {
-
-            /*
-             * Keep the marker around 200px from the
-             * top of the visible map.
-             *
-             * This is the position you previously
-             * liked.
-             */
-            targetPoint = L.point(
-                mapSize.x / 2,
-                220
-            );
-
-        }
-
-
-        // -------------------------------------------------
-        // DESKTOP
-        // -------------------------------------------------
-
-        else {
-
-            /*
-             * The details panel occupies the LEFT side.
-             *
-             * Therefore, place the selected agency slightly
-             * to the RIGHT of the normal map center.
-             */
-            targetPoint = L.point(
-                mapSize.x / 2 + 180,
-                mapSize.y / 2
-            );
-
-        }
-
-
-        /*
-         * -------------------------------------------------
-         * IMPORTANT PART
-         * -------------------------------------------------
-         *
-         * Project the selected agency using the TARGET
-         * zoom level, not the current zoom level.
-         *
-         * This tells Leaflet exactly where the marker
-         * will exist when the map reaches zoom 17.
-         */
-        const markerProjected =
-            map.project(
-                latlng,
-                targetZoom
-            );
-
-
-        /*
-         * The center of the map's screen.
-         *
-         * Leaflet's projected coordinates are based on
-         * the world coordinate system at targetZoom.
-         */
-        const screenCenter = L.point(
-            mapSize.x / 2,
-            mapSize.y / 2
+        selectAgencyMarker(
+            marker
         );
 
 
         /*
-         * Calculate the projected position that the
-         * map center needs to have.
-         *
-         * In other words:
-         *
-         * marker position
-         *        -
-         * desired screen position
-         *        +
-         * screen center
-         *
-         * = required map center
+         * Open the agency details panel.
          */
-        const targetCenterProjected =
-            markerProjected
-                .subtract(targetPoint)
-                .add(screenCenter);
+        openAgencyDetails(
+            marker.agencyData
+        );
 
 
         /*
-         * Convert that projected point back into
-         * latitude/longitude at the target zoom.
+         * Wait one browser frame so the panel has started
+         * opening before calculating the final composition.
          */
-        const targetCenter =
-            map.unproject(
-                targetCenterProjected,
-                targetZoom
-            );
-
-
-        /*
-         * ONE animation.
-         *
-         * Leaflet now simultaneously:
-         *
-         * - pans
-         * - zooms
-         *
-         * while targeting the selected agency's
-         * final screen position.
-         */
-        map.flyTo(
-            targetCenter,
-            targetZoom,
-            {
-                animate: true,
+        requestAnimationFrame(
+            () => {
 
                 /*
-                 * Fast enough to feel responsive.
+                 * Target zoom level.
                  */
-                duration: 0.55,
+                const targetZoom =
+                    17;
+
 
                 /*
-                 * Slightly stronger easing gives the
-                 * transition a more deliberate feel.
+                 * Get the current map dimensions.
                  */
-                easeLinearity: 0.25
+                const mapSize =
+                    map.getSize();
+
+
+                /*
+                 * Determine where the selected marker
+                 * should appear in the final composition.
+                 */
+                let targetPoint;
+
+
+                // -------------------------------------------------
+                // MOBILE
+                // -------------------------------------------------
+
+                if (
+                    window.innerWidth <= 900
+                ) {
+
+                    /*
+                     * Keep the marker around 220px from
+                     * the top of the visible map.
+                     */
+                    targetPoint =
+                        L.point(
+                            mapSize.x / 2,
+                            220
+                        );
+
+                }
+
+
+                // -------------------------------------------------
+                // DESKTOP
+                // -------------------------------------------------
+
+                else {
+
+                    /*
+                     * The details panel occupies the LEFT side.
+                     *
+                     * Place the selected agency slightly
+                     * to the RIGHT of map center.
+                     */
+                    targetPoint =
+                        L.point(
+                            mapSize.x / 2 + 180,
+                            mapSize.y / 2
+                        );
+
+                }
+
+
+                /*
+                 * Project the selected agency using
+                 * the target zoom level.
+                 */
+                const markerProjected =
+                    map.project(
+                        latlng,
+                        targetZoom
+                    );
+
+
+                /*
+                 * Determine the center of the map screen.
+                 */
+                const screenCenter =
+                    L.point(
+                        mapSize.x / 2,
+                        mapSize.y / 2
+                    );
+
+
+                /*
+                 * Calculate the projected location required
+                 * for the map center.
+                 */
+                const targetCenterProjected =
+                    markerProjected
+                        .subtract(
+                            targetPoint
+                        )
+                        .add(
+                            screenCenter
+                        );
+
+
+                /*
+                 * Convert the projected point back into
+                 * latitude/longitude at target zoom.
+                 */
+                const targetCenter =
+                    map.unproject(
+                        targetCenterProjected,
+                        targetZoom
+                    );
+
+
+                /*
+                 * Smoothly pan and zoom toward the
+                 * selected agency.
+                 *
+                 * This animation only happens because
+                 * the user selected an agency.
+                 */
+                map.flyTo(
+                    targetCenter,
+                    targetZoom,
+                    {
+                        animate:
+                            true,
+
+                        /*
+                         * Short and responsive animation.
+                         */
+                        duration:
+                            0.55,
+
+                        /*
+                         * Controlled easing.
+                         */
+                        easeLinearity:
+                            0.25
+
+                    }
+                );
+
             }
         );
 
-    });
-
-}
+    }
 
 
     // =========================================================
-// CLOSE SEARCH WHEN CLICKING OUTSIDE
-// =========================================================
+    // CLOSE SEARCH WHEN CLICKING OUTSIDE
+    // =========================================================
 
-const searchForm =
-    document.querySelector(
-        '.search-form'
+    const searchForm =
+        document.querySelector(
+            '.search-form'
+        );
+
+
+    document.addEventListener(
+        'click',
+        event => {
+
+            /*
+             * If the search interface isn't present,
+             * nothing needs to happen.
+             */
+            if (
+                !searchForm ||
+                !resultsContainer
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+             * Don't close results when interacting
+             * with the search interface.
+             */
+            if (
+                searchForm.contains(
+                    event.target
+                )
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+             * Close search results.
+             */
+            resultsContainer.innerHTML =
+                '';
+
+        }
     );
 
 
-document.addEventListener(
-    'click',
-    event => {
+    // =========================================================
+    // CLOSE AGENCY DETAILS WHEN CLICKING OUTSIDE
+    // =========================================================
 
-        /*
-         * If the search interface isn't present,
-         * nothing needs to happen.
-         */
-        if (
-            !searchForm ||
-            !resultsContainer
-        ) {
-            return;
+    document.addEventListener(
+        'click',
+        event => {
+
+            /*
+             * Do nothing when the agency details panel
+             * is currently closed.
+             */
+            if (
+                !agencyDetails ||
+                !agencyDetails.classList.contains(
+                    'active'
+                )
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+             * Keep the panel open when clicking
+             * anywhere inside the panel.
+             */
+            if (
+                event.target.closest(
+                    '#agencyDetails'
+                )
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+             * Keep the panel open when clicking
+             * an agency marker.
+             */
+            if (
+                event.target.closest(
+                    '.leaflet-marker-icon'
+                )
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+             * Keep the panel open when clicking
+             * a search result.
+             */
+            if (
+                resultsContainer &&
+                resultsContainer.contains(
+                    event.target
+                )
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+             * Keep the panel open when interacting
+             * with the search interface.
+             */
+            if (
+                searchForm &&
+                searchForm.contains(
+                    event.target
+                )
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+             * Otherwise close the agency details panel.
+             */
+            closeAgencyDetails();
+
         }
-
-
-        /*
-         * Don't close results when the user
-         * is interacting with the search UI.
-         */
-        if (
-            searchForm.contains(
-                event.target
-            )
-        ) {
-            return;
-        }
-
-
-        /*
-         * Close search results.
-         */
-        resultsContainer.innerHTML =
-            '';
-
-    }
-);
-
-
-// =========================================================
-// CLOSE AGENCY DETAILS WHEN CLICKING OUTSIDE
-// =========================================================
-
-document.addEventListener(
-    'click',
-    event => {
-
-        /*
-         * Do nothing when the agency details panel
-         * is currently closed.
-         */
-        if (
-            !agencyDetails ||
-            !agencyDetails.classList.contains('active')
-        ) {
-            return;
-        }
-
-
-        /*
-         * Keep the panel open when the user clicks
-         * anywhere inside the panel.
-         *
-         * This includes:
-         *
-         * - Navigate
-         * - Close
-         * - Contact links
-         * - Agency information
-         */
-        if (
-            event.target.closest(
-                '#agencyDetails'
-            )
-        ) {
-            return;
-        }
-
-
-        /*
-         * Keep the panel open when the user clicks
-         * an agency marker.
-         *
-         * This is important because marker clicks
-         * first open the panel, then the browser
-         * bubbles the same click to document.
-         */
-        if (
-            event.target.closest(
-                '.leaflet-marker-icon'
-            )
-        ) {
-            return;
-        }
-
-
-        /*
-         * Keep the panel open when the user clicks
-         * a search result.
-         *
-         * Search results can call focusMarker(),
-         * which opens the agency panel.
-         */
-        if (
-            resultsContainer &&
-            resultsContainer.contains(
-                event.target
-            )
-        ) {
-            return;
-        }
-
-
-        /*
-         * Keep the panel open when interacting
-         * with the search interface.
-         */
-        if (
-            searchForm &&
-            searchForm.contains(
-                event.target
-            )
-        ) {
-            return;
-        }
-
-
-        /*
-         * At this point the click happened outside:
-         *
-         * - the agency panel
-         * - an agency marker
-         * - search results
-         * - the search interface
-         *
-         * Therefore it is safe to close the panel.
-         */
-        closeAgencyDetails();
-
-    }
-);
-
-    
+    );
 
 
     // =========================================================
@@ -4094,12 +3221,23 @@ document.addEventListener(
     ) {
 
         /*
+         * Stop when the results container doesn't exist.
+         */
+        if (!resultsContainer) {
+            return;
+        }
+
+
+        /*
          * Clear old results.
          */
         resultsContainer.innerHTML =
             '';
 
 
+        /*
+         * Create one result for every match.
+         */
         matches.forEach(
             ([name, marker]) => {
 
@@ -4118,10 +3256,10 @@ document.addEventListener(
 
 
                 /*
-                 * Build the result interface.
+                 * Build the search result interface.
                  *
-                 * The agency name comes from our
-                 * already-normalized search key.
+                 * Agency names are escaped before being
+                 * inserted into HTML.
                  */
                 item.innerHTML = `
                     <div class="search-content">
@@ -4140,58 +3278,52 @@ document.addEventListener(
                 `;
 
 
+                /*
+                 * Select the agency when its search
+                 * result is clicked.
+                 */
                 item.addEventListener(
-    'click',
-    event => {
+                    'click',
+                    event => {
 
-        /*
-         * Prevent the document-level click handler
-         * from treating this as an outside click.
-         */
-        event.stopPropagation();
-
-
-        /*
-         * Record that the user intentionally selected
-         * this agency from the search results.
-         *
-         * This is different from view_agency:
-         *
-         * search_agency = search intent
-         * view_agency   = actually opening the agency
-         */
-        logUserActivity(
-            'search_agency',
-            marker.agencyData.id
-        );
+                        /*
+                         * Prevent the document-level
+                         * outside-click handler from
+                         * immediately closing the panel.
+                         */
+                        event.stopPropagation();
 
 
-        /*
-         * Reuse the existing agency-selection workflow.
-         *
-         * This handles:
-         *
-         * - marker selection
-         * - agency details panel
-         * - map animation
-         * - navigation button
-         */
-        focusMarker(
-            marker
-        );
+                        /*
+                         * Record intentional search selection.
+                         */
+                        logUserActivity(
+                            'search_agency',
+                            marker.agencyData.id
+                        );
 
 
-        /*
-         * Search suggestions are no longer needed
-         * after the agency has been selected.
-         */
-        resultsContainer.innerHTML =
-            '';
-
-    }
-);
+                        /*
+                         * Reuse the normal agency-selection workflow.
+                         */
+                        focusMarker(
+                            marker
+                        );
 
 
+                        /*
+                         * Remove suggestions after selection.
+                         */
+                        resultsContainer.innerHTML =
+                            '';
+
+                    }
+                );
+
+
+                /*
+                 * Add the result to the interface.
+                 */
                 resultsContainer.appendChild(
                     item
                 );
@@ -4252,7 +3384,7 @@ document.addEventListener(
 
                 if (
                     event.key ===
-                    "Enter"
+                    'Enter'
                 ) {
 
                     if (searchBtn) {
@@ -4276,13 +3408,16 @@ document.addEventListener(
     /*
      * Escape text before placing it into HTML.
      *
-     * This is especially important because agency names
-     * originate from database data.
+     * This is important because agency names originate
+     * from database data.
      */
     function escapeHtml(
         text
     ) {
 
+        /*
+         * Create a temporary DOM element.
+         */
         const div =
             document.createElement(
                 'div'
@@ -4298,8 +3433,8 @@ document.addEventListener(
 
 
         /*
-         * Reading innerHTML now returns
-         * the safely escaped representation.
+         * Reading innerHTML now returns the safely
+         * escaped representation.
          */
         return div.innerHTML;
 

@@ -235,6 +235,23 @@ html, body {
     display: none;
 }
 
+/* =========================================================
+   MAP PERFORMANCE DURING DRAGGING
+   ========================================================= */
+
+/*
+ * Temporarily hide agency labels while the map is moving.
+ *
+ * The actual agency markers remain visible.
+ * Only the text labels are hidden during continuous
+ * map interaction.
+ */
+.map-is-moving .agency-map-label {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
 .category-filters {
     cursor: grab;
     overscroll-behavior: contain;
