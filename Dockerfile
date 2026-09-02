@@ -30,6 +30,9 @@ RUN composer install \
     --optimize-autoloader \
     --no-interaction
 
+# Create Laravel's public storage symlink.
+RUN php artisan storage:link
+
 # Install frontend dependencies.
 RUN npm install
 
