@@ -16,7 +16,7 @@
             <a href="{{ route('admin.nga') }}"
             class="{{ request()->routeIs('admin.nga') ? 'active' : '' }}">
                 <i class="ph-light ph-buildings"></i>
-                Agencies
+                NGA & NGO
             </a>
 
             <!-- Categories -->

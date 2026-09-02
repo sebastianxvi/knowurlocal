@@ -242,7 +242,7 @@
 
 
                         {{-- =================================================
-                             USER
+                            USER
                         ================================================== --}}
 
                         <td>
@@ -252,15 +252,6 @@
                                 <span class="actor-name">
 
                                     {{ $req->user->first_name ?? 'Guest' }}
-
-                                </span>
-
-
-                                <span
-                                    class="role-badge {{ $req->user ? 'user' : 'guest' }}"
-                                >
-
-                                    {{ $req->user ? 'User' : 'Guest' }}
 
                                 </span>
 

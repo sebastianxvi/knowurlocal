@@ -482,10 +482,11 @@
                     <select name="agency_id" id="faq_agency" required>
                         <option value="" disabled selected hidden></option>
                         @foreach($agencies as $agency)
-                            <option 
+                            <option
                                 value="{{ $agency->id }}"
-                                data-abbr="{{ strtolower($agency->agency_abbreviation) }}">
-                                
+                                data-abbr="{{ strtolower($agency->agency_abbreviation) }}"
+                                data-full-name="{{ $agency->agency_name }}"
+                            >
                                 {{ $agency->agency_name }}
                             </option>
                         @endforeach
@@ -556,13 +557,13 @@
                     </div>
 
                     <div class="floating-group">
-                        <input
-                            type="text"
+                        <textarea
                             name="question"
                             id="faq_question"
                             placeholder=" "
+                            rows="1"
                             required
-                        >
+                        ></textarea>
                         <label>Question</label>
                     </div>
 
@@ -584,7 +585,7 @@
 <div class="faq-language-heading">
     <div class="faq-language-title optional">
         Filipino / Taglish
-        <span class="faq-optional-badge">Optional</span>
+        {{-- <span class="faq-optional-badge">Optional</span> --}}
     </div>
 
     <button
@@ -598,12 +599,12 @@
 </div>
 
                     <div class="floating-group">
-                        <input
-                            type="text"
+                        <textarea
                             name="question_fil"
                             id="faq_question_fil"
                             placeholder=" "
-                        >
+                            rows="1"
+                        ></textarea>
                         <label>Question</label>
                     </div>
 

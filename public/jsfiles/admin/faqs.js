@@ -47,14 +47,189 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("translateFaqBtn");
 
 
+        /*
+ * =========================================================
+ * AGENCY SELECT OPTION TRUNCATION
+ * =========================================================
+ *
+ * Shortens long agency names inside the native select.
+ *
+ * The original agency name is preserved in data-full-name,
+ * so this only changes what the administrator sees.
+ */
+function truncateAgencyOptions() {
+
+    /*
+     * Stop safely if the agency selector is unavailable.
+     */
+    if (!agencySelect) {
+        return;
+    }
+
+
+    /*
+     * Measure the actual width of the select element.
+     *
+     * A small amount of space is reserved for the native
+     * select arrow and internal browser padding.
+     */
+    const availableWidth =
+        Math.max(
+            agencySelect.clientWidth - 48,
+            120
+        );
+
+
+    /*
+     * Read the select's actual font configuration.
+     *
+     * This ensures the text measurement matches the
+     * typography displayed inside the control.
+     */
+    const styles =
+        window.getComputedStyle(
+            agencySelect
+        );
+
+
+    const font =
+        `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
+
+
+    /*
+     * Create an off-screen canvas used only for measuring
+     * rendered text width.
+     */
+    const canvas =
+        document.createElement("canvas");
+
+
+    const context =
+        canvas.getContext("2d");
+
+
+    /*
+     * Stop safely if text measurement is unavailable.
+     */
+    if (!context) {
+        return;
+    }
+
+
+    context.font = font;
+
+
+    /*
+     * Process every agency option.
+     */
+    Array.from(
+        agencySelect.options
+    ).forEach(option => {
+
+        /*
+         * The placeholder has no full agency name,
+         * so there is nothing to truncate.
+         */
+        if (!option.dataset.fullName) {
+            return;
+        }
+
+
+        /*
+         * Always use the original name as the source.
+         *
+         * This prevents repeated calls from truncating
+         * an already-truncated string.
+         */
+        const fullName =
+            option.dataset.fullName.trim();
+
+
+        /*
+         * If the full agency name already fits,
+         * restore the complete name.
+         */
+        if (
+            context.measureText(fullName).width
+            <= availableWidth
+        ) {
+
+            option.textContent =
+                fullName;
+
+            return;
+        }
+
+
+        const ellipsis =
+            "...";
+
+
+        /*
+         * Binary search finds the maximum number of
+         * characters that can fit without repeatedly
+         * measuring every possible substring.
+         */
+        let low = 0;
+        let high = fullName.length;
+
+
+        while (
+            low < high
+        ) {
+
+            const middle =
+                Math.ceil(
+                    (low + high) / 2
+                );
+
+
+            const candidate =
+                fullName.slice(
+                    0,
+                    middle
+                ) + ellipsis;
+
+
+            if (
+                context.measureText(
+                    candidate
+                ).width <= availableWidth
+            ) {
+
+                low =
+                    middle;
+
+            } else {
+
+                high =
+                    middle - 1;
+
+            }
+
+        }
+
+
+        /*
+         * Replace only the visible option label.
+         *
+         * The original name remains untouched inside
+         * data-full-name.
+         */
+        option.textContent =
+            fullName.slice(
+                0,
+                low
+            ) + ellipsis;
+
+    });
+}
+
+
     /*
      * =========================================================
      * SUPPORT REQUEST → FAQ DATA
      * =========================================================
-     *
-     * These variables are injected by the FAQ Blade.
-     *
-     * During normal FAQ management they are null.
      */
 
     const supportFaqData =
@@ -80,83 +255,91 @@ document.addEventListener("DOMContentLoaded", function () {
      * AUTO-RESIZE TEXTAREAS
      * =========================================================
      *
-     * All text-heavy FAQ fields use the same resize system.
+     * This is the single source of truth for textarea height.
      *
-     * The CSS defines the maximum height.
-     * JavaScript calculates the required height.
+     * It is intentionally reusable so both:
+     *
+     * 1. User typing
+     * 2. JavaScript-generated content
+     *
+     * use exactly the same resizing behavior.
      */
 
     function resizeTextarea(textarea) {
 
-    /*
-     * Stop safely if the textarea does not exist.
-     */
-    if (!textarea) {
-        return;
+        /*
+         * Stop safely if the textarea does not exist.
+         */
+        if (!textarea) {
+            return;
+        }
+
+
+        /*
+         * Temporarily remove the current height.
+         *
+         * This is important when content becomes shorter.
+         * Without resetting the height first, scrollHeight
+         * may remain based on the previous larger value.
+         */
+        textarea.style.height = "auto";
+
+
+        /*
+         * Read the maximum height defined by CSS.
+         *
+         * This keeps JavaScript synchronized with the
+         * design rules defined in the stylesheet.
+         */
+        const styles =
+            window.getComputedStyle(textarea);
+
+        const maxHeight =
+            parseFloat(styles.maxHeight);
+
+
+        /*
+         * Determine how much vertical space the content needs.
+         */
+        const requiredHeight =
+            textarea.scrollHeight;
+
+
+        /*
+         * Never allow JavaScript to exceed the CSS limit.
+         *
+         * Math.min() chooses the smaller value between:
+         *
+         * 1. Required content height
+         * 2. Maximum allowed height
+         */
+        const finalHeight =
+            Number.isFinite(maxHeight)
+                ? Math.min(
+                    requiredHeight,
+                    maxHeight
+                )
+                : requiredHeight;
+
+
+        /*
+         * Apply the calculated height.
+         */
+        textarea.style.height =
+            `${finalHeight}px`;
+
+
+        /*
+         * Only enable vertical scrolling when the content
+         * actually exceeds the maximum allowed height.
+         *
+         * This keeps normal short content clean.
+         */
+        textarea.style.overflowY =
+            requiredHeight > maxHeight
+                ? "auto"
+                : "hidden";
     }
-
-
-    /*
-     * Temporarily remove the height restriction.
-     *
-     * This lets scrollHeight recalculate correctly when
-     * the administrator deletes text.
-     */
-    textarea.style.height = "auto";
-
-
-    /*
-     * Read the maximum height defined by CSS.
-     *
-     * getComputedStyle() allows JavaScript to respect the
-     * maximum height we already defined in CSS.
-     */
-    const styles =
-        window.getComputedStyle(textarea);
-
-    const maxHeight =
-        parseFloat(styles.maxHeight);
-
-
-    /*
-     * Calculate the height actually required by the content.
-     */
-    const requiredHeight =
-        textarea.scrollHeight;
-
-
-    /*
-     * Use the smaller of:
-     *
-     * 1. Required content height
-     * 2. CSS maximum height
-     */
-    const finalHeight =
-        Math.min(
-            requiredHeight,
-            maxHeight
-        );
-
-
-    /*
-     * Apply the calculated height.
-     */
-    textarea.style.height =
-        `${finalHeight}px`;
-
-
-    /*
-     * Only show scrolling when the content is actually
-     * larger than the allowed maximum.
-     *
-     * This prevents the ugly scrollbar from appearing
-     * during normal short content.
-     */
-    textarea.style.overflowY =
-        requiredHeight > maxHeight
-            ? "auto"
-            : "hidden";
-}
 
 
     /*
@@ -164,7 +347,9 @@ document.addEventListener("DOMContentLoaded", function () {
      * FAQ AUTO-RESIZE FIELD COLLECTION
      * =========================================================
      *
-     * These are all fields that should automatically grow.
+     * Every text-heavy FAQ field belongs to this collection.
+     *
+     * Centralizing the fields prevents duplicated resize logic.
      */
 
     const autoResizeFields = [
@@ -177,10 +362,43 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /*
-     * Attach the resize behavior once to every field.
+     * =========================================================
+     * RESIZE ALL FAQ TEXTAREAS
+     * =========================================================
      *
-     * This means we do NOT need separate resize logic for
-     * Keywords, Question, Answer, etc.
+     * Used whenever JavaScript fills multiple FAQ fields at
+     * the same time.
+     *
+     * Example:
+     *
+     * AI translation
+     * Support Request conversion
+     * Edit mode
+     * View mode
+     */
+
+    function resizeAllTextareas() {
+
+        autoResizeFields.forEach(field => {
+
+            if (!field) {
+                return;
+            }
+
+            resizeTextarea(field);
+
+        });
+
+    }
+
+
+    /*
+     * =========================================================
+     * ATTACH AUTO-RESIZE BEHAVIOR
+     * =========================================================
+     *
+     * The input event fires whenever an administrator types,
+     * deletes, pastes, or otherwise edits the field normally.
      */
 
     autoResizeFields.forEach(field => {
@@ -189,11 +407,14 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        field.addEventListener("input", () => {
+        field.addEventListener(
+            "input",
+            () => {
 
-            resizeTextarea(field);
+                resizeTextarea(field);
 
-        });
+            }
+        );
 
     });
 
@@ -203,10 +424,10 @@ document.addEventListener("DOMContentLoaded", function () {
      * RESET FAQ TEXTAREA HEIGHTS
      * =========================================================
      *
-     * Returns all auto-growing fields to their compact
-     * starting height.
+     * Returns all textareas to their compact starting height.
      *
-     * This is used whenever the FAQ modal is opened or closed.
+     * The next time content is inserted, resizeTextarea()
+     * will calculate the correct height again.
      */
 
     function resetTextareaHeights() {
@@ -218,6 +439,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             field.style.height = "38px";
+            field.style.overflowY = "hidden";
 
         });
 
@@ -270,13 +492,6 @@ document.addEventListener("DOMContentLoaded", function () {
      * =========================================================
      * SUPPORT REQUEST → FAQ PREPARATION
      * =========================================================
-     *
-     * Generates a bilingual FAQ draft from a Support Request.
-     *
-     * IMPORTANT:
-     *
-     * This does not save anything.
-     * It only fills the existing FAQ form.
      */
 
     async function prepareSupportFaq() {
@@ -295,7 +510,6 @@ document.addEventListener("DOMContentLoaded", function () {
         /*
          * Disable Save while the draft is being prepared.
          */
-
         const saveBtn =
             document.querySelector(".btn-save");
 
@@ -308,14 +522,12 @@ document.addEventListener("DOMContentLoaded", function () {
          * Temporarily prevent editing while the draft
          * is being generated.
          */
-
         enableInputs(false);
 
 
         /*
          * Give the administrator immediate feedback.
          */
-
         title.textContent =
             "Preparing FAQ...";
 
@@ -329,7 +541,6 @@ document.addEventListener("DOMContentLoaded", function () {
              * The server retrieves the authoritative
              * Support Request information from the database.
              */
-
             const response = await fetch(
                 supportFaqPrepareUrl,
                 {
@@ -352,7 +563,6 @@ document.addEventListener("DOMContentLoaded", function () {
             /*
              * Parse Laravel's JSON response.
              */
-
             const result =
                 await response.json();
 
@@ -360,7 +570,6 @@ document.addEventListener("DOMContentLoaded", function () {
             /*
              * Stop if the server or AI preparation failed.
              */
-
             if (
                 !response.ok ||
                 !result.success ||
@@ -383,7 +592,6 @@ document.addEventListener("DOMContentLoaded", function () {
              * Set the agency from the original
              * Support Request.
              */
-
             agencySelect.value =
                 result.agency_id || "";
 
@@ -391,7 +599,6 @@ document.addEventListener("DOMContentLoaded", function () {
             /*
              * Fill the English FAQ fields.
              */
-
             questionInput.value =
                 draft.question || "";
 
@@ -402,7 +609,6 @@ document.addEventListener("DOMContentLoaded", function () {
             /*
              * Fill the Filipino / Taglish fields.
              */
-
             questionFilInput.value =
                 draft.question_fil || "";
 
@@ -418,7 +624,6 @@ document.addEventListener("DOMContentLoaded", function () {
              *
              * The administrator must approve them.
              */
-
             selectedKeywordSuggestions.clear();
 
             keywordSuggestionList.innerHTML = "";
@@ -490,7 +695,6 @@ document.addEventListener("DOMContentLoaded", function () {
              * Generate fallback keywords only when AI
              * returned no suggestions and the field is empty.
              */
-
             if (
                 suggestions.length === 0 &&
                 !keywordsInput.value.trim()
@@ -504,14 +708,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
             /*
-             * Trigger input events.
+             * Resize every field after the server has
+             * populated the form.
              *
-             * This updates:
-             *
-             * 1. Floating labels
-             * 2. Auto-resizing textareas
+             * This is important because assigning
+             * textarea.value programmatically does NOT
+             * automatically fire an input event.
              */
+            resizeAllTextareas();
 
+
+            /*
+             * Trigger input events for other systems that
+             * depend on the input event.
+             *
+             * The resize itself is already handled above.
+             */
             questionInput.dispatchEvent(
                 new Event("input", {
                     bubbles: true
@@ -546,7 +758,6 @@ document.addEventListener("DOMContentLoaded", function () {
             /*
              * The AI draft is ready for human review.
              */
-
             title.textContent =
                 "Create FAQ from Support Request";
 
@@ -558,10 +769,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 saveBtn.disabled = false;
             }
 
-
-            /*
-             * Tell the administrator what happened.
-             */
 
             showAlertModal({
 
@@ -593,11 +800,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 error
             );
 
-
-            /*
-             * Re-enable the form so the administrator
-             * isn't trapped inside a disabled modal.
-             */
 
             enableInputs(true);
 
@@ -714,7 +916,6 @@ document.addEventListener("DOMContentLoaded", function () {
                  * English content is required before
                  * translation can begin.
                  */
-
                 if (
                     !question ||
                     !answer
@@ -749,7 +950,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 /*
                  * Prevent duplicate translation requests.
                  */
-
                 if (
                     translateFaqBtn.disabled
                 ) {
@@ -776,7 +976,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     /*
                      * Send the English source content to Laravel.
                      */
-
                     const response =
                         await fetch(
                             window.FAQ_TRANSLATE_URL,
@@ -822,7 +1021,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     /*
                      * Parse Laravel's JSON response.
                      */
-
                     const result =
                         await response.json();
 
@@ -830,7 +1028,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     /*
                      * Handle server-side failure.
                      */
-
                     if (
                         !response.ok ||
                         !result.success
@@ -847,7 +1044,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     /*
                      * Fill Filipino fields.
                      */
-
                     questionFilInput.value =
                         result.translation
                             .question_fil ||
@@ -862,7 +1058,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     /*
                      * Read AI keyword suggestions.
                      */
-
                     const keywordSuggestions =
                         Array.isArray(
                             result.translation
@@ -876,7 +1071,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     /*
                      * Reset previous AI selections.
                      */
-
                     selectedKeywordSuggestions.clear();
 
                     keywordSuggestionList.innerHTML =
@@ -963,12 +1157,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                     /*
-                     * Trigger input events so:
+                     * Resize the Filipino fields immediately.
                      *
-                     * 1. Floating labels update.
-                     * 2. Filipino fields resize.
+                     * JavaScript changing .value does not fire
+                     * the input event automatically.
                      */
+                    resizeTextarea(
+                        questionFilInput
+                    );
 
+                    resizeTextarea(
+                        answerFilInput
+                    );
+
+
+                    /*
+                     * Trigger input events for any other UI
+                     * functionality that listens for them.
+                     */
                     questionFilInput.dispatchEvent(
                         new Event("input", {
                             bubbles: true
@@ -1018,7 +1224,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     /*
                      * Always restore the translation button.
                      */
-
                     translateFaqBtn.disabled =
                         false;
 
@@ -1055,7 +1260,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 /*
                  * Read existing comma-separated keywords.
                  */
-
                 const existingKeywords =
                     keywordsInput.value
                         .split(",")
@@ -1069,7 +1273,6 @@ document.addEventListener("DOMContentLoaded", function () {
                  * Combine existing keywords with
                  * administrator-approved AI suggestions.
                  */
-
                 const combinedKeywords = [
                     ...existingKeywords,
                     ...selectedKeywordSuggestions
@@ -1079,7 +1282,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 /*
                  * Remove duplicates case-insensitively.
                  */
-
                 const uniqueKeywords = [];
 
                 const seen = new Set();
@@ -1114,7 +1316,6 @@ document.addEventListener("DOMContentLoaded", function () {
                  * Write the approved keywords back
                  * into the textarea.
                  */
-
                 keywordsInput.value =
                     uniqueKeywords.join(", ");
 
@@ -1123,7 +1324,6 @@ document.addEventListener("DOMContentLoaded", function () {
                  * The administrator intentionally approved
                  * these keywords.
                  */
-
                 userEditedKeywords =
                     true;
 
@@ -1134,12 +1334,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 /*
                  * Trigger the normal input pipeline.
                  *
-                 * This automatically:
-                 *
-                 * 1. Resizes the textarea.
-                 * 2. Updates any floating-label behavior.
+                 * This resizes the textarea and also lets
+                 * other UI listeners react to the change.
                  */
-
                 keywordsInput.dispatchEvent(
                     new Event("input", {
                         bubbles: true
@@ -1148,57 +1345,49 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 /*
- * Remove the keywords that were just approved
- * from the temporary AI suggestion list.
- *
- * The keyword has already been added to the
- * Keywords textarea, so showing it again would
- * create unnecessary duplication.
- */
-selectedKeywordSuggestions.forEach(keyword => {
+                 * Remove the keywords that were just approved
+                 * from the temporary AI suggestion list.
+                 */
+                selectedKeywordSuggestions.forEach(keyword => {
 
-    const chips =
-        keywordSuggestionList.querySelectorAll(
-            ".keyword-suggestion"
-        );
+                    const chips =
+                        keywordSuggestionList.querySelectorAll(
+                            ".keyword-suggestion"
+                        );
 
-    chips.forEach(chip => {
+                    chips.forEach(chip => {
 
-        /*
-         * Compare the chip's text with the approved
-         * keyword instead of relying on an element ID.
-         */
-        if (
-            chip.textContent.trim().toLowerCase() ===
-            keyword.trim().toLowerCase()
-        ) {
+                        if (
+                            chip.textContent.trim().toLowerCase() ===
+                            keyword.trim().toLowerCase()
+                        ) {
 
-            chip.remove();
+                            chip.remove();
 
-        }
+                        }
 
-    });
+                    });
 
-});
+                });
 
 
-/*
- * The approved keywords are no longer selected
- * because their suggestion chips have been removed.
- */
-selectedKeywordSuggestions.clear();
+                /*
+                 * The approved keywords are no longer selected
+                 * because their suggestion chips have been removed.
+                 */
+                selectedKeywordSuggestions.clear();
 
 
-/*
- * Keep the suggestion panel open.
- */
-keywordSuggestionsBox.hidden = false;
+                /*
+                 * Keep the suggestion panel open.
+                 */
+                keywordSuggestionsBox.hidden = false;
 
 
-/*
- * Update the button count.
- */
-updateKeywordSelectionButton();
+                /*
+                 * Update the button count.
+                 */
+                updateKeywordSelectionButton();
 
             }
         );
@@ -1264,21 +1453,12 @@ updateKeywordSelectionButton();
         });
 
 
-        /*
-         * Automatically close after 1.5 seconds.
-         */
-
         setTimeout(() => {
 
             closeAlertModal();
 
         }, 1500);
 
-
-        /*
-         * Clear the flash message so it cannot
-         * trigger again.
-         */
 
         window.__FLASH_SUCCESS__ =
             null;
@@ -1290,11 +1470,6 @@ updateKeywordSelectionButton();
      * =========================================================
      * ENABLE / DISABLE INPUTS
      * =========================================================
-     *
-     * JavaScript only controls the UI state here.
-     *
-     * Actual authorization must remain enforced
-     * server-side by Laravel.
      */
 
     function enableInputs(
@@ -1313,7 +1488,6 @@ updateKeywordSelectionButton();
              * Hidden fields must remain enabled because
              * Laravel needs them during submission.
              */
-
             if (
                 input.name === "_method" ||
                 input.type === "hidden"
@@ -1327,7 +1501,6 @@ updateKeywordSelectionButton();
             /*
              * File inputs do not support readonly.
              */
-
             if (
                 input.type === "file"
             ) {
@@ -1365,7 +1538,6 @@ updateKeywordSelectionButton();
                  * Text fields remain technically enabled
                  * but become readonly.
                  */
-
                 input.setAttribute(
                     "readonly",
                     "readonly"
@@ -1387,326 +1559,41 @@ updateKeywordSelectionButton();
 
     }
 
-    /*
- * =========================================================
- * AI KEYWORD REGENERATION
- * =========================================================
- *
- * Generates a fresh set of AI keyword suggestions.
- *
- * IMPORTANT:
- *
- * This does NOT:
- *
- * - modify the FAQ database
- * - modify the question
- * - modify the answer
- * - modify Filipino fields
- * - automatically insert keywords
- *
- * It only replaces the temporary suggestion chips.
- */
-
-async function regenerateKeywordSuggestions() {
 
     /*
-     * The backend requires English question and answer
-     * as the source material for keyword generation.
+     * =========================================================
+     * AI KEYWORD REGENERATION
+     * =========================================================
      */
-    const question =
-        questionInput.value.trim();
 
-    const answer =
-        answerInput.value.trim();
-
-
-    /*
-     * Do not send an incomplete FAQ to the AI.
-     */
-    if (
-        !question ||
-        !answer
-    ) {
-
-        showAlertModal({
-
-            title:
-                "English content required",
-
-            text:
-                "Please enter the English question and answer before generating keyword suggestions.",
-
-            icon:
-                "!",
-
-            variant:
-                "danger",
-
-            confirmText:
-                "OK",
-
-            showCancel:
-                false
-
-        });
-
-        return;
-    }
-
-
-    /*
-     * Prevent duplicate AI requests.
-     *
-     * This protects both the UI and your API usage.
-     */
-    if (
-        !regenerateKeywordSuggestionsBtn ||
-        regenerateKeywordSuggestionsBtn.disabled
-    ) {
-        return;
-    }
-
-
-    /*
-     * Preserve the original button appearance.
-     */
-    const originalButtonHTML =
-        regenerateKeywordSuggestionsBtn.innerHTML;
-
-
-    /*
-     * Disable the button immediately.
-     */
-    regenerateKeywordSuggestionsBtn.disabled =
-        true;
-
-
-    /*
-     * Give the administrator immediate feedback.
-     */
-    regenerateKeywordSuggestionsBtn.innerHTML = `
-        <i class="ph-light ph-spinner"></i>
-        Generating...
-    `;
-
-
-    try {
+    async function regenerateKeywordSuggestions() {
 
         /*
-         * Ask Laravel to generate a fresh set of
-         * keyword suggestions.
+         * The backend requires English question and answer
+         * as the source material for keyword generation.
          */
-        const response =
-            await fetch(
-                window.FAQ_KEYWORDS_URL,
-                {
-                    method:
-                        "POST",
+        const question =
+            questionInput.value.trim();
 
-                    headers: {
-
-                        "Content-Type":
-                            "application/json",
-
-                        "Accept":
-                            "application/json",
-
-                        "X-CSRF-TOKEN":
-                            document.querySelector(
-                                'meta[name="csrf-token"]'
-                            )?.getAttribute(
-                                "content"
-                            )
-                    },
-
-                    body:
-                        JSON.stringify({
-
-                            question:
-                                question,
-
-                            answer:
-                                answer,
-
-                            /*
-                             * Existing keywords are sent so
-                             * the AI can avoid unnecessarily
-                             * repeating them.
-                             */
-                            keywords:
-                                keywordsInput
-                                    .value
-                                    .trim()
-
-                        })
-                }
-            );
+        const answer =
+            answerInput.value.trim();
 
 
         /*
-         * Parse Laravel's response.
-         */
-        const result =
-            await response.json();
-
-
-        /*
-         * Treat both HTTP errors and application-level
-         * failures as errors.
+         * Do not send an incomplete FAQ to the AI.
          */
         if (
-            !response.ok ||
-            !result.success
-        ) {
-
-            throw new Error(
-                result.message ||
-                "Keyword generation failed."
-            );
-
-        }
-
-
-        /*
-         * Safely read the returned suggestions.
-         */
-        const suggestions =
-            Array.isArray(
-                result.keyword_suggestions
-            )
-                ? result.keyword_suggestions
-                : [];
-
-
-        /*
-         * Clear previous temporary selections.
-         */
-        selectedKeywordSuggestions.clear();
-
-
-        /*
-         * Remove the previous suggestion chips.
-         */
-        keywordSuggestionList.innerHTML =
-            "";
-
-
-        /*
-         * Build the new suggestion chips.
-         */
-        suggestions.forEach(
-            keyword => {
-
-                const cleanKeyword =
-                    String(
-                        keyword
-                    ).trim();
-
-
-                /*
-                 * Ignore empty AI values.
-                 */
-                if (
-                    !cleanKeyword
-                ) {
-                    return;
-                }
-
-
-                /*
-                 * Create a real button rather than a
-                 * clickable div.
-                 *
-                 * This gives us proper keyboard accessibility.
-                 */
-                const chip =
-                    document.createElement(
-                        "button"
-                    );
-
-
-                chip.type =
-                    "button";
-
-
-                chip.className =
-                    "keyword-suggestion";
-
-
-                /*
-                 * textContent is intentionally used instead
-                 * of innerHTML.
-                 *
-                 * This prevents AI-generated text from being
-                 * interpreted as HTML.
-                 */
-                chip.textContent =
-                    cleanKeyword;
-
-
-                chip.setAttribute(
-                    "aria-pressed",
-                    "false"
-                );
-
-
-                chip.title =
-                    "Select this keyword";
-
-
-                /*
-                 * Clicking a chip toggles its selection.
-                 */
-                chip.addEventListener(
-                    "click",
-                    () => {
-
-                        toggleKeywordSuggestion(
-                            cleanKeyword,
-                            chip
-                        );
-
-                    }
-                );
-
-
-                keywordSuggestionList.appendChild(
-                    chip
-                );
-
-            }
-        );
-
-
-        /*
-         * Show the suggestion container only when
-         * suggestions were actually returned.
-         */
-        keywordSuggestionsBox.hidden =
-            suggestions.length === 0;
-
-
-        /*
-         * Reset the Add Selected button.
-         */
-        updateKeywordSelectionButton();
-
-
-        /*
-         * If the AI returned nothing useful, tell the admin
-         * instead of silently doing nothing.
-         */
-        if (
-            suggestions.length === 0
+            !question ||
+            !answer
         ) {
 
             showAlertModal({
 
                 title:
-                    "No suggestions generated",
+                    "English content required",
 
                 text:
-                    "The AI could not generate new keyword suggestions. Please try again.",
+                    "Please enter the English question and answer before generating keyword suggestions.",
 
                 icon:
                     "!",
@@ -1722,78 +1609,338 @@ async function regenerateKeywordSuggestions() {
 
             });
 
+            return;
         }
 
 
-    } catch (error) {
+        /*
+         * Prevent duplicate AI requests.
+         */
+        if (
+            !regenerateKeywordSuggestionsBtn ||
+            regenerateKeywordSuggestionsBtn.disabled
+        ) {
+            return;
+        }
+
 
         /*
-         * Keep technical details in the browser console
-         * for development/debugging.
-         *
-         * Do not expose them to administrators.
+         * Preserve the original button appearance.
          */
-        console.error(
-            "FAQ keyword regeneration error:",
-            error
-        );
+        const originalButtonHTML =
+            regenerateKeywordSuggestionsBtn.innerHTML;
 
 
-        showAlertModal({
-
-            title:
-                "Keyword generation failed",
-
-            text:
-                "New keyword suggestions could not be generated. Please try again.",
-
-            icon:
-                "!",
-
-            variant:
-                "danger",
-
-            confirmText:
-                "OK",
-
-            showCancel:
-                false
-
-        });
-
-
-    } finally {
-
-        /*
-         * Always restore the button, even if the request
-         * fails.
-         */
         regenerateKeywordSuggestionsBtn.disabled =
-            false;
+            true;
 
-        regenerateKeywordSuggestionsBtn.innerHTML =
-            originalButtonHTML;
+
+        regenerateKeywordSuggestionsBtn.innerHTML = `
+            <i class="ph-light ph-spinner"></i>
+            Generating...
+        `;
+
+
+        try {
+
+            /*
+             * Ask Laravel to generate a fresh set of
+             * keyword suggestions.
+             */
+            const response =
+                await fetch(
+                    window.FAQ_KEYWORDS_URL,
+                    {
+                        method:
+                            "POST",
+
+                        headers: {
+
+                            "Content-Type":
+                                "application/json",
+
+                            "Accept":
+                                "application/json",
+
+                            "X-CSRF-TOKEN":
+                                document.querySelector(
+                                    'meta[name="csrf-token"]'
+                                )?.getAttribute(
+                                    "content"
+                                )
+                        },
+
+                        body:
+                            JSON.stringify({
+
+                                question:
+                                    question,
+
+                                answer:
+                                    answer,
+
+                                keywords:
+                                    keywordsInput
+                                        .value
+                                        .trim()
+
+                            })
+                    }
+                );
+
+
+            /*
+             * Parse Laravel's response.
+             */
+            const result =
+                await response.json();
+
+
+            /*
+             * Treat both HTTP errors and application-level
+             * failures as errors.
+             */
+            if (
+                !response.ok ||
+                !result.success
+            ) {
+
+                throw new Error(
+                    result.message ||
+                    "Keyword generation failed."
+                );
+
+            }
+
+
+            /*
+             * Safely read the returned suggestions.
+             */
+            const suggestions =
+                Array.isArray(
+                    result.keyword_suggestions
+                )
+                    ? result.keyword_suggestions
+                    : [];
+
+
+            /*
+             * Clear previous temporary selections.
+             */
+            selectedKeywordSuggestions.clear();
+
+
+            /*
+             * Remove the previous suggestion chips.
+             */
+            keywordSuggestionList.innerHTML =
+                "";
+
+
+            /*
+             * Build the new suggestion chips.
+             */
+            suggestions.forEach(
+                keyword => {
+
+                    const cleanKeyword =
+                        String(
+                            keyword
+                        ).trim();
+
+
+                    /*
+                     * Ignore empty AI values.
+                     */
+                    if (
+                        !cleanKeyword
+                    ) {
+                        return;
+                    }
+
+
+                    /*
+                     * Create a real button rather than a
+                     * clickable div.
+                     *
+                     * This gives us proper keyboard accessibility.
+                     */
+                    const chip =
+                        document.createElement(
+                            "button"
+                        );
+
+
+                    chip.type =
+                        "button";
+
+
+                    chip.className =
+                        "keyword-suggestion";
+
+
+                    /*
+                     * textContent is intentionally used instead
+                     * of innerHTML.
+                     *
+                     * This prevents AI-generated text from being
+                     * interpreted as HTML.
+                     */
+                    chip.textContent =
+                        cleanKeyword;
+
+
+                    chip.setAttribute(
+                        "aria-pressed",
+                        "false"
+                    );
+
+
+                    chip.title =
+                        "Select this keyword";
+
+
+                    /*
+                     * Clicking a chip toggles its selection.
+                     */
+                    chip.addEventListener(
+                        "click",
+                        () => {
+
+                            toggleKeywordSuggestion(
+                                cleanKeyword,
+                                chip
+                            );
+
+                        }
+                    );
+
+
+                    keywordSuggestionList.appendChild(
+                        chip
+                    );
+
+                }
+            );
+
+
+            /*
+             * Show the suggestion container only when
+             * suggestions were actually returned.
+             */
+            keywordSuggestionsBox.hidden =
+                suggestions.length === 0;
+
+
+            /*
+             * Reset the Add Selected button.
+             */
+            updateKeywordSelectionButton();
+
+
+            /*
+             * Tell the administrator when no suggestions
+             * were generated.
+             */
+            if (
+                suggestions.length === 0
+            ) {
+
+                showAlertModal({
+
+                    title:
+                        "No suggestions generated",
+
+                    text:
+                        "The AI could not generate new keyword suggestions. Please try again.",
+
+                    icon:
+                        "!",
+
+                    variant:
+                        "danger",
+
+                    confirmText:
+                        "OK",
+
+                    showCancel:
+                        false
+
+                });
+
+            }
+
+
+        } catch (error) {
+
+            /*
+             * Keep technical details in the browser console.
+             *
+             * Do not expose internal error information
+             * to administrators.
+             */
+            console.error(
+                "FAQ keyword regeneration error:",
+                error
+            );
+
+
+            showAlertModal({
+
+                title:
+                    "Keyword generation failed",
+
+                text:
+                    "New keyword suggestions could not be generated. Please try again.",
+
+                icon:
+                    "!",
+
+                variant:
+                    "danger",
+
+                confirmText:
+                    "OK",
+
+                showCancel:
+                    false
+
+            });
+
+
+        } finally {
+
+            /*
+             * Always restore the button, even if the request
+             * fails.
+             */
+            regenerateKeywordSuggestionsBtn.disabled =
+                false;
+
+            regenerateKeywordSuggestionsBtn.innerHTML =
+                originalButtonHTML;
+
+        }
 
     }
 
-}
 
-/*
- * =========================================================
- * REGENERATE KEYWORDS BUTTON
- * =========================================================
- */
+    /*
+     * =========================================================
+     * REGENERATE KEYWORDS BUTTON
+     * =========================================================
+     */
 
-if (
-    regenerateKeywordSuggestionsBtn
-) {
+    if (
+        regenerateKeywordSuggestionsBtn
+    ) {
 
-    regenerateKeywordSuggestionsBtn.addEventListener(
-        "click",
-        regenerateKeywordSuggestions
-    );
+        regenerateKeywordSuggestionsBtn.addEventListener(
+            "click",
+            regenerateKeywordSuggestions
+        );
 
-}
+    }
 
 
     /*
@@ -1803,274 +1950,316 @@ if (
      */
 
     function generateKeywords() {
-    /*
-     * =========================================================
-     * 1. READ THE CURRENT FAQ DATA
-     * =========================================================
-     *
-     * The generator uses only information already present
-     * in the FAQ form.
-     */
-
-    const selectedAgency =
-        agencySelect.options[agencySelect.selectedIndex];
-
-    const abbreviation =
-        selectedAgency?.dataset?.abbr?.trim() || "";
-
-    const question =
-        questionInput.value?.trim() || "";
-
-
-    /*
-     * =========================================================
-     * 2. STOP IF THERE IS NO QUESTION
-     * =========================================================
-     */
-
-    if (!question) {
-        keywordsInput.value = "";
-        keywordsInput.dataset.auto = "true";
-
-        autoResizeTextarea(keywordsInput);
-
-        return;
-    }
-
-
-    /*
-     * =========================================================
-     * 3. NORMALIZE THE QUESTION
-     * =========================================================
-     *
-     * Punctuation becomes spaces so words do not accidentally
-     * join together.
-     */
-
-    const normalizedQuestion = question
-        .toLowerCase()
-        .replace(/[^\p{L}\p{N}\s-]/gu, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-
-
-    /*
-     * =========================================================
-     * 4. REMOVE COMMON QUESTION / GRAMMAR WORDS
-     * =========================================================
-     *
-     * These words are useful for understanding a sentence,
-     * but usually poor standalone search keywords.
-     */
-
-    const stopwords = new Set([
-        "a",
-        "an",
-        "and",
-        "ang",
-        "are",
-        "ba",
-        "can",
-        "do",
-        "does",
-        "for",
-        "from",
-        "how",
-        "i",
-        "in",
-        "is",
-        "it",
-        "ko",
-        "may",
-        "my",
-        "ng",
-        "of",
-        "on",
-        "pwede",
-        "sa",
-        "the",
-        "to",
-        "what",
-        "when",
-        "where",
-        "which",
-        "who",
-        "why",
-        "with",
-        "need"
-    ]);
-
-
-    /*
-     * =========================================================
-     * 5. CREATE CLEAN WORDS
-     * =========================================================
-     */
-
-    const words = normalizedQuestion
-        .split(/\s+/)
-        .map(word =>
-            word.replace(/^-+|-+$/g, "")
-        )
-        .filter(Boolean)
-        .filter(word => !stopwords.has(word))
-        .filter(word => word.length >= 3);
-
-
-    /*
-     * =========================================================
-     * 6. IDENTIFY POSSIBLE CONCEPT WORDS
-     * =========================================================
-     *
-     * Longer words are generally more informative than
-     * very short grammatical words.
-     */
-
-    const conceptWords = words.filter(
-        word => word.length >= 5
-    );
-
-
-    /*
-     * =========================================================
-     * 7. GENERATE PHRASES
-     * =========================================================
-     *
-     * We create phrases only when they contain meaningful
-     * concept words.
-     *
-     * This prevents weak phrases such as:
-     *
-     * "title applying"
-     * "applying private"
-     *
-     * from dominating the keyword list.
-     */
-
-    const phrases = [];
-
-    for (let i = 0; i < words.length; i++) {
-
-        const current = words[i];
 
         /*
-         * Two-word phrase.
+         * =====================================================
+         * 1. READ THE CURRENT FAQ DATA
+         * =====================================================
          */
-        if (i + 1 < words.length) {
 
-            const next = words[i + 1];
+        const selectedAgency =
+            agencySelect.options[agencySelect.selectedIndex];
 
-            if (
-                current.length >= 5 ||
-                next.length >= 5
-            ) {
-                phrases.push(
-                    `${current} ${next}`
-                );
-            }
-        }
+        const abbreviation =
+            selectedAgency?.dataset?.abbr?.trim() || "";
+
+        const agencyText =
+            selectedAgency?.dataset?.fullName
+            || selectedAgency?.text
+            || "";
+
+        const question =
+            questionInput.value?.trim() || "";
+
 
         /*
-         * Three-word phrase.
-         *
-         * Require at least two meaningful words so that
-         * purely grammatical combinations are avoided.
+         * =====================================================
+         * 2. STOP IF THERE IS NO QUESTION
+         * =====================================================
          */
-        if (i + 2 < words.length) {
 
-            const next = words[i + 1];
-            const afterNext = words[i + 2];
+        if (!question) {
 
-            const meaningfulCount = [
-                current,
-                next,
-                afterNext
-            ].filter(word => word.length >= 5).length;
+            keywordsInput.value = "";
 
-            if (meaningfulCount >= 2) {
-                phrases.push(
-                    `${current} ${next} ${afterNext}`
-                );
-            }
+            keywordsInput.dataset.auto =
+                "true";
+
+
+            /*
+             * Use the actual shared resize function.
+             *
+             * The previous code called
+             * autoResizeTextarea(), which does not exist.
+             */
+            resizeTextarea(
+                keywordsInput
+            );
+
+            return;
         }
-    }
 
 
-    /*
-     * =========================================================
-     * 8. BUILD CANDIDATES
-     * =========================================================
-     *
-     * Agency abbreviation comes first because it is a useful
-     * search term and is already known from the selected agency.
-     *
-     * Then we prioritize phrases before individual words.
-     */
+        /*
+         * =====================================================
+         * 3. NORMALIZE THE QUESTION
+         * =====================================================
+         */
 
-    const candidates = [
-        abbreviation,
-        ...phrases,
-        ...conceptWords
-    ];
-
-
-    /*
-     * =========================================================
-     * 9. REMOVE DUPLICATES
-     * =========================================================
-     */
-
-    const unique = [];
-    const seen = new Set();
-
-    for (const candidate of candidates) {
-
-        const keyword = candidate
+        const normalizedQuestion = question
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}\s-]/gu, " ")
             .replace(/\s+/g, " ")
             .trim();
 
-        if (!keyword) {
-            continue;
+
+        /*
+         * =====================================================
+         * 4. REMOVE COMMON QUESTION / GRAMMAR WORDS
+         * =====================================================
+         */
+
+        const stopwords = new Set([
+            "a",
+            "an",
+            "and",
+            "ang",
+            "are",
+            "ba",
+            "can",
+            "do",
+            "does",
+            "for",
+            "from",
+            "how",
+            "i",
+            "in",
+            "is",
+            "it",
+            "ko",
+            "may",
+            "my",
+            "ng",
+            "of",
+            "on",
+            "pwede",
+            "sa",
+            "the",
+            "to",
+            "what",
+            "when",
+            "where",
+            "which",
+            "who",
+            "why",
+            "with",
+            "need"
+        ]);
+
+
+        /*
+         * =====================================================
+         * 5. CREATE CLEAN WORDS
+         * =====================================================
+         */
+
+        const words = normalizedQuestion
+            .split(/\s+/)
+            .map(word =>
+                word.replace(/^-+|-+$/g, "")
+            )
+            .filter(Boolean)
+            .filter(word => !stopwords.has(word))
+            .filter(word => word.length >= 3);
+
+
+        /*
+         * =====================================================
+         * 6. IDENTIFY POSSIBLE CONCEPT WORDS
+         * =====================================================
+         */
+
+        const conceptWords = words.filter(
+            word => word.length >= 5
+        );
+
+
+        /*
+         * =====================================================
+         * 7. GENERATE PHRASES
+         * =====================================================
+         */
+
+        const phrases = [];
+
+        for (
+            let i = 0;
+            i < words.length;
+            i++
+        ) {
+
+            const current =
+                words[i];
+
+
+            /*
+             * Two-word phrase.
+             */
+            if (
+                i + 1 < words.length
+            ) {
+
+                const next =
+                    words[i + 1];
+
+                if (
+                    current.length >= 5 ||
+                    next.length >= 5
+                ) {
+
+                    phrases.push(
+                        `${current} ${next}`
+                    );
+
+                }
+
+            }
+
+
+            /*
+             * Three-word phrase.
+             */
+            if (
+                i + 2 < words.length
+            ) {
+
+                const next =
+                    words[i + 1];
+
+                const afterNext =
+                    words[i + 2];
+
+                const meaningfulCount = [
+                    current,
+                    next,
+                    afterNext
+                ].filter(
+                    word => word.length >= 5
+                ).length;
+
+
+                if (
+                    meaningfulCount >= 2
+                ) {
+
+                    phrases.push(
+                        `${current} ${next} ${afterNext}`
+                    );
+
+                }
+
+            }
+
         }
 
-        const normalized =
-            keyword.toLowerCase();
 
-        if (seen.has(normalized)) {
-            continue;
+        /*
+         * =====================================================
+         * 8. BUILD CANDIDATES
+         * =====================================================
+         */
+
+        const candidates = [
+            abbreviation,
+            ...phrases,
+            ...conceptWords
+        ];
+
+
+        /*
+         * =====================================================
+         * 9. REMOVE DUPLICATES
+         * =====================================================
+         */
+
+        const unique = [];
+
+        const seen =
+            new Set();
+
+
+        for (
+            const candidate of candidates
+        ) {
+
+            const keyword =
+                candidate
+                    .replace(/\s+/g, " ")
+                    .trim();
+
+
+            if (!keyword) {
+                continue;
+            }
+
+
+            const normalized =
+                keyword.toLowerCase();
+
+
+            if (
+                seen.has(normalized)
+            ) {
+                continue;
+            }
+
+
+            seen.add(normalized);
+
+            unique.push(
+                keyword
+            );
+
         }
 
-        seen.add(normalized);
 
-        unique.push(keyword);
+        /*
+         * =====================================================
+         * 10. LIMIT AUTOMATIC KEYWORDS
+         * =====================================================
+         */
+
+        const finalKeywords =
+            unique.slice(0, 15);
+
+
+        /*
+         * =====================================================
+         * 11. UPDATE THE FORM
+         * =====================================================
+         */
+
+        keywordsInput.value =
+            finalKeywords.join(", ");
+
+
+        keywordsInput.dataset.auto =
+            "true";
+
+
+        /*
+         * IMPORTANT:
+         *
+         * JavaScript assigning .value does not automatically
+         * fire an input event.
+         *
+         * Therefore we explicitly resize the field here.
+         */
+        resizeTextarea(
+            keywordsInput
+        );
+
     }
-
-
-    /*
-     * =========================================================
-     * 10. LIMIT AUTOMATIC KEYWORDS
-     * =========================================================
-     *
-     * Automatic generation remains conservative.
-     */
-
-    const finalKeywords =
-        unique.slice(0, 15);
-
-
-    /*
-     * =========================================================
-     * 11. UPDATE THE FORM
-     * =========================================================
-     */
-
-    keywordsInput.value =
-        finalKeywords.join(", ");
-
-    keywordsInput.dataset.auto = "true";
-
-    autoResizeTextarea(keywordsInput);
-}
 
 
     /*
@@ -2078,11 +2267,10 @@ if (
      * KEYWORD MANUAL EDIT TRACKING
      * =========================================================
      *
-     * Resizing is already handled by the generic textarea
-     * listener above.
-     *
      * This listener only tracks whether the administrator
      * intentionally modified the keyword field.
+     *
+     * Resizing itself is handled by the shared listener above.
      */
 
     keywordsInput.addEventListener(
@@ -2100,7 +2288,9 @@ if (
 
 
     /*
-     * Generate keywords when the agency or question changes.
+     * =========================================================
+     * KEYWORD GENERATION TRIGGERS
+     * =========================================================
      */
 
     agencySelect.addEventListener(
@@ -2137,7 +2327,6 @@ if (
         /*
          * Show the modal.
          */
-
         modal.classList.remove(
             "hidden"
         );
@@ -2150,7 +2339,6 @@ if (
          * Force browser reflow so the CSS animation
          * starts correctly.
          */
-
         void modal.offsetWidth;
 
 
@@ -2158,6 +2346,13 @@ if (
             "active"
         );
 
+        /*
+ * Wait until the modal has been rendered so the
+ * selector has its final width before measuring text.
+ */
+requestAnimationFrame(() => {
+    truncateAgencyOptions();
+});
 
         const saveBtn =
             document.querySelector(
@@ -2169,7 +2364,6 @@ if (
          * Reset the form before loading
          * the requested FAQ data.
          */
-
         form.reset();
 
         resetImageState();
@@ -2180,7 +2374,6 @@ if (
         /*
          * Reset keyword state.
          */
-
         userEditedKeywords =
             false;
 
@@ -2191,7 +2384,6 @@ if (
         /*
          * Reset AI keyword suggestions.
          */
-
         selectedKeywordSuggestions.clear();
 
         keywordSuggestionList.innerHTML =
@@ -2282,7 +2474,6 @@ if (
              * Existing database keywords are loaded as
              * existing content, not as a new manual edit.
              */
-
             keywordsInput.dataset.auto =
                 "true";
 
@@ -2291,28 +2482,16 @@ if (
 
 
             /*
-             * Resize every field after loading the
+             * Resize all fields after loading the
              * existing FAQ.
              */
-
-            autoResizeFields.forEach(
-                field => {
-
-                    if (!field) {
-                        return;
-                    }
-
-                    resizeTextarea(field);
-
-                }
-            );
+            resizeAllTextareas();
 
 
             /*
              * Generate keywords only when no keywords
              * were stored in the database.
              */
-
             if (
                 !data.keywords ||
                 !data.keywords.trim()
@@ -2336,7 +2515,6 @@ if (
             /*
              * Load existing image.
              */
-
             if (data.image) {
 
                 previewImg.src =
@@ -2395,27 +2573,15 @@ if (
 
 
             /*
-             * Resize all fields so the administrator can
-             * see the existing content.
+             * Resize every field so the administrator can
+             * immediately see the complete content.
              */
-
-            autoResizeFields.forEach(
-                field => {
-
-                    if (!field) {
-                        return;
-                    }
-
-                    resizeTextarea(field);
-
-                }
-            );
+            resizeAllTextareas();
 
 
             /*
              * Preserve floating-label state for keywords.
              */
-
             if (
                 keywordsInput.value.trim() !== ""
             ) {
@@ -2440,7 +2606,6 @@ if (
             /*
              * Viewing is read-only.
              */
-
             enableInputs(false);
 
 
@@ -2451,7 +2616,6 @@ if (
             /*
              * Show existing image.
              */
-
             if (data.image) {
 
                 previewImg.src =
@@ -2490,7 +2654,6 @@ if (
             /*
              * A Support Request becomes a new FAQ.
              */
-
             form.action =
                 "/faqs";
 
@@ -2507,7 +2670,6 @@ if (
              * Preselect the agency attached to
              * the original Support Request.
              */
-
             agencySelect.value =
                 data.agency_id || "";
 
@@ -2516,7 +2678,6 @@ if (
              * Disable the form while AI prepares
              * the bilingual draft.
              */
-
             enableInputs(false);
 
 
@@ -2533,11 +2694,7 @@ if (
 
     /*
      * Make openFaqModal available to the Blade.
-     *
-     * The Add FAQ button uses this function through
-     * its onclick attribute.
      */
-
     window.openFaqModal =
         openFaqModal;
 
@@ -2567,7 +2724,6 @@ if (
              * Do not open View mode when the administrator
              * clicked an action button or form.
              */
-
             if (
                 e.target.closest("button") ||
                 e.target.closest("form")
@@ -2731,7 +2887,6 @@ if (
             /*
              * Reset image state.
              */
-
             previewImg.src =
                 "";
 
@@ -2745,7 +2900,6 @@ if (
             /*
              * Clear the file input.
              */
-
             imageInput.value =
                 "";
 
@@ -2761,7 +2915,6 @@ if (
     /*
      * Clicking the backdrop closes the modal.
      */
-
     modal.addEventListener(
         "click",
         e => {
@@ -2781,7 +2934,6 @@ if (
     /*
      * Escape also closes the modal.
      */
-
     document.addEventListener(
         "keydown",
         e => {
@@ -2802,14 +2954,7 @@ if (
      * =========================================================
      * FAQ DATA RECOVERY ACTIONS
      * =========================================================
-     *
-     * JavaScript only handles confirmation dialogs.
-     *
-     * Laravel remains responsible for authorization,
-     * validation, soft deletion, restoration, and
-     * permanent deletion.
      */
-
 
     /*
      * =========================================================
@@ -2870,11 +3015,6 @@ if (
                     true,
 
                 onConfirm: () => {
-
-                    /*
-                     * Laravel receives the DELETE request
-                     * and executes the SoftDeletes workflow.
-                     */
 
                     deleteForm.submit();
 
@@ -2946,11 +3086,6 @@ if (
 
                 onConfirm: () => {
 
-                    /*
-                     * Laravel handles the PATCH request
-                     * and restores the soft-deleted FAQ.
-                     */
-
                     restoreForm.submit();
 
                 }
@@ -3021,11 +3156,6 @@ if (
 
                 onConfirm: () => {
 
-                    /*
-                     * Laravel performs the actual
-                     * force-delete operation.
-                     */
-
                     forceDeleteForm.submit();
 
                 }
@@ -3053,7 +3183,6 @@ if (
             /*
              * No file selected.
              */
-
             if (!file) {
 
                 previewImg.style.display =
@@ -3075,7 +3204,6 @@ if (
              * Laravel MUST still validate the uploaded
              * file server-side.
              */
-
             const allowedTypes = [
                 "image/jpeg",
                 "image/png",
@@ -3123,10 +3251,9 @@ if (
             /*
              * Limit the client-side preview to 2MB.
              *
-             * Again, Laravel must enforce the same limit
+             * Laravel must enforce the same limit
              * server-side.
              */
-
             if (
                 file.size >
                 2 * 1024 * 1024
@@ -3166,7 +3293,6 @@ if (
             /*
              * Generate a local preview.
              */
-
             const reader =
                 new FileReader();
 
@@ -3219,7 +3345,6 @@ if (
                  * Viewing an FAQ must not allow
                  * image selection.
                  */
-
                 if (
                     currentMode === "view"
                 ) {
@@ -3251,7 +3376,6 @@ if (
              * Prevent immediate submission so the
              * administrator can confirm the operation.
              */
-
             e.preventDefault();
 
 
@@ -3282,7 +3406,6 @@ if (
                      * submit listener and sends the form
                      * normally to Laravel.
                      */
-
                     form.submit();
 
                 }
@@ -3297,10 +3420,6 @@ if (
      * =========================================================
      * AUTO OPEN SUPPORT FAQ
      * =========================================================
-     *
-     * When the page was opened through
-     * "Support Request → To FAQ", automatically open
-     * the FAQ modal in conversion mode.
      */
 
     if (
@@ -3313,5 +3432,16 @@ if (
         );
 
     }
+
+    /*
+ * Recalculate the visible agency names when the
+ * browser viewport changes size.
+ */
+window.addEventListener(
+    "resize",
+    () => {
+        truncateAgencyOptions();
+    }
+);
 
 });
