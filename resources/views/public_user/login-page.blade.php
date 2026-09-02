@@ -474,6 +474,18 @@
 
                 </div>
 
+                {{-- Forgot password link. --}}
+<div class="forgot-password-wrapper">
+
+    <a
+        href="{{ route('password.request') }}"
+        class="forgot-password-link"
+    >
+        Forgot password?
+    </a>
+
+</div>
+
 
                 {{-- Login button. --}}
                 <button

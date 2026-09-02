@@ -50,6 +50,43 @@ Route::get('/register', function () {
 Route::post('/register', [AuthController::class, 'register'])
     ->name('public.register.submit');
 
+    /*
+|--------------------------------------------------------------------------
+| PASSWORD RESET
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])
+    ->name('password.request');
+
+Route::post('/forgot-password', [AuthController::class, 'sendPasswordResetOtp'])
+    ->middleware('throttle:5,1')
+    ->name('password.email');
+
+    Route::get('/forgot-password/otp', [AuthController::class, 'showPasswordResetOtp'])
+    ->name('password.otp');
+
+Route::post('/forgot-password/otp', [AuthController::class, 'verifyPasswordResetOtp'])
+    ->middleware('throttle:10,1')
+    ->name('password.otp.verify');
+
+Route::post('/forgot-password/resend', [AuthController::class, 'resendPasswordResetOtp'])
+    ->middleware('throttle:3,1')
+    ->name('password.otp.resend');
+
+
+    /*
+|--------------------------------------------------------------------------
+| Password Reset — New Password
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/reset-password', [AuthController::class, 'showResetPassword'])
+    ->name('password.reset');
+
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])
+    ->name('password.update');
+
 /*
 |--------------------------------------------------------------------------
 | OTP VERIFICATION
