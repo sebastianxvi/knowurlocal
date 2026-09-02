@@ -87,12 +87,19 @@ class AgencyController extends Controller
          */
         if ($request->filled('search')) {
 
-            $query->where(
-                'agency_name',
+    $search = trim($request->search);
+
+    $query->where(function ($query) use ($search) {
+
+        $query
+            ->where('agency_name', 'LIKE', '%' . $search . '%')
+            ->orWhere(
+                'agency_abbreviation',
                 'LIKE',
-                '%' . $request->search . '%'
+                '%' . $search . '%'
             );
-        }
+    });
+}
 
 
         /*
