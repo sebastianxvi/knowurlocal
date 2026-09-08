@@ -1022,69 +1022,115 @@ class TemporaryFaqSeeder extends Seeder
          * Counters for the Artisan output.
          */
         $inserted = 0;
-        $skipped = 0;
+$updated = 0;
+$restored = 0;
+$unchanged = 0;
 
         /*
          * Insert the complete dataset inside one database transaction.
          */
-        DB::transaction(function () use (
-            $faqs,
-            $agencyIds,
-            &$inserted,
-            &$skipped
-        ) {
+DB::transaction(function () use (
+    $faqs,
+    $agencyIds,
+    &$inserted,
+    &$updated,
+    &$restored,
+    &$unchanged
+) {
 
-            /*
-             * Process every FAQ record.
-             */
-            foreach ($faqs as $data) {
+    /*
+     * Process every FAQ record.
+     */
+    foreach ($faqs as $data) {
 
-                /*
-                 * Convert the readable agency name into its
-                 * corresponding foreign-key ID.
-                 */
-                $agencyId = $agencyIds->get(
-                    $data['agency']
-                );
+        /*
+         * Convert the readable agency name into its
+         * corresponding foreign-key ID.
+         */
+        $agencyId = $agencyIds->get(
+            $data['agency']
+        );
 
-                /*
-                 * Check active and soft-deleted records so
-                 * rerunning the seeder does not create duplicates.
-                 */
-                $existingFaq = Faq::withTrashed()
-                    ->where('agency_id', $agencyId)
-                    ->where('question', $data['question'])
-                    ->first();
+        /*
+         * Look for the FAQ in both active and soft-deleted records.
+         * The agency ID + question combination identifies the FAQ.
+         */
+        $existingFaq = Faq::withTrashed()
+            ->where('agency_id', $agencyId)
+            ->where('question', $data['question'])
+            ->first();
 
-                /*
-                 * Keep an existing record untouched.
-                 */
-                if ($existingFaq) {
-                    $skipped++;
+        /*
+         * Prepare the values that should exist in the database.
+         */
+        $faqData = [
+            'agency_id' => $agencyId,
+            'question' => $data['question'],
+            'answer' => $data['answer'],
+            'question_fil' => $data['question_fil'],
+            'answer_fil' => $data['answer_fil'],
+            'keywords' => $data['keywords'],
+            'image' => null,
+        ];
 
-                    continue;
-                }
+        /*
+         * If the FAQ does not exist, create it.
+         */
+        if (!$existingFaq) {
 
-                /*
-                 * Create the FAQ using the fields supported
-                 * by the Faq model and database schema.
-                 */
-                Faq::create([
-                    'agency_id' => $agencyId,
-                    'question' => $data['question'],
-                    'answer' => $data['answer'],
-                    'question_fil' => $data['question_fil'],
-                    'answer_fil' => $data['answer_fil'],
-                    'keywords' => $data['keywords'],
-                    'image' => null,
-                ]);
+            Faq::create($faqData);
 
-                /*
-                 * Count the successful insertion.
-                 */
-                $inserted++;
+            $inserted++;
+
+            continue;
+        }
+
+        /*
+         * If the FAQ was previously soft-deleted,
+         * restore it before updating its information.
+         */
+        if ($existingFaq->trashed()) {
+
+            $existingFaq->restore();
+
+            $restored++;
+        }
+
+        /*
+         * Check whether any seeded value is different
+         * from the value currently stored in the database.
+         */
+        $hasChanges = false;
+
+        foreach ($faqData as $field => $value) {
+
+            if ($existingFaq->{$field} != $value) {
+
+                $hasChanges = true;
+
+                break;
             }
-        });
+        }
+
+        /*
+         * Update the existing FAQ only when something changed.
+         */
+        if ($hasChanges) {
+
+            $existingFaq->update($faqData);
+
+            $updated++;
+
+            continue;
+        }
+
+        /*
+         * Nothing changed, so no database update is necessary.
+         */
+        $unchanged++;
+    }
+});
+
 
         /*
          * Display the final result in the Artisan console.
@@ -1094,11 +1140,19 @@ class TemporaryFaqSeeder extends Seeder
         );
 
         $this->command->info(
-            "Inserted: {$inserted}"
-        );
+    "Inserted: {$inserted}"
+);
 
-        $this->command->info(
-            "Skipped existing: {$skipped}"
-        );
+$this->command->info(
+    "Updated: {$updated}"
+);
+
+$this->command->info(
+    "Restored: {$restored}"
+);
+
+$this->command->info(
+    "Unchanged: {$unchanged}"
+);
     }
 }
