@@ -2090,124 +2090,120 @@ function closeAgencyDetails() {
      */
     function updateAgencyLabels() {
 
-        /*
-         * Read the current zoom.
-         */
-        const zoom =
-            map.getZoom();
+    /*
+     * Check every agency marker.
+     */
+    Object.values(markers).forEach(
+        marker => {
 
+            /*
+             * Get the agency attached to this marker.
+             */
+            const agency =
+                marker.agencyData;
 
-        /*
-         * Process every agency marker.
-         */
-        Object.values(markers).forEach(
-            marker => {
+            /*
+             * Ignore invalid markers.
+             */
+            if (!agency) {
+                return;
+            }
 
-                /*
-                 * Get the associated agency.
-                 */
-                const agency =
-                    marker.agencyData;
+            /*
+             * Get this marker's tooltip.
+             */
+            const tooltip =
+                marker.getTooltip();
 
+            /*
+             * Ignore markers without tooltips.
+             */
+            if (!tooltip) {
+                return;
+            }
 
-                /*
-                 * Ignore invalid marker data.
-                 */
-                if (!agency) {
+            /*
+             * Check whether this agency belongs
+             * to the currently selected category.
+             */
+            const agencyCategoryId =
+                agency.category?.id;
 
-                    return;
+            const matchesCategory =
+                activeCategoryId === 'all' ||
+                String(agencyCategoryId) ===
+                    String(activeCategoryId);
 
-                }
+            /*
+             * Hide labels belonging to filtered-out agencies.
+             */
+            if (!matchesCategory) {
 
+                tooltip.setOpacity(0);
 
-                /*
-                 * Retrieve the tooltip attached
-                 * to this marker.
-                 */
-                const tooltip =
-                    marker.getTooltip();
+                return;
+            }
 
+            /*
+             * Leaflet gives the marker a DOM element only
+             * when the individual marker is actually visible.
+             *
+             * When the marker is represented by a cluster,
+             * marker.getElement() returns null.
+             */
+            const markerElement =
+                marker.getElement();
 
-                /*
-                 * Ignore markers without tooltips.
-                 */
-                if (!tooltip) {
+            /*
+             * Show the abbreviation when the individual
+             * marker is visible.
+             */
+            if (markerElement) {
 
-                    return;
-
-                }
-
-
-                /*
-                 * Get the agency category.
-                 */
-                const agencyCategoryId =
-                    agency.category?.id;
-
-
-                /*
-                 * Check whether the agency belongs
-                 * to the active category filter.
-                 */
-                const matchesCategory =
-                    activeCategoryId === 'all' ||
-                    String(agencyCategoryId) ===
-                        String(activeCategoryId);
-
-
-                /*
-                 * Hide labels for filtered-out agencies.
-                 */
-                if (!matchesCategory) {
-
-                    tooltip.setOpacity(
-                        0
-                    );
-
-                    return;
-
-                }
-
-
-                /*
-                 * Keep tooltips closed while zoomed out.
-                 *
-                 * Clusters are responsible for representing
-                 * agency density at these zoom levels.
-                 */
-                if (zoom < 16) {
-
-                    tooltip.setOpacity(
-                        0
-                    );
-
-                    return;
-
-                }
-
-
-                /*
-                 * Keep the full agency name available
-                 * to the hover tooltip.
-                 */
-                tooltip.setContent(
-                    agency.agency_name || ''
-                );
-
-
-                /*
-                 * Do not permanently display it.
-                 *
-                 * Mouse interaction opens it instead.
-                 */
-                tooltip.setOpacity(
-                    0
-                );
+                tooltip.setOpacity(1);
 
             }
-        );
 
-    }
+            /*
+             * Hide the abbreviation when the marker
+             * is currently represented by a cluster.
+             */
+            else {
+
+                tooltip.setOpacity(0);
+
+            }
+
+        }
+    );
+
+}
+
+
+/*
+ * Schedule a label refresh after Leaflet has finished
+ * updating marker positions and DOM elements.
+ *
+ * Two animation frames give MarkerCluster enough time
+ * to finish inserting the individual markers into the map.
+ */
+function refreshAgencyLabels() {
+
+    requestAnimationFrame(
+        () => {
+
+            requestAnimationFrame(
+                () => {
+
+                    updateAgencyLabels();
+
+                }
+            );
+
+        }
+    );
+
+}
 
 
     // =========================================================
@@ -2932,61 +2928,6 @@ allAgencyMarkers.push(
 );
 
 
-                        // -------------------------------------------------
-                        // MARKER HOVER
-                        // -------------------------------------------------
-
-                        /*
-                         * Display the full agency name when
-                         * the user hovers over the marker.
-                         *
-                         * This replaces permanent labels and
-                         * prevents the map from becoming crowded.
-                         */
-                        marker.on(
-                            'mouseover',
-                            () => {
-
-                                /*
-                                 * Do not show tooltips while the
-                                 * map is actively animating/moving.
-                                 */
-                                if (
-                                    map._animatingZoom ||
-                                    map._animating ||
-                                    document
-                                        .getElementById('map')
-                                        ?.classList
-                                        .contains('map-is-moving')
-                                ) {
-
-                                    return;
-
-                                }
-
-
-                                /*
-                                 * Show the agency tooltip.
-                                 */
-                                marker.openTooltip();
-
-                            }
-                        );
-
-
-                        /*
-                         * Hide the tooltip when the pointer
-                         * leaves the marker.
-                         */
-                        marker.on(
-                            'mouseout',
-                            () => {
-
-                                marker.closeTooltip();
-
-                            }
-                        );
-
 
                         // -------------------------------------------------
                         // AGENCY TOOLTIP
@@ -2998,28 +2939,42 @@ allAgencyMarkers.push(
                          * It is displayed only through marker interaction.
                          */
                         marker.bindTooltip(
-                            agency.agency_name || '',
-                            {
+    agency.agency_abbreviation?.trim() ||
+    agency.agency_name?.trim() ||
+    'Agency',
+    {
+        /*
+         * Keep the tooltip attached to the marker
+         * even without hovering.
+         */
+        permanent: true,
 
-                                permanent:
-                                    false,
+        /*
+         * Display the abbreviation above the marker.
+         */
+        direction: 'top',
 
-                                direction:
-                                    'top',
+        /*
+         * Add a small gap between the marker and label.
+         */
+        offset: [
+            0,
+            -10
+        ],
 
-                                offset: [
-                                    0,
-                                    -10
-                                ],
+        /*
+         * Use KNOWURLOCAL's custom label styling.
+         */
+        className:
+            'agency-map-label',
 
-                                className:
-                                    'agency-map-label',
-
-                                interactive:
-                                    false
-
-                            }
-                        );
+        /*
+         * The label should never capture mouse clicks.
+         */
+        interactive:
+            false
+    }
+);
 
 
                         // -------------------------------------------------
@@ -3123,7 +3078,7 @@ allAgencyMarkers.push(
             /*
              * Refresh label state after movement.
              */
-            updateAgencyLabels();
+            refreshAgencyLabels();
 
         }
     );
@@ -3140,10 +3095,26 @@ allAgencyMarkers.push(
         'zoomend',
         () => {
 
-            updateAgencyLabels();
+            refreshAgencyLabels();
 
         }
     );
+
+    /*
+ * MarkerCluster fires this event after its cluster
+ * animation has completed.
+ *
+ * This is the ideal moment to reveal abbreviations
+ * for markers that have just been separated.
+ */
+markerClusterGroup.on(
+    'animationend',
+    () => {
+
+        refreshAgencyLabels();
+
+    }
+);
 
 
     // =========================================================
