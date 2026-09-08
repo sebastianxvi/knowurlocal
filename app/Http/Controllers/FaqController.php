@@ -702,8 +702,8 @@ if ($status === 'trashed') {
             'image' => [
     'nullable',
     'image',
-    'mimes:jpg,jpeg,png',
-    'max:2048',
+    'mimes:jpg,jpeg,png,webp',
+    'max:5120',
 ],
         ]);
 
@@ -779,8 +779,8 @@ $faq->id
             'image' => [
     'nullable',
     'image',
-    'mimes:jpg,jpeg,png',
-    'max:2048',
+    'mimes:jpg,jpeg,png,webp',
+    'max:5120',
 ],
         ]);
 

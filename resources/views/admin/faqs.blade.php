@@ -627,7 +627,7 @@
                             type="file" 
                             name="image" 
                             id="faq_image" 
-                            accept="image/*"
+                            accept="image/jpeg, image/png, image/webp"
                             hidden
                         >
 
@@ -635,7 +635,7 @@
                         <div class="upload-content" id="upload-placeholder">
                             <i class="ph ph-image"></i>
                             <p>Click to upload image</p>
-                            <span>PNG, JPG up to 2MB</span>
+                            <span>PNG, JPG, WebP up to 5MB</span>
                         </div>
 
                         <!-- Preview -->

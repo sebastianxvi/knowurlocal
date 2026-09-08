@@ -3207,7 +3207,7 @@ requestAnimationFrame(() => {
             const allowedTypes = [
                 "image/jpeg",
                 "image/png",
-                "image/jpg"
+                "image/webp"
             ];
 
 
@@ -3256,7 +3256,7 @@ requestAnimationFrame(() => {
              */
             if (
                 file.size >
-                2 * 1024 * 1024
+                5 * 1024 * 1024
             ) {
 
                 showAlertModal({
@@ -3265,7 +3265,7 @@ requestAnimationFrame(() => {
                         "File too large",
 
                     text:
-                        "Maximum file size is 2MB.",
+                        "Maximum file size is 5MB.",
 
                     icon:
                         "!",
