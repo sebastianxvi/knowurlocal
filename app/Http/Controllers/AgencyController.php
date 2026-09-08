@@ -389,7 +389,7 @@ $contactTypes = ContactType::where('is_active', true)
             'nullable|numeric|between:-180,180',
 
         'agency_image' =>
-            'nullable|image|mimes:jpeg,png|max:2048',
+            'nullable|image|mimes:jpeg,png,webp|max:5120',
 
         /*
          * =================================================
@@ -846,7 +846,7 @@ $contactTypes = ContactType::where('is_active', true)
             'nullable|numeric|between:-180,180',
 
         'agency_image' =>
-            'nullable|image|mimes:jpeg,png|max:2048',
+            'nullable|image|mimes:jpeg,png,webp|max:5120',
 
         /*
          * Contacts are required because Hotline and Email

@@ -1780,11 +1780,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 /*
-                 * 2 MB client-side limit.
-                 */
+                * 5 MB client-side limit.
+                *
+                * This improves the user experience by rejecting
+                * oversized files before the form is submitted.
+                *
+                * IMPORTANT:
+                * Laravel must still enforce the same limit
+                * server-side because JavaScript validation can
+                * always be bypassed by a malicious client.
+                */
                 if (
                     file.size >
-                    2 * 1024 * 1024
+                    5 * 1024 * 1024
                 ) {
 
                     showAlertModal({
@@ -1793,7 +1801,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             "Image Too Large",
 
                         text:
-                            "The maximum image size is 2 MB.",
+                            "The maximum image size is 5 MB.",
 
                         icon:
                             "!",

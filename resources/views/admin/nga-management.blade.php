@@ -607,7 +607,7 @@
                         type="file" 
                         name="agency_image" 
                         id="agency_image" 
-                        accept="image/png, image/jpeg"
+                        accept="image/png, image/jpeg, image/webp"
                         hidden
                     >
 
@@ -615,7 +615,7 @@
                     <div class="upload-content" id="agency-upload-placeholder">
                         <i class="ph-light ph-image"></i>
                         <p>Click to upload image</p>
-                        <span>PNG, JPG up to 2MB</span>
+                        <span>PNG, JPG, WebP up to 5MB</span>
                     </div>
 
                     <!-- PREVIEW -->
