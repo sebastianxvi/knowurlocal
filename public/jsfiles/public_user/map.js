@@ -475,6 +475,189 @@ function createSelectedAgencyIcon() {
             'agencyDetailsImage'
         );
 
+        /*
+ * Image preview modal.
+ *
+ * This allows users to inspect the agency image
+ * without leaving the agency details panel.
+ */
+const imageModal =
+    document.getElementById(
+        'image-modal'
+    );
+
+
+/*
+ * Enlarged image displayed inside the modal.
+ */
+const modalImage =
+    document.getElementById(
+        'modal-img'
+    );
+
+
+/*
+ * Modal close button.
+ */
+const imageClose =
+    document.getElementById(
+        'image-close'
+    );
+
+    /*
+ * Open the image preview when the agency image
+ * is clicked.
+ */
+if (
+    agencyDetailsImage &&
+    imageModal &&
+    modalImage
+) {
+
+    agencyDetailsImage.addEventListener(
+        'click',
+        () => {
+
+            /*
+             * Use the exact same image currently
+             * displayed in the agency details panel.
+             */
+            modalImage.src =
+                agencyDetailsImage.src;
+
+
+            /*
+             * Reuse the agency image's accessible
+             * alternative description.
+             */
+            modalImage.alt =
+                agencyDetailsImage.alt ||
+                'Agency image preview';
+
+
+            /*
+             * Display the modal.
+             */
+            imageModal.classList.add(
+                'active'
+            );
+
+
+            /*
+             * Prevent the page behind the modal
+             * from receiving accidental interaction.
+             */
+            document.body.style.overflow =
+                'hidden';
+
+        }
+    );
+
+}
+
+/*
+ * Close the image preview.
+ */
+function closeImagePreview() {
+
+    /*
+     * Stop if the modal doesn't exist.
+     */
+    if (!imageModal) {
+
+        return;
+
+    }
+
+
+    /*
+     * Hide the modal.
+     */
+    imageModal.classList.remove(
+        'active'
+    );
+
+
+    /*
+     * Restore normal page interaction.
+     */
+    document.body.style.overflow =
+        '';
+
+
+    /*
+     * Clear the image after the modal is closed.
+     *
+     * This prevents an old agency image from remaining
+     * in the modal DOM unnecessarily.
+     */
+    if (modalImage) {
+
+        modalImage.src =
+            '';
+
+    }
+
+}
+
+/*
+ * Close when the X button is clicked.
+ */
+if (imageClose) {
+
+    imageClose.addEventListener(
+        'click',
+        closeImagePreview
+    );
+
+}
+
+/*
+ * Close when the user clicks the dark backdrop.
+ *
+ * Clicking the image itself does NOT close the modal.
+ */
+if (imageModal) {
+
+    imageModal.addEventListener(
+        'click',
+        event => {
+
+            if (
+                event.target ===
+                imageModal
+            ) {
+
+                closeImagePreview();
+
+            }
+
+        }
+    );
+
+}
+
+/*
+ * Allow keyboard users to close the preview
+ * with the Escape key.
+ */
+document.addEventListener(
+    'keydown',
+    event => {
+
+        if (
+            event.key === 'Escape' &&
+            imageModal?.classList.contains(
+                'active'
+            )
+        ) {
+
+            closeImagePreview();
+
+        }
+
+    }
+);
 
     /*
      * Agency name.
