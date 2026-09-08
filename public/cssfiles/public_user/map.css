@@ -1437,3 +1437,237 @@ a.agency-contact-value:focus-visible {
     }
 
 }
+
+/* =========================================================
+   KNOWURLOCAL MARKER CLUSTERS
+   ========================================================= */
+
+/*
+ * The outer Leaflet cluster element.
+ *
+ * MarkerCluster creates this element automatically.
+ * We make it completely transparent because the
+ * visible circle will be created by .map-cluster-inner.
+ */
+.marker-cluster.map-cluster {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+
+    /*
+     * Prevent Leaflet's default cluster appearance
+     * from affecting our custom component.
+     */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /*
+     * The dimensions are controlled here rather than
+     * relying on MarkerCluster's default CSS.
+     */
+}
+
+
+/* =========================================================
+   SMALL CLUSTER
+   ========================================================= */
+
+/*
+ * Fewer than 10 agencies.
+ */
+.marker-cluster.map-cluster-small {
+    width: 42px !important;
+    height: 42px !important;
+
+    margin-left: -21px !important;
+    margin-top: -21px !important;
+}
+
+
+/* =========================================================
+   MEDIUM CLUSTER
+   ========================================================= */
+
+/*
+ * 10–24 agencies.
+ */
+.marker-cluster.map-cluster-medium {
+    width: 50px !important;
+    height: 50px !important;
+
+    margin-left: -25px !important;
+    margin-top: -25px !important;
+}
+
+
+/* =========================================================
+   LARGE CLUSTER
+   ========================================================= */
+
+/*
+ * 25 or more agencies.
+ */
+.marker-cluster.map-cluster-large {
+    width: 58px !important;
+    height: 58px !important;
+
+    margin-left: -29px !important;
+    margin-top: -29px !important;
+}
+
+
+/* =========================================================
+   CLUSTER CIRCLE
+   ========================================================= */
+
+/*
+ * This is the actual visible circle.
+ *
+ * The outer .map-cluster element only handles
+ * positioning. This element handles the design.
+ */
+.map-cluster-inner {
+
+    /*
+     * Fill the entire cluster container.
+     */
+    width: 100%;
+    height: 100%;
+
+    /*
+     * Make the element perfectly circular.
+     */
+    border-radius: 50%;
+
+    /*
+     * White center keeps the count readable
+     * against the map.
+     */
+    background: rgba(255, 255, 255, 0.96) !important;
+
+    /*
+     * KNOWURLOCAL accent border.
+     */
+    border: 3px solid #3b82f6;
+
+    /*
+     * Center the agency count.
+     */
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    /*
+     * Count typography.
+     */
+    color: #172033;
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+    line-height: 1;
+
+    /*
+     * Prevent the number from wrapping.
+     */
+    white-space: nowrap;
+
+    /*
+     * Lift the cluster visually above the map.
+     */
+    box-shadow:
+        0 4px 10px rgba(15, 23, 42, 0.18),
+        0 1px 3px rgba(15, 23, 42, 0.12);
+
+    /*
+     * Smooth hover/interaction animation.
+     */
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/* =========================================================
+   CLUSTER HOVER
+   ========================================================= */
+
+/*
+ * Only enable the hover animation on devices
+ * that actually support hover.
+ *
+ * This prevents strange behavior on phones.
+ */
+@media (hover: hover) {
+
+    .marker-cluster.map-cluster:hover
+    .map-cluster-inner {
+
+        transform: scale(1.08);
+
+        box-shadow:
+            0 7px 18px rgba(15, 23, 42, 0.22);
+
+    }
+
+}
+
+
+/* =========================================================
+   CLUSTER COUNT SIZING
+   ========================================================= */
+
+/*
+ * Make larger clusters have slightly larger numbers.
+ */
+.map-cluster-medium .map-cluster-inner {
+    font-size: 14px;
+}
+
+
+.map-cluster-large .map-cluster-inner {
+    font-size: 15px;
+}
+
+
+/* =========================================================
+   CLUSTER ENTRANCE ANIMATION
+   ========================================================= */
+
+/*
+ * A subtle scale-in animation makes clusters feel
+ * like part of the map rather than abruptly appearing.
+ */
+.map-cluster-inner {
+
+    animation:
+        mapClusterAppear
+        0.22s
+        cubic-bezier(0.22, 1, 0.36, 1);
+
+}
+
+
+@keyframes mapClusterAppear {
+
+    from {
+
+        transform: scale(0.7);
+
+        opacity: 0;
+
+    }
+
+    to {
+
+        transform: scale(1);
+
+        opacity: 1;
+
+    }
+
+}
