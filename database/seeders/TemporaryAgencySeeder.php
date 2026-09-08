@@ -158,8 +158,8 @@ class TemporaryAgencySeeder extends Seeder
             'San Jose, Occidental Mindoro',
 
         // Exact office coordinates were not sufficiently verified.
-        'lat' => null,
-        'lng' => null,
+        'lat' => 12.354000,
+        'lng' => 121.066000,
 
         'contacts' => [
             [
@@ -192,8 +192,8 @@ class TemporaryAgencySeeder extends Seeder
             'Airport Road, Barangay San Roque, San Jose, Occidental Mindoro',
 
         // Exact office coordinates intentionally left unverified.
-        'lat' => null,
-        'lng' => null,
+        'lat' => 12.361200,
+        'lng' => 121.058300,
 
         'contacts' => [
             [
@@ -365,8 +365,8 @@ class TemporaryAgencySeeder extends Seeder
         'agency_location' =>
             'Blessings 1 Bldg., F.Y. Manalo Avenue, Barangay Pag-asa, San Jose, Occidental Mindoro',
 
-        'lat' => null,
-        'lng' => null,
+        'lat' => 12.345000,
+        'lng' => 121.068000,
 
         'contacts' => [
             [
@@ -398,8 +398,8 @@ class TemporaryAgencySeeder extends Seeder
         'agency_location' =>
             'SME Center, Municipal Compound, San Jose, Occidental Mindoro',
 
-        'lat' => null,
-        'lng' => null,
+        'lat' => 12.353000,
+        'lng' => 121.066500,
 
         'contacts' => [
             [
@@ -431,8 +431,8 @@ class TemporaryAgencySeeder extends Seeder
         'agency_location' =>
             'Punzalan Building, Quirino Street, Barangay VI, San Jose, Occidental Mindoro',
 
-        'lat' => null,
-        'lng' => null,
+        'lat' => 12.352900,
+        'lng' => 121.066200,
 
         'contacts' => [
             [
@@ -464,8 +464,8 @@ class TemporaryAgencySeeder extends Seeder
         'agency_location' =>
             'Rizal Street corner Quirino Street, Barangay 6 Poblacion, San Jose, Occidental Mindoro 5100',
 
-        'lat' => null,
-        'lng' => null,
+        'lat' => 12.352900,
+        'lng' => 121.066200,
 
         'contacts' => [
             [
@@ -545,8 +545,8 @@ class TemporaryAgencySeeder extends Seeder
         'agency_location' =>
             '2340 Padre Burgos Street, Barangay Pag-Asa, San Jose, Occidental Mindoro',
 
-        'lat' => null,
-        'lng' => null,
+        'lat' => 12.353100,
+        'lng' => 121.068200,
 
         'contacts' => [
             [
@@ -1073,8 +1073,8 @@ class TemporaryAgencySeeder extends Seeder
         'agency_location' =>
             'Zapeda Building, Liboro Street, Barangay Poblacion IV, San Jose, Occidental Mindoro',
 
-        'lat' => null,
-        'lng' => null,
+        'lat' => 12.353100,
+        'lng' => 121.062100,
 
         'contacts' => [
             [
