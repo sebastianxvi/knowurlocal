@@ -15,6 +15,10 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Configure PHP upload limits for agency images.
+RUN printf "upload_max_filesize=5M\npost_max_size=8M\n" \
+    > /usr/local/etc/php/conf.d/uploads.ini
+
 # Copy Composer from the official Composer image.
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
