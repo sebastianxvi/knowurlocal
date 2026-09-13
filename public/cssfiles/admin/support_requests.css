@@ -1527,3 +1527,34 @@
 
     pointer-events: none;
 }
+
+/* =========================================================
+   SUPPORT REQUEST TABLE
+   ID COLUMN WIDTH
+   ========================================================= */
+
+/*
+ * The Blade table uses:
+ *
+ * <table class="table">
+ *
+ * Therefore, the selector must target .table instead of
+ * .support-requests-table.
+ */
+
+.table-wrapper > table.table th:first-child,
+.table-wrapper > table.table td:first-child {
+
+    /* Gives the ID column enough horizontal space */
+    width: 70px !important;
+
+    /* Prevents the column from becoming too narrow */
+    min-width: 70px !important;
+
+    /* Prevents IDs such as 10 or 125 from wrapping */
+    white-space: nowrap !important;
+
+    /* Keeps the ID visually centered */
+    text-align: center;
+
+}
