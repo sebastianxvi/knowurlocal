@@ -84,25 +84,123 @@ class DashboardController extends Controller
      */
     private function dashboardData(): array
     {
-        /*
-         * =====================================================
-         * OVERVIEW
-         * =====================================================
-         */
+        
 
-        $totalAgencies = Agency::count();
+    /*
+ * =====================================================
+ * OVERVIEW
+ * =====================================================
+ */
 
-        $totalFaqs = Faq::count();
+$totalAgencies = Agency::count();
 
-        $totalUsers = User::where(
-            'role',
-            'user'
-        )->count();
 
-        $totalAdmins = User::whereIn(
-            'role',
-            ['admin', 'superadmin']
-        )->count();
+/*
+ * Count active agencies by their related agency type.
+ *
+ * The agency_types table currently contains:
+ *
+ * - NGA
+ * - NGO
+ */
+$totalNGA = Agency::whereHas(
+    'type',
+    function ($query) {
+
+        $query->where(
+            'name',
+            'NGA'
+        );
+    }
+)->count();
+
+
+$totalNGO = Agency::whereHas(
+    'type',
+    function ($query) {
+
+        $query->where(
+            'name',
+            'NGO'
+        );
+    }
+)->count();
+
+
+$totalFaqs = Faq::count();
+
+
+/*
+ * =====================================================
+ * TOP FAQ CONTRIBUTOR
+ * =====================================================
+ *
+ * Count FAQs per active agency.
+ *
+ * whereHas('agency') prevents FAQs belonging to
+ * soft-deleted agencies from being included.
+ */
+$faqCountsByAgency = Faq::query()
+    ->whereHas('agency')
+    ->select('agency_id')
+    ->selectRaw('COUNT(*) as faq_count')
+    ->groupBy('agency_id')
+    ->orderByDesc('faq_count')
+    ->get();
+
+
+/*
+ * Get the highest FAQ count.
+ *
+ * Cast the result to integer so the dashboard receives
+ * a numeric value rather than a database string.
+ */
+$topFaqCount = (int) (
+    $faqCountsByAgency
+        ->first()
+        ?->faq_count ?? 0
+);
+
+
+/*
+ * Find every agency sharing the highest FAQ count.
+ */
+$topFaqAgencyIds = $topFaqCount > 0
+    ? $faqCountsByAgency
+        ->where('faq_count', $topFaqCount)
+        ->pluck('agency_id')
+    : collect();
+
+
+/*
+ * Count the agencies sharing the highest FAQ count.
+ */
+$topFaqContributorTieCount = $topFaqAgencyIds->count();
+
+
+/*
+ * Load only the abbreviations of the top contributors.
+ */
+$topFaqContributors = $topFaqContributorTieCount > 0
+    ? Agency::whereIn(
+        'id',
+        $topFaqAgencyIds
+    )
+    ->orderBy('agency_abbreviation')
+    ->pluck('agency_abbreviation')
+    : collect();
+
+
+$totalUsers = User::where(
+    'role',
+    'user'
+)->count();
+
+
+$totalAdmins = User::whereIn(
+    'role',
+    ['admin', 'superadmin']
+)->count();
 
 
         /*
@@ -687,9 +785,22 @@ class DashboardController extends Controller
              * Overview
              */
             'totalAgencies' => $totalAgencies,
-            'totalFaqs' => $totalFaqs,
-            'totalUsers' => $totalUsers,
-            'totalAdmins' => $totalAdmins,
+
+'totalNGA' => $totalNGA,
+
+'totalNGO' => $totalNGO,
+
+'totalFaqs' => $totalFaqs,
+
+'topFaqCount' => $topFaqCount,
+
+'topFaqContributorTieCount' => $topFaqContributorTieCount,
+
+'topFaqContributors' => $topFaqContributors,
+
+'totalUsers' => $totalUsers,
+
+'totalAdmins' => $totalAdmins,
 
 
             /*

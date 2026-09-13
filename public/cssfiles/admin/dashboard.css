@@ -299,6 +299,19 @@
    OVERVIEW CARD
    ========================================================= */
 
+/*
+ * The overview card can be used as an anchor element.
+ *
+ * color: inherit
+ * Prevents the browser from applying the default
+ * blue link color.
+ *
+ * text-decoration: none
+ * Removes the default underline from anchor elements.
+ *
+ * cursor: pointer
+ * Clearly communicates that the entire card is clickable.
+ */
 .overview-card {
     display: flex;
     align-items: flex-start;
@@ -313,22 +326,103 @@
     border: 1px solid #e5e9f0;
     border-radius: 12px;
 
+    color: inherit;
+    text-decoration: none;
+
+    cursor: pointer;
+
     box-shadow:
         0 1px 2px rgba(15, 23, 42, 0.03);
 
     transition:
         transform 0.2s ease,
         box-shadow 0.2s ease,
-        border-color 0.2s ease;
+        border-color 0.2s ease,
+        background-color 0.2s ease;
 }
 
+
+/*
+ * Hover feedback gives the user a clear indication
+ * that the entire card is interactive.
+ */
 .overview-card:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
 
     border-color: #d8dee9;
 
+    background: #ffffff;
+
     box-shadow:
-        0 5px 16px rgba(15, 23, 42, 0.06);
+        0 6px 18px rgba(15, 23, 42, 0.07);
+}
+
+
+/*
+ * Keyboard users must receive the same visual clarity
+ * as mouse users.
+ *
+ * :focus-visible only appears when the element receives
+ * keyboard-style focus, avoiding unnecessary outlines
+ * during normal mouse clicks.
+ */
+.overview-card:focus-visible {
+    outline: 2px solid #8fb1ed;
+    outline-offset: 3px;
+
+    border-color: #8fb1ed;
+}
+
+
+/*
+ * Prevents the card from appearing lifted while pressed.
+ */
+.overview-card:active {
+    transform: translateY(0);
+}
+
+/* =========================================================
+   OVERVIEW CARD ARROW
+   ========================================================= */
+
+/*
+ * This arrow is optional but recommended.
+ *
+ * It gives users a subtle indication that the card
+ * opens another administrative page.
+ */
+.overview-card-arrow {
+    flex: 0 0 auto;
+
+    margin-left: auto;
+    padding-top: 2px;
+
+    font-size: 16px;
+
+    color: #94a3b8;
+
+    opacity: 0;
+
+    transform: translate(-2px, 2px);
+
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease,
+        color 0.18s ease;
+}
+
+
+/*
+ * The arrow becomes visible when the card is hovered
+ * or focused using the keyboard.
+ */
+.overview-card:hover .overview-card-arrow,
+.overview-card:focus-visible .overview-card-arrow {
+    opacity: 1;
+
+    color: #315fbd;
+
+    transform: translate(0, 0);
 }
 
 
@@ -443,6 +537,75 @@
     font-size: 10px;
 
     color: #94a3b8;
+}
+
+/* =========================================================
+   AGENCY BREAKDOWN
+   ========================================================= */
+
+.overview-breakdown {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+
+    margin-top: 8px;
+}
+
+.overview-breakdown > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.5;
+
+    color: #64748b;
+}
+
+.overview-breakdown > span strong {
+    margin-top: 0;
+
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.5;
+
+    color: #526078;
+}
+
+
+/* =========================================================
+   TOP FAQ CONTRIBUTOR
+   ========================================================= */
+
+.overview-top-contributor {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+
+    margin-top: 8px;
+}
+
+.overview-meta-label {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+
+    color: #94a3b8;
+}
+
+.overview-meta-value {
+    max-width: 100%;
+
+    overflow-wrap: anywhere;
+
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5;
+
+    color: #64748b;
 }
 
 
@@ -615,6 +778,248 @@
     color: #315fbd;
 
     transform: translateX(2px);
+}
+
+/* =========================================================
+   ATTENTION ITEM HEADING
+   ========================================================= */
+
+/*
+ * Keeps the main alert title and priority badge
+ * aligned while allowing them to wrap on small screens.
+ */
+.attention-item-heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+
+    min-width: 0;
+}
+
+
+/*
+ * The title remains flexible so long text does not
+ * force the entire alert item outside the viewport.
+ */
+.attention-item-heading strong {
+    min-width: 0;
+}
+
+
+/* =========================================================
+   ATTENTION DESCRIPTION
+   ========================================================= */
+
+/*
+ * Replaces the generic content span styling for the
+ * more descriptive second line.
+ */
+.attention-description {
+    display: block;
+
+    margin-top: 3px;
+
+    font-size: 11px;
+    line-height: 1.45;
+
+    color: #718096;
+}
+
+
+/* =========================================================
+   ATTENTION META
+   ========================================================= */
+
+/*
+ * Shows which administrative area owns the task.
+ */
+.attention-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+
+    margin-top: 7px;
+
+    font-size: 10px;
+    line-height: 1.3;
+
+    color: #94a3b8;
+}
+
+
+/*
+ * Keeps the contextual icon visually lightweight.
+ */
+.attention-meta i {
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   ATTENTION PRIORITY BADGE
+   ========================================================= */
+
+/*
+ * Base badge styling.
+ *
+ * The badge is intentionally compact so it supports
+ * the title instead of overpowering it.
+ */
+.attention-priority {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 3px 6px;
+
+    border: 1px solid transparent;
+    border-radius: 999px;
+
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.2;
+
+    letter-spacing: 0.01em;
+    text-transform: capitalize;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   HIGH PRIORITY
+   ========================================================= */
+
+/*
+ * High priority is used for pending citizen inquiries
+ * because an administrator response is still required.
+ */
+.attention-priority-high {
+    border-color: #efd49a;
+
+    background: #fff0c7;
+
+    color: #956300;
+}
+
+
+/* =========================================================
+   MEDIUM PRIORITY
+   ========================================================= */
+
+/*
+ * Medium priority is used for content completeness
+ * tasks that do not immediately block citizen support.
+ */
+.attention-priority-medium {
+    border-color: #d5e2f7;
+
+    background: #eaf2ff;
+
+    color: #315fbd;
+}
+
+
+/* =========================================================
+   CLEAR STATUS
+   ========================================================= */
+
+/*
+ * Healthy state badge for the empty attention list.
+ */
+.attention-priority-clear {
+    border-color: #cce7d7;
+
+    background: #ddf5e7;
+
+    color: #18804b;
+}
+
+
+/* =========================================================
+   ATTENTION ITEM FOCUS
+   ========================================================= */
+
+/*
+ * Makes keyboard navigation visible.
+ *
+ * The outline is placed outside the component so it
+ * does not change the item's dimensions.
+ */
+.attention-item:focus-visible {
+    outline: 2px solid #8fb1ed;
+    outline-offset: 3px;
+}
+
+
+/* =========================================================
+   ATTENTION STATE COLOR REFINEMENT
+   ========================================================= */
+
+/*
+ * Keeps the description and metadata aligned with
+ * the semantic color of each alert state.
+ */
+.attention-warning .attention-description {
+    color: #8f7951;
+}
+
+.attention-info .attention-description {
+    color: #7185a5;
+}
+
+.attention-success .attention-description {
+    color: #5f8a70;
+}
+
+
+/* =========================================================
+   ATTENTION RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    /*
+     * Allows the heading and priority badge to wrap
+     * naturally on narrow screens.
+     */
+    .attention-item-heading {
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+
+    /*
+     * Prevents the arrow from being squeezed by
+     * long alert content.
+     */
+    .attention-arrow {
+        margin-top: 2px;
+    }
+
+
+    /*
+     * Gives the metadata enough room to wrap if needed.
+     */
+    .attention-meta {
+        flex-wrap: wrap;
+    }
+
+}
+
+
+/* =========================================================
+   ATTENTION REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .attention-item-heading,
+    .attention-priority {
+        transition: none;
+    }
+
 }
 
 
@@ -2729,6 +3134,7 @@
 @media (prefers-reduced-motion: reduce) {
 
     .overview-card,
+    .overview-card-arrow,
     .attention-item,
     .attention-arrow,
     .section-action,

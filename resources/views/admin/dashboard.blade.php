@@ -77,282 +77,535 @@
 
         <div class="overview-grid">
 
-            {{-- AGENCIES --}}
-            <article class="overview-card overview-agencies">
+    {{-- =================================================
+         AGENCIES
+         ================================================= --}}
 
-                <div class="overview-icon">
-                    <i class="ph-light ph-buildings"></i>
-                </div>
+    <a
+        href="{{ route('admin.nga') }}"
+        class="overview-card overview-agencies"
+    >
 
-                <div class="overview-info">
+        <div class="overview-icon">
 
-                    <span class="overview-label">
-                        Agencies
-                    </span>
-
-                    <strong>
-                        {{ number_format($totalAgencies) }}
-                    </strong>
-
-                    <span class="overview-meta">
-                        Directory records
-                    </span>
-
-                </div>
-
-            </article>
-
-
-            {{-- FAQs --}}
-            <article class="overview-card overview-faqs">
-
-                <div class="overview-icon">
-                    <i class="ph-light ph-book-open-text"></i>
-                </div>
-
-                <div class="overview-info">
-
-                    <span class="overview-label">
-                        FAQs
-                    </span>
-
-                    <strong>
-                        {{ number_format($totalFaqs) }}
-                    </strong>
-
-                    <span class="overview-meta">
-                        Knowledge base records
-                    </span>
-
-                </div>
-
-            </article>
-
-
-            {{-- USERS --}}
-            <article class="overview-card overview-users">
-
-                <div class="overview-icon">
-                    <i class="ph-light ph-users"></i>
-                </div>
-
-                <div class="overview-info">
-
-                    <span class="overview-label">
-                        Public Users
-                    </span>
-
-                    <strong>
-                        {{ number_format($totalUsers) }}
-                    </strong>
-
-                    <span class="overview-meta">
-                        Registered accounts
-                    </span>
-
-                </div>
-
-            </article>
-
-
-            {{-- PENDING INQUIRIES --}}
-            <article
-                class="overview-card overview-pending {{ $pendingInquiries > 0 ? 'has-attention' : '' }}"
-            >
-
-                <div class="overview-icon">
-                    <i class="ph-light ph-chat-circle-text"></i>
-                </div>
-
-                <div class="overview-info">
-
-                    <span class="overview-label">
-                        Pending Inquiries
-                    </span>
-
-                    <strong>
-                        {{ number_format($pendingInquiries) }}
-                    </strong>
-
-                    <span class="overview-meta">
-                        Awaiting response
-                    </span>
-
-                </div>
-
-            </article>
+            <i
+                class="ph-light ph-buildings"
+                aria-hidden="true"
+            ></i>
 
         </div>
 
-    </section>
+
+        <div class="overview-info">
+
+            <span class="overview-label">
+                Agencies
+            </span>
+
+            <strong>
+                {{ number_format($totalAgencies) }}
+            </strong>
 
 
-    {{-- =====================================================
-         NEEDS ATTENTION
-         ===================================================== --}}
+            <div class="overview-breakdown">
 
-    <section class="dashboard-section">
+                <span>
+                    NGA
 
-        <div class="section-heading">
+                    <strong>
+                        {{ number_format($totalNGA) }}
+                    </strong>
+                </span>
 
-            <div class="section-heading-main">
 
-                <div class="section-heading-icon attention">
-                    <i class="ph-light ph-warning-circle"></i>
-                </div>
+                <span>
+                    NGO
 
-                <div class="section-heading-copy">
-
-                    <span class="eyebrow">
-                        Attention
-                    </span>
-
-                    <h2>
-                        Needs attention
-                    </h2>
-
-                    <p>
-                        Items that may require administrative action.
-                    </p>
-
-                </div>
+                    <strong>
+                        {{ number_format($totalNGO) }}
+                    </strong>
+                </span>
 
             </div>
 
         </div>
 
 
-        <div class="attention-list">
+        <i
+            class="ph-light ph-arrow-up-right overview-card-arrow"
+            aria-hidden="true"
+        ></i>
 
-            {{-- PENDING INQUIRIES --}}
-            @if($pendingInquiries > 0)
+    </a>
 
-                <a
-                    href="{{ route('admin.support.requests', ['status' => 'pending']) }}"
-                    class="attention-item attention-warning"
-                >
 
-                    <span class="attention-icon">
-                        <i class="ph-light ph-clock"></i>
+
+    {{-- =================================================
+         FAQs
+         ================================================= --}}
+
+    <a
+        href="{{ route('faqs.index') }}"
+        class="overview-card overview-faqs"
+    >
+
+        <div class="overview-icon">
+
+            <i
+                class="ph-light ph-book-open-text"
+                aria-hidden="true"
+            ></i>
+
+        </div>
+
+
+        <div class="overview-info">
+
+            <span class="overview-label">
+                FAQs
+            </span>
+
+            <strong>
+                {{ number_format($totalFaqs) }}
+            </strong>
+
+
+            <div class="overview-meta overview-top-contributor">
+
+                @if($topFaqCount > 0)
+
+                    <span class="overview-meta-label">
+
+                        {{ $topFaqContributorTieCount > 1
+                            ? 'Top contributors'
+                            : 'Top contributor'
+                        }}
+
                     </span>
 
-                    <span class="attention-content">
+
+                    <span class="overview-meta-value">
+
+                        @if($topFaqContributorTieCount > 1)
+
+                            {{ $topFaqContributorTieCount }}
+                            agencies tied ·
+                            {{ number_format($topFaqCount) }}
+                            FAQs
+
+                        @else
+
+                            {{ $topFaqContributors->first() ?? 'Unknown agency' }}
+                            ·
+                            {{ number_format($topFaqCount) }}
+                            FAQs
+
+                        @endif
+
+                    </span>
+
+                @else
+
+                    <span class="overview-meta-label">
+                        No FAQ data yet
+                    </span>
+
+                @endif
+
+            </div>
+
+        </div>
+
+
+        <i
+            class="ph-light ph-arrow-up-right overview-card-arrow"
+            aria-hidden="true"
+        ></i>
+
+    </a>
+
+
+
+    {{-- =================================================
+         PUBLIC USERS
+         ================================================= --}}
+
+    <a
+        href="{{ route('admin.users') }}"
+        class="overview-card overview-users"
+    >
+
+        <div class="overview-icon">
+
+            <i
+                class="ph-light ph-users"
+                aria-hidden="true"
+            ></i>
+
+        </div>
+
+
+        <div class="overview-info">
+
+            <span class="overview-label">
+                Public Users
+            </span>
+
+            <strong>
+                {{ number_format($totalUsers) }}
+            </strong>
+
+            <span class="overview-meta">
+                Registered accounts
+            </span>
+
+        </div>
+
+
+        <i
+            class="ph-light ph-arrow-up-right overview-card-arrow"
+            aria-hidden="true"
+        ></i>
+
+    </a>
+
+
+
+    {{-- =================================================
+         PENDING INQUIRIES
+         ================================================= --}}
+
+    <a
+        href="{{ route('admin.support.requests') }}"
+        class="overview-card overview-pending {{ $pendingInquiries > 0 ? 'has-attention' : '' }}"
+    >
+
+        <div class="overview-icon">
+
+            <i
+                class="ph-light ph-chat-circle-text"
+                aria-hidden="true"
+            ></i>
+
+        </div>
+
+
+        <div class="overview-info">
+
+            <span class="overview-label">
+                Pending Inquiries
+            </span>
+
+            <strong>
+                {{ number_format($pendingInquiries) }}
+            </strong>
+
+            <span class="overview-meta">
+                Awaiting response
+            </span>
+
+        </div>
+
+
+        <i
+            class="ph-light ph-arrow-up-right overview-card-arrow"
+            aria-hidden="true"
+        ></i>
+
+    </a>
+
+</div>
+
+    </section>
+
+
+    {{-- =====================================================
+     NEEDS ATTENTION
+     ===================================================== --}}
+
+<section class="dashboard-section">
+
+    <div class="section-heading">
+
+        <div class="section-heading-main">
+
+            <div class="section-heading-icon attention">
+                <i
+                    class="ph-light ph-warning-circle"
+                    aria-hidden="true"
+                ></i>
+            </div>
+
+            <div class="section-heading-copy">
+
+                <span class="eyebrow">
+                    Attention
+                </span>
+
+                <h2>
+                    Needs attention
+                </h2>
+
+                <p>
+                    Administrative tasks that may require action.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="attention-list">
+
+        {{-- =================================================
+             PENDING INQUIRIES
+             ================================================= --}}
+
+        @if($pendingInquiries > 0)
+
+            <a
+                href="{{ route('admin.support.requests', ['status' => 'pending']) }}"
+                class="attention-item attention-warning"
+            >
+
+                <span class="attention-icon">
+                    <i
+                        class="ph-light ph-clock"
+                        aria-hidden="true"
+                    ></i>
+                </span>
+
+
+                <span class="attention-content">
+
+                    <span class="attention-item-heading">
 
                         <strong>
-                            {{ $pendingInquiries }}
+                            {{ number_format($pendingInquiries) }}
                             {{ $pendingInquiries === 1 ? 'inquiry' : 'inquiries' }}
                             awaiting response
                         </strong>
 
-                        <span>
-                            Users are waiting for an administrator's response.
+                        <span class="attention-priority attention-priority-high">
+                            High
                         </span>
 
                     </span>
 
-                    <i class="ph-light ph-arrow-right attention-arrow"></i>
 
-                </a>
+                    <span class="attention-description">
+                        Citizens are waiting for an administrator's response.
+                    </span>
 
-            @endif
+
+                    <span class="attention-meta">
+                        <i
+                            class="ph-light ph-chats"
+                            aria-hidden="true"
+                        ></i>
+
+                        User inquiries
+                    </span>
+
+                </span>
 
 
-            {{-- INCOMPLETE AGENCIES --}}
-            @if($incompleteAgencies > 0)
+                <i
+                    class="ph-light ph-arrow-right attention-arrow"
+                    aria-hidden="true"
+                ></i>
 
-                            <a
-                                href="{{ route('admin.nga', ['filter' => 'incomplete']) }}"
-                                class="attention-item attention-info"
-                            >
+            </a>
 
-                                <span class="attention-icon">
-                                    <i class="ph-light ph-buildings"></i>
-                                </span>
+        @endif
 
-                                <span class="attention-content">
 
-                                    <strong>
-                                        {{ $incompleteAgencies }}
-                                        {{ $incompleteAgencies === 1 ? 'agency record needs' : 'agency records need' }}
-                                        attention
-                                    </strong>
+        {{-- =================================================
+             INCOMPLETE AGENCIES
+             ================================================= --}}
 
-                                    <span>
-                                        Some required directory information is missing.
-                                    </span>
+        @if($incompleteAgencies > 0)
 
-                                </span>
+            <a
+                href="{{ route('admin.nga', ['filter' => 'incomplete']) }}"
+                class="attention-item attention-info"
+            >
 
-                                <i class="ph-light ph-arrow-right attention-arrow"></i>
+                <span class="attention-icon">
+                    <i
+                        class="ph-light ph-buildings"
+                        aria-hidden="true"
+                    ></i>
+                </span>
 
-                            </a>
 
-                        @endif
+                <span class="attention-content">
 
-                        @if($incompleteFaqs > 0)
-
-                <a
-                    href="{{ route('faqs.index', ['filter' => 'missing_translation']) }}"
-                    class="attention-item attention-warning"
-                >
-
-                    <div class="attention-icon">
-                        <i class="ph-light ph-translate"></i>
-                    </div>
-
-                    <div class="attention-content">
+                    <span class="attention-item-heading">
 
                         <strong>
-                            {{ $incompleteFaqs }}
+                            {{ number_format($incompleteAgencies) }}
+                            {{ $incompleteAgencies === 1 ? 'agency record needs' : 'agency records need' }}
+                            attention
+                        </strong>
+
+                        <span class="attention-priority attention-priority-medium">
+                            Medium
+                        </span>
+
+                    </span>
+
+
+                    <span class="attention-description">
+                        Required directory information is missing from some records.
+                    </span>
+
+
+                    <span class="attention-meta">
+                        <i
+                            class="ph-light ph-database"
+                            aria-hidden="true"
+                        ></i>
+
+                        Agency directory
+                    </span>
+
+                </span>
+
+
+                <i
+                    class="ph-light ph-arrow-right attention-arrow"
+                    aria-hidden="true"
+                ></i>
+
+            </a>
+
+        @endif
+
+
+        {{-- =================================================
+             INCOMPLETE FAQ TRANSLATIONS
+             ================================================= --}}
+
+        @if($incompleteFaqs > 0)
+
+            <a
+                href="{{ route('faqs.index', ['filter' => 'missing_translation']) }}"
+                class="attention-item attention-warning"
+            >
+
+                <span class="attention-icon">
+                    <i
+                        class="ph-light ph-translate"
+                        aria-hidden="true"
+                    ></i>
+                </span>
+
+
+                <span class="attention-content">
+
+                    <span class="attention-item-heading">
+
+                        <strong>
+                            {{ number_format($incompleteFaqs) }}
                             {{ $incompleteFaqs === 1 ? 'FAQ needs' : 'FAQs need' }}
                             translation
                         </strong>
 
-                        <span>
-                            Filipino/Taglish content is incomplete.
+                        <span class="attention-priority attention-priority-medium">
+                            Medium
                         </span>
 
-                    </div>
-
-                    <i class="ph-light ph-arrow-right attention-arrow"></i>
-
-                </a>
-
-            @endif
-
-
-            {{-- NOTHING REQUIRES ATTENTION --}}
-            @if(
-                $pendingInquiries === 0 &&
-                $incompleteAgencies === 0 &&
-                $incompleteFaqs === 0
-            )
-
-                <div class="attention-item attention-success">
-
-                    <span class="attention-icon">
-                        <i class="ph-light ph-check-circle"></i>
                     </span>
 
-                    <span class="attention-content">
+
+                    <span class="attention-description">
+                        Filipino or Taglish content is incomplete.
+                    </span>
+
+
+                    <span class="attention-meta">
+                        <i
+                            class="ph-light ph-book-open-text"
+                            aria-hidden="true"
+                        ></i>
+
+                        Knowledge base
+                    </span>
+
+                </span>
+
+
+                <i
+                    class="ph-light ph-arrow-right attention-arrow"
+                    aria-hidden="true"
+                ></i>
+
+            </a>
+
+        @endif
+
+
+        {{-- =================================================
+             NOTHING REQUIRES ATTENTION
+             ================================================= --}}
+
+        @if(
+            $pendingInquiries === 0 &&
+            $incompleteAgencies === 0 &&
+            $incompleteFaqs === 0
+        )
+
+            <div class="attention-item attention-success">
+
+                <span class="attention-icon">
+                    <i
+                        class="ph-light ph-check-circle"
+                        aria-hidden="true"
+                    ></i>
+                </span>
+
+
+                <span class="attention-content">
+
+                    <span class="attention-item-heading">
 
                         <strong>
                             Everything looks good
                         </strong>
 
-                        <span>
-                            No immediate administrative issues were detected.
+                        <span class="attention-priority attention-priority-clear">
+                            Clear
                         </span>
 
                     </span>
 
-                </div>
 
-            @endif
+                    <span class="attention-description">
+                        No immediate administrative issues were detected.
+                    </span>
 
-        </div>
 
-    </section>
+                    <span class="attention-meta">
+                        <i
+                            class="ph-light ph-shield-check"
+                            aria-hidden="true"
+                        ></i>
+
+                        System status
+                    </span>
+
+                </span>
+
+            </div>
+
+        @endif
+
+    </div>
+
+</section>
 
 
     {{-- =====================================================
