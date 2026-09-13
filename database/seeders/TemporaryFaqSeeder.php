@@ -72,12 +72,12 @@ class TemporaryFaqSeeder extends Seeder
 
             /*
              * =========================================================
-             * DEPARTMENT OF AGRARIAN REFORM
+             * Department of Agrarian Reform - Occidental Mindoro Provincial Office
              * =========================================================
              */
 
             [
-                'agency' => 'Department of Agrarian Reform',
+                'agency' => 'Department of Agrarian Reform - Occidental Mindoro Provincial Office',
 
                 'question' => 'Can DAR help me with an agrarian reform legal concern?',
 
@@ -91,7 +91,7 @@ class TemporaryFaqSeeder extends Seeder
             ],
 
             [
-                'agency' => 'Department of Agrarian Reform',
+                'agency' => 'Department of Agrarian Reform - Occidental Mindoro Provincial Office',
 
                 'question' => 'What should I prepare before asking DAR about my agrarian case?',
 

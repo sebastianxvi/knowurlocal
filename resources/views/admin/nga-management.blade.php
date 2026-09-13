@@ -252,6 +252,8 @@
     data-type_id="{{ $agency->agency_type_id }}"
     data-category_id="{{ $agency->category_id }}"
     data-description="{{ $agency->agency_description }}"
+    data-office_head_name="{{ $agency->office_head_name }}"
+    data-office_head_position="{{ $agency->office_head_position }}"
     data-services_offered="{{ $agency->services_offered }}"
     data-location="{{ $agency->agency_location }}"
     data-office="{{ $agency->office_hours }}"
@@ -356,6 +358,8 @@
                 data-type_id="{{ $agency->agency_type_id }}"
                 data-category_id="{{ $agency->category_id }}"
                 data-description="{{ $agency->agency_description }}"
+                data-office_head_name="{{ $agency->office_head_name }}"
+                data-office_head_position="{{ $agency->office_head_position }}"
                 data-services_offered="{{ $agency->services_offered }}"
                 data-location="{{ $agency->agency_location }}"
                 data-office="{{ $agency->office_hours }}"
@@ -712,25 +716,87 @@
                 </div>
 
                 <!-- OPTIONAL (NO STRICT VALIDATION) -->
+                {{-- DESCRIPTION --}}
                 <div class="floating-group" data-validate="optional-text">
-                    <textarea name="agency_description" id="agency_description" placeholder=" "></textarea>
-                    <label for="agency_description">Description</label>
+
+                    <textarea
+                        name="agency_description"
+                        id="agency_description"
+                        placeholder=" "
+                        maxlength="1000"
+                    ></textarea>
+
+                    <label for="agency_description">
+                        Description
+                    </label>
+
                     <span class="form-message"></span>
+
                 </div>
 
+
+                {{-- OFFICE HEAD INFORMATION --}}
+                <div class="agency-section-label">
+                    Office Head Information
+                </div>
+
+
+                {{-- OFFICE HEAD NAME --}}
                 <div class="floating-group" data-validate="optional-text">
-                <textarea
-                    name="services_offered"
-                    id="services_offered"
-                    placeholder=" "
-                ></textarea>
 
-                <label for="services_offered">
-                    Services Offered
-                </label>
+                    <input
+                        type="text"
+                        name="office_head_name"
+                        id="office_head_name"
+                        placeholder=" "
+                        maxlength="255"
+                    >
 
-                <span class="form-message"></span>
-            </div>
+                    <label for="office_head_name">
+                        Office Head Name
+                    </label>
+
+                    <span class="form-message"></span>
+
+                </div>
+
+
+                {{-- OFFICE HEAD POSITION --}}
+                <div class="floating-group" data-validate="optional-text">
+
+                    <input
+                        type="text"
+                        name="office_head_position"
+                        id="office_head_position"
+                        placeholder=" "
+                        maxlength="255"
+                    >
+
+                    <label for="office_head_position">
+                        Office Head Position
+                    </label>
+
+                    <span class="form-message"></span>
+
+                </div>
+
+
+                {{-- SERVICES OFFERED --}}
+                <div class="floating-group" data-validate="optional-text">
+
+                    <textarea
+                        name="services_offered"
+                        id="services_offered"
+                        placeholder=" "
+                    ></textarea>
+
+                    <label for="services_offered">
+                        Services Offered
+                    </label>
+
+                    <span class="form-message"></span>
+
+                </div>
             </div>
 
             

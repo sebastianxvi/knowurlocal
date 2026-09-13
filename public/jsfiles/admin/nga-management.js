@@ -1923,10 +1923,28 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
 
-        document.getElementById(
+       document.getElementById(
             "agency_description"
         ).value =
             data.description || "";
+
+
+        /*
+        * Fill the office head information.
+        *
+        * These values come from the agency data attributes
+        * provided by the Blade view.
+        */
+        document.getElementById(
+            "office_head_name"
+        ).value =
+            data.office_head_name || "";
+
+
+        document.getElementById(
+            "office_head_position"
+        ).value =
+            data.office_head_position || "";
 
 
         document.getElementById(
@@ -2565,6 +2583,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     description:
                         row.dataset.description,
+
+                    office_head_name:
+                        row.dataset.office_head_name,
+
+                    office_head_position:
+                        row.dataset.office_head_position,
 
                     services_offered:
                         row.dataset.services_offered,
@@ -3281,6 +3305,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     description:
                         btn.dataset.description,
+
+                    office_head_name:
+                        btn.dataset.office_head_name,
+
+                    office_head_position:
+                        btn.dataset.office_head_position,
 
                     services_offered:
                         btn.dataset.services_offered,

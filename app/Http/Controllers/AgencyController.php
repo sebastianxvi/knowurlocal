@@ -274,13 +274,13 @@ $contactTypes = ContactType::where('is_active', true)
 
 
     /**
-     * =========================================================
-     * 📦 GET ALL AGENCIES
-     * =========================================================
-     *
-     * Used by endpoints that need agency data in JSON format.
-     */
-    public function getAll()
+ * =========================================================
+ * 📦 GET ALL AGENCIES
+ * =========================================================
+ *
+ * Used by endpoints that need agency data in JSON format.
+ */
+public function getAll()
 {
     /*
      * Load the agency's related information in the same query
@@ -303,6 +303,12 @@ $contactTypes = ContactType::where('is_active', true)
             'services_offered',
             'office_hours',
 
+            /*
+             * Office Head information.
+             */
+            'office_head_name',
+            'office_head_position',
+
             'agency_location',
             'lat',
             'lng',
@@ -311,6 +317,9 @@ $contactTypes = ContactType::where('is_active', true)
         ])
         ->get();
 
+    /*
+     * Return the selected agency data as JSON.
+     */
     return response()->json($agencies);
 }
 
@@ -375,6 +384,12 @@ $contactTypes = ContactType::where('is_active', true)
 
         'agency_description' =>
             'nullable|string',
+
+        'office_head_name' =>
+            'nullable|string|max:255',
+
+        'office_head_position' =>
+            'nullable|string|max:255',
 
         'services_offered' =>
             'nullable|string',
@@ -735,6 +750,12 @@ $contactTypes = ContactType::where('is_active', true)
         'agency_description' =>
             $agency->agency_description,
 
+        'office_head_name' =>
+            $agency->office_head_name,
+
+        'office_head_position' =>
+            $agency->office_head_position,
+
         'services_offered' =>
             $agency->services_offered,
 
@@ -832,6 +853,12 @@ $contactTypes = ContactType::where('is_active', true)
 
         'agency_description' =>
             'nullable|string',
+
+        'office_head_name' =>
+            'nullable|string|max:255',
+
+        'office_head_position' =>
+            'nullable|string|max:255',
 
         'services_offered' =>
             'nullable|string',
@@ -1014,6 +1041,12 @@ $contactTypes = ContactType::where('is_active', true)
 
         'agency_description' =>
             $agency->agency_description,
+
+        'office_head_name' =>
+            $agency->office_head_name,
+
+        'office_head_position' =>
+            $agency->office_head_position,
 
         'services_offered' =>
             $agency->services_offered,
@@ -1247,6 +1280,12 @@ $contactTypes = ContactType::where('is_active', true)
 
         'agency_description' =>
             $agency->agency_description,
+
+        'office_head_name' =>
+            $agency->office_head_name,
+
+        'office_head_position' =>
+            $agency->office_head_position,
 
         'services_offered' =>
             $agency->services_offered,
@@ -1489,6 +1528,12 @@ $contactTypes = ContactType::where('is_active', true)
 
         'agency_description' =>
             $agency->agency_description,
+
+        'office_head_name' =>
+            $agency->office_head_name,
+
+        'office_head_position' =>
+            $agency->office_head_position,
 
         'services_offered' =>
             $agency->services_offered,
@@ -1875,6 +1920,12 @@ public function restore($id)
 
         'agency_description' =>
             $agency->agency_description,
+
+        'office_head_name' =>
+            $agency->office_head_name,
+
+        'office_head_position' =>
+            $agency->office_head_position,
 
         'services_offered' =>
             $agency->services_offered,

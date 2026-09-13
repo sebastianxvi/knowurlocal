@@ -721,6 +721,29 @@ document.addEventListener(
             'agencyDetailsServices'
         );
 
+    /*
+ * Agency office head name.
+ *
+ * This references the paragraph where the office head's
+ * name will be displayed.
+ */
+const agencyDetailsOfficeHeadName =
+    document.getElementById(
+        'agencyDetailsOfficeHeadName'
+    );
+
+
+/*
+ * Agency office head position.
+ *
+ * This references the paragraph where the office head's
+ * designation will be displayed.
+ */
+const agencyDetailsOfficeHeadPosition =
+    document.getElementById(
+        'agencyDetailsOfficeHeadPosition'
+    );
+
 
     /*
      * Agency office hours.
@@ -753,6 +776,17 @@ document.addEventListener(
         document.getElementById(
             'agencyServicesSection'
         );
+
+    /*
+ * Office Head information section.
+ *
+ * The entire section will be hidden when both office head
+ * fields are empty.
+ */
+const agencyOfficeHeadSection =
+    document.getElementById(
+        'agencyOfficeHeadSection'
+    );
 
 
     const agencyHoursSection =
@@ -1777,6 +1811,83 @@ marker.setIcon(
             agencyDetailsDescription,
             agency.agency_description
         );
+
+        // -----------------------------------------------------
+// OFFICE HEAD
+// -----------------------------------------------------
+
+/*
+ * Normalize the office head name.
+ *
+ * String() safely converts the value into text.
+ * trim() removes unnecessary spaces.
+ * || '' provides an empty string when the value is missing.
+ */
+const officeHeadName =
+    String(
+        agency.office_head_name || ''
+    ).trim();
+
+
+/*
+ * Normalize the office head position.
+ */
+const officeHeadPosition =
+    String(
+        agency.office_head_position || ''
+    ).trim();
+
+
+/*
+ * The Office Head section is valid only when
+ * BOTH the name and position are available.
+ */
+const hasCompleteOfficeHeadInformation =
+    officeHeadName !== '' &&
+    officeHeadPosition !== '';
+
+
+/*
+ * Display the office head name.
+ *
+ * textContent safely displays database content
+ * as plain text instead of interpreting it as HTML.
+ */
+if (agencyDetailsOfficeHeadName) {
+
+    agencyDetailsOfficeHeadName.textContent =
+        hasCompleteOfficeHeadInformation
+            ? officeHeadName
+            : '';
+
+}
+
+
+/*
+ * Display the office head position.
+ */
+if (agencyDetailsOfficeHeadPosition) {
+
+    agencyDetailsOfficeHeadPosition.textContent =
+        hasCompleteOfficeHeadInformation
+            ? officeHeadPosition
+            : '';
+
+}
+
+
+/*
+ * Control the actual HTML hidden property.
+ *
+ * hidden = false means show the section.
+ * hidden = true means hide the section.
+ */
+if (agencyOfficeHeadSection) {
+
+    agencyOfficeHeadSection.hidden =
+        !hasCompleteOfficeHeadInformation;
+
+}
 
 
         // -----------------------------------------------------

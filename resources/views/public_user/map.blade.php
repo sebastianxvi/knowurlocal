@@ -155,6 +155,47 @@
             </div>
 
 
+            <section
+    id="agencyOfficeHeadSection"
+    class="agency-detail-section"
+    hidden
+>
+    <h3>Office Head</h3>
+
+    <div class="agency-office-head">
+
+        <div class="agency-office-head-item">
+            <div class="agency-office-head-icon">
+                <i class="ph-light ph-user"></i>
+            </div>
+
+            <div class="agency-office-head-content">
+                <span class="agency-office-head-label">
+                    Name
+                </span>
+
+                <p id="agencyDetailsOfficeHeadName"></p>
+            </div>
+        </div>
+
+        <div class="agency-office-head-item">
+            <div class="agency-office-head-icon">
+                <i class="ph-light ph-identification-card"></i>
+            </div>
+
+            <div class="agency-office-head-content">
+                <span class="agency-office-head-label">
+                    Position
+                </span>
+
+                <p id="agencyDetailsOfficeHeadPosition"></p>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+
             <!-- ABOUT -->
 
             <section

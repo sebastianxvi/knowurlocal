@@ -14,10 +14,15 @@ class Agency extends Model
     protected $fillable = [
         'agency_name',
         'agency_abbreviation',
-        'agency_type_id', 
+        'agency_type_id',
         'category_id',
         'agency_location',
         'agency_description',
+
+        // Office head information.
+        'office_head_name',
+        'office_head_position',
+
         'services_offered',
         'office_hours',
         'lat',
@@ -25,29 +30,31 @@ class Agency extends Model
         'agency_image',
     ];
 
-    
+
     public function faqs()
     {
         return $this->hasMany(Faq::class);
     }
+
 
     public function type()
     {
         return $this->belongsTo(AgencyType::class, 'agency_type_id');
     }
 
-    public function category()
-{
-    return $this->belongsTo(Category::class);
-}
 
-/**
- * All contact information belonging to this agency.
- */
-public function contacts()
-{
-    return $this->hasMany(AgencyContact::class)
-        ->orderBy('sort_order');
-}
-    
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+
+    /**
+     * All contact information belonging to this agency.
+     */
+    public function contacts()
+    {
+        return $this->hasMany(AgencyContact::class)
+            ->orderBy('sort_order');
+    }
 }
