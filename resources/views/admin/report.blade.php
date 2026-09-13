@@ -417,148 +417,271 @@
 
 
     {{-- =====================================================
-         SYSTEM OVERVIEW
-         ===================================================== --}}
+     SYSTEM OVERVIEW
+     ===================================================== --}}
 
-    <section class="section">
+<section class="section">
 
-        <h2 class="section-title">
-            System Overview
-        </h2>
+    <h2 class="section-title">
+        System Overview
+    </h2>
 
-        <table class="metric-table">
-
-            <tr>
-
-                <td class="metric-cell">
-
-                    <div class="metric-label">
-                        Total Agencies
-                    </div>
-
-                    <div class="metric-value blue">
-                        {{ number_format($totalAgencies) }}
-                    </div>
-
-                </td>
+    <p class="section-subtitle">
+        Key information for managing KNOWURLOCAL.
+    </p>
 
 
-                <td class="metric-cell">
+    <table class="metric-table">
 
-                    <div class="metric-label">
-                        Total FAQs
-                    </div>
+        <tr>
 
-                    <div class="metric-value purple">
-                        {{ number_format($totalFaqs) }}
-                    </div>
+            {{-- =================================================
+                 AGENCIES
+                 Matches the dashboard overview card.
+                 ================================================= --}}
 
-                </td>
+            <td class="metric-cell">
+
+                <div class="metric-label">
+                    Agencies
+                </div>
+
+                <div class="metric-value blue">
+                    {{ number_format($totalAgencies) }}
+                </div>
+
+                <div class="metric-note">
+
+                    NGA
+                    {{ number_format($totalNGA) }}
+
+                    &nbsp;&nbsp;
+
+                    NGO
+                    {{ number_format($totalNGO) }}
+
+                </div>
+
+            </td>
 
 
-                <td class="metric-cell">
+            {{-- =================================================
+                 FAQs
+                 Matches the dashboard FAQ overview card.
+                 ================================================= --}}
 
-                    <div class="metric-label">
-                        Public Users
-                    </div>
+            <td class="metric-cell">
 
-                    <div class="metric-value">
-                        {{ number_format($totalUsers) }}
-                    </div>
+                <div class="metric-label">
+                    FAQs
+                </div>
 
-                </td>
+                <div class="metric-value purple">
+                    {{ number_format($totalFaqs) }}
+                </div>
 
 
-                <td class="metric-cell">
+                <div class="metric-note">
 
-                    <div class="metric-label">
-                        Administrators
-                    </div>
+                    @if($topFaqCount > 0)
 
-                    <div class="metric-value">
-                        {{ number_format($totalAdmins) }}
-                    </div>
+                        @if($topFaqContributorTieCount > 1)
 
-                </td>
+                            Top contributors:
+                            {{ number_format($topFaqContributorTieCount) }}
+                            agencies tied ·
+                            {{ number_format($topFaqCount) }}
+                            FAQs
 
-            </tr>
+                        @else
 
-        </table>
+                            Top contributor:
+                            {{ $topFaqContributors->first() ?? 'Unknown agency' }}
+                            ·
+                            {{ number_format($topFaqCount) }}
+                            FAQs
 
-    </section>
+                        @endif
 
+                    @else
+
+                        No FAQ data yet
+
+                    @endif
+
+                </div>
+
+            </td>
+
+
+            {{-- =================================================
+                 PUBLIC USERS
+                 Matches the dashboard public-user card.
+                 ================================================= --}}
+
+            <td class="metric-cell">
+
+                <div class="metric-label">
+                    Public Users
+                </div>
+
+                <div class="metric-value blue">
+                    {{ number_format($totalUsers) }}
+                </div>
+
+                <div class="metric-note">
+                    Registered accounts
+                </div>
+
+            </td>
+
+
+            {{-- =================================================
+                 PENDING INQUIRIES
+                 Matches the dashboard pending-inquiry card.
+                 ================================================= --}}
+
+            <td class="metric-cell">
+
+                <div class="metric-label">
+                    Pending Inquiries
+                </div>
+
+                <div class="metric-value amber">
+                    {{ number_format($pendingInquiries) }}
+                </div>
+
+                <div class="metric-note">
+                    Awaiting response
+                </div>
+
+            </td>
+
+        </tr>
+
+    </table>
+
+</section>
 
 
     {{-- =====================================================
-         DIRECTORY DATA HEALTH
-         ===================================================== --}}
+     NEEDS ATTENTION SUMMARY
+     ===================================================== --}}
 
-    <section class="section">
+<section class="section">
 
-        <h2 class="section-title">
-            Directory Data Health
-        </h2>
+    <h2 class="section-title">
+        Needs Attention Summary
+    </h2>
 
-        <table class="metric-table">
+    <p class="section-subtitle">
+        Administrative records and citizen inquiries that may require action.
+    </p>
+
+
+    <table class="metric-table">
+
+        <tr>
+
+            <td class="metric-cell">
+
+                <div class="metric-label">
+                    Total Items Needing Attention
+                </div>
+
+                <div class="metric-value amber">
+                    {{ number_format($totalNeedsAttention) }}
+                </div>
+
+                <div class="metric-note">
+                    Combined attention categories
+                </div>
+
+            </td>
+
+
+            <td class="metric-cell">
+
+                <div class="metric-label">
+                    Pending Inquiries
+                </div>
+
+                <div class="metric-value amber">
+                    {{ number_format($pendingInquiries) }}
+                </div>
+
+                <div class="metric-note">
+                    Awaiting administrator response
+                </div>
+
+            </td>
+
+
+            <td class="metric-cell">
+
+                <div class="metric-label">
+                    Incomplete Agencies
+                </div>
+
+                <div class="metric-value blue">
+                    {{ number_format($incompleteAgencies) }}
+                </div>
+
+                <div class="metric-note">
+                    Missing directory information
+                </div>
+
+            </td>
+
+
+            <td class="metric-cell">
+
+                <div class="metric-label">
+                    FAQs Needing Attention
+                </div>
+
+                <div class="metric-value amber">
+                    {{ number_format($incompleteFaqs) }}
+                </div>
+
+                <div class="metric-note">
+                    Missing or incomplete FAQ content
+                </div>
+
+            </td>
+
+        </tr>
+
+    </table>
+
+
+    @if($totalNeedsAttention === 0)
+
+        <div class="empty">
+            No immediate administrative issues were detected.
+        </div>
+
+    @else
+
+        <table class="status-row">
 
             <tr>
 
-                <td class="metric-cell">
-
-                    <div class="metric-label">
-                        Complete Agencies
-                    </div>
-
-                    <div class="metric-value green">
-                        {{ number_format($completeAgencies) }}
-                    </div>
-
+                <td>
+                    Current attention status
                 </td>
 
-
-                <td class="metric-cell">
-
-                    <div class="metric-label">
-                        Agencies Needing Attention
-                    </div>
-
-                    <div class="metric-value amber">
-                        {{ number_format($incompleteAgencies) }}
-                    </div>
-
-                </td>
-
-
-                <td class="metric-cell">
-
-                    <div class="metric-label">
-                        Complete FAQs
-                    </div>
-
-                    <div class="metric-value green">
-                        {{ number_format($completeFaqs) }}
-                    </div>
-
-                </td>
-
-
-                <td class="metric-cell">
-
-                    <div class="metric-label">
-                        FAQs Needing Attention
-                    </div>
-
-                    <div class="metric-value amber">
-                        {{ number_format($incompleteFaqs) }}
-                    </div>
-
+                <td class="amber">
+                    Action may be required
                 </td>
 
             </tr>
 
         </table>
 
-    </section>
+    @endif
+
+</section>
 
 
 

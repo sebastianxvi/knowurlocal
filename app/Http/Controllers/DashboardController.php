@@ -602,6 +602,22 @@ $totalAdmins = User::whereIn(
         $completeFaqs =
             $totalFaqs - $incompleteFaqs;
 
+        /*
+ * =====================================================
+ * NEEDS ATTENTION SUMMARY
+ * =====================================================
+ *
+ * These are the same attention categories displayed
+ * on the administrator dashboard.
+ *
+ * Keeping the total in the controller ensures that
+ * the dashboard and PDF use the same calculation.
+ */
+$totalNeedsAttention =
+    $pendingInquiries +
+    $incompleteAgencies +
+    $incompleteFaqs;
+
 
         /*
         * =====================================================
@@ -845,6 +861,11 @@ $totalAdmins = User::whereIn(
             'completeAgencies' => $completeAgencies,
             'incompleteFaqs' => $incompleteFaqs,
             'completeFaqs' => $completeFaqs,
+
+            /*
+            * Needs attention
+            */
+            'totalNeedsAttention' => $totalNeedsAttention,
 
 
             /*
