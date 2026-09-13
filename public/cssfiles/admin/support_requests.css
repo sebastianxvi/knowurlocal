@@ -1445,3 +1445,85 @@
     }
 
 }
+
+/* =========================================================
+   SUPPORT IMAGE UPLOAD OVERRIDES
+   ========================================================= */
+
+
+/*
+ * The shared image-upload.css file controls:
+ *
+ * - Upload box
+ * - Upload icon
+ * - Upload text
+ * - Preview image
+ * - Shared hover behavior
+ *
+ * This file only contains Support Request-specific behavior.
+ */
+
+
+/* =========================================================
+   SUPPORT IMAGE UPLOAD GROUP
+   ========================================================= */
+
+.support-image-group {
+
+    width: 100%;
+
+    margin-top: 4px;
+}
+
+
+/* =========================================================
+   REMOVE IMAGE BUTTON
+   ========================================================= */
+
+.remove-support-image-btn {
+
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   EXISTING IMAGE STATE
+   ========================================================= */
+
+#support-image-upload-box.has-image {
+
+    border-style: solid;
+
+    border-color: #dbeafe;
+
+    background: #f8fafc;
+}
+
+
+/* =========================================================
+   SUPPORT IMAGE ERROR STATE
+   ========================================================= */
+
+#support-image-upload-box.image-upload-error {
+
+    border-color: #fca5a5;
+
+    background: #fef2f2;
+
+    box-shadow:
+        0 0 0 3px rgba(239, 68, 68, 0.08);
+}
+
+
+/* =========================================================
+   SUPPORT IMAGE DISABLED STATE
+   ========================================================= */
+
+#support-image-upload-box.is-disabled {
+
+    opacity: 0.6;
+
+    cursor: not-allowed;
+
+    pointer-events: none;
+}

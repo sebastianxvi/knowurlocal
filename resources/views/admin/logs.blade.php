@@ -447,101 +447,191 @@
     'update_category'
 ], true))
 
-        @php
-            /*
-             * Retrieve the structured audit snapshots.
-             *
-             * UserLog normally casts these values into arrays,
-             * but older records may still contain JSON strings.
-             */
-            $oldValues = $log->old_values ?? [];
-            $newValues = $log->new_values ?? [];
+    @php
+        /*
+         * Retrieve the old and new audit snapshots.
+         *
+         * UserLog normally casts these values into arrays,
+         * but older records may still contain JSON strings.
+         */
+        $oldValues = $log->old_values ?? [];
+        $newValues = $log->new_values ?? [];
 
-            /*
-             * Safely decode older JSON-string records.
-             */
-            if (is_string($oldValues)) {
-                $decoded = json_decode($oldValues, true);
-                $oldValues = is_array($decoded) ? $decoded : [];
-            }
 
-            if (is_string($newValues)) {
-                $decoded = json_decode($newValues, true);
-                $newValues = is_array($decoded) ? $decoded : [];
-            }
+        /*
+         * Decode old JSON snapshots when necessary.
+         */
+        if (is_string($oldValues)) {
 
-            /*
-             * Collect every field appearing in either snapshot.
-             */
-            $changedFields = array_unique(
-                array_merge(
-                    array_keys($oldValues),
-                    array_keys($newValues)
-                )
+            $decoded = json_decode(
+                $oldValues,
+                true
             );
 
-            /*
-             * Remove identifiers and metadata that should not
-             * be presented as user-editable fields.
-             */
-            $changedFields = array_values(
-                array_diff(
-                    $changedFields,
-                    [
-                        'agency_id',
-                        'faq_id',
-                        'status'
-                    ]
-                )
+            $oldValues = is_array($decoded)
+                ? $decoded
+                : [];
+        }
+
+
+        /*
+         * Decode new JSON snapshots when necessary.
+         */
+        if (is_string($newValues)) {
+
+            $decoded = json_decode(
+                $newValues,
+                true
             );
 
-            /*
-             * Convert database field names into readable labels.
-             */
-            $fieldLabels = collect($changedFields)
-                ->map(function ($field) {
-                    return ucwords(
-                        str_replace('_', ' ', $field)
-                    );
-                });
-        @endphp
+            $newValues = is_array($decoded)
+                ? $decoded
+                : [];
+        }
 
-        @if(empty($changedFields))
 
-            <span class="change-status">
-                No recorded changes
+        /*
+         * Retrieve the image values.
+         *
+         * array_key_exists() is important here because the
+         * new image may intentionally exist with a NULL value.
+         */
+        $oldImage = $oldValues['image'] ?? null;
+
+        $newImage = array_key_exists('image', $newValues)
+            ? $newValues['image']
+            : null;
+
+
+        /*
+         * Detect intentional image removal.
+         *
+         * Example:
+         *
+         * Old image: faqs/example.png
+         * New image: null
+         *
+         * This means the image was removed.
+         */
+        $imageWasRemoved =
+            !empty($oldImage) &&
+            empty($newImage);
+
+
+        /*
+         * Collect all fields from both snapshots.
+         */
+        $changedFields = array_unique(
+            array_merge(
+                array_keys($oldValues),
+                array_keys($newValues)
+            )
+        );
+
+
+        /*
+         * If the image was removed but the new snapshot
+         * did not contain the image key, manually add it.
+         */
+        if ($imageWasRemoved) {
+
+            $changedFields[] = 'image';
+
+        }
+
+
+        /*
+         * Remove fields that are not user-editable fields.
+         */
+        $changedFields = array_values(
+            array_diff(
+                array_unique($changedFields),
+                [
+                    'agency_id',
+                    'faq_id',
+                    'status'
+                ]
+            )
+        );
+
+
+        /*
+         * Convert field names into readable labels.
+         *
+         * image becomes Image instead of Image Path.
+         */
+        $fieldLabels = collect($changedFields)
+            ->map(function ($field) {
+
+                if ($field === 'image') {
+                    return 'Image';
+                }
+
+                return ucwords(
+                    str_replace('_', ' ', $field)
+                );
+
+            });
+    @endphp
+
+
+    @if($imageWasRemoved)
+
+        <div class="audit-summary">
+
+            <span class="audit-summary-count">
+                Image removed
             </span>
 
-        @else
+            <span
+                class="audit-summary-fields"
+                title="FAQ image was removed"
+            >
+                FAQ image was removed
+            </span>
 
-            <div class="audit-summary">
+        </div>
 
-                <span class="audit-summary-count">
 
-                    {{ count($changedFields) }}
+    @elseif(empty($changedFields))
 
-                    {{ count($changedFields) === 1 ? 'field' : 'fields' }}
+        <span class="change-status">
+            No recorded changes
+        </span>
 
-                    changed
 
-                </span>
+    @else
 
-                <span
-                    class="audit-summary-fields"
-                    title="{{ $fieldLabels->implode(' · ') }}"
-                >
+        <div class="audit-summary">
 
-                    {{ $fieldLabels->take(2)->implode(' · ') }}
+            <span class="audit-summary-count">
 
-                    @if(count($changedFields) > 2)
-                        · +{{ count($changedFields) - 2 }} more
-                    @endif
+                {{ count($changedFields) }}
 
-                </span>
+                {{ count($changedFields) === 1 ? 'field' : 'fields' }}
 
-            </div>
+                changed
 
-        @endif
+            </span>
+
+            <span
+                class="audit-summary-fields"
+                title="{{ $fieldLabels->implode(' · ') }}"
+            >
+
+                {{ $fieldLabels->take(2)->implode(' · ') }}
+
+                @if(count($changedFields) > 2)
+
+                    · +{{ count($changedFields) - 2 }} more
+
+                @endif
+
+            </span>
+
+        </div>
+
+    @endif
 
     @elseif(in_array($log->action, [
     'approve_admin',

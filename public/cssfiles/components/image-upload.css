@@ -1,0 +1,518 @@
+
+/* =========================================================
+   SHARED IMAGE UPLOAD COMPONENT
+   KNOWURLOCAL
+   ========================================================= */
+
+
+/* =========================================================
+   UPLOAD FIELD WRAPPER
+   ========================================================= */
+
+.image-upload-box {
+
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 100%;
+
+    height: 180px;
+
+    /*
+     * Keeps borders and padding inside the declared size.
+     */
+    box-sizing: border-box;
+
+    /*
+     * Prevents the upload content from escaping the box.
+     */
+    overflow: hidden;
+
+    border: 2px dashed #e5e7eb;
+
+    border-radius: 14px;
+
+    background: #fafafa;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+
+}
+
+
+/* =========================================================
+   HOVER STATE
+   ========================================================= */
+
+.image-upload-box:hover {
+
+    border-color: #3b82f6;
+
+    background: #f0f7ff;
+
+    box-shadow:
+        0 4px 12px rgba(59, 130, 246, 0.06);
+
+}
+
+
+/* =========================================================
+   KEYBOARD ACCESSIBILITY
+   ========================================================= */
+
+.image-upload-box:focus-within {
+
+    border-color: #3b82f6;
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.12);
+
+}
+
+
+/* =========================================================
+   UPLOAD PLACEHOLDER
+   ========================================================= */
+
+.image-upload-box > .upload-content {
+
+    /*
+     * Establishes the vertical centering container.
+     */
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    /*
+     * Ensures the content uses the entire upload box.
+     */
+    width: 100%;
+
+    height: 100%;
+
+    /*
+     * Allows the flex item to shrink correctly
+     * inside the upload container.
+     */
+    flex: 1 1 auto;
+
+    min-width: 0;
+
+    min-height: 0;
+
+    box-sizing: border-box;
+
+    padding: 20px;
+
+    /*
+     * Centers the text itself.
+     */
+    text-align: center;
+
+    /*
+     * The upload box handles clicking.
+     * The hidden file input remains the actual file control.
+     */
+    pointer-events: none;
+
+    z-index: 1;
+
+    transition:
+        opacity 0.2s ease;
+
+}
+
+
+/* =========================================================
+   UPLOAD ICON
+   ========================================================= */
+
+.upload-content i {
+
+    display: block;
+
+    font-size: 28px;
+
+    line-height: 1;
+
+    color: #64748b;
+
+    opacity: 0.85;
+
+    transition:
+        color 0.2s ease,
+        transform 0.2s ease,
+        opacity 0.2s ease;
+
+}
+
+
+.image-upload-box:hover .upload-content i {
+
+    color: #3b82f6;
+
+    opacity: 1;
+
+    transform: translateY(-2px);
+
+}
+
+
+/* =========================================================
+   UPLOAD TITLE
+   ========================================================= */
+
+.upload-content p {
+
+    /*
+     * Explicitly controls the text spacing.
+     * This prevents browser default margins from
+     * affecting vertical alignment.
+     */
+    margin: 8px 0 0;
+
+    color: #334155;
+
+    font-size: 14px;
+
+    font-weight: 500;
+
+    line-height: 1.4;
+
+}
+
+
+/* =========================================================
+   UPLOAD DESCRIPTION
+   ========================================================= */
+
+.upload-content span {
+
+    display: block;
+
+    margin-top: 4px;
+
+    color: #6b7280;
+
+    font-size: 12px;
+
+    line-height: 1.4;
+
+}
+
+
+/* =========================================================
+   IMAGE PREVIEW
+   ========================================================= */
+
+.faq-preview-img {
+
+    position: absolute;
+
+    inset: 0;
+
+    display: block;
+
+    width: 100%;
+
+    height: 100%;
+
+    object-fit: cover;
+
+    border-radius: 12px;
+
+    z-index: 2;
+
+    transition:
+        transform 0.2s ease;
+
+}
+
+
+/* =========================================================
+   IMAGE PREVIEW HOVER
+   ========================================================= */
+
+.faq-preview-img:hover {
+
+    transform: scale(1.02);
+
+}
+
+
+/* =========================================================
+   HIDE PLACEHOLDER WHEN IMAGE EXISTS
+   ========================================================= */
+
+.image-upload-box.has-image .upload-content {
+
+    opacity: 0;
+
+    visibility: hidden;
+
+}
+
+
+/* =========================================================
+   PREVIEW IMAGE ACCESSIBILITY
+   ========================================================= */
+
+.faq-preview-img:focus-visible {
+
+    outline: 3px solid rgba(59, 130, 246, 0.35);
+
+    outline-offset: -3px;
+
+}
+
+
+/* =========================================================
+   IMAGE REMOVE BUTTON
+   ========================================================= */
+
+.remove-support-image-btn,
+.remove-faq-image-btn {
+
+    position: absolute;
+
+    top: 10px;
+
+    right: 10px;
+
+    z-index: 5;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 30px;
+
+    height: 30px;
+
+    padding: 0;
+
+    border: 1px solid rgba(254, 202, 202, 0.95);
+
+    border-radius: 999px;
+
+    background: rgba(255, 255, 255, 0.95);
+
+    color: #dc2626;
+
+    font-size: 15px;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 4px 12px rgba(15, 23, 42, 0.12);
+
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+
+}
+
+
+/* =========================================================
+   IMAGE REMOVE BUTTON HOVER
+   ========================================================= */
+
+.remove-support-image-btn:hover,
+.remove-faq-image-btn:hover {
+
+    background: #fef2f2;
+
+    border-color: #fca5a5;
+
+    color: #b91c1c;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 6px 14px rgba(220, 38, 38, 0.14);
+
+}
+
+
+/* =========================================================
+   IMAGE REMOVE BUTTON PRESS
+   ========================================================= */
+
+.remove-support-image-btn:active,
+.remove-faq-image-btn:active {
+
+    transform: translateY(0);
+
+    box-shadow:
+        0 3px 8px rgba(220, 38, 38, 0.10);
+
+}
+
+
+/* =========================================================
+   IMAGE REMOVE BUTTON KEYBOARD STATE
+   ========================================================= */
+
+.remove-support-image-btn:focus-visible,
+.remove-faq-image-btn:focus-visible {
+
+    outline: none;
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.18);
+
+}
+
+
+/* =========================================================
+   IMAGE REMOVE BUTTON ICON
+   ========================================================= */
+
+.remove-support-image-btn i,
+.remove-faq-image-btn i {
+
+    font-size: 15px;
+
+    line-height: 1;
+
+    opacity: 0.9;
+
+}
+
+
+/* =========================================================
+   MOBILE ADJUSTMENT
+   ========================================================= */
+
+@media (max-width: 640px) {
+
+    .image-upload-box {
+
+        height: 160px;
+
+        border-radius: 12px;
+
+    }
+
+
+    .image-upload-box > .upload-content {
+
+        padding: 16px;
+
+    }
+
+
+    .upload-content i {
+
+        font-size: 25px;
+
+    }
+
+
+    .upload-content p {
+
+        font-size: 13px;
+
+    }
+
+
+    .upload-content span {
+
+        font-size: 11px;
+
+    }
+
+
+    .remove-support-image-btn,
+    .remove-faq-image-btn {
+
+        top: 8px;
+
+        right: 8px;
+
+        width: 28px;
+
+        height: 28px;
+
+    }
+
+}
+
+/* =========================================================
+   FAQ IMAGE UPLOAD CENTERING FIX
+   KNOWURLOCAL
+   ========================================================= */
+
+#image-upload-box {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 180px;
+    height: 180px;
+
+    overflow: hidden;
+}
+
+/* Force the FAQ placeholder to stay perfectly centered */
+#image-upload-box > .upload-content {
+    position: absolute;
+    inset: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    height: 100%;
+
+    margin: 0;
+    padding: 20px;
+
+    box-sizing: border-box;
+    text-align: center;
+}
+
+/* Keep the icon and text aligned as one centered group */
+#image-upload-box > .upload-content > i {
+    display: block;
+
+    margin: 0;
+    line-height: 1;
+}
+
+/* Remove default paragraph spacing that may shift the group */
+#image-upload-box > .upload-content > p {
+    margin: 8px 0 0;
+    line-height: 1.4;
+}
+
+/* Keep the helper text aligned */
+#image-upload-box > .upload-content > span {
+    display: block;
+
+    margin: 4px 0 0;
+    line-height: 1.4;
+}

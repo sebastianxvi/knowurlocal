@@ -5,8 +5,10 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <meta
         name="csrf-token"
@@ -19,10 +21,16 @@
     <script src="https://unpkg.com/phosphor-icons"></script>
 
     <!-- Global theme -->
-    <link rel="stylesheet" href="{{ asset('cssfiles/theme.css') }}">
+    <link
+        rel="stylesheet"
+        href="{{ asset('cssfiles/theme.css') }}"
+    >
 
     <!-- Page-specific styles -->
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/inquiries.css') }}">
+    <link
+        rel="stylesheet"
+        href="{{ asset('cssfiles/public_user/inquiries.css') }}"
+    >
 
 </head>
 
@@ -31,6 +39,7 @@
 <div class="inquiries-page">
 
     <!-- ================= TOP BAR ================= -->
+
     <header class="inquiries-header">
 
         <button
@@ -39,19 +48,32 @@
             class="back-btn"
             aria-label="Go back"
         >
-            <i class="ph-light ph-arrow-left"></i>
+            <i
+                class="ph-light ph-arrow-left"
+                aria-hidden="true"
+            ></i>
         </button>
 
         <div class="header-copy">
+
             <h1>My Inquiries</h1>
-            <p>Track your submitted questions and responses</p>
+
+            <p>
+                Track your submitted questions and responses
+            </p>
+
         </div>
 
     </header>
 
 
     <!-- ================= FILTERS ================= -->
-    <div class="filter-bar" role="group" aria-label="Filter inquiries">
+
+    <div
+        class="filter-bar"
+        role="group"
+        aria-label="Filter inquiries"
+    >
 
         <button
             type="button"
@@ -81,126 +103,205 @@
 
 
     <!-- ================= INQUIRIES ================= -->
+
     <main class="inquiries-list">
 
         @forelse($requests as $req)
 
             <article
-    class="inquiry-card"
-    data-id="{{ $req->id }}"
-    data-status="{{ $req->status }}"
->
+                class="inquiry-card"
+                data-id="{{ $req->id }}"
+                data-status="{{ $req->status }}"
+            >
 
-    <!-- ================= COLLAPSED HEADER ================= -->
+                <!-- ================= COLLAPSED HEADER ================= -->
 
-    <button
-        type="button"
-        class="inquiry-toggle"
-        aria-expanded="false"
-    >
-
-        <div class="inquiry-summary">
-
-            <div class="card-header">
-
-                <span class="status {{ $req->status }}">
-
-    @if($req->status === 'answered')
-        <i class="ph-light ph-check"></i>
-    @else
-        <i class="ph-light ph-clock"></i>
-    @endif
-
-    {{ ucfirst($req->status) }}
-
-    @if(
-        $req->status === 'answered' &&
-        is_null($req->answer_seen_at)
-    )
-        <span
-            class="unread-inquiry-dot"
-            aria-label="New response"
-        ></span>
-    @endif
-
-</span>
-
-                <time
-                    datetime="{{ $req->created_at->toIso8601String() }}"
-                    class="inquiry-date"
+                <button
+                    type="button"
+                    class="inquiry-toggle"
+                    aria-expanded="false"
                 >
-                    {{ $req->created_at->format('M d, Y') }}
-                </time>
 
-            </div>
+                    <div class="inquiry-summary">
+
+                        <div class="card-header">
+
+                            <span class="status {{ $req->status }}">
+
+                                @if($req->status === 'answered')
+
+                                    <i
+                                        class="ph-light ph-check"
+                                        aria-hidden="true"
+                                    ></i>
+
+                                @else
+
+                                    <i
+                                        class="ph-light ph-clock"
+                                        aria-hidden="true"
+                                    ></i>
+
+                                @endif
+
+                                {{ ucfirst($req->status) }}
+
+                                @if(
+                                    $req->status === 'answered' &&
+                                    is_null($req->answer_seen_at)
+                                )
+
+                                    <span
+                                        class="unread-inquiry-dot"
+                                        aria-label="New response"
+                                    ></span>
+
+                                @endif
+
+                            </span>
+
+                            <time
+                                datetime="{{ $req->created_at->toIso8601String() }}"
+                                class="inquiry-date"
+                            >
+                                {{ $req->created_at->format('M d, Y') }}
+                            </time>
+
+                        </div>
 
 
-            <p class="question-preview">
-                {{ $req->question }}
-            </p>
+                        <p class="question-preview">
+                            {{ $req->question }}
+                        </p>
 
-        </div>
-
-
-        <i
-            class="ph-light ph-caret-down inquiry-chevron"
-            aria-hidden="true"
-        ></i>
-
-    </button>
+                    </div>
 
 
-    <!-- ================= EXPANDABLE CONTENT ================= -->
+                    <i
+                        class="ph-light ph-caret-down inquiry-chevron"
+                        aria-hidden="true"
+                    ></i>
 
-    <div class="inquiry-details">
-
-    <div class="inquiry-details-inner">
+                </button>
 
 
-        @if($req->status === 'answered')
+                <!-- ================= EXPANDABLE CONTENT ================= -->
 
-            <div class="answer-block">
+                <div class="inquiry-details">
 
-                <div class="answer-header">
-                    <i class="ph-light ph-chat-centered-text"></i>
-                    <span>Administrator response</span>
+                    <div class="inquiry-details-inner">
+
+                        @if($req->status === 'answered')
+
+                            <!-- ================= ADMIN ANSWER ================= -->
+
+                            <div class="answer-block">
+
+                                <div class="answer-header">
+
+                                    <i
+                                        class="ph-light ph-chat-centered-text"
+                                        aria-hidden="true"
+                                    ></i>
+
+                                    <span>
+                                        Administrator response
+                                    </span>
+
+                                </div>
+
+
+                                <p class="answer">
+                                    {{ $req->answer }}
+                                </p>
+
+
+                                <!-- ================= ATTACHED IMAGE ================= -->
+
+                                @if($req->answer_image)
+
+                                    <div class="inquiry-image-block">
+
+                                        <div class="inquiry-image-header">
+
+                                            <i
+                                                class="ph-light ph-image"
+                                                aria-hidden="true"
+                                            ></i>
+
+                                            <span>
+                                                Attached image
+                                            </span>
+
+                                        </div>
+
+
+                                        <button
+                                            type="button"
+                                            class="inquiry-image-preview-trigger"
+                                            data-image-preview
+                                            data-image-src="{{ asset('storage/' . $req->answer_image) }}"
+                                            aria-label="Open attached image in full view"
+                                        >
+
+                                            <img
+                                                src="{{ asset('storage/' . $req->answer_image) }}"
+                                                alt="Image attached by the administrator"
+                                                class="inquiry-attached-image"
+                                                loading="lazy"
+                                            >
+
+                                        </button>
+
+                                    </div>
+
+                                @endif
+
+                            </div>
+
+                        @else
+
+                            <!-- ================= PENDING STATE ================= -->
+
+                            <div class="pending-message">
+
+                                <i
+                                    class="ph-light ph-hourglass"
+                                    aria-hidden="true"
+                                ></i>
+
+                                <span>
+                                    Waiting for an administrator's response
+                                </span>
+
+                            </div>
+
+                        @endif
+
+                    </div>
+
                 </div>
 
-                <p class="answer">
-                    {{ $req->answer }}
-                </p>
-
-            </div>
-
-        @else
-
-            <div class="pending-message">
-
-                <i class="ph-light ph-hourglass"></i>
-
-                <span>
-                    Waiting for an administrator's response
-                </span>
-
-            </div>
-
-        @endif
-
-    </div>
-
-</div>
-
-</article>
+            </article>
 
         @empty
+
+            <!-- ================= EMPTY STATE ================= -->
 
             <div class="empty-state">
 
                 <div class="empty-icon">
-                    <i class="ph-light ph-chat-circle-dots"></i>
+
+                    <i
+                        class="ph-light ph-chat-circle-dots"
+                        aria-hidden="true"
+                    ></i>
+
                 </div>
 
-                <h2>No inquiries yet</h2>
+                <h2>
+                    No inquiries yet
+                </h2>
 
                 <p>
                     Ask a question and track the response here.
@@ -210,8 +311,14 @@
                     href="{{ route('map') }}"
                     class="ask-btn"
                 >
-                    <i class="ph-light ph-paper-plane-tilt"></i>
+
+                    <i
+                        class="ph-light ph-paper-plane-tilt"
+                        aria-hidden="true"
+                    ></i>
+
                     Ask a question
+
                 </a>
 
             </div>
@@ -221,6 +328,62 @@
     </main>
 
 </div>
+
+
+<!-- =====================================================
+     IMAGE LIGHTBOX
+     ===================================================== -->
+
+<div
+    class="image-lightbox"
+    id="image-lightbox"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="image-lightbox-title"
+    aria-hidden="true"
+>
+
+    <div class="image-lightbox-content">
+
+        <button
+            type="button"
+            class="image-lightbox-close"
+            id="image-lightbox-close"
+            aria-label="Close image preview"
+        >
+
+            <i
+                class="ph-light ph-x"
+                aria-hidden="true"
+            ></i>
+
+        </button>
+
+
+        <img
+            src=""
+            alt=""
+            class="image-lightbox-image"
+            id="image-lightbox-image"
+        >
+
+    </div>
+
+
+    <span
+        id="image-lightbox-title"
+        hidden
+    >
+        Attached image preview
+    </span>
+
+</div>
+
+
+<!-- Page JavaScript -->
+
 <script src="{{ asset('jsfiles/public_user/inquiries.js') }}"></script>
+
 </body>
+
 </html>

@@ -1,9 +1,29 @@
 @extends('layouts.admin')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('cssfiles/components/table.css') }}">
-<link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
-<link rel="stylesheet" href="{{ asset('cssfiles/admin/support_requests.css') }}">
+
+<link
+    rel="stylesheet"
+    href="{{ asset('cssfiles/components/table.css') }}"
+>
+
+<link
+    rel="stylesheet"
+    href="{{ asset('cssfiles/components/form-system.css') }}"
+>
+
+{{-- Shared image uploader design --}}
+<link
+    rel="stylesheet"
+    href="{{ asset('cssfiles/components/image-upload.css') }}"
+>
+
+{{-- Support Request-specific styles --}}
+<link
+    rel="stylesheet"
+    href="{{ asset('cssfiles/admin/support_requests.css') }}"
+>
+
 @endpush
 
 
@@ -20,16 +40,8 @@
 
     {{-- =========================================================
          STATUS TABS
-         =========================================================
-         
-         "status" controls which dataset is displayed:
-         
-         active  = normal Support Requests
-         trashed = soft-deleted Support Requests
-         
-         The actual request workflow status is handled separately
-         through "status_filter".
-    ========================================================== --}}
+         ========================================================= --}}
+
     @if(auth()->user()->role === 'superadmin')
 
     <div class="support-status-tabs">
@@ -58,42 +70,43 @@
 
         </a>
 
-            <a
-                href="{{ route(
-                    'admin.support.requests',
-                    array_merge(
-                        request()->except('page'),
-                        [
-                            'status' => 'trashed',
-                            'status_filter' => null
-                        ]
-                    )
-                ) }}"
-                class="support-status-tab {{ $status === 'trashed' ? 'active' : '' }}"
-            >
 
-                <i class="ph-light ph-trash"></i>
+        {{-- TRASHED --}}
+        <a
+            href="{{ route(
+                'admin.support.requests',
+                array_merge(
+                    request()->except('page'),
+                    [
+                        'status' => 'trashed',
+                        'status_filter' => null
+                    ]
+                )
+            ) }}"
+            class="support-status-tab {{ $status === 'trashed' ? 'active' : '' }}"
+        >
 
-                <span>
-                    Trashed
-                </span>
+            <i class="ph-light ph-trash"></i>
 
-                <span class="status-count">
-                    {{ $trashedCount }}
-                </span>
+            <span>
+                Trashed
+            </span>
 
-            </a>
+            <span class="status-count">
+                {{ $trashedCount }}
+            </span>
 
+        </a>
 
     </div>
-        @endif
 
+    @endif
 
 
 
     {{-- =========================================================
          FILTER
-         ========================================================== --}}
+         ========================================================= --}}
 
     <form
         method="GET"
@@ -111,7 +124,6 @@
         <div class="filter-card">
 
             <div class="filter-bar">
-
 
                 {{-- SEARCH --}}
                 <input
@@ -182,7 +194,7 @@
 
     {{-- =========================================================
          TABLE
-         ========================================================== --}}
+         ========================================================= --}}
 
     <div class="table-wrapper">
 
@@ -225,15 +237,13 @@
 
             <tbody>
 
-
                 @forelse($requests as $req)
 
                     <tr>
 
-
                         {{-- =================================================
                              ID
-                        ================================================== --}}
+                             ================================================== --}}
 
                         <td>
                             {{ $req->id }}
@@ -242,8 +252,8 @@
 
 
                         {{-- =================================================
-                            USER
-                        ================================================== --}}
+                             USER
+                             ================================================== --}}
 
                         <td>
 
@@ -263,7 +273,7 @@
 
                         {{-- =================================================
                              QUESTION
-                        ================================================== --}}
+                             ================================================== --}}
 
                         <td>
 
@@ -278,7 +288,7 @@
 
                         {{-- =================================================
                              AGENCY
-                        ================================================== --}}
+                             ================================================== --}}
 
                         <td>
 
@@ -290,7 +300,7 @@
 
                         {{-- =================================================
                              STATUS
-                        ================================================== --}}
+                             ================================================== --}}
 
                         <td>
 
@@ -306,7 +316,7 @@
 
                         {{-- =================================================
                              DATE
-                        ================================================== --}}
+                             ================================================== --}}
 
                         <td>
 
@@ -318,7 +328,7 @@
 
                         {{-- =================================================
                              ACTIONS
-                        ================================================== --}}
+                             ================================================== --}}
 
                         <td>
 
@@ -327,7 +337,7 @@
 
                                 {{-- =================================================
                                      ACTIVE REQUEST ACTIONS
-                                ================================================== --}}
+                                     ================================================== --}}
 
                                 @if($status === 'active')
 
@@ -343,14 +353,18 @@
                                         data-agency="{{ $req->agency->agency_name ?? 'Unknown' }}"
                                         data-agency-id="{{ $req->agency_id }}"
                                         data-answer="{{ $req->answer }}"
+
+                                        {{-- NEW: Existing answer image path --}}
+                                        data-answer-image="{{ $req->answer_image }}"
                                     >
+
                                         <i class="ph-light ph-chat-centered-text"></i>
 
                                         <span>
                                             Manage
                                         </span>
+
                                     </button>
-                                    
 
 
 
@@ -371,15 +385,17 @@
                                             @method('DELETE')
 
 
-                                           <button
+                                            <button
                                                 type="submit"
                                                 class="btn btn-danger delete-btn"
                                             >
+
                                                 <i class="ph-light ph-trash"></i>
 
                                                 <span>
                                                     Trash
                                                 </span>
+
                                             </button>
 
                                         </form>
@@ -401,19 +417,22 @@
                                                 $req->id
                                             ) }}"
                                         >
+
                                             <i class="ph-light ph-chat-centered-dots"></i>
 
                                             <span>
                                                 To FAQ
                                             </span>
+
                                         </a>
 
                                     @endif
 
 
+
                                 {{-- =================================================
                                      TRASHED REQUEST ACTIONS
-                                ================================================== --}}
+                                     ================================================== --}}
 
                                 @elseif($status === 'trashed')
 
@@ -439,11 +458,13 @@
                                                 type="submit"
                                                 class="btn btn-primary restore-btn"
                                             >
+
                                                 <i class="ph-light ph-arrow-counter-clockwise"></i>
 
                                                 <span>
                                                     Restore
                                                 </span>
+
                                             </button>
 
                                         </form>
@@ -491,7 +512,6 @@
 
                 @empty
 
-
                     <tr>
 
                         <td
@@ -513,9 +533,7 @@
 
                     </tr>
 
-
                 @endforelse
-
 
             </tbody>
 
@@ -527,7 +545,7 @@
 
     {{-- =========================================================
          FOOTER / PAGINATION
-         ========================================================== --}}
+         ========================================================= --}}
 
     <div class="footer">
 
@@ -605,7 +623,6 @@
 
             @endif
 
-
         </div>
 
     </div>
@@ -618,7 +635,7 @@
 
 {{-- =============================================================
      SUPPORT REQUEST MANAGEMENT MODAL
-============================================================= --}}
+     ============================================================= --}}
 
 <div
     id="support-modal-back"
@@ -674,6 +691,9 @@
             data-reply-url="{{ route('admin.support.reply') }}"
 
             data-update-url="/admin/support-requests"
+
+            {{-- NEW: Required for file uploads --}}
+            enctype="multipart/form-data"
         >
 
             @csrf
@@ -715,41 +735,86 @@
 
 
 
-                {{-- AGENCY --}}
-                <div class="floating-group select-group">
+                {{-- =========================================================
+     AGENCY SEARCHABLE SELECT
+     ========================================================= --}}
 
-                    <select
-                        name="agency_id"
-                        id="sr-agency"
-                        required
-                    >
+<div
+    class="floating-group searchable-select"
+    id="support-agency-searchable"
+>
 
-                        <option
-                            value=""
-                            disabled
-                            selected
-                            hidden
-                        ></option>
+    {{-- Visible search field --}}
+    <input
+        type="text"
+        id="sr-agency-search"
+        class="searchable-select-input"
+        placeholder=" "
+        autocomplete="off"
+        role="combobox"
+        aria-expanded="false"
+        aria-controls="sr-agency-options"
+        aria-autocomplete="list"
+        required
+    >
+
+    <label
+        for="sr-agency-search"
+        class="searchable-select-label"
+    >
+        Agency
+    </label>
+
+    <i
+        class="ph-light ph-caret-down searchable-select-arrow"
+        aria-hidden="true"
+    ></i>
 
 
-                        @foreach($agencies as $agency)
-
-                            <option value="{{ $agency->id }}">
-
-                                {{ $agency->agency_name }}
-
-                            </option>
-
-                        @endforeach
-
-                    </select>
+    {{-- Search results --}}
+    <div
+        id="sr-agency-options"
+        class="searchable-select-options"
+        role="listbox"
+    ></div>
 
 
-                    <label>
-                        Agency
-                    </label>
+    {{-- Actual submitted field --}}
+    <select
+        name="agency_id"
+        id="sr-agency"
+        class="searchable-select-native"
+    >
 
-                </div>
+        <option
+            value=""
+            selected
+            disabled
+            hidden
+        >
+        
+        </option>
+
+        @foreach($agencies as $agency)
+
+            <option
+                value="{{ $agency->id }}"
+                data-abbr="{{ strtolower($agency->agency_abbreviation ?? '') }}"
+                data-full-name="{{ $agency->agency_name }}"
+            >
+                {{ $agency->agency_name }}
+            </option>
+
+        @endforeach
+
+    </select>
+
+
+    <div class="form-message">
+        Please select an agency.
+    </div>
+
+</div>
 
 
 
@@ -787,6 +852,84 @@
                 </div>
 
 
+
+                {{-- =========================================================
+     ANSWER IMAGE UPLOAD
+     ========================================================= --}}
+
+<div class="floating-group">
+
+    <div
+        class="image-upload-box"
+        id="support-image-upload-box"
+    >
+
+        {{-- File input --}}
+        <input
+            type="file"
+            name="answer_image"
+            id="support_answer_image"
+            accept="image/jpeg, image/png, image/webp"
+            hidden
+        >
+
+        {{-- Image removal flag --}}
+        <input
+            type="hidden"
+            name="remove_answer_image"
+            id="remove_answer_image"
+            value="0"
+        >
+
+        {{-- Upload interface --}}
+        <div
+            class="upload-content"
+            id="support-upload-placeholder"
+        >
+
+            <i class="ph ph-image"></i>
+
+            <p>
+                Click to upload image
+            </p>
+
+            <span>
+                PNG, JPG, WebP up to 5MB
+            </span>
+
+        </div>
+
+        {{-- Existing/new image preview --}}
+        <img
+            id="support-preview-img"
+            class="faq-preview-img"
+            alt="Answer image preview"
+            style="display: none;"
+        >
+
+        {{-- Remove image button --}}
+        <button
+            type="button"
+            class="remove-support-image-btn"
+            id="remove-support-image-btn"
+            aria-label="Remove answer image"
+            title="Remove image"
+            style="display: none;"
+        >
+
+            <i class="ph-light ph-x"></i>
+
+        </button>
+
+    </div>
+
+    <label>
+        Upload Image (optional)
+    </label>
+
+</div>
+
+
             </div>
 
         </form>
@@ -801,7 +944,7 @@
 
 {{-- =============================================================
      SIMILAR FAQ MODAL
-============================================================= --}}
+     ============================================================= --}}
 
 <div
     id="similar-faq-modal-back"

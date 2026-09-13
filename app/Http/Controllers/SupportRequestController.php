@@ -7,6 +7,7 @@ use App\Models\SupportRequest;
 use App\Models\UserLog;
 use App\Services\FaqSimilarityService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class SupportRequestController extends Controller
 {
@@ -134,16 +135,19 @@ class SupportRequestController extends Controller
 
 
         /*
-         * Retrieve agencies for the filter dropdown.
-         *
-         * Only the required columns are selected.
-         */
-        $agencies = Agency::select(
-            'id',
-            'agency_name'
-        )
-        ->orderBy('agency_name')
-        ->get();
+ * Retrieve agencies for the filter dropdown
+ * and searchable agency selector.
+ *
+ * agency_abbreviation must be included because
+ * the Blade view uses it for abbreviation searching.
+ */
+$agencies = Agency::select(
+    'id',
+    'agency_name',
+    'agency_abbreviation'
+)
+->orderBy('agency_name')
+->get();
 
 
         /*
@@ -184,15 +188,22 @@ class SupportRequestController extends Controller
          * Validate all browser-supplied values.
          */
         $validated = $request->validate([
-            'request_id' =>
-                'required|exists:support_requests,id',
+    'request_id' =>
+        'required|exists:support_requests,id',
 
-            'agency_id' =>
-                'required|exists:agencies,id',
+    'agency_id' =>
+        'required|exists:agencies,id',
 
-            'reply' =>
-                'required|string|max:1000',
-        ]);
+    'reply' =>
+        'required|string|max:1000',
+
+    'answer_image' => [
+        'nullable',
+        'image',
+        'mimes:jpg,jpeg,png,webp',
+        'max:5120',
+    ],
+]);
 
 
         /*
@@ -207,33 +218,37 @@ class SupportRequestController extends Controller
                 $validated['request_id']
             );
 
+            $imagePath = null;
+
+if ($request->hasFile('answer_image')) {
+    $imagePath = $request
+        ->file('answer_image')
+        ->store('support-answers', 'public');
+}
+
 
         /*
          * Update the answer lifecycle.
          */
         $support->update([
+    'answer' =>
+        $validated['reply'],
 
-            'answer' =>
-                $validated['reply'],
+    'agency_id' =>
+        $validated['agency_id'],
 
-            'agency_id' =>
-                $validated['agency_id'],
+    'answer_image' =>
+        $imagePath,
 
-            'status' =>
-                'answered',
+    'status' =>
+        'answered',
 
-            /*
-             * Record when the answer was provided.
-             */
-            'answered_at' =>
-                now(),
+    'answered_at' =>
+        now(),
 
-            /*
-             * The new answer has not been viewed yet.
-             */
-            'answer_seen_at' =>
-                null,
-        ]);
+    'answer_seen_at' =>
+        null,
+]);
 
 
         return back()->with(
@@ -323,62 +338,138 @@ class SupportRequestController extends Controller
 
 
     /**
-     * =========================================================
-     * 📝 UPDATE ANSWER
-     * =========================================================
+ * =========================================================
+ * 📝 UPDATE ANSWER
+ * =========================================================
+ */
+public function update(
+    Request $request,
+    $id
+) {
+    /*
+     * Validate all submitted values.
      */
-    public function update(
-        Request $request,
-        $id
-    ) {
-        /*
-         * Validate the new answer.
-         */
-        $validated = $request->validate([
-            'reply' =>
-                'required|string|max:1000',
-        ]);
+    $validated = $request->validate([
+        'reply' => [
+            'required',
+            'string',
+            'max:1000',
+        ],
 
-
-        /*
-         * Only active Support Requests may be edited.
-         */
-        $support =
-            SupportRequest::findOrFail($id);
-
+        'answer_image' => [
+            'nullable',
+            'image',
+            'mimes:jpg,jpeg,png,webp',
+            'max:5120',
+        ],
 
         /*
-         * Update the answer.
+         * This field is sent as "1" when the administrator
+         * clicks the X button.
          */
-        $support->update([
+        'remove_answer_image' => [
+            'nullable',
+            'boolean',
+        ],
+    ]);
 
-            'answer' =>
-                $validated['reply'],
+    /*
+     * Retrieve only an active Support Request.
+     */
+    $support = SupportRequest::findOrFail($id);
 
-            'status' =>
-                'answered',
+    /*
+     * Preserve the existing image path before changing
+     * the Support Request.
+     */
+    $oldImagePath = $support->answer_image;
 
-            /*
-             * Preserve the original answer timestamp when
-             * possible.
-             */
-            'answered_at' =>
-                $support->answered_at ?? now(),
+    /*
+     * Start with the existing image.
+     *
+     * This means the old image is preserved unless the
+     * administrator removes it or uploads a replacement.
+     */
+    $newImagePath = $oldImagePath;
 
-            /*
-             * Since the answer changed, the user must be
-             * notified that a new answer is available.
-             */
-            'answer_seen_at' =>
-                null,
-        ]);
-
-
-        return back()->with(
-            'success',
-            'Answer updated successfully.'
-        );
+    /*
+     * =====================================================
+     * REMOVE EXISTING IMAGE
+     * =====================================================
+     *
+     * This runs when the hidden input contains "1".
+     */
+    if ($request->boolean('remove_answer_image')) {
+        $newImagePath = null;
     }
+
+    /*
+     * =====================================================
+     * UPLOAD NEW IMAGE
+     * =====================================================
+     *
+     * A newly uploaded image takes priority over the
+     * removal flag.
+     */
+    if ($request->hasFile('answer_image')) {
+        $newImagePath = $request
+            ->file('answer_image')
+            ->store('support-answers', 'public');
+    }
+
+    /*
+     * Update the Support Request record.
+     */
+    $support->update([
+        'answer' => $validated['reply'],
+
+        'answer_image' => $newImagePath,
+
+        'status' => 'answered',
+
+        /*
+         * Preserve the original answer timestamp when possible.
+         */
+        'answered_at' => $support->answered_at ?? now(),
+
+        /*
+         * Notify the user that the answer was changed.
+         */
+        'answer_seen_at' => null,
+    ]);
+
+    /*
+     * =====================================================
+     * DELETE THE OLD IMAGE FILE
+     * =====================================================
+     *
+     * Delete the old physical file only when:
+     *
+     * - An old image exists; and
+     * - The image was removed or replaced.
+     *
+     * The old file is not deleted when the administrator
+     * simply edits the answer text.
+     */
+    $imageWasRemoved =
+        $request->boolean('remove_answer_image');
+
+    $imageWasReplaced =
+        $request->hasFile('answer_image');
+
+    if (
+        $oldImagePath &&
+        ($imageWasRemoved || $imageWasReplaced) &&
+        Storage::disk('public')->exists($oldImagePath)
+    ) {
+        Storage::disk('public')->delete($oldImagePath);
+    }
+
+    return back()->with(
+        'success',
+        'Answer updated successfully.'
+    );
+}
 
 
     /**
@@ -611,11 +702,21 @@ class SupportRequestController extends Controller
         $agencyId =
             $support->agency_id;
 
+            $imagePath =
+    $support->answer_image;
+
 
         /*
          * Permanently remove the record.
          */
         $support->forceDelete();
+
+if (
+    $imagePath &&
+    Storage::disk('public')->exists($imagePath)
+) {
+    Storage::disk('public')->delete($imagePath);
+}
 
 
         /*
@@ -834,6 +935,9 @@ class SupportRequestController extends Controller
 
             'answer' =>
                 $support->answer,
+
+            'answer_image' =>
+    $support->answer_image,
 
             'status' =>
                 $support->status,

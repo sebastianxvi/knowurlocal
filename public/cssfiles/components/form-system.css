@@ -178,3 +178,323 @@
     border-color:#10b981;
     box-shadow:0 0 0 3px rgba(16,185,129,0.08);
 }
+
+/* =========================================================
+   SEARCHABLE SELECT COMPONENT
+   KNOWURLOCAL
+   ========================================================= */
+
+/*
+|--------------------------------------------------------------------------
+| Searchable select wrapper
+|--------------------------------------------------------------------------
+| Keeps the search input and dropdown options positioned together.
+*/
+.searchable-select {
+    position: relative;
+    width: 100%;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Searchable select input
+|--------------------------------------------------------------------------
+| Uses the same visual language as the shared floating form fields.
+*/
+.searchable-select-input {
+    width: 100%;
+
+    min-height: 54px;
+    padding: 24px 42px 10px 12px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+
+    background: #fff;
+    color: #111827;
+
+    font-size: 14px;
+    line-height: 1.4;
+
+    outline: none;
+    box-sizing: border-box;
+
+    cursor: text;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Searchable select focus state
+|--------------------------------------------------------------------------
+*/
+.searchable-select-input:focus {
+    border-color: #3b82f6;
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Searchable select floating label
+|--------------------------------------------------------------------------
+*/
+.searchable-select-label {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+
+    color: #6b7280;
+
+    font-size: 12px;
+    font-weight: 400;
+
+    pointer-events: none;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Dropdown arrow
+|--------------------------------------------------------------------------
+| Replaces the browser's default select arrow.
+*/
+.searchable-select-arrow {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+
+    width: 16px;
+    height: 16px;
+
+    color: #94a3b8;
+
+    pointer-events: none;
+    transform: translateY(-50%);
+
+    transition:
+        transform 0.2s ease,
+        color 0.2s ease;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Rotated arrow while dropdown is open
+|--------------------------------------------------------------------------
+*/
+.searchable-select.is-open .searchable-select-arrow {
+    color: #3b82f6;
+    transform: translateY(-50%) rotate(180deg);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Dropdown options panel
+|--------------------------------------------------------------------------
+| Hidden by default and displayed by JavaScript when opened.
+*/
+.searchable-select-options {
+    position: absolute;
+    z-index: 1000;
+
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+
+    display: none;
+
+    max-height: 240px;
+    overflow-y: auto;
+
+    padding: 6px;
+
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+
+    background: #fff;
+
+    box-shadow:
+        0 12px 32px rgba(15, 23, 42, 0.12);
+
+    animation: searchableSelectOpen 0.16s ease;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Display dropdown when active
+|--------------------------------------------------------------------------
+*/
+.searchable-select.is-open .searchable-select-options {
+    display: block;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Individual dropdown option
+|--------------------------------------------------------------------------
+*/
+.searchable-select-option {
+    display: block;
+
+    width: 100%;
+
+    padding: 10px 12px;
+
+    border: 0;
+    border-radius: 8px;
+
+    background: transparent;
+    color: #334155;
+
+    font-size: 14px;
+    line-height: 1.4;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Option hover and keyboard focus state
+|--------------------------------------------------------------------------
+*/
+.searchable-select-option:hover,
+.searchable-select-option:focus {
+    background: #eff6ff;
+    color: #1d4ed8;
+
+    outline: none;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Selected option
+|--------------------------------------------------------------------------
+*/
+.searchable-select-option.is-selected {
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-weight: 500;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Empty search result state
+|--------------------------------------------------------------------------
+*/
+.searchable-select-empty {
+    padding: 12px;
+
+    color: #94a3b8;
+
+    font-size: 13px;
+    text-align: center;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Hidden native select
+|--------------------------------------------------------------------------
+| The native select remains in the DOM so Laravel receives agency_id.
+| It is visually hidden but not removed from form submission.
+|--------------------------------------------------------------------------
+*/
+.searchable-select-native {
+    position: absolute;
+
+    width: 1px;
+    height: 1px;
+
+    padding: 0;
+    margin: -1px;
+
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+
+    white-space: nowrap;
+
+    border: 0;
+
+    /*
+     * Keeps the native select visually hidden
+     * while preserving its form-submission behavior.
+     */
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Validation states
+|--------------------------------------------------------------------------
+*/
+.floating-group.error .searchable-select-input {
+    border-color: #ef4444;
+
+    box-shadow:
+        0 0 0 3px rgba(239, 68, 68, 0.08);
+}
+
+.floating-group.success .searchable-select-input {
+    border-color: #10b981;
+
+    box-shadow:
+        0 0 0 3px rgba(16, 185, 129, 0.08);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Open animation
+|--------------------------------------------------------------------------
+*/
+@keyframes searchableSelectOpen {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Reduced motion accessibility
+|--------------------------------------------------------------------------
+| Prevents unnecessary animation for users who prefer reduced motion.
+|--------------------------------------------------------------------------
+*/
+@media (prefers-reduced-motion: reduce) {
+    .searchable-select-options,
+    .searchable-select-input,
+    .searchable-select-arrow,
+    .searchable-select-option {
+        animation: none;
+        transition: none;
+    }
+}

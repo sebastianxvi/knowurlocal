@@ -19,6 +19,618 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const agencySelect = document.getElementById("faq_agency");
 
+
+    /*
+ * =========================================================
+ * SEARCHABLE AGENCY SELECT
+ * =========================================================
+ *
+ * The native select remains responsible for form submission.
+ *
+ * The visible text input provides:
+ *
+ * 1. Full agency-name searching
+ * 2. Abbreviation searching
+ * 3. Keyboard accessibility
+ * 4. Custom dropdown styling
+ */
+
+const agencySearchInput =
+    document.getElementById("faq_agency_search");
+
+const agencyOptionsContainer =
+    document.getElementById("faq-agency-options");
+
+const agencySearchableWrapper =
+    document.getElementById("agency-searchable");
+
+
+/*
+ * Stores the currently visible agency options.
+ *
+ * Each item contains:
+ *
+ * 1. The original option value
+ * 2. The full agency name
+ * 3. The agency abbreviation
+ * 4. A normalized search string
+ */
+let searchableAgencyOptions = [];
+
+
+/*
+ * Tracks whether the custom dropdown is active.
+ */
+let agencyDropdownOpen = false;
+
+
+/*
+ * =========================================================
+ * BUILD SEARCH DATA
+ * =========================================================
+ *
+ * Reads the existing native select options.
+ *
+ * This avoids duplicating agency data in JavaScript.
+ */
+
+function buildSearchableAgencyOptions() {
+
+    if (
+        !agencySelect ||
+        !agencyOptionsContainer
+    ) {
+        return;
+    }
+
+
+    searchableAgencyOptions =
+        Array.from(
+            agencySelect.options
+        )
+        .filter(option => option.value !== "")
+        .map(option => {
+
+            const fullName =
+                option.dataset.fullName ||
+                option.textContent.trim();
+
+            const abbreviation =
+                option.dataset.abbr ||
+                "";
+
+            return {
+
+                value:
+                    option.value,
+
+                fullName:
+                    fullName.trim(),
+
+                abbreviation:
+                    abbreviation.trim(),
+
+                searchText:
+                    `${fullName} ${abbreviation}`
+                        .toLowerCase()
+                        .trim()
+
+            };
+
+        });
+
+}
+
+
+/*
+ * =========================================================
+ * OPEN DROPDOWN
+ * =========================================================
+ */
+
+function openAgencyDropdown() {
+
+    if (
+        !agencySearchInput ||
+        agencySearchInput.readOnly ||
+        agencySearchInput.disabled
+    ) {
+        return;
+    }
+
+
+    agencyDropdownOpen =
+        true;
+
+
+    agencySearchableWrapper.classList.add(
+        "is-open"
+    );
+
+
+    agencySearchInput.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+
+    renderAgencyOptions(
+        agencySearchInput.value
+    );
+
+}
+
+
+/*
+ * =========================================================
+ * CLOSE DROPDOWN
+ * =========================================================
+ */
+
+function closeAgencyDropdown() {
+
+    agencyDropdownOpen =
+        false;
+
+
+    if (agencySearchableWrapper) {
+
+        agencySearchableWrapper.classList.remove(
+            "is-open"
+        );
+
+    }
+
+
+    if (agencySearchInput) {
+
+        agencySearchInput.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+
+    }
+
+}
+
+
+/*
+ * =========================================================
+ * RENDER FILTERED OPTIONS
+ * =========================================================
+ *
+ * Uses textContent instead of innerHTML for agency data.
+ *
+ * This prevents agency names from being interpreted as HTML.
+ */
+
+function renderAgencyOptions(
+    searchTerm = ""
+) {
+
+    if (!agencyOptionsContainer) {
+        return;
+    }
+
+
+    const normalizedSearch =
+        searchTerm
+            .toLowerCase()
+            .trim();
+
+
+    const filteredOptions =
+        searchableAgencyOptions.filter(
+            agency => {
+
+                return agency.searchText.includes(
+                    normalizedSearch
+                );
+
+            }
+        );
+
+
+    agencyOptionsContainer.replaceChildren();
+
+
+    if (
+        filteredOptions.length === 0
+    ) {
+
+        const emptyState =
+            document.createElement("div");
+
+        emptyState.className =
+            "searchable-select-empty";
+
+        emptyState.textContent =
+            "No matching agencies found.";
+
+        agencyOptionsContainer.appendChild(
+            emptyState
+        );
+
+        return;
+
+    }
+
+
+    filteredOptions.forEach(
+        agency => {
+
+            const optionButton =
+                document.createElement("button");
+
+
+            optionButton.type =
+                "button";
+
+
+            optionButton.className =
+                "searchable-select-option";
+
+
+            optionButton.setAttribute(
+                "role",
+                "option"
+            );
+
+
+            optionButton.dataset.value =
+                agency.value;
+
+
+            optionButton.textContent =
+                agency.fullName;
+
+
+            /*
+             * Display the abbreviation only when available.
+             */
+            if (
+                agency.abbreviation
+            ) {
+
+                optionButton.textContent +=
+                    ` (${agency.abbreviation.toUpperCase()})`;
+
+            }
+
+
+            /*
+             * Highlight the currently selected agency.
+             */
+            if (
+                agencySelect.value === agency.value
+            ) {
+
+                optionButton.classList.add(
+                    "is-selected"
+                );
+
+                optionButton.setAttribute(
+                    "aria-selected",
+                    "true"
+                );
+
+            } else {
+
+                optionButton.setAttribute(
+                    "aria-selected",
+                    "false"
+                );
+
+            }
+
+
+            optionButton.addEventListener(
+                "click",
+                function () {
+
+                    selectAgency(
+                        agency.value
+                    );
+
+                }
+            );
+
+
+            agencyOptionsContainer.appendChild(
+                optionButton
+            );
+
+        }
+    );
+
+}
+
+
+/*
+ * =========================================================
+ * SELECT AGENCY
+ * =========================================================
+ *
+ * Updates both:
+ *
+ * 1. The visible search input
+ * 2. The native Laravel form select
+ */
+
+function selectAgency(
+    agencyValue
+) {
+
+    if (
+        !agencySelect ||
+        !agencySearchInput
+    ) {
+        return;
+    }
+
+
+    const selectedOption =
+        Array.from(
+            agencySelect.options
+        ).find(
+            option =>
+                option.value === String(
+                    agencyValue
+                )
+        );
+
+
+    /*
+     * Do not select values that do not exist
+     * in the server-provided agency list.
+     */
+    if (!selectedOption) {
+
+        agencySelect.value =
+            "";
+
+        agencySearchInput.value =
+            "";
+
+        closeAgencyDropdown();
+
+        return;
+
+    }
+
+
+    /*
+     * Update the real submitted value.
+     */
+    agencySelect.value =
+        selectedOption.value;
+
+
+    /*
+     * Update the visible field.
+     */
+    agencySearchInput.value =
+        selectedOption.dataset.fullName ||
+        selectedOption.textContent.trim();
+
+
+    closeAgencyDropdown();
+
+
+    /*
+     * Trigger existing keyword-generation logic.
+     */
+    agencySelect.dispatchEvent(
+        new Event("change", {
+            bubbles: true
+        })
+    );
+
+}
+
+
+/*
+ * =========================================================
+ * SYNCHRONIZE SEARCH INPUT
+ * =========================================================
+ *
+ * Used after form.reset(), edit mode, view mode,
+ * and Support Request conversion.
+ */
+
+function syncAgencySearchInput() {
+
+    if (
+        !agencySelect ||
+        !agencySearchInput
+    ) {
+        return;
+    }
+
+
+    const selectedOption =
+        agencySelect.options[
+            agencySelect.selectedIndex
+        ];
+
+
+    if (
+        !selectedOption ||
+        !selectedOption.value
+    ) {
+
+        agencySearchInput.value =
+            "";
+
+        return;
+
+    }
+
+
+    agencySearchInput.value =
+        selectedOption.dataset.fullName ||
+        selectedOption.textContent.trim();
+
+}
+
+
+/*
+ * =========================================================
+ * SEARCH INPUT EVENTS
+ * =========================================================
+ */
+
+if (agencySearchInput) {
+
+    /*
+     * Open the dropdown when the field receives focus.
+     */
+    agencySearchInput.addEventListener(
+        "focus",
+        function () {
+
+            openAgencyDropdown();
+
+        }
+    );
+
+
+    /*
+     * Filter agencies while typing.
+     */
+    agencySearchInput.addEventListener(
+        "input",
+        function () {
+
+            /*
+             * Typing is searching, not selecting.
+             *
+             * The native select remains unchanged until
+             * an actual option is clicked.
+             */
+            openAgencyDropdown();
+
+            renderAgencyOptions(
+                this.value
+            );
+
+        }
+    );
+
+
+    /*
+     * Open the dropdown when clicked.
+     */
+    agencySearchInput.addEventListener(
+        "click",
+        function () {
+
+            openAgencyDropdown();
+
+        }
+    );
+
+}
+
+
+/*
+ * =========================================================
+ * CLOSE WHEN CLICKING OUTSIDE
+ * =========================================================
+ */
+
+document.addEventListener(
+    "click",
+    function (event) {
+
+        if (
+            !agencySearchableWrapper
+        ) {
+            return;
+        }
+
+
+        if (
+            !agencySearchableWrapper.contains(
+                event.target
+            )
+        ) {
+
+            closeAgencyDropdown();
+
+        }
+
+    }
+);
+
+
+/*
+ * =========================================================
+ * KEYBOARD ACCESSIBILITY
+ * =========================================================
+ */
+
+if (agencySearchInput) {
+
+    agencySearchInput.addEventListener(
+        "keydown",
+        function (event) {
+
+            /*
+             * Escape closes the dropdown.
+             */
+            if (
+                event.key === "Escape"
+            ) {
+
+                closeAgencyDropdown();
+
+                return;
+
+            }
+
+
+            /*
+             * Enter selects the first visible result.
+             */
+            if (
+                event.key === "Enter" &&
+                agencyDropdownOpen
+            ) {
+
+                const firstOption =
+                    agencyOptionsContainer.querySelector(
+                        ".searchable-select-option"
+                    );
+
+
+                if (firstOption) {
+
+                    event.preventDefault();
+
+                    selectAgency(
+                        firstOption.dataset.value
+                    );
+
+                }
+
+            }
+
+        }
+    );
+
+}
+
+
+/*
+ * =========================================================
+ * INITIALIZE SEARCHABLE AGENCY SELECT
+ * =========================================================
+ */
+
+buildSearchableAgencyOptions();
+
+
     const questionInput =
         document.getElementById("faq_question");
 
@@ -43,187 +655,18 @@ document.addEventListener("DOMContentLoaded", function () {
     const imageInput =
         document.getElementById("faq_image");
 
+    const removeFaqImageBtn =
+    document.getElementById("removeFaqImage");
+
+    const removeImageInput =
+    document.getElementById("removeImageInput");
+
+    
+
     const translateFaqBtn =
         document.getElementById("translateFaqBtn");
 
 
-        /*
- * =========================================================
- * AGENCY SELECT OPTION TRUNCATION
- * =========================================================
- *
- * Shortens long agency names inside the native select.
- *
- * The original agency name is preserved in data-full-name,
- * so this only changes what the administrator sees.
- */
-function truncateAgencyOptions() {
-
-    /*
-     * Stop safely if the agency selector is unavailable.
-     */
-    if (!agencySelect) {
-        return;
-    }
-
-
-    /*
-     * Measure the actual width of the select element.
-     *
-     * A small amount of space is reserved for the native
-     * select arrow and internal browser padding.
-     */
-    const availableWidth =
-        Math.max(
-            agencySelect.clientWidth - 48,
-            120
-        );
-
-
-    /*
-     * Read the select's actual font configuration.
-     *
-     * This ensures the text measurement matches the
-     * typography displayed inside the control.
-     */
-    const styles =
-        window.getComputedStyle(
-            agencySelect
-        );
-
-
-    const font =
-        `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
-
-
-    /*
-     * Create an off-screen canvas used only for measuring
-     * rendered text width.
-     */
-    const canvas =
-        document.createElement("canvas");
-
-
-    const context =
-        canvas.getContext("2d");
-
-
-    /*
-     * Stop safely if text measurement is unavailable.
-     */
-    if (!context) {
-        return;
-    }
-
-
-    context.font = font;
-
-
-    /*
-     * Process every agency option.
-     */
-    Array.from(
-        agencySelect.options
-    ).forEach(option => {
-
-        /*
-         * The placeholder has no full agency name,
-         * so there is nothing to truncate.
-         */
-        if (!option.dataset.fullName) {
-            return;
-        }
-
-
-        /*
-         * Always use the original name as the source.
-         *
-         * This prevents repeated calls from truncating
-         * an already-truncated string.
-         */
-        const fullName =
-            option.dataset.fullName.trim();
-
-
-        /*
-         * If the full agency name already fits,
-         * restore the complete name.
-         */
-        if (
-            context.measureText(fullName).width
-            <= availableWidth
-        ) {
-
-            option.textContent =
-                fullName;
-
-            return;
-        }
-
-
-        const ellipsis =
-            "...";
-
-
-        /*
-         * Binary search finds the maximum number of
-         * characters that can fit without repeatedly
-         * measuring every possible substring.
-         */
-        let low = 0;
-        let high = fullName.length;
-
-
-        while (
-            low < high
-        ) {
-
-            const middle =
-                Math.ceil(
-                    (low + high) / 2
-                );
-
-
-            const candidate =
-                fullName.slice(
-                    0,
-                    middle
-                ) + ellipsis;
-
-
-            if (
-                context.measureText(
-                    candidate
-                ).width <= availableWidth
-            ) {
-
-                low =
-                    middle;
-
-            } else {
-
-                high =
-                    middle - 1;
-
-            }
-
-        }
-
-
-        /*
-         * Replace only the visible option label.
-         *
-         * The original name remains untouched inside
-         * data-full-name.
-         */
-        option.textContent =
-            fullName.slice(
-                0,
-                low
-            ) + ellipsis;
-
-    });
-}
 
 
     /*
@@ -592,8 +1035,9 @@ function truncateAgencyOptions() {
              * Set the agency from the original
              * Support Request.
              */
-            agencySelect.value =
-                result.agency_id || "";
+            selectAgency(
+    result.agency_id || ""
+);
 
 
             /*
@@ -1401,19 +1845,120 @@ function truncateAgencyOptions() {
      * =========================================================
      */
 
-    function resetImageState() {
+    function resetImageState(
+    markForRemoval = false
+) {
 
+    /*
+     * Clear the image preview.
+     */
+    if (previewImg) {
         previewImg.src = "";
+        previewImg.style.display = "none";
+    }
 
-        previewImg.style.display =
-            "none";
 
-        uploadPlaceholder.style.display =
-            "block";
+    /*
+     * Show the upload placeholder.
+     */
+    if (uploadPlaceholder) {
+        uploadPlaceholder.style.display = "flex";
+    }
 
+
+    /*
+     * Hide the X button.
+     */
+    if (removeFaqImageBtn) {
+        removeFaqImageBtn.style.display = "none";
+    }
+
+
+    /*
+     * Clear the selected file.
+     */
+    if (imageInput) {
         imageInput.value = "";
+    }
+
+
+    /*
+     * Tell Laravel whether the saved image
+     * should be removed.
+     */
+    if (removeImageInput) {
+        removeImageInput.value =
+            markForRemoval ? "1" : "0";
+    }
+
+}
+
+function showFaqImagePreview(imageSource) {
+
+    /*
+     * Display the selected or existing image.
+     */
+    if (previewImg) {
+        previewImg.src = imageSource;
+        previewImg.style.display = "block";
+    }
+
+
+    /*
+     * Hide the upload instructions
+     * while an image is displayed.
+     */
+    if (uploadPlaceholder) {
+        uploadPlaceholder.style.display = "none";
+    }
+
+
+    /*
+     * Show the remove button only in Add/Edit mode.
+     *
+     * View mode must remain read-only.
+     */
+    if (removeFaqImageBtn) {
+
+        removeFaqImageBtn.style.display =
+            currentMode === "view"
+                ? "none"
+                : "inline-flex";
 
     }
+
+}
+
+if (removeFaqImageBtn) {
+
+    removeFaqImageBtn.addEventListener(
+        "click",
+        function (event) {
+
+            /*
+             * Prevent the upload box from opening.
+             */
+            event.stopPropagation();
+
+
+            /*
+             * Do not allow removal in View mode.
+             */
+            if (currentMode === "view") {
+                return;
+            }
+
+
+            /*
+             * Clear the preview and mark the
+             * database image for deletion.
+             */
+            resetImageState(true);
+
+        }
+    );
+
+}
 
 
     /*
@@ -1556,6 +2101,29 @@ function truncateAgencyOptions() {
             }
 
         });
+
+        /*
+ * =====================================================
+ * SEARCHABLE AGENCY INPUT STATE
+ * =====================================================
+ *
+ * The native select is hidden, so the visible search input
+ * must also follow the current Add/Edit/View state.
+ */
+
+if (agencySearchInput) {
+
+    agencySearchInput.readOnly =
+        !enable;
+
+}
+
+
+if (!enable) {
+
+    closeAgencyDropdown();
+
+}
 
     }
 
@@ -2346,13 +2914,7 @@ function truncateAgencyOptions() {
             "active"
         );
 
-        /*
- * Wait until the modal has been rendered so the
- * selector has its final width before measuring text.
- */
-requestAnimationFrame(() => {
-    truncateAgencyOptions();
-});
+    
 
         const saveBtn =
             document.querySelector(
@@ -2366,9 +2928,19 @@ requestAnimationFrame(() => {
          */
         form.reset();
 
-        resetImageState();
+/*
+ * The native select resets automatically,
+ * but the custom visible input does not.
+ *
+ * Synchronize the custom input manually.
+ */
+syncAgencySearchInput();
 
-        resetTextareaHeights();
+closeAgencyDropdown();
+
+resetImageState();
+
+resetTextareaHeights();
 
 
         /*
@@ -2424,8 +2996,7 @@ requestAnimationFrame(() => {
             previewImg.style.display =
                 "none";
 
-            uploadPlaceholder.style.display =
-                "block";
+            uploadPlaceholder.style.display = "flex";
 
         }
 
@@ -2448,8 +3019,9 @@ requestAnimationFrame(() => {
                 "PUT";
 
 
-            agencySelect.value =
-                data.agency || "";
+            selectAgency(
+                data.agency || ""
+            );
 
 
             questionInput.value =
@@ -2517,24 +3089,15 @@ requestAnimationFrame(() => {
              */
             if (data.image) {
 
-                previewImg.src =
-                    `/storage/${data.image}`;
+    showFaqImagePreview(
+        `/storage/${data.image}`
+    );
 
-                previewImg.style.display =
-                    "block";
+} else {
 
-                uploadPlaceholder.style.display =
-                    "none";
+    resetImageState();
 
-            } else {
-
-                previewImg.style.display =
-                    "none";
-
-                uploadPlaceholder.style.display =
-                    "block";
-
-            }
+}
 
         }
 
@@ -2550,8 +3113,9 @@ requestAnimationFrame(() => {
             data
         ) {
 
-            agencySelect.value =
-                data.agency || "";
+            selectAgency(
+    data.agency || ""
+);
 
 
             questionInput.value =
@@ -2618,24 +3182,15 @@ requestAnimationFrame(() => {
              */
             if (data.image) {
 
-                previewImg.src =
-                    `/storage/${data.image}`;
+    showFaqImagePreview(
+        `/storage/${data.image}`
+    );
 
-                previewImg.style.display =
-                    "block";
+} else {
 
-                uploadPlaceholder.style.display =
-                    "none";
+    resetImageState();
 
-            } else {
-
-                previewImg.style.display =
-                    "none";
-
-                uploadPlaceholder.style.display =
-                    "block";
-
-            }
+}
 
         }
 
@@ -2670,8 +3225,9 @@ requestAnimationFrame(() => {
              * Preselect the agency attached to
              * the original Support Request.
              */
-            agencySelect.value =
-                data.agency_id || "";
+            selectAgency(
+    data.agency_id || ""
+);
 
 
             /*
@@ -2879,9 +3435,16 @@ requestAnimationFrame(() => {
 
             form.reset();
 
-            resetImageState();
+/*
+ * Reset the visible searchable agency field.
+ */
+syncAgencySearchInput();
 
-            resetTextareaHeights();
+closeAgencyDropdown();
+
+resetImageState();
+
+resetTextareaHeights();
 
 
             /*
@@ -2893,8 +3456,7 @@ requestAnimationFrame(() => {
             previewImg.style.display =
                 "none";
 
-            uploadPlaceholder.style.display =
-                "block";
+            uploadPlaceholder.style.display = "flex";
 
 
             /*
@@ -3185,15 +3747,11 @@ requestAnimationFrame(() => {
              */
             if (!file) {
 
-                previewImg.style.display =
-                    "none";
+    resetImageState();
 
-                uploadPlaceholder.style.display =
-                    "block";
+    return;
 
-                return;
-
-            }
+}
 
 
             /*
@@ -3223,7 +3781,7 @@ requestAnimationFrame(() => {
                         "Invalid file type",
 
                     text:
-                        "Only JPG and PNG images are allowed.",
+                        "Only JPG, PNG, and WebP images are allowed.",
 
                     icon:
                         "!",
@@ -3240,20 +3798,19 @@ requestAnimationFrame(() => {
                 });
 
 
-                imageInput.value =
-                    "";
+                resetImageState();
 
-                return;
+return;
 
             }
 
 
             /*
-             * Limit the client-side preview to 2MB.
-             *
-             * Laravel must enforce the same limit
-             * server-side.
-             */
+ * Limit the client-side preview to 5MB.
+ *
+ * Laravel must enforce the same limit
+ * server-side.
+ */
             if (
                 file.size >
                 5 * 1024 * 1024
@@ -3282,10 +3839,9 @@ requestAnimationFrame(() => {
                 });
 
 
-                imageInput.value =
-                    "";
+                resetImageState();
 
-                return;
+return;
 
             }
 
@@ -3298,18 +3854,25 @@ requestAnimationFrame(() => {
 
 
             reader.onload =
-                function (e) {
+    function (e) {
 
-                    previewImg.src =
-                        e.target.result;
+        /*
+         * A newly selected image should not be marked
+         * for deletion.
+         */
+        if (removeImageInput) {
+            removeImageInput.value = "0";
+        }
 
-                    previewImg.style.display =
-                        "block";
 
-                    uploadPlaceholder.style.display =
-                        "none";
+        /*
+         * Display the newly selected image.
+         */
+        showFaqImagePreview(
+            e.target.result
+        );
 
-                };
+    };
 
 
             reader.readAsDataURL(
@@ -3433,15 +3996,6 @@ requestAnimationFrame(() => {
 
     }
 
-    /*
- * Recalculate the visible agency names when the
- * browser viewport changes size.
- */
-window.addEventListener(
-    "resize",
-    () => {
-        truncateAgencyOptions();
-    }
-);
+    
 
 });

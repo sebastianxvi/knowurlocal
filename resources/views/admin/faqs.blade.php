@@ -3,6 +3,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('cssfiles/components/table.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/components/image-upload.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/faqs.css') }}">
 @endpush
 
@@ -193,7 +194,6 @@
         </form>
 
     </div>
-    </form>
 
     <!-- ================= TABLE ================= -->
     <div class="table-wrapper">
@@ -478,21 +478,91 @@
 
             <div class="form-card">
 
-                <div class="floating-group">
-                    <select name="agency_id" id="faq_agency" required>
-                        <option value="" disabled selected hidden></option>
-                        @foreach($agencies as $agency)
-                            <option
-                                value="{{ $agency->id }}"
-                                data-abbr="{{ strtolower($agency->agency_abbreviation) }}"
-                                data-full-name="{{ $agency->agency_name }}"
-                            >
-                                {{ $agency->agency_name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <label>Agency</label>
-                </div>
+                <div class="floating-group searchable-select" id="agency-searchable">
+
+    {{-- =====================================================
+         SEARCH INPUT
+         =====================================================
+
+         This is the visible field administrators interact with.
+         It searches both the agency full name and abbreviation.
+    --}}
+    <input
+        type="text"
+        id="faq_agency_search"
+        class="searchable-select-input"
+        placeholder=" "
+        autocomplete="off"
+        role="combobox"
+        aria-expanded="false"
+        aria-controls="faq-agency-options"
+        aria-autocomplete="list"
+        required
+    >
+
+    <label
+        for="faq_agency_search"
+        class="searchable-select-label"
+    >
+        Agency
+    </label>
+
+    <i
+        class="ph-light ph-caret-down searchable-select-arrow"
+        aria-hidden="true"
+    ></i>
+
+
+    {{-- =====================================================
+         CUSTOM DROPDOWN OPTIONS
+         =====================================================
+
+         JavaScript generates the searchable options here.
+    --}}
+    <div
+        id="faq-agency-options"
+        class="searchable-select-options"
+        role="listbox"
+    ></div>
+
+
+    {{-- =====================================================
+         NATIVE SELECT
+         =====================================================
+
+         This remains the real form field.
+
+         Laravel receives agency_id from this select.
+         JavaScript only synchronizes it with the visible search.
+    --}}
+    <select
+        name="agency_id"
+        id="faq_agency"
+        class="searchable-select-native"
+    >
+        <option value="" selected disabled hidden>
+            Choose agency
+        </option>
+
+        @foreach($agencies as $agency)
+
+            <option
+                value="{{ $agency->id }}"
+                data-abbr="{{ strtolower($agency->agency_abbreviation ?? '') }}"
+                data-full-name="{{ $agency->agency_name }}"
+            >
+                {{ $agency->agency_name }}
+            </option>
+
+        @endforeach
+    </select>
+
+    <div class="form-message">
+        Please select an agency.
+    </div>
+
+</div>
+
 
                 <div class="floating-group keyword-field-group">
 
@@ -619,32 +689,57 @@
 
                 </div>
 
-                <div class="floating-group">
+                {{-- =========================================================
+     FAQ IMAGE UPLOAD
+     ========================================================= --}}
 
-                    <div class="image-upload-box" id="image-upload-box">
+<div class="floating-group">
 
-                        <input 
-                            type="file" 
-                            name="image" 
-                            id="faq_image" 
-                            accept="image/jpeg, image/png, image/webp"
-                            hidden
-                        >
+    <div class="image-upload-box" id="image-upload-box">
 
-                        <!-- Upload UI -->
-                        <div class="upload-content" id="upload-placeholder">
-                            <i class="ph ph-image"></i>
-                            <p>Click to upload image</p>
-                            <span>PNG, JPG, WebP up to 5MB</span>
-                        </div>
+    <input
+        type="file"
+        name="image"
+        id="faq_image"
+        accept="image/png,image/jpeg,image/webp"
+        hidden
+    >
 
-                        <!-- Preview -->
-                        <img id="preview-img" class="faq-preview-img" style="display:none;">
+    <input
+        type="hidden"
+        name="remove_image"
+        id="removeImageInput"
+        value="0"
+    >
 
-                    </div>
+    <div class="upload-content" id="upload-placeholder">
 
-                    <label>Upload Image (optional)</label>
-                </div>
+        <i class="ph-light ph-image"></i>
+
+        <p>Click to upload image</p>
+
+        <span>PNG, JPG, WebP up to 5MB</span>
+
+    </div>
+
+    <img
+        id="preview-img"
+        class="faq-preview-img"
+        alt="Image preview"
+        style="display: none;"
+    >
+
+    <button
+        type="button"
+        class="remove-faq-image-btn"
+        id="removeFaqImage"
+        aria-label="Remove image"
+        style="display: none;"
+    >
+        <i class="ph-light ph-x"></i>
+    </button>
+
+</div>
 
             </div>
 

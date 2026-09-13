@@ -705,6 +705,11 @@ if ($status === 'trashed') {
     'mimes:jpg,jpeg,png,webp',
     'max:5120',
 ],
+
+'remove_image' => [
+    'nullable',
+    'boolean',
+],
         ]);
 
         $imagePath = null;
@@ -801,22 +806,43 @@ $faq->id
 
         $imageChanged = $request->hasFile('image');
 
+$removeImage = $request->boolean('remove_image');
+
 $imagePath = $faq->image;
 
+/*
+ * CASE 1:
+ * The administrator clicked X and removed the existing image.
+ */
+if ($removeImage && $faq->image) {
+
+    Storage::disk('public')->delete(
+        $faq->image
+    );
+
+    $imagePath = null;
+}
+
+/*
+ * CASE 2:
+ * The administrator uploaded a replacement image.
+ *
+ * The replacement takes priority over remove_image.
+ */
 if ($imageChanged) {
 
     /*
-     * Remove the previous image only when the administrator
-     * actually uploads a replacement.
+     * Delete the previous image from storage.
      */
     if ($faq->image) {
-        Storage::disk('public')->delete($faq->image);
+
+        Storage::disk('public')->delete(
+            $faq->image
+        );
     }
 
     /*
-     * Store the replacement using Laravel's public disk.
-     * Laravel generates the stored filename instead of
-     * trusting the user's original filename.
+     * Store the new image.
      */
     $imagePath = $request->file('image')->store(
         'faqs',

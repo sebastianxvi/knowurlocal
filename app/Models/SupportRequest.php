@@ -14,6 +14,7 @@ class SupportRequest extends Model
         'agency_id',
         'question',
         'answer',
+        'answer_image',
         'status',
         'ip_address',
 
