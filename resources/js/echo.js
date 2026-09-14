@@ -15,6 +15,18 @@ window.Pusher = Pusher;
 
 /*
 |--------------------------------------------------------------------------
+| Temporary production diagnostics
+|--------------------------------------------------------------------------
+|
+| Pusher logs the WebSocket connection process and detailed failures.
+| Remove this after the issue is fixed.
+|
+*/
+
+Pusher.logToConsole = true;
+
+/*
+|--------------------------------------------------------------------------
 | Read required configuration
 |--------------------------------------------------------------------------
 |
@@ -102,6 +114,52 @@ window.Echo = new Echo({
             Accept: "application/json",
         },
     },
+});
+
+/*
+|--------------------------------------------------------------------------
+| Detailed Reverb connection diagnostics
+|--------------------------------------------------------------------------
+|
+| These listeners help identify whether the failure is caused by:
+|
+| - DNS or hostname resolution
+| - TLS / HTTPS certificate problems
+| - Railway WebSocket routing
+| - Incorrect Reverb application credentials
+| - Browser transport restrictions
+|
+*/
+
+const pusherConnection =
+    window.Echo.connector.pusher.connection;
+
+pusherConnection.bind("state_change", (states) => {
+    console.info("Reverb state changed:", states);
+});
+
+pusherConnection.bind("connecting_in", (data) => {
+    console.info("Reverb connecting in:", data);
+});
+
+pusherConnection.bind("connected", () => {
+    console.info("Reverb WebSocket connected.");
+});
+
+pusherConnection.bind("disconnected", () => {
+    console.warn("Reverb WebSocket disconnected.");
+});
+
+pusherConnection.bind("unavailable", () => {
+    console.error("Reverb WebSocket unavailable.");
+});
+
+pusherConnection.bind("failed", () => {
+    console.error("Reverb WebSocket failed.");
+});
+
+pusherConnection.bind("error", (error) => {
+    console.error("DETAILED REVERB CONNECTION ERROR:", error);
 });
 
 /*
