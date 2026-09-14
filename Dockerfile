@@ -38,10 +38,25 @@ RUN composer install \
 # Create Laravel's public storage symlink.
 RUN php artisan storage:link
 
+# ---------------------------------------------------------
+# Production Reverb configuration for the frontend build.
+# ---------------------------------------------------------
+#
+# These values are intentionally public because Vite places
+# VITE_* values inside the browser JavaScript bundle.
+#
+# Never place REVERB_APP_SECRET or another private secret here.
+#
+
+ENV VITE_REVERB_APP_KEY=knowurlocal-key
+ENV VITE_REVERB_HOST=knowurlocal-reverb-production.up.railway.app
+ENV VITE_REVERB_PORT=443
+ENV VITE_REVERB_SCHEME=https
+
 # Install frontend dependencies.
 RUN npm install
 
-# Build Vite production assets.
+# Build Vite production assets using the public Reverb values.
 RUN npm run build
 
 # Document the port used by the application.
