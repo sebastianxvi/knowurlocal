@@ -235,7 +235,17 @@
             </thead>
 
 
-            <tbody>
+            <tbody
+                id="support-requests-table-body"
+
+                data-is-superadmin="{{ auth()->user()->role === 'superadmin' ? 'true' : 'false' }}"
+
+                data-delete-url="{{ url('/admin/support-requests') }}"
+
+                data-faq-url="{{ url('/admin/support-requests') }}"
+
+                data-similar-faq-url="{{ url('/admin/support-requests') }}"
+            >
 
                 @forelse($requests as $req)
 

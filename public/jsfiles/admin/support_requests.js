@@ -1744,9 +1744,987 @@ console.table(searchableSupportAgencies);
 }
 
 
+        /*
+|--------------------------------------------------------------------------
+| REALTIME SUPPORT REQUEST LISTENER
+|--------------------------------------------------------------------------
+*/
+
+/*
+ * Find the table body where support requests are displayed.
+ */
+const supportRequestsTableBody = document.getElementById(
+    "support-requests-table-body"
+);
+
+
+/*
+ * Create a table row for a newly-created support request.
+ */
+function createRealtimeSupportRequestRow(request) {
+
+    /*
+     * Create the main table row.
+     */
+    const row = document.createElement("tr");
+
+    /*
+     * Store the request ID on the row.
+     * This prevents duplicate rows.
+     */
+    row.dataset.requestId = String(request.id);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ID CELL
+    |--------------------------------------------------------------------------
+    */
+
+    const idCell = document.createElement("td");
+
+    idCell.textContent = request.id;
+
+    row.appendChild(idCell);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | USER CELL
+    |--------------------------------------------------------------------------
+    */
+
+    const userCell = document.createElement("td");
+
+    const actorCell = document.createElement("div");
+
+    actorCell.className = "actor-cell";
+
+    const actorName = document.createElement("span");
+
+    actorName.className = "actor-name";
+
+    actorName.textContent =
+        request.user_name || "Guest";
+
+    actorCell.appendChild(actorName);
+
+    userCell.appendChild(actorCell);
+
+    row.appendChild(userCell);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | QUESTION CELL
+    |--------------------------------------------------------------------------
+    */
+
+    const questionCell = document.createElement("td");
+
+    const question =
+        String(request.question || "");
+
+    questionCell.textContent =
+        question.length > 60
+            ? `${question.substring(0, 60)}...`
+            : question;
+
+    row.appendChild(questionCell);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | AGENCY CELL
+    |--------------------------------------------------------------------------
+    */
+
+    const agencyCell = document.createElement("td");
+
+    /*
+     * The agency can be null because users do not
+     * need to choose an agency when submitting.
+     */
+    agencyCell.textContent =
+        request.agency_name || "—";
+
+    row.appendChild(agencyCell);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | STATUS CELL
+    |--------------------------------------------------------------------------
+    */
+
+    const statusCell = document.createElement("td");
+
+    const status =
+        String(request.status || "pending");
+
+    const statusBadge = document.createElement("span");
+
+    statusBadge.className =
+        `badge ${status}`;
+
+    statusBadge.textContent =
+        status.charAt(0).toUpperCase() +
+        status.slice(1);
+
+    statusCell.appendChild(statusBadge);
+
+    row.appendChild(statusCell);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DATE CELL
+    |--------------------------------------------------------------------------
+    */
+
+    const dateCell = document.createElement("td");
+
+    const createdDate =
+        request.created_at
+            ? new Date(request.created_at)
+            : new Date();
+
+    dateCell.textContent =
+        createdDate.toLocaleDateString(
+            "en-US",
+            {
+                month: "short",
+                day: "2-digit",
+                year: "numeric"
+            }
+        );
+
+    row.appendChild(dateCell);
+
+
+    /*
+|--------------------------------------------------------------------------
+| ACTION CELL
+|--------------------------------------------------------------------------
+*/
+
+/*
+ * Create the table cell that will contain
+ * all available row actions.
+ */
+const actionCell = document.createElement("td");
+
+/*
+ * Create the shared action wrapper.
+ *
+ * This matches the existing Blade structure:
+ *
+ * <div class="tablebtn">
+ */
+const actionWrapper = document.createElement("div");
+
+actionWrapper.className = "tablebtn";
+
+
+/*
+|--------------------------------------------------------------------------
+| MANAGE BUTTON
+|--------------------------------------------------------------------------
+*/
+
+/*
+ * Create the Manage button.
+ */
+const manageButton = document.createElement("button");
+
+manageButton.type = "button";
+
+manageButton.className =
+    "btn btn-primary view-btn";
+
+/*
+ * Store the support request ID.
+ */
+manageButton.dataset.id =
+    String(request.id);
+
+/*
+ * Store the question used by the support modal.
+ */
+manageButton.dataset.question =
+    request.question || "";
+
+/*
+ * Store the user name used by the support modal.
+ */
+manageButton.dataset.user =
+    request.user_name || "Guest";
+
+/*
+ * Store the agency name.
+ */
+manageButton.dataset.agency =
+    request.agency_name || "Unknown";
+
+/*
+ * Store the agency ID.
+ */
+manageButton.dataset.agencyId =
+    request.agency_id || "";
+
+/*
+ * Store the existing answer, if available.
+ */
+manageButton.dataset.answer =
+    request.answer || "";
+
+/*
+ * Store the existing answer image, if available.
+ */
+manageButton.dataset.answerImage =
+    request.answer_image || "";
+
+
+/*
+ * Create the Manage icon.
+ */
+const manageIcon = document.createElement("i");
+
+manageIcon.className =
+    "ph-light ph-chat-centered-text";
+
+
+/*
+ * Create the visible button label.
+ */
+const manageText = document.createElement("span");
+
+manageText.textContent =
+    "Manage";
+
+
+/*
+ * Assemble the Manage button.
+ */
+manageButton.appendChild(manageIcon);
+
+manageButton.appendChild(manageText);
+
+
+/*
+ * Add Manage to the action wrapper.
+ */
+actionWrapper.appendChild(manageButton);
+
+
+/*
+|--------------------------------------------------------------------------
+| SUPERADMIN-ONLY ACTIONS
+|--------------------------------------------------------------------------
+*/
+
+/*
+ * Locate the table body.
+ *
+ * The tbody contains the current user's permission
+ * information through data-is-superadmin.
+ */
+const tableBody =
+    document.getElementById(
+        "support-requests-table-body"
+    );
+
+
+/*
+ * Read the permission flag safely.
+ */
+const isSuperadmin =
+    tableBody?.dataset.isSuperadmin === "true";
+
+
+/*
+ * Only create Trash and To FAQ actions
+ * for superadmins.
+ */
+if (isSuperadmin) {
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | MOVE TO TRASH
+    |--------------------------------------------------------------------------
+    */
+
+    /*
+     * Create the form required by Laravel.
+     *
+     * The existing delegated JavaScript handler
+     * expects .delete-btn to be inside a form.
+     */
+    const deleteForm =
+        document.createElement("form");
+
+    deleteForm.method =
+        "POST";
+
+    /*
+     * Read the base delete URL from the tbody.
+     */
+    const deleteBaseUrl =
+        tableBody.dataset.deleteUrl;
+
+
+    /*
+     * Build the request-specific delete URL.
+     *
+     * Example:
+     * /admin/support-requests/123
+     */
+    deleteForm.action =
+        `${deleteBaseUrl}/${encodeURIComponent(request.id)}`;
+
+
+    /*
+     * Create the CSRF token field.
+     *
+     * Laravel requires this for POST-based forms.
+     */
+    const csrfInput =
+        document.createElement("input");
+
+    csrfInput.type =
+        "hidden";
+
+    csrfInput.name =
+        "_token";
+
+    csrfInput.value =
+        document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content") || "";
+
+
+    /*
+     * Create Laravel's method spoofing field.
+     *
+     * This allows a POST form to behave as DELETE.
+     */
+    const methodInput =
+        document.createElement("input");
+
+    methodInput.type =
+        "hidden";
+
+    methodInput.name =
+        "_method";
+
+    methodInput.value =
+        "DELETE";
+
+
+    /*
+     * Create the Trash button.
+     */
+    const deleteButton =
+        document.createElement("button");
+
+    deleteButton.type =
+        "submit";
+
+    deleteButton.className =
+        "btn btn-danger delete-btn";
+
+
+    /*
+     * Create the Trash icon.
+     */
+    const deleteIcon =
+        document.createElement("i");
+
+    deleteIcon.className =
+        "ph-light ph-trash";
+
+
+    /*
+     * Create the Trash label.
+     */
+    const deleteText =
+        document.createElement("span");
+
+    deleteText.textContent =
+        "Trash";
+
+
+    /*
+     * Assemble the Trash button.
+     */
+    deleteButton.appendChild(deleteIcon);
+
+    deleteButton.appendChild(deleteText);
+
+
+    /*
+     * Assemble the delete form.
+     */
+    deleteForm.appendChild(csrfInput);
+
+    deleteForm.appendChild(methodInput);
+
+    deleteForm.appendChild(deleteButton);
+
+
+    /*
+     * Add the form to the action wrapper.
+     */
+    actionWrapper.appendChild(deleteForm);
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | ADD TO FAQ
+    |--------------------------------------------------------------------------
+    */
+
+    /*
+     * Create the FAQ link.
+     */
+    const faqButton =
+        document.createElement("a");
+
+    faqButton.className =
+        "btn btn-secondary faq-btn";
+
+    /*
+     * Prevent an empty href if the data attribute
+     * is missing.
+     */
+    const faqBaseUrl =
+        tableBody.dataset.faqUrl || "";
+
+
+    /*
+     * Build the FAQ preparation URL.
+     *
+     * Example:
+     * /admin/support-requests/123/to-faq
+     */
+    faqButton.href =
+        `${faqBaseUrl}/${encodeURIComponent(request.id)}/to-faq`;
+
+
+    /*
+     * Store the request ID for the existing
+     * similar-FAQ JavaScript handler.
+     */
+    faqButton.dataset.id =
+        String(request.id);
+
+
+    /*
+     * Build the similar FAQ endpoint.
+     *
+     * Example:
+     * /admin/support-requests/123/similar-faqs
+     */
+    faqButton.dataset.similarUrl =
+        `${tableBody.dataset.similarFaqUrl}/${encodeURIComponent(request.id)}/similar-faqs`;
+
+
+    /*
+     * Create the FAQ icon.
+     */
+    const faqIcon =
+        document.createElement("i");
+
+    faqIcon.className =
+        "ph-light ph-chat-centered-dots";
+
+
+    /*
+     * Create the FAQ label.
+     */
+    const faqText =
+        document.createElement("span");
+
+    faqText.textContent =
+        "To FAQ";
+
+
+    /*
+     * Assemble the FAQ link.
+     */
+    faqButton.appendChild(faqIcon);
+
+    faqButton.appendChild(faqText);
+
+
+    /*
+     * Add the FAQ link to the action wrapper.
+     */
+    actionWrapper.appendChild(faqButton);
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| FINAL ASSEMBLY
+|--------------------------------------------------------------------------
+*/
+
+/*
+ * Add the action wrapper to the table cell.
+ */
+actionCell.appendChild(actionWrapper);
+
+
+/*
+ * Add the completed action cell to the row.
+ */
+row.appendChild(actionCell);
+
+
+    /*
+     * Return the completed row.
+     */
+    return row;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| HANDLE NEW SUPPORT REQUEST
+|--------------------------------------------------------------------------
+*/
+
+/*
+ * This function handles the event received from Laravel.
+ */
+function handleRealtimeSupportRequest(request) {
+
+    /*
+     * Stop if the table does not exist.
+     */
+    if (!supportRequestsTableBody) {
+        console.warn(
+            "Support request table body was not found."
+        );
+
+        return;
+    }
+
+    /*
+     * Log the received event during development.
+     */
+    console.log(
+        "Realtime support request received:",
+        request
+    );
+
+    /*
+     * Validate that the event contains an ID.
+     */
+    if (!request || !request.id) {
+        console.error(
+            "Realtime event received without a request ID:",
+            request
+        );
+
+        return;
+    }
+
+    /*
+     * Prevent duplicate rows.
+     */
+    const existingRow =
+        supportRequestsTableBody.querySelector(
+            `tr[data-request-id="${request.id}"]`
+        );
+
+    if (existingRow) {
+        console.info(
+            "Support request already exists in the table:",
+            request.id
+        );
+
+        return;
+    }
+
+    /*
+     * Remove the empty-state row if present.
+     *
+     * This supports both:
+     * - <td class="empty">
+     * - an empty-state element inside the row
+     */
+    const emptyCell =
+        supportRequestsTableBody.querySelector(
+            ".empty"
+        );
+
+    if (emptyCell) {
+        emptyCell.closest("tr")?.remove();
+    }
+
+    /*
+     * Create the new row.
+     */
+    const newRow =
+        createRealtimeSupportRequestRow(request);
+
+    /*
+     * Insert the newest request at the top.
+     */
+    supportRequestsTableBody.prepend(newRow);
+
+    /*
+     * Add a temporary visual highlight.
+     */
+    newRow.classList.add(
+        "realtime-new-row"
+    );
+
+    /*
+     * Remove the highlight after 2.5 seconds.
+     */
+    window.setTimeout(() => {
+        newRow.classList.remove(
+            "realtime-new-row"
+        );
+    }, 2500);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| INITIALIZE ECHO LISTENER
+|--------------------------------------------------------------------------
+*/
+
+/*
+ * Prevent the listener from being initialized more than once.
+ */
+let supportRequestRealtimeInitialized = false;
+
+
+/*
+ * Initialize the private support-request channel.
+ */
+function initializeSupportRequestRealtime() {
+
+    /*
+     * Prevent duplicate subscriptions.
+     */
+    if (supportRequestRealtimeInitialized) {
+        return true;
+    }
+
+
+    /*
+     * Confirm that the table body exists.
+     */
+    if (!supportRequestsTableBody) {
+        console.warn(
+            "Realtime listener stopped: support request table was not found."
+        );
+
+        return false;
+    }
+
+
+    /*
+     * Confirm that Laravel Echo has loaded.
+     */
+    if (!window.Echo) {
+        console.warn(
+            "Realtime listener waiting: Laravel Echo is unavailable."
+        );
+
+        return false;
+    }
+
+
+    /*
+|--------------------------------------------------------------------------
+| INSPECT REVERB CONNECTION
+|--------------------------------------------------------------------------
+|
+| Laravel Echo uses the Pusher-compatible connector when connected
+| to Laravel Reverb.
+|
+*/
+
+const echoConnector = window.Echo.connector;
+
+console.info(
+    "Echo connector:",
+    echoConnector
+);
+
+/*
+ * Get the Pusher connection created by Laravel Echo.
+ *
+ * The optional chaining operator prevents JavaScript from
+ * crashing if the connector is not ready yet.
+ */
+const connection =
+    echoConnector?.pusher?.connection;
+
+console.info(
+    "Realtime connection state:",
+    connection?.state ||
+        "connection object not found"
+);
+
+/*
+|--------------------------------------------------------------------------
+| REVERB CONNECTION EVENTS
+|--------------------------------------------------------------------------
+|
+| Reverb uses Pusher's event API.
+| Therefore, use connection.bind(), not connection.on().
+|
+*/
+
+if (connection) {
+
+    /*
+     * Runs when the WebSocket connection fails.
+     */
+    connection.bind(
+        "failed",
+        (error) => {
+            console.error(
+                "Reverb WebSocket connection failed:",
+                error
+            );
+        }
+    );
+
+    /*
+     * Runs when the WebSocket connection succeeds.
+     */
+    connection.bind(
+        "connected",
+        () => {
+            console.info(
+                "Reverb WebSocket connected."
+            );
+        }
+    );
+
+    /*
+     * Runs when the WebSocket connection closes.
+     */
+    connection.bind(
+        "disconnected",
+        () => {
+            console.warn(
+                "Reverb WebSocket disconnected."
+            );
+        }
+    );
+
+    /*
+     * Runs when the connection becomes unavailable.
+     */
+    connection.bind(
+        "unavailable",
+        () => {
+            console.warn(
+                "Reverb WebSocket is unavailable."
+            );
+        }
+    );
+
+    /*
+     * Runs whenever the connection state changes.
+     */
+    connection.bind(
+        "state_change",
+        (stateChange) => {
+            console.info(
+                "Reverb connection state changed:",
+                stateChange.previous,
+                "→",
+                stateChange.current
+            );
+        }
+    );
+
+} else {
+
+    console.warn(
+        "Reverb connection object could not be found."
+    );
+
+}
+
+
+    /*
+     * Subscribe to the private Laravel channel.
+     */
+    const supportRequestChannel = window.Echo.private(
+    "admin.support-requests"
+);
+
+/*
+|--------------------------------------------------------------------------
+| Confirm private-channel subscription
+|--------------------------------------------------------------------------
+*/
+
+supportRequestChannel.subscribed(() => {
+
+    console.log(
+        "✅ SUBSCRIBED to private admin.support-requests channel."
+    );
+
+});
+
+/*
+|--------------------------------------------------------------------------
+| Listen for support request event
+|--------------------------------------------------------------------------
+*/
+
+supportRequestChannel.listen(
+    ".support.request.created",
+    (event) => {
+
+        console.log(
+            "🔥 LIVE EVENT RECEIVED:",
+            event
+        );
+
+        console.log(
+            "EVENT ID:",
+            event?.id
+        );
+
+        console.log(
+            "EVENT DATA:",
+            event
+        );
+
+
+        handleRealtimeSupportRequest(
+            event
+        );
+    }
+);
+
+
+/*
+|--------------------------------------------------------------------------
+| Listen for private-channel errors
+|--------------------------------------------------------------------------
+*/
+
+if (typeof supportRequestChannel.error === "function") {
+
+    supportRequestChannel.error((error) => {
+
+        console.error(
+            "❌ PRIVATE CHANNEL ERROR:",
+            {
+                code: error?.code,
+                message: error?.message,
+                statusCode: error?.statusCode,
+                name: error?.name,
+                raw: error
+            }
+        );
+
+    });
+
+}
+
+
+supportRequestRealtimeInitialized = true;
+
+console.info(
+    "Echo listener registered for private admin.support-requests."
+);
+
+return true;
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| WAIT FOR ECHO TO LOAD
+|--------------------------------------------------------------------------
+*/
+
+/*
+ * Try to initialize immediately.
+ */
+if (!initializeSupportRequestRealtime()) {
+
+    /*
+     * Retry while Echo is still loading.
+     */
+    let realtimeAttempts = 0;
+
+    const maximumRealtimeAttempts = 40;
+
+
+    /*
+     * Retry every 500 milliseconds.
+     */
+    const realtimeRetryTimer =
+        window.setInterval(() => {
+
+            realtimeAttempts++;
+
+
+            const initialized =
+                initializeSupportRequestRealtime();
+
+
+            /*
+             * Stop retrying after successful initialization.
+             */
+            if (initialized) {
+
+                window.clearInterval(
+                    realtimeRetryTimer
+                );
+
+                return;
+
+            }
+
+
+            /*
+             * Stop after approximately 20 seconds.
+             */
+            if (
+                realtimeAttempts >=
+                maximumRealtimeAttempts
+            ) {
+
+                window.clearInterval(
+                    realtimeRetryTimer
+                );
+
+                console.error(
+                    "Realtime listener could not initialize after 20 seconds."
+                );
+
+            }
+
+        }, 500);
+
+}
+
+
     /*
      * Make the function available to Blade inline
      * onclick attributes.
      */
     window.closeSupportModal = closeSupportModal;
+    
 });

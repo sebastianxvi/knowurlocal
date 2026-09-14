@@ -6,16 +6,45 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
-return Application::configure(basePath: dirname(__DIR__))
+return Application::configure(
+    basePath: dirname(__DIR__)
+)
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        commands: __DIR__.'/../routes/console.php',
+        web: __DIR__ . '/../routes/web.php',
+        commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware) {
 
+    /*
+    |--------------------------------------------------------------------------
+    | Broadcasting Routes
+    |--------------------------------------------------------------------------
+    |
+    | The web middleware provides the browser session and CSRF support.
+    | The auth middleware ensures that private channels receive an
+    | authenticated Laravel user before authorization is attempted.
+    |
+    */
+    ->withBroadcasting(
+        __DIR__ . '/../routes/channels.php',
+        [
+            'middleware' => [
+                'web',
+                'auth',
+            ],
+        ],
+    )
+
+    ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            // 🔥 REGISTER AUTH MIDDLEWARE
+            /*
+            |--------------------------------------------------------------------------
+            | Authentication
+            |--------------------------------------------------------------------------
+            |
+            | Uses your custom redirect behavior for public and admin pages.
+            |
+            */
             'auth' => Authenticate::class,
 
             'no.cache' => NoCache::class,
@@ -24,8 +53,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
             'superadmin.only' => \App\Http\Middleware\SuperAdminOnly::class,
         ]);
-
     })
+
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->create();

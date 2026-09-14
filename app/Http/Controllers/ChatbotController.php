@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Agency;
 use App\Models\Faq;
 use App\Models\ChatbotLog;
+use App\Events\SupportRequestCreated;
 use App\Models\SupportRequest;
 use Illuminate\Http\Request;
 use App\Services\OpenRouterService;
 use App\Services\FaqMatcherService;
 use App\Services\FaqSemanticMatcherService;
 use App\Services\FaqIntentService;
+use Illuminate\Support\Facades\Log;
 
 class ChatbotController extends Controller
 {
@@ -441,100 +443,121 @@ class ChatbotController extends Controller
 
 
     /**
-     * Submit a question for human assistance.
+ * Submit a question for human assistance.
+ */
+public function submitSupportRequest(Request $request)
+{
+    /*
+     * Validate all browser-supplied data before
+     * performing any database operation.
      */
-    public function submitSupportRequest(Request $request)
-    {
-        /*
-         * Validate all browser-supplied data before
-         * performing any database operation.
-         */
-        $validated = $request->validate([
-            'question' => [
-                'required',
-                'string',
-                'max:500',
-            ],
+    $validated = $request->validate([
+        'question' => [
+            'required',
+            'string',
+            'max:500',
+        ],
 
-            'agency_id' => [
-                'nullable',
-                'exists:agencies,id',
-            ],
-        ]);
+        'agency_id' => [
+            'nullable',
+            'integer',
+            'exists:agencies,id',
+        ],
+    ]);
 
-        /*
-         * Normalize whitespace.
-         *
-         * This makes duplicate detection more consistent.
-         */
-        $question = trim(
-            preg_replace(
-                '/\s+/',
-                ' ',
-                $validated['question']
-            )
-        );
+    /*
+     * Normalize repeated whitespace and remove
+     * unnecessary spaces at the beginning and end.
+     */
+    $question = trim(
+        preg_replace(
+            '/\s+/',
+            ' ',
+            $validated['question']
+        )
+    );
 
-        /*
-         * Check whether this authenticated user already has
-         * an identical pending support request.
-         */
-        $duplicatePendingRequest =
-            SupportRequest::where(
-                'user_id',
-                auth()->id()
-            )
-            ->where(
-                'question',
-                $question
-            )
-            ->where(
-                'status',
-                'pending'
-            )
-            ->exists();
+    /*
+     * Check whether the authenticated user already
+     * submitted the same pending question.
+     */
+    $duplicatePendingRequest = SupportRequest::query()
+        ->where('user_id', auth()->id())
+        ->where('question', $question)
+        ->where('status', 'pending')
+        ->exists();
 
-        /*
-         * Prevent duplicate pending submissions.
-         */
-        if ($duplicatePendingRequest) {
-
-            return response()->json([
-                'success' => false,
-
-                'message' =>
-                    'You already have a pending request with the same question.',
-            ], 422);
-        }
-
-        /*
-         * Create the support request only after validation
-         * and duplicate protection succeed.
-         */
-        SupportRequest::create([
-            'user_id' =>
-                auth()->id(),
-
-            'agency_id' =>
-                $validated['agency_id'] ?? null,
-
-            'question' =>
-                $question,
-
-            'ip_address' =>
-                $request->ip(),
-        ]);
-
-        /*
-         * Return a safe success response.
-         */
+    /*
+     * Stop duplicate pending submissions.
+     */
+    if ($duplicatePendingRequest) {
         return response()->json([
-            'success' => true,
-
-            'message' =>
-                'Your question has been sent to a human assistant.',
-        ]);
+            'success' => false,
+            'message' => 'You already have a pending request with the same question.',
+        ], 422);
     }
+
+    /*
+     * Create the support request.
+     *
+     * agency_id is intentionally nullable because
+     * the user does not need to select an agency.
+     */
+    $supportRequest = SupportRequest::create([
+        'user_id' => auth()->id(),
+        'agency_id' => $validated['agency_id'] ?? null,
+        'question' => $question,
+        'status' => 'pending',
+        'ip_address' => $request->ip(),
+    ]);
+
+    /*
+     * Load related records for the broadcast payload.
+     */
+    $supportRequest->load([
+        'user',
+        'agency',
+    ]);
+
+    /*
+     * Broadcast the newly-created request to authorized
+     * admin dashboard clients.
+     */
+    /*
+|--------------------------------------------------------------------------
+| Broadcast new support request
+|--------------------------------------------------------------------------
+*/
+
+Log::info('SupportRequestCreated broadcast starting', [
+    'request_id' => $supportRequest->id,
+    'channel' => 'admin.support-requests',
+    'event' => 'support.request.created',
+]);
+
+broadcast(new SupportRequestCreated(
+    id: $supportRequest->id,
+    question: $supportRequest->question,
+    status: $supportRequest->status,
+    agencyId: $supportRequest->agency_id,
+    agencyName: $supportRequest->agency?->agency_name,
+    userName: $supportRequest->user?->first_name ?? 'User',
+    createdAt: $supportRequest->created_at?->toIso8601String()
+        ?? now()->toIso8601String(),
+));
+
+Log::info('SupportRequestCreated broadcast finished', [
+    'request_id' => $supportRequest->id,
+]);
+
+    /*
+     * Return a JSON response to the frontend.
+     */
+    return response()->json([
+        'success' => true,
+        'message' => 'Your question has been sent to a human assistant.',
+    ], 201);
+}
 
 
     /**

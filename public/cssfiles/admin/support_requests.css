@@ -1558,3 +1558,24 @@
     text-align: center;
 
 }
+
+
+/* =========================================================
+   REALTIME NEW REQUEST HIGHLIGHT
+   ========================================================= */
+
+.realtime-new-row {
+    animation: realtimeRequestHighlight 2.5s ease;
+}
+
+@keyframes realtimeRequestHighlight {
+
+    0% {
+        background-color: rgba(59, 130, 246, 0.14);
+    }
+
+    100% {
+        background-color: transparent;
+    }
+
+}
