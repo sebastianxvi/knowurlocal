@@ -92,22 +92,51 @@ const forceTLS = reverbScheme === "https";
 */
 
 window.Echo = new Echo({
+    /*
+     * Use Laravel Reverb through the Pusher-compatible protocol.
+     */
     broadcaster: "reverb",
 
+    /*
+     * Public Reverb application key.
+     */
     key: reverbAppKey,
 
+    /*
+     * Railway public Reverb hostname.
+     * Do not include https:// or wss:// here.
+     */
     wsHost: reverbHost,
-    wsPort: reverbPort,
-    wssPort: reverbPort,
 
-    forceTLS,
+    /*
+     * Standard secure WebSocket port.
+     */
+    wsPort: 443,
 
-    enabledTransports: forceTLS
-        ? ["wss"]
-        : ["ws"],
+    /*
+     * Secure WebSocket port.
+     */
+    wssPort: 443,
 
+    /*
+     * Production Reverb uses encrypted WebSockets.
+     */
+    forceTLS: true,
+
+    /*
+     * Allow only secure WebSocket connections.
+     */
+    enabledTransports: ["wss"],
+
+    /*
+     * Laravel private-channel authentication endpoint.
+     */
     authEndpoint: broadcastAuthEndpoint,
 
+    /*
+     * Send Laravel's CSRF token when authenticating
+     * the private channel.
+     */
     auth: {
         headers: {
             "X-CSRF-TOKEN": csrfToken,
