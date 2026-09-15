@@ -475,11 +475,12 @@ function createSelectedAgencyIcon() {
             'agencyDetailsImage'
         );
 
-        /*
- * Image preview modal.
- *
- * This allows users to inspect the agency image
- * without leaving the agency details panel.
+        // =========================================================
+// IMAGE PREVIEW MODAL
+// =========================================================
+
+/*
+ * Modal container that displays the enlarged agency image.
  */
 const imageModal =
     document.getElementById(
@@ -488,7 +489,7 @@ const imageModal =
 
 
 /*
- * Enlarged image displayed inside the modal.
+ * Image element displayed inside the modal.
  */
 const modalImage =
     document.getElementById(
@@ -497,16 +498,68 @@ const modalImage =
 
 
 /*
- * Modal close button.
+ * Close button inside the image modal.
  */
 const imageClose =
     document.getElementById(
         'image-close'
     );
 
+
+/*
+ * Current image zoom level.
+ *
+ * 1 means normal size.
+ * 4 means maximum zoom.
+ */
+let imageZoom =
+    1;
+
+
+/*
+ * Stores the distance between two fingers
+ * at the beginning of a pinch gesture.
+ */
+let touchStartDistance =
+    null;
+
+
+// =========================================================
+// IMAGE TRANSFORMATION
+// =========================================================
+
+/*
+ * Apply the current zoom level to the image.
+ */
+function updateImageTransform() {
+
     /*
- * Open the image preview when the agency image
- * is clicked.
+     * Stop safely when the image element
+     * does not exist.
+     */
+    if (!modalImage) {
+
+        return;
+
+    }
+
+
+    /*
+     * Scale the image without changing
+     * its original geographic or layout position.
+     */
+    modalImage.style.transform =
+        `scale(${imageZoom})`;
+
+}
+
+
+// =========================================================
+// OPEN IMAGE MODAL
+// =========================================================
+
+/*
+ * Open the image preview when the agency image is clicked.
  */
 if (
     agencyDetailsImage &&
@@ -519,20 +572,32 @@ if (
         () => {
 
             /*
-             * Use the exact same image currently
-             * displayed in the agency details panel.
+             * Copy the currently displayed agency image
+             * into the modal image.
              */
             modalImage.src =
                 agencyDetailsImage.src;
 
 
             /*
-             * Reuse the agency image's accessible
-             * alternative description.
+             * Preserve the image's accessible description.
              */
             modalImage.alt =
                 agencyDetailsImage.alt ||
                 'Agency image preview';
+
+
+            /*
+             * Always start a new image at normal zoom.
+             */
+            imageZoom =
+                1;
+
+
+            /*
+             * Apply the normal image scale.
+             */
+            updateImageTransform();
 
 
             /*
@@ -545,7 +610,7 @@ if (
 
             /*
              * Prevent the page behind the modal
-             * from receiving accidental interaction.
+             * from scrolling while it is open.
              */
             document.body.style.overflow =
                 'hidden';
@@ -555,13 +620,18 @@ if (
 
 }
 
+
+// =========================================================
+// CLOSE IMAGE MODAL
+// =========================================================
+
 /*
- * Close the image preview.
+ * Close the image preview and reset its state.
  */
 function closeImagePreview() {
 
     /*
-     * Stop if the modal doesn't exist.
+     * Stop safely if the modal is unavailable.
      */
     if (!imageModal) {
 
@@ -579,17 +649,34 @@ function closeImagePreview() {
 
 
     /*
-     * Restore normal page interaction.
+     * Restore normal page scrolling.
      */
     document.body.style.overflow =
         '';
 
 
     /*
-     * Clear the image after the modal is closed.
-     *
-     * This prevents an old agency image from remaining
-     * in the modal DOM unnecessarily.
+     * Reset the zoom for the next preview.
+     */
+    imageZoom =
+        1;
+
+
+    /*
+     * Reset the stored pinch distance.
+     */
+    touchStartDistance =
+        null;
+
+
+    /*
+     * Remove the zoom transformation.
+     */
+    updateImageTransform();
+
+
+    /*
+     * Clear the image source after closing.
      */
     if (modalImage) {
 
@@ -600,8 +687,13 @@ function closeImagePreview() {
 
 }
 
+
+// =========================================================
+// CLOSE BUTTON
+// =========================================================
+
 /*
- * Close when the X button is clicked.
+ * Close the modal when the X button is clicked.
  */
 if (imageClose) {
 
@@ -612,10 +704,261 @@ if (imageClose) {
 
 }
 
+
+// =========================================================
+// MOUSE WHEEL ZOOM
+// =========================================================
+
 /*
- * Close when the user clicks the dark backdrop.
+ * Allow desktop users to zoom using the mouse wheel.
+ */
+if (modalImage) {
+
+    modalImage.addEventListener(
+        'wheel',
+        event => {
+
+            /*
+             * Prevent the page from scrolling
+             * while the image is being zoomed.
+             */
+            event.preventDefault();
+
+
+            /*
+             * Scroll up zooms in.
+             * Scroll down zooms out.
+             */
+            if (event.deltaY < 0) {
+
+                imageZoom +=
+                    0.2;
+
+            }
+
+            else {
+
+                imageZoom -=
+                    0.2;
+
+            }
+
+
+            /*
+             * Restrict zoom between 1x and 4x.
+             */
+            imageZoom =
+                Math.min(
+                    Math.max(
+                        imageZoom,
+                        1
+                    ),
+                    4
+                );
+
+
+            /*
+             * Apply the updated zoom.
+             */
+            updateImageTransform();
+
+        },
+        {
+            passive: false
+        }
+    );
+
+}
+
+
+// =========================================================
+// MOBILE PINCH DISTANCE
+// =========================================================
+
+/*
+ * Calculate the distance between two touch points.
+ */
+function getTouchDistance(
+    touchOne,
+    touchTwo
+) {
+
+    /*
+     * Calculate the horizontal distance.
+     */
+    const differenceX =
+        touchOne.clientX -
+        touchTwo.clientX;
+
+
+    /*
+     * Calculate the vertical distance.
+     */
+    const differenceY =
+        touchOne.clientY -
+        touchTwo.clientY;
+
+
+    /*
+     * Return the actual distance using
+     * the Pythagorean theorem.
+     */
+    return Math.sqrt(
+        differenceX * differenceX +
+        differenceY * differenceY
+    );
+
+}
+
+
+// =========================================================
+// MOBILE PINCH-TO-ZOOM
+// =========================================================
+
+/*
+ * Enable two-finger pinch-to-zoom on mobile devices.
+ */
+if (modalImage) {
+
+    /*
+     * Store the initial distance when
+     * two fingers touch the image.
+     */
+    modalImage.addEventListener(
+        'touchstart',
+        event => {
+
+            if (
+                event.touches.length === 2
+            ) {
+
+                touchStartDistance =
+                    getTouchDistance(
+                        event.touches[0],
+                        event.touches[1]
+                    );
+
+            }
+
+        },
+        {
+            passive: true
+        }
+    );
+
+
+    /*
+     * Update the zoom while the two fingers move.
+     */
+    modalImage.addEventListener(
+        'touchmove',
+        event => {
+
+            /*
+             * Ignore the gesture unless
+             * exactly two fingers are active.
+             */
+            if (
+                event.touches.length !== 2 ||
+                touchStartDistance === null
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+             * Prevent browser scrolling
+             * during the pinch gesture.
+             */
+            event.preventDefault();
+
+
+            /*
+             * Calculate the new distance
+             * between the two fingers.
+             */
+            const currentDistance =
+                getTouchDistance(
+                    event.touches[0],
+                    event.touches[1]
+                );
+
+
+            /*
+             * Calculate how much the fingers moved apart
+             * or closer together.
+             */
+            const distanceDifference =
+                currentDistance -
+                touchStartDistance;
+
+
+            /*
+             * Convert finger movement into zoom movement.
+             */
+            imageZoom +=
+                distanceDifference * 0.005;
+
+
+            /*
+             * Restrict zoom between 1x and 4x.
+             */
+            imageZoom =
+                Math.min(
+                    Math.max(
+                        imageZoom,
+                        1
+                    ),
+                    4
+                );
+
+
+            /*
+             * Save the current distance
+             * for the next movement event.
+             */
+            touchStartDistance =
+                currentDistance;
+
+
+            /*
+             * Apply the updated zoom.
+             */
+            updateImageTransform();
+
+        },
+        {
+            passive: false
+        }
+    );
+
+
+    /*
+     * Stop pinch tracking when the fingers leave the image.
+     */
+    modalImage.addEventListener(
+        'touchend',
+        () => {
+
+            touchStartDistance =
+                null;
+
+        }
+    );
+
+}
+
+
+// =========================================================
+// CLOSE BY CLICKING THE BACKDROP
+// =========================================================
+
+/*
+ * Close the modal only when the dark backdrop is clicked.
  *
- * Clicking the image itself does NOT close the modal.
+ * Clicking the image itself will not close the modal.
  */
 if (imageModal) {
 
@@ -637,9 +980,14 @@ if (imageModal) {
 
 }
 
+
+// =========================================================
+// CLOSE WITH ESCAPE
+// =========================================================
+
 /*
- * Allow keyboard users to close the preview
- * with the Escape key.
+ * Allow keyboard users to close the modal
+ * using the Escape key.
  */
 document.addEventListener(
     'keydown',

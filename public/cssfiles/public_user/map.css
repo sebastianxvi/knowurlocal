@@ -2042,12 +2042,35 @@ a.agency-contact-value:focus-visible {
     box-shadow:
         0 20px 60px rgba(0, 0, 0, 0.30);
 
-    transform: scale(0.94);
+    /*
+     * JavaScript controls the zoom level.
+     */
+    transform: scale(1);
+
+    transform-origin: center center;
+
+    /*
+     * Prevent the browser from interpreting
+     * pinch gestures as page scrolling.
+     */
+    touch-action: none;
+
+    /*
+     * Prevent accidental text/image selection.
+     */
+    user-select: none;
+
+    /*
+     * Prevent dragging the image as a native image.
+     */
+    -webkit-user-drag: none;
+
+    cursor: zoom-in;
 
     opacity: 0;
 
     transition:
-        transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.12s ease-out,
         opacity 0.2s ease;
 }
 
@@ -2058,9 +2081,12 @@ a.agency-contact-value:focus-visible {
  */
 #image-modal.active #modal-img {
 
-    transform: scale(1);
-
     opacity: 1;
+}
+
+#modal-img.is-zoomed {
+
+    cursor: grab;
 }
 
 
