@@ -472,9 +472,39 @@
             </div>
         </div>
 
-        <form id="faqForm" method="POST" action="{{ route('faqs.store') }}" enctype="multipart/form-data">
-            @csrf
-            <input type="hidden" name="_method" id="faq-method" value="POST">
+        <form
+    id="faqForm"
+    method="POST"
+    action="{{ route('faqs.store') }}"
+    enctype="multipart/form-data"
+>
+    @csrf
+
+    {{-- 
+        Laravel uses this field to determine whether the form
+        performs a POST request for creating an FAQ or a PUT/PATCH
+        request for updating an existing FAQ.
+    --}}
+    <input
+        type="hidden"
+        name="_method"
+        id="faq-method"
+        value="POST"
+    >
+
+    {{--
+        Contains the original Support Request ID when an answered
+        Support Request is converted into an FAQ.
+
+        Laravel will use this ID to locate and copy the original
+        answer image into the FAQ image directory.
+    --}}
+    <input
+        type="hidden"
+        name="support_request_id"
+        id="support_request_id"
+        value=""
+    >
 
             <div class="form-card">
 

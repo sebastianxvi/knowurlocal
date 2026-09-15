@@ -661,6 +661,17 @@ buildSearchableAgencyOptions();
     const removeImageInput =
     document.getElementById("removeImageInput");
 
+
+    /*
+ * Stores the Support Request ID when an answered
+ * Support Request is being converted into an FAQ.
+ *
+ * Laravel uses this value to copy the original
+ * Support Request answer image into the FAQ.
+ */
+const supportRequestIdInput =
+    document.getElementById("support_request_id");
+
     
 
     const translateFaqBtn =
@@ -1030,6 +1041,20 @@ buildSearchableAgencyOptions();
             const draft =
                 result.draft;
 
+            /*
+ * Preserve the original Support Request ID.
+ *
+ * This hidden field will be submitted together with
+ * the new FAQ form so Laravel knows where to retrieve
+ * the original answer image.
+ */
+if (supportRequestIdInput) {
+
+    supportRequestIdInput.value =
+        result.support_request_id || "";
+
+}
+
 
             /*
              * Set the agency from the original
@@ -1058,6 +1083,25 @@ buildSearchableAgencyOptions();
 
             answerFilInput.value =
                 draft.answer_fil || "";
+
+            /*
+ * Display the original Support Request answer image
+ * as a preview when one exists.
+ *
+ * This only displays the image. The actual image copy
+ * will be handled securely by Laravel during saving.
+ */
+if (result.support_image) {
+
+    showFaqImagePreview(
+        `/storage/${result.support_image}`
+    );
+
+} else {
+
+    resetImageState();
+
+}
 
 
             /*
@@ -1950,10 +1994,27 @@ if (removeFaqImageBtn) {
 
 
             /*
-             * Clear the preview and mark the
-             * database image for deletion.
-             */
-            resetImageState(true);
+ * Clear the preview and mark the
+ * database image for deletion.
+ */
+resetImageState(true);
+
+
+/*
+ * If this is a Support Request conversion,
+ * clearing the Support Request reference prevents
+ * Laravel from copying the original Support Request
+ * image after the administrator removed it.
+ */
+if (
+    currentMode === "convert" &&
+    supportRequestIdInput
+) {
+
+    supportRequestIdInput.value =
+        "";
+
+}
 
         }
     );
@@ -2974,17 +3035,33 @@ resetTextareaHeights();
          */
 
         if (
-            mode === "add"
-        ) {
+    mode === "add"
+) {
 
-            form.action =
-                "/faqs";
+    form.action =
+        "/faqs";
 
-            methodInput.value =
-                "POST";
+    methodInput.value =
+        "POST";
 
-            title.textContent =
-                "Add FAQ";
+
+    /*
+     * Clear any previous Support Request reference.
+     *
+     * Without this reset, opening Add FAQ after a
+     * conversion could accidentally copy an old
+     * Support Request image.
+     */
+    if (supportRequestIdInput) {
+
+        supportRequestIdInput.value =
+            "";
+
+    }
+
+
+    title.textContent =
+        "Add FAQ";
 
 
             enableInputs(true);
@@ -3202,19 +3279,33 @@ resetTextareaHeights();
          */
 
         if (
-            mode === "convert" &&
-            data
-        ) {
+    mode === "convert" &&
+    data
+) {
 
-            /*
-             * A Support Request becomes a new FAQ.
-             */
-            form.action =
-                "/faqs";
+    /*
+     * A Support Request becomes a new FAQ.
+     */
+    form.action =
+        "/faqs";
 
 
-            methodInput.value =
-                "POST";
+    methodInput.value =
+        "POST";
+
+
+    /*
+     * Store the Support Request ID immediately.
+     *
+     * This guarantees that the ID is available even
+     * before the preparation request finishes.
+     */
+    if (supportRequestIdInput) {
+
+        supportRequestIdInput.value =
+            data.id || "";
+
+    }
 
 
             title.textContent =
@@ -3924,59 +4015,318 @@ return;
 
     }
 
+    /*
+ * =========================================================
+ * DUPLICATE FAQ VALIDATION
+ * =========================================================
+ *
+ * Performs a frontend duplicate check before the form
+ * confirmation modal is displayed.
+ *
+ * The backend check remains authoritative because:
+ *
+ * 1. The browser only sees FAQs on the current page.
+ * 2. Another administrator may create the same FAQ.
+ * 3. Frontend validation can be bypassed.
+ */
+
+function normalizeFaqValue(value) {
 
     /*
-     * =========================================================
-     * CONFIRM SAVE
-     * =========================================================
+     * Convert null/undefined values into an empty string.
+     *
+     * trim() removes unnecessary spaces.
+     *
+     * toLocaleLowerCase() makes comparison
+     * case-insensitive for the current locale.
      */
+    return String(value ?? "")
+        .trim()
+        .toLocaleLowerCase();
 
-    form.addEventListener(
-        "submit",
-        function (e) {
+}
 
-            /*
-             * Prevent immediate submission so the
-             * administrator can confirm the operation.
-             */
-            e.preventDefault();
 
+function getCurrentFaqId() {
+
+    /*
+     * During edit mode, the current FAQ must be excluded
+     * from the duplicate comparison.
+     */
+    if (
+        currentMode === "edit" &&
+        methodInput.value === "PUT"
+    ) {
+
+        const action =
+            form.getAttribute("action") || "";
+
+        const match =
+            action.match(/\/faqs\/(\d+)$/);
+
+        return match
+            ? match[1]
+            : null;
+
+    }
+
+    return null;
+
+}
+
+
+function findDuplicateFaq() {
+
+    /*
+     * Read and normalize the values currently entered
+     * into the form.
+     */
+    const agencyId =
+        String(agencySelect.value || "");
+
+    const question =
+        normalizeFaqValue(
+            questionInput.value
+        );
+
+    const answer =
+        normalizeFaqValue(
+            answerInput.value
+        );
+
+    const keywords =
+        normalizeFaqValue(
+            keywordsInput.value
+        );
+
+
+    /*
+     * Do not run duplicate comparison against
+     * incomplete FAQ data.
+     *
+     * Laravel will perform the required-field validation.
+     */
+    if (
+        !agencyId ||
+        !question ||
+        !answer
+    ) {
+
+        return null;
+
+    }
+
+
+    /*
+     * Read the FAQ rows currently rendered on the page.
+     *
+     * This is only an early UX check.
+     * Laravel still performs the real database check.
+     */
+    const faqRows =
+        document.querySelectorAll(
+            ".faq-row"
+        );
+
+
+    const currentFaqId =
+        getCurrentFaqId();
+
+
+    for (
+        const row of faqRows
+    ) {
+
+        const rowId =
+            String(
+                row.dataset.id || ""
+            );
+
+
+        /*
+         * Do not compare an FAQ against itself
+         * while editing that FAQ.
+         */
+        if (
+            currentFaqId &&
+            rowId === currentFaqId
+        ) {
+
+            continue;
+
+        }
+
+
+        const rowAgency =
+            String(
+                row.dataset.agency || ""
+            );
+
+
+        const rowQuestion =
+            normalizeFaqValue(
+                row.dataset.question
+            );
+
+        const rowAnswer =
+            normalizeFaqValue(
+                row.dataset.answer
+            );
+
+        const rowKeywords =
+            normalizeFaqValue(
+                row.dataset.keywords
+            );
+
+
+        /*
+         * A duplicate requires all four values
+         * to match exactly after normalization:
+         *
+         * 1. Agency
+         * 2. English question
+         * 3. English answer
+         * 4. Keywords
+         */
+        const isDuplicate =
+            rowAgency === agencyId &&
+            rowQuestion === question &&
+            rowAnswer === answer &&
+            rowKeywords === keywords;
+
+
+        if (isDuplicate) {
+
+            return {
+
+                id:
+                    rowId,
+
+                question:
+                    row.dataset.question ||
+                    "This FAQ"
+
+            };
+
+        }
+
+    }
+
+
+    /*
+     * No duplicate was found among the
+     * currently visible FAQ rows.
+     */
+    return null;
+
+}
+
+
+    /*
+ * =========================================================
+ * CONFIRM SAVE
+ * =========================================================
+ */
+
+form.addEventListener(
+    "submit",
+    function (e) {
+
+        /*
+         * Stop the browser's normal submission first.
+         *
+         * This allows validation and confirmation to run
+         * before Laravel receives the request.
+         */
+        e.preventDefault();
+
+
+        /*
+         * Run the frontend duplicate check.
+         */
+        const duplicateFaq =
+            findDuplicateFaq();
+
+
+        /*
+         * Stop immediately when a duplicate is detected.
+         *
+         * The existing shared alert modal is reused.
+         */
+        if (duplicateFaq) {
 
             showAlertModal({
 
                 title:
-                    "Save changes?",
+                    "Duplicate FAQ detected",
 
                 text:
-                    "Make sure all information is correct.",
+                    "An FAQ with the same agency, question, answer, and keywords already exists. Please review the existing FAQ instead of creating another copy.",
 
                 icon:
-                    "✓",
+                    "!",
 
                 variant:
-                    "success",
+                    "danger",
 
                 confirmText:
-                    "Save",
+                    "OK",
 
                 showCancel:
-                    true,
-
-                onConfirm: () => {
-
-                    /*
-                     * Native form submission bypasses this
-                     * submit listener and sends the form
-                     * normally to Laravel.
-                     */
-                    form.submit();
-
-                }
+                    false
 
             });
 
+
+            /*
+             * Do not display the Save confirmation modal.
+             */
+            return;
+
         }
-    );
+
+
+        /*
+         * No duplicate was found among the currently
+         * visible FAQ rows, so request confirmation.
+         *
+         * Laravel will still perform the authoritative
+         * database duplicate check.
+         */
+        showAlertModal({
+
+            title:
+                "Save changes?",
+
+            text:
+                "Make sure all information is correct.",
+
+            icon:
+                "✓",
+
+            variant:
+                "success",
+
+            confirmText:
+                "Save",
+
+            showCancel:
+                true,
+
+            onConfirm: () => {
+
+                /*
+                 * Native form.submit() bypasses this submit
+                 * event listener and submits the form normally.
+                 */
+                form.submit();
+
+            }
+
+        });
+
+    }
+);
 
 
     /*

@@ -9,6 +9,8 @@ use App\Models\UserLog;
 use App\Models\SupportRequest;
 use App\Services\FaqTranslationService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
 
 class FaqController extends Controller
 {
@@ -285,32 +287,34 @@ public function prepareFromSupport(
          * Nothing is written to the FAQ database here.
          */
         return response()->json([
-            'success' => true,
+    'success' => true,
 
-            'support_request_id' => $support->id,
+    'support_request_id' => $support->id,
 
-            'agency_id' => $support->agency_id,
+    'agency_id' => $support->agency_id,
 
-            'draft' => [
-                'detected_language' =>
-                    $draft['detected_language'],
-    
-                'question' =>
-                    $draft['question'],
+    'support_image' => $support->answer_image,
 
-                'answer' =>
-                    $draft['answer'],
+    'draft' => [
+        'detected_language' =>
+            $draft['detected_language'],
 
-                'question_fil' =>
-                    $draft['question_fil'],
+        'question' =>
+            $draft['question'],
 
-                'answer_fil' =>
-                    $draft['answer_fil'],
+        'answer' =>
+            $draft['answer'],
 
-                'keyword_suggestions' =>
-                    $draft['keyword_suggestions'],
-            ],
-        ]);
+        'question_fil' =>
+            $draft['question_fil'],
+
+        'answer_fil' =>
+            $draft['answer_fil'],
+
+        'keyword_suggestions' =>
+            $draft['keyword_suggestions'],
+    ],
+]);
 
     } catch (\Throwable $e) {
 
@@ -682,43 +686,268 @@ if ($status === 'trashed') {
 
 
     /**
-     * ➕ STORE FAQ
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'agency_id'    => 'required|exists:agencies,id',
+ * ➕ STORE FAQ
+ */
+public function store(Request $request)
+{
+    /*
+    |--------------------------------------------------------------------------
+    | VALIDATE BASIC INPUT FIRST
+    |--------------------------------------------------------------------------
+    |
+    | We validate the incoming data before using it for
+    | duplicate detection or database operations.
+    |
+    */
 
-            // English is required.
-            'question'     => 'required|string|max:255',
-            'answer'       => 'required|string',
+    $validated = $request->validate([
+        'agency_id' => [
+            'required',
+            'integer',
+            'exists:agencies,id',
+        ],
 
-            // Filipino / Taglish is optional.
-            'question_fil' => 'nullable|string|max:255',
-            'answer_fil'   => 'nullable|string',
+        'support_request_id' => [
+            'nullable',
+            'integer',
+            'exists:support_requests,id',
+        ],
 
-            // Search keywords are optional.
-            'keywords'     => 'nullable|string|max:1000',
-            'image' => [
-    'nullable',
-    'image',
-    'mimes:jpg,jpeg,png,webp',
-    'max:5120',
-],
+        // English is required.
+        'question' => [
+            'required',
+            'string',
+            'max:255',
+        ],
 
-'remove_image' => [
-    'nullable',
-    'boolean',
-],
-        ]);
+        'answer' => [
+            'required',
+            'string',
+        ],
 
-        $imagePath = null;
+        // Filipino / Taglish is optional.
+        'question_fil' => [
+            'nullable',
+            'string',
+            'max:255',
+        ],
+
+        'answer_fil' => [
+            'nullable',
+            'string',
+        ],
+
+        // Search keywords are optional.
+        'keywords' => [
+            'nullable',
+            'string',
+            'max:1000',
+        ],
+
+        'image' => [
+            'nullable',
+            'image',
+            'mimes:jpg,jpeg,png,webp',
+            'max:5120',
+        ],
+
+        'remove_image' => [
+            'nullable',
+            'boolean',
+        ],
+    ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | NORMALIZE VALUES FOR DUPLICATE DETECTION
+    |--------------------------------------------------------------------------
+    |
+    | trim() removes unnecessary spaces.
+    | mb_strtolower() makes the comparison case-insensitive.
+    |
+    */
+
+    $normalizedQuestion = mb_strtolower(
+        trim($validated['question'])
+    );
+
+    $normalizedAnswer = mb_strtolower(
+        trim($validated['answer'])
+    );
+
+    $normalizedKeywords = mb_strtolower(
+        trim($validated['keywords'] ?? '')
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | CHECK FOR AN EXISTING FAQ
+    |--------------------------------------------------------------------------
+    |
+    | withTrashed() also checks soft-deleted FAQs.
+    | This prevents an administrator from creating a duplicate
+    | while the original FAQ is still in the recycle bin.
+    |
+    */
+
+    $duplicateFaq = Faq::withTrashed()
+        ->where(
+            'agency_id',
+            $validated['agency_id']
+        )
+        ->get()
+        ->first(function ($faq) use (
+            $normalizedQuestion,
+            $normalizedAnswer,
+            $normalizedKeywords
+        ) {
+            return mb_strtolower(
+                trim($faq->question)
+            ) === $normalizedQuestion
+
+            && mb_strtolower(
+                trim($faq->answer)
+            ) === $normalizedAnswer
+
+            && mb_strtolower(
+                trim($faq->keywords ?? '')
+            ) === $normalizedKeywords;
+        });
+
+    /*
+    |--------------------------------------------------------------------------
+    | STOP DUPLICATE CREATION
+    |--------------------------------------------------------------------------
+    */
+
+    if ($duplicateFaq) {
+        return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors([
+                'question' =>
+                    'This FAQ already exists for the selected agency.',
+            ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | FAQ IMAGE HANDLING
+    |--------------------------------------------------------------------------
+    */
+
+    $imagePath = null;
+
+/*
+|--------------------------------------------------------------------------
+| CASE 1: ADMINISTRATOR UPLOADED A NEW IMAGE
+|--------------------------------------------------------------------------
+|
+| A manually uploaded image always takes priority over
+| the image attached to the Support Request.
+|
+*/
 
 if ($request->hasFile('image')) {
+
     $imagePath = $request->file('image')->store(
         'faqs',
         'public'
     );
+}
+
+/*
+|--------------------------------------------------------------------------
+| CASE 2: COPY IMAGE FROM SUPPORT REQUEST
+|--------------------------------------------------------------------------
+|
+| This is used when the FAQ is being created from an
+| answered Support Request and no replacement image
+| was manually uploaded.
+|
+*/
+
+elseif ($request->filled('support_request_id')) {
+
+    /*
+     * Retrieve the source Support Request from the database.
+     *
+     * We do not trust the question, answer, or image path
+     * sent by the browser.
+     */
+    $support = SupportRequest::findOrFail(
+        $request->input('support_request_id')
+    );
+
+    /*
+     * Only answered Support Requests may become FAQs.
+     */
+    abort_unless(
+        filled($support->answer),
+        422,
+        'Only answered support requests can become FAQs.'
+    );
+
+    /*
+     * Make sure the selected agency belongs to the
+     * original Support Request.
+     *
+     * This prevents an administrator from associating
+     * the copied content with an unrelated agency.
+     */
+    abort_unless(
+        (int) $support->agency_id ===
+        (int) $request->input('agency_id'),
+        403,
+        'The selected agency does not match the support request.'
+    );
+
+    /*
+     * Only copy the image if the Support Request actually
+     * contains an image and the file exists on storage.
+     */
+    if (
+        $support->answer_image &&
+        Storage::disk('public')->exists(
+            $support->answer_image
+        )
+    ) {
+
+        /*
+         * Preserve the original file extension.
+         */
+        $extension = pathinfo(
+            $support->answer_image,
+            PATHINFO_EXTENSION
+        );
+
+        /*
+         * Generate a unique destination filename.
+         *
+         * The copied file is stored separately from the
+         * Support Request image so the FAQ does not depend
+         * on the original file remaining unchanged.
+         */
+        $newImagePath =
+            'faqs/faq-' .
+            Str::uuid() .
+            '.' .
+            strtolower($extension);
+
+        /*
+         * Copy the original Support Request image into
+         * the FAQ storage directory.
+         */
+        Storage::disk('public')->copy(
+            $support->answer_image,
+            $newImagePath
+        );
+
+        /*
+         * Save the copied FAQ image path in the FAQ record.
+         */
+        $imagePath = $newImagePath;
+    }
 }
 
 $faq = Faq::create([
@@ -760,6 +989,8 @@ $faq->id
             ->back()
             ->with('success', 'FAQ created successfully.');
     }
+
+
 
     /**
      * ✏️ UPDATE FAQ
