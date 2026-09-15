@@ -54,20 +54,20 @@ class TemporaryAgencySeeder extends Seeder
         ])->pluck('id', 'category_name');
 
         /*
-         * Resolve contact-type IDs by their stable slugs.
-         *
-         * This is safer than hard-coding contact_type_id values because
-         * database IDs may change while the semantic slugs remain stable.
-         */
-        $hotlineTypeId = ContactType::where(
-            'slug',
-            'hotline'
-        )->value('id');
+ * Resolve contact-type IDs by their stable slugs.
+ *
+ * Using slugs prevents the seeder from depending on fixed
+ * auto-increment IDs.
+ */
+$contactTypeIds = ContactType::whereIn('slug', [
 
-        $emailTypeId = ContactType::where(
-            'slug',
-            'email'
-        )->value('id');
+    'hotline',
+    'landline',
+    'email',
+    'website',
+    'facebook',
+
+])->pluck('id', 'slug');
 
         /*
          * Stop immediately if the NGA reference is missing.
@@ -92,14 +92,24 @@ class TemporaryAgencySeeder extends Seeder
             );
         }
 
-        /*
-         * Stop if required contact types are missing.
-         */
-        if (!$hotlineTypeId || !$emailTypeId) {
-            throw new RuntimeException(
-                'Required Hotline and Email contact types were not found.'
-            );
-        }
+ /*
+ * Stop if any required contact type is missing.
+ *
+ * These slugs must exist in the contact_types table
+ * before agency contacts can be inserted.
+ */
+foreach (
+    ['hotline', 'landline', 'email', 'website', 'facebook']
+    as $requiredContactType
+) {
+
+    if (!$contactTypeIds->has($requiredContactType)) {
+
+        throw new RuntimeException(
+            "Required contact type '{$requiredContactType}' was not found."
+        );
+    }
+}
 
         /*
          * Temporary test dataset.
@@ -120,23 +130,30 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'DA',
                 'category' => 'Agriculture & Agrarian Services',
                 'agency_description' => 'Government agency responsible for promoting agricultural development and supporting farmers, fisherfolk, agricultural enterprises, and rural communities through agricultural programs and technical assistance.',
+                'office_head_name' => null,
+                'office_head_position' => null,
                 'services_offered' => 'Agricultural assistance; farmer and fisherfolk programs; agricultural production support; farm development; livelihood programs; technical assistance; training and agricultural information.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM',
                 'agency_location' => 'San Jose, Occidental Mindoro',
                 'lat' => 12.353100,
                 'lng' => 121.068200,
                 'contacts' => [
-                    [
-                        'type' => 'hotline',
-                        'label' => 'DA Hotline',
-                        'value' => '1381',
-                    ],
-                    [
-                        'type' => 'email',
-                        'label' => 'Official Email',
-                        'value' => 'osec.official@da.gov.ph',
-                    ],
-                ],
+    [
+        'type' => 'hotline',
+        'label' => 'DA Hotline',
+        'value' => '1381',
+    ],
+    [
+        'type' => 'landline',
+        'label' => 'MIMAROPA Regional Office',
+        'value' => '(02) 8927-4350 / (02) 8332-7274',
+    ],
+    [
+        'type' => 'email',
+        'label' => 'MIMAROPA Regional Office',
+        'value' => 'mimaropa@mail.da.gov.ph',
+    ],
+],
             ],
 
           
@@ -148,6 +165,9 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government agency responsible for implementing agrarian reform programs, including land tenure improvement, agrarian justice, and support services for agrarian reform beneficiaries.',
+
+            'office_head_name' => null,
+'office_head_position' => null,
 
         'services_offered' =>
             'Land tenure improvement; agrarian legal assistance; land acquisition and distribution assistance; agrarian reform beneficiary support; land-related case assistance.',
@@ -182,7 +202,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government agency responsible for the development, operation, maintenance, and management of irrigation systems supporting agricultural production.',
-
+'office_head_name' => 'Mary Grace B. Cartagena',
+'office_head_position' => 'Division Manager',
         'services_offered' =>
             'Irrigation development; irrigation system operation and maintenance; irrigation water management; irrigators association assistance; irrigation technical services.',
 
@@ -197,15 +218,20 @@ class TemporaryAgencySeeder extends Seeder
 
         'contacts' => [
             [
-                'type' => 'hotline',
-                'label' => 'Office Telephone',
-                'value' => '(043) 457-0250',
-            ],
-            [
-                'type' => 'email',
-                'label' => 'Official Office Email',
-                'value' => 'r4b.occmindoro-imo@nia.gov.ph',
-            ],
+    'type' => 'landline',
+    'label' => 'Office Telephone',
+    'value' => '(043) 457-0250',
+],
+[
+    'type' => 'hotline',
+    'label' => 'IMO Mobile Contact',
+    'value' => '0977-824-7254 / 0920-959-5102',
+],
+[
+    'type' => 'email',
+    'label' => 'Official Office Email',
+    'value' => 'r4b.occmindoro-imo@nia.gov.ph',
+],
         ],
     ],
 
@@ -214,23 +240,40 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'DepEd',
                 'category' => 'Education',
                 'agency_description' => 'Government agency responsible for delivering and supporting accessible and quality basic education for learners and communities.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Basic education programs; learner enrollment and records assistance; teacher and school support; learner welfare; school governance; education-related information and assistance.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM',
                 'agency_location' => 'Bonifacio Street, San Jose, Occidental Mindoro',
                 'lat' => 12.353000,
                 'lng' => 121.066800,
                 'contacts' => [
-                    [
-                        'type' => 'hotline',
-                        'label' => 'Public Assistance',
-                        'value' => '8888',
-                    ],
-                    [
-                        'type' => 'email',
-                        'label' => 'DepEd Action Center',
-                        'value' => 'action@deped.gov.ph',
-                    ],
-                ],
+    [
+        'type' => 'landline',
+        'label' => 'Schools Division Office',
+        'value' => '(043) 458-1453',
+    ],
+    [
+        'type' => 'hotline',
+        'label' => 'Smart Mobile',
+        'value' => '0969-199-6860',
+    ],
+    [
+        'type' => 'hotline',
+        'label' => 'Globe Mobile',
+        'value' => '0967-084-3670',
+    ],
+    [
+        'type' => 'email',
+        'label' => 'DepEd Action Center',
+        'value' => 'action@deped.gov.ph',
+    ],
+    [
+        'type' => 'facebook',
+        'label' => 'Official Facebook Page',
+        'value' => 'DepEd Occidental Mindoro',
+    ],
+],
             ],
 
             [
@@ -240,7 +283,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government fire protection agency responsible for fire prevention, fire suppression, rescue operations, emergency response, and fire safety enforcement.',
-
+'office_head_name' => 'FINSP Vincent M. Almero',
+'office_head_position' => 'Chief, BFP–San Jose Fire Station',
         'services_offered' =>
             'Fire emergency response; rescue assistance; fire prevention; fire safety inspection; fire safety education; fire safety-related certification and assistance.',
 
@@ -271,23 +315,20 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'PNP',
                 'category' => 'Public Safety & Security',
                 'agency_description' => 'Local police unit responsible for maintaining peace and order, preventing and investigating crimes, responding to emergencies, and protecting the community.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Police assistance; crime reporting; emergency response; investigation; public safety assistance; police-related document and clearance assistance.',
                 'office_hours' => '24 hours / Emergency response',
                 'agency_location' => 'Quezon Street, San Jose, Occidental Mindoro',
                 'lat' => 12.352300,
                 'lng' => 121.069100,
                 'contacts' => [
-                    [
-                        'type' => 'hotline',
-                        'label' => 'Emergency Hotline',
-                        'value' => '911',
-                    ],
-                    [
-                        'type' => 'email',
-                        'label' => 'E-Sumbong',
-                        'value' => 'e-sumbong@pnp.gov.ph',
-                    ],
-                ],
+    [
+        'type' => 'hotline',
+        'label' => 'Police Emergency Hotline',
+        'value' => '911',
+    ],
+],
             ],
 
             [
@@ -295,6 +336,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'PA',
                 'category' => 'Public Safety & Security',
                 'agency_description' => 'Land-based branch of the Armed Forces of the Philippines responsible for territorial defense, security operations, and support to civilian authorities when required.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Territorial security; community assistance; civil-military coordination; humanitarian assistance; disaster response support.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM; operations as required',
                 'agency_location' => 'San Jose, Occidental Mindoro',
@@ -321,7 +364,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government agency responsible for civil aviation regulation and the operation and safety oversight of government airports.',
-
+'office_head_name' => null,
+'office_head_position' => null,
         'services_offered' =>
             'Airport operations; aviation safety and security; passenger assistance; airport information; aviation regulatory services.',
 
@@ -336,17 +380,27 @@ class TemporaryAgencySeeder extends Seeder
         'lng' => 121.04679,
 
         'contacts' => [
-            [
-                'type' => 'hotline',
-                'label' => 'San Jose Airport',
-                'value' => '0993-904-0870',
-            ],
-            [
-                'type' => 'email',
-                'label' => 'San Jose Airport',
-                'value' => 'sanjose_airport@caap.gov.ph',
-            ],
-        ],
+    [
+        'type' => 'landline',
+        'label' => 'San Jose Airport',
+        'value' => '(043) 491-1828',
+    ],
+    [
+        'type' => 'landline',
+        'label' => 'San Jose Airport Fax',
+        'value' => '(043) 742-5527',
+    ],
+    [
+    'type' => 'hotline',
+    'label' => 'CAAP Operations Center 24/7',
+    'value' => '(02) 8246-4988 local 2234 / 2235',
+],
+[
+    'type' => 'email',
+    'label' => 'CAAP Operations Center',
+    'value' => 'opcen@caap.gov.ph',
+],
+],
     ],
 
             [
@@ -356,30 +410,37 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government agency that promotes science, technology, research, and innovation to support communities, enterprises, and local development.',
-
+'office_head_name' => 'Maria Ethelwilda G. Coronacion',
+'office_head_position' => 'Provincial S&T Director',
         'services_offered' =>
             'Technology assistance; innovation support; technical assistance; research and development support; science and technology training; technology-based enterprise assistance.',
 
         'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM',
 
         'agency_location' =>
-            'Blessings 1 Bldg., F.Y. Manalo Avenue, Barangay Pag-asa, San Jose, Occidental Mindoro',
+            'Blessings 1 Building, F.Y. Manalo Avenue,
+Barangay Pag-asa, San Jose, Occidental Mindoro',
 
         'lat' => 12.345000,
         'lng' => 121.068000,
 
         'contacts' => [
-            [
-                'type' => 'hotline',
-                'label' => 'Mobile',
-                'value' => '0920-969-6224',
-            ],
-            [
-                'type' => 'email',
-                'label' => 'Official Email',
-                'value' => 'pstc.occimindoro@mimaropa.dost.gov.ph',
-            ],
-        ],
+    [
+        'type' => 'hotline',
+        'label' => 'Provincial S&T Director Mobile',
+        'value' => '0920-969-6224',
+    ],
+    [
+        'type' => 'email',
+        'label' => 'PSTO Occidental Mindoro',
+        'value' => 'pstc.occimindoro@mimaropa.dost.gov.ph',
+    ],
+    [
+        'type' => 'facebook',
+        'label' => 'Official Facebook Page',
+        'value' => 'DOST Occidental Mindoro',
+    ],
+],
     ],
 
             [
@@ -389,7 +450,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government agency supporting entrepreneurs, micro, small, and medium enterprises, consumers, and local industries through enterprise development, trade promotion, and consumer protection.',
-
+'office_head_name' => 'Noel Dr. Flores',
+'office_head_position' => 'Provincial Director',
         'services_offered' =>
             'Business advisory services; MSME development; entrepreneurship assistance; Negosyo Center services; consumer assistance; business training and enterprise development.',
 
@@ -402,17 +464,27 @@ class TemporaryAgencySeeder extends Seeder
         'lng' => 121.066500,
 
         'contacts' => [
-            [
-                'type' => 'hotline',
-                'label' => 'DTI Customer Contact Center',
-                'value' => '1-DTI (384)',
-            ],
-            [
-                'type' => 'email',
-                'label' => 'DTI Customer Contact Center',
-                'value' => 'ask@dti.gov.ph',
-            ],
-        ],
+    [
+        'type' => 'landline',
+        'label' => 'Provincial Office',
+        'value' => '(043) 491-0531',
+    ],
+    [
+        'type' => 'hotline',
+        'label' => 'Provincial Director Mobile',
+        'value' => '0921-587-2436',
+    ],
+    [
+        'type' => 'email',
+        'label' => 'Provincial Office Email',
+        'value' => 'R04B.OccidentalMindoro@dti.gov.ph',
+    ],
+    [
+        'type' => 'email',
+        'label' => 'Provincial Director Email',
+        'value' => 'NoelFlores@dti.gov.ph',
+    ],
+],
     ],
 
             [
@@ -422,30 +494,32 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government financial institution providing banking and development financing services to individuals, businesses, farmers, government institutions, and other priority sectors.',
-
+'office_head_name' => null,
+'office_head_position' => null,
         'services_offered' =>
             'Deposit and withdrawal services; loans and financing; government transactions; agricultural and MSME financing; payment and banking services.',
 
         'office_hours' => 'Monday-Friday, 9:00 AM-4:00 PM',
 
         'agency_location' =>
-            'Punzalan Building, Quirino Street, Barangay VI, San Jose, Occidental Mindoro',
+            'Punzalan Building, Quirino Street,
+Barangay VI, San Jose, Occidental Mindoro',
 
         'lat' => 12.352900,
         'lng' => 121.066200,
 
         'contacts' => [
-            [
-                'type' => 'hotline',
-                'label' => 'San Jose Branch',
-                'value' => '(043) 457-0243',
-            ],
-            [
-                'type' => 'email',
-                'label' => 'Branch Email',
-                'value' => 'SanJoseMindoroBranch@landbank.com',
-            ],
-        ],
+    [
+        'type' => 'landline',
+        'label' => 'San Jose Branch',
+        'value' => '(043) 457-0243',
+    ],
+    [
+        'type' => 'email',
+        'label' => 'San Jose Mindoro Branch',
+        'value' => 'SanJoseMindoroBranch@landbank.com',
+    ],
+],
     ],
 
             [
@@ -455,7 +529,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government development bank providing banking and financing services to individuals, businesses, government entities, and priority economic sectors.',
-
+'office_head_name' => null,
+'office_head_position' => null,
         'services_offered' =>
             'Deposit accounts; loans; development financing; government banking services; payment services; business financing.',
 
@@ -486,6 +561,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'COMELEC',
                 'category' => 'Government & Public Administration',
                 'agency_description' => 'Constitutional commission responsible for administering elections and maintaining the integrity of the electoral process.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Voter registration assistance; voter record concerns; election information; election-related inquiries; electoral process assistance.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM',
                 'agency_location' => 'San Jose, Occidental Mindoro',
@@ -510,23 +587,25 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'DILG',
                 'category' => 'Government & Public Administration',
                 'agency_description' => 'Government agency that supports effective local governance, peace and order, public safety, and accountable local government administration.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Local governance assistance; barangay governance support; capacity building; local government monitoring; public safety and governance programs.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM',
                 'agency_location' => 'San Jose, Occidental Mindoro',
                 'lat' => 12.352900,
                 'lng' => 121.066200,
                 'contacts' => [
-                    [
-                        'type' => 'hotline',
-                        'label' => 'San Jose Mobile',
-                        'value' => '0917-840-2244',
-                    ],
-                    [
-                        'type' => 'email',
-                        'label' => 'San Jose DILG Office',
-                        'value' => 'dilgsanjoseocmin@gmail.com',
-                    ],
-                ],
+    [
+        'type' => 'hotline',
+        'label' => 'San Jose DILG Mobile',
+        'value' => '0917-840-2244',
+    ],
+    [
+        'type' => 'email',
+        'label' => 'San Jose DILG Office',
+        'value' => 'dilgsanjoseocmin@gmail.com',
+    ],
+],
             ],
 
             [
@@ -536,7 +615,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government agency providing social protection, welfare assistance, crisis intervention, livelihood support, and community-based social services.',
-
+'office_head_name' => null,
+'office_head_position' => null,
         'services_offered' =>
             'Social welfare assistance; crisis intervention; livelihood assistance; emergency assistance; community-based social services; social protection programs.',
 
@@ -569,7 +649,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government agency responsible for promoting employment, workers welfare, labor standards, and fair employment practices.',
-
+'office_head_name' => 'Gener Francisco',
+'office_head_position' => 'Provincial Director',
         'services_offered' =>
             'Employment assistance; labor standards assistance; worker welfare programs; livelihood and employment programs; labor-related assistance; job-seeking support.',
 
@@ -582,17 +663,22 @@ class TemporaryAgencySeeder extends Seeder
         'lng' => 121.06503,
 
         'contacts' => [
-            [
-                'type' => 'hotline',
-                'label' => 'Provincial Office',
-                'value' => '(043) 457-0463',
-            ],
-            [
-                'type' => 'email',
-                'label' => 'Provincial Office',
-                'value' => 'ro4b_ocmindoro@dole.gov.ph',
-            ],
-        ],
+    [
+        'type' => 'landline',
+        'label' => 'Provincial Office',
+        'value' => '(043) 457-0463',
+    ],
+    [
+        'type' => 'hotline',
+        'label' => 'Provincial Office Mobile',
+        'value' => '0905-476-8414 / 0910-629-1413',
+    ],
+    [
+        'type' => 'email',
+        'label' => 'Provincial Office',
+        'value' => 'ro4b_ocmindoro@dole.gov.ph',
+    ],
+],
     ],
 
             [
@@ -602,7 +688,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government-owned savings and housing finance institution providing member savings, housing finance, short-term loans, and related financial services.',
-
+'office_head_name' => null,
+'office_head_position' => null,
         'services_offered' =>
             'Membership services; savings programs; housing loans; short-term loans; member account assistance; Pag-IBIG payment services.',
 
@@ -615,17 +702,12 @@ class TemporaryAgencySeeder extends Seeder
         'lng' => 121.07075,
 
         'contacts' => [
-            [
-                'type' => 'hotline',
-                'label' => 'Pag-IBIG Hotline',
-                'value' => '8-PAG-IBIG (724-4244)',
-            ],
-            [
-                'type' => 'email',
-                'label' => 'Official Contact',
-                'value' => 'contactus@pagibigfund.gov.ph',
-            ],
-        ],
+    [
+        'type' => 'landline',
+        'label' => 'Member Services Office',
+        'value' => '(02) 8422-3000 local 6562',
+    ],
+],
     ],
 
             [
@@ -635,7 +717,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government social security institution providing social insurance and benefits to covered workers, employers, self-employed members, and their beneficiaries.',
-
+'office_head_name' => null,
+'office_head_position' => null,
         'services_offered' =>
             'Membership services; contribution assistance; benefit applications; loans; retirement benefits; disability benefits; maternity and sickness benefit assistance.',
 
@@ -648,17 +731,12 @@ class TemporaryAgencySeeder extends Seeder
         'lng' => 121.06307,
 
         'contacts' => [
-            [
-                'type' => 'hotline',
-                'label' => 'SSS Hotline',
-                'value' => '1455',
-            ],
-            [
-                'type' => 'email',
-                'label' => 'Branch Email',
-                'value' => 'sanjose@sss.gov.ph',
-            ],
-        ],
+    [
+        'type' => 'landline',
+        'label' => 'San Jose Branch',
+        'value' => '(043) 457-0093',
+    ],
+],
     ],
 
             [
@@ -668,7 +746,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Constitutional commission responsible for promoting a merit-based, professional, ethical, and efficient Philippine public service.',
-
+'office_head_name' => 'Atty. Angelina V. Faral',
+'office_head_position' => 'Director II',
         'services_offered' =>
             'Civil service examination assistance; eligibility services; government employment information; personnel-related assistance; certification and records services.',
 
@@ -699,6 +778,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'RTC / SC',
                 'category' => 'Justice & Legal Services',
                 'agency_description' => 'Court that hears and decides civil, criminal, and other cases within its jurisdiction under the Philippine judicial system.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Court proceedings; case filing and processing; court documents; judicial records; hearings and case-related transactions.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM',
                 'agency_location' => 'Hall of Justice, San Jose, Occidental Mindoro',
@@ -723,6 +804,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'NBI',
                 'category' => 'Justice & Legal Services',
                 'agency_description' => 'National investigative agency responsible for investigating major crimes and providing investigative, forensic, and clearance-related services.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'NBI clearance assistance; criminal investigation; forensic services; background investigation; investigative assistance.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM; satellite schedules may vary',
                 'agency_location' => 'Sangguniang Bayan Building, Municipal Compound, San Jose, Occidental Mindoro',
@@ -747,6 +830,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'PAO',
                 'category' => 'Justice & Legal Services',
                 'agency_description' => 'Government legal assistance office providing free legal services to qualified individuals who cannot afford private legal representation.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Free legal consultation; legal representation; preparation of legal documents; assistance in criminal, civil, family, and other qualified cases.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM',
                 'agency_location' => 'San Jose, Occidental Mindoro',
@@ -771,6 +856,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'BJMP',
                 'category' => 'Justice & Legal Services',
                 'agency_description' => 'Government agency responsible for the administration, custody, security, and rehabilitation of persons deprived of liberty in local jails.',
+                'office_head_name' => 'Nelmar M. Malimata',
+'office_head_position' => 'San Jose District Jail Warden',
                 'services_offered' => 'Jail management; custody and security; rehabilitation programs; visitation assistance; welfare and development programs for persons deprived of liberty.',
                 'office_hours' => '24 hours / Jail operations',
                 'agency_location' => 'San Jose District Jail, San Jose, Occidental Mindoro',
@@ -795,6 +882,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'DOJ',
                 'category' => 'Justice & Legal Services',
                 'agency_description' => 'Government department responsible for the administration of justice and prosecution of criminal cases and other legal matters within its mandate.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Prosecution services; preliminary investigation; legal assistance and advice; case evaluation; criminal complaint processing.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM',
                 'agency_location' => 'San Jose, Occidental Mindoro',
@@ -819,6 +908,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'PCSO',
                 'category' => 'Social Welfare & Community Services',
                 'agency_description' => 'Government-owned corporation that raises funds through charity games and provides financial and medical assistance programs.',
+                'office_head_name' => 'Rowena B. Rebaldo',
+'office_head_position' => 'Assistant Branch Manager',
                 'services_offered' => 'Medical assistance; financial assistance; charity programs; individual assistance; support for qualified health-related expenses.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM',
                 'agency_location' => 'Barangay Central, San Jose, Occidental Mindoro',
@@ -845,7 +936,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government agency responsible for environmental protection and the sustainable management, conservation, and regulation of natural resources.',
-
+'office_head_name' => null,
+'office_head_position' => null,
         'services_offered' =>
             'Environmental assistance; forestry services; natural resource management; conservation programs; permits and clearances; environmental information and assistance.',
 
@@ -876,6 +968,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'DOH',
                 'category' => 'Health & Public Health',
                 'agency_description' => 'Government agency responsible for protecting and promoting public health, disease prevention, health regulation, and healthcare system support.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Public health programs; disease prevention; health education; health regulation; health facility support; health emergency assistance.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM',
                 'agency_location' => 'San Jose, Occidental Mindoro',
@@ -902,7 +996,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government corporation providing postal, mail, parcel, and related postal services to individuals, businesses, and government offices.',
-
+'office_head_name' => 'Ronalyn M. Ancheta',
+'office_head_position' => 'Postmaster / Focal Person',
         'services_offered' =>
             'Mail acceptance and delivery; parcel services; registered mail; postal transactions; other postal services.',
 
@@ -933,6 +1028,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'CDA',
                 'category' => 'Trade, Industry & Enterprise',
                 'agency_description' => 'Government agency responsible for promoting, registering, regulating, and supporting cooperatives in the Philippines.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Cooperative registration; development assistance; training; compliance assistance; organizational development; cooperative monitoring.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM',
                 'agency_location' => 'Sub-Capitol Compound, Barangay Magbay, San Jose, Occidental Mindoro',
@@ -957,6 +1054,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'NCIP',
                 'category' => 'Social Welfare & Community Services',
                 'agency_description' => 'Government agency responsible for protecting and promoting the rights, welfare, and interests of Indigenous Cultural Communities and Indigenous Peoples.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Ancestral domain assistance; Indigenous Peoples rights protection; documentation and certification; community development assistance; cultural and legal support.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM',
                 'agency_location' => 'Old National Highway, San Jose, Occidental Mindoro',
@@ -981,6 +1080,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'BuCor',
                 'category' => 'Justice & Legal Services',
                 'agency_description' => 'Government agency responsible for the safekeeping and rehabilitation of national prisoners and the administration of national correctional institutions.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Correctional management; rehabilitation; inmate welfare programs; livelihood and skills development; reintegration support.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM / facility operations as required',
                 'agency_location' => 'San Jose, Occidental Mindoro',
@@ -1007,7 +1108,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Maritime law enforcement and safety agency responsible for maritime security, search and rescue, maritime safety, marine environmental protection, and sea emergency response.',
-
+'office_head_name' => null,
+'office_head_position' => null,
         'services_offered' =>
             'Search and rescue; maritime safety assistance; emergency response; maritime law enforcement; marine environmental protection.',
 
@@ -1038,6 +1140,8 @@ class TemporaryAgencySeeder extends Seeder
                 'agency_abbreviation' => 'PPA',
                 'category' => 'Maritime, Ports & Postal Services',
                 'agency_description' => 'Government agency responsible for planning, development, regulation, and management of public ports and port facilities.',
+                'office_head_name' => null,
+'office_head_position' => null,
                 'services_offered' => 'Port operations; passenger and cargo coordination; port facility management; shipping-related assistance; port safety and security coordination.',
                 'office_hours' => 'Monday-Friday, 8:00 AM-5:00 PM; port operations as scheduled',
                 'agency_location' => 'PPA Port, Felix Y. Manalo Avenue, San Jose, Occidental Mindoro',
@@ -1064,7 +1168,8 @@ class TemporaryAgencySeeder extends Seeder
 
         'agency_description' =>
             'Government agency responsible for administering and enforcing national internal revenue laws and collecting national internal revenue taxes.',
-
+'office_head_name' => null,
+'office_head_position' => null,
         'services_offered' =>
             'Taxpayer registration; tax filing assistance; tax payment information; taxpayer inquiries; tax compliance services; tax document processing.',
 
@@ -1111,8 +1216,7 @@ DB::transaction(function () use (
     $agencies,
     $ngaTypeId,
     $categoryIds,
-    $hotlineTypeId,
-    $emailTypeId,
+    $contactTypeIds,
     &$inserted,
     &$updated,
     &$restored,
@@ -1145,6 +1249,8 @@ DB::transaction(function () use (
             'category_id' => $categoryId,
             'agency_location' => $data['agency_location'],
             'agency_description' => $data['agency_description'],
+            'office_head_name' => $data['office_head_name'],
+            'office_head_position' => $data['office_head_position'],
             'services_offered' => $data['services_offered'],
             'office_hours' => $data['office_hours'],
             'lat' => $data['lat'],
@@ -1152,144 +1258,218 @@ DB::transaction(function () use (
         ];
 
         /*
-         * Tracks whether anything belonging to this agency
-         * needed to be changed, inserted, or restored.
-         */
-        $recordChanged = false;
+ * Tracks whether anything belonging to this agency
+ * needed to be changed, inserted, or restored.
+ */
+$recordChanged = false;
+$agencyChanged = false;
+
+/*
+ * Create the agency when it does not exist.
+ */
+if (!$existingAgency) {
+
+    $agency = Agency::create($agencyData);
+
+    $inserted++;
+
+    $recordChanged = true;
+
+} else {
+
+    $agency = $existingAgency;
+
+    /*
+     * Restore the agency when it was soft-deleted.
+     */
+    if ($agency->trashed()) {
+
+        $agency->restore();
+
+        $restored++;
+
+        $recordChanged = true;
+    }
+
+    /*
+     * Check only the seeded agency fields.
+     *
+     * This is separate from Laravel's wasChanged()
+     * because restoration can also mark the model as changed.
+     */
+    foreach ($agencyData as $field => $value) {
+
+        if ($agency->{$field} != $value) {
+
+            $agencyChanged = true;
+
+            break;
+        }
+    }
+
+    /*
+     * Update the agency when one of its fields changed.
+     */
+    if ($agencyChanged) {
+
+        $agency->update($agencyData);
+
+        $updated++;
+
+        $recordChanged = true;
+    }
+}
 
         /*
-         * Create the agency when it does not exist.
+ * Synchronize the agency's contacts.
+ *
+ * The seeder treats the contacts array as the source of truth.
+ *
+ * For every agency:
+ * - Existing matching contacts are updated.
+ * - Missing contacts are inserted.
+ * - Contacts no longer defined in the seeder are deleted.
+ *
+ * This prevents duplicate contacts caused by changed labels.
+ */
+$seededContactIds = [];
+
+foreach ($data['contacts'] as $index => $contact) {
+
+    /*
+     * Resolve the contact type using its stable slug.
+     */
+    $contactTypeId = $contactTypeIds->get(
+        $contact['type']
+    );
+
+    /*
+     * Reject unsupported contact types.
+     */
+    if (!$contactTypeId) {
+
+        throw new RuntimeException(
+            "Unsupported contact type '{$contact['type']}' "
+            . "for agency '{$data['agency_name']}'."
+        );
+    }
+
+    /*
+     * Find an existing contact using:
+     *
+     * - agency ID
+     * - contact type ID
+     * - contact label
+     *
+     * The contact value is intentionally excluded because
+     * the value may change over time.
+     */
+    $existingContact = AgencyContact::where(
+        'agency_id',
+        $agency->id
+    )
+        ->where(
+            'contact_type_id',
+            $contactTypeId
+        )
+        ->where(
+            'label',
+            $contact['label']
+        )
+        ->first();
+
+    /*
+     * Prepare the synchronized contact data.
+     */
+    $contactData = [
+        'agency_id' => $agency->id,
+        'contact_type_id' => $contactTypeId,
+        'label' => $contact['label'],
+        'value' => $contact['value'],
+        'is_primary' => true,
+        'sort_order' => $index + 1,
+    ];
+
+    /*
+     * Create the contact when it does not exist.
+     */
+    if (!$existingContact) {
+
+        $existingContact = AgencyContact::create(
+            $contactData
+        );
+
+        $recordChanged = true;
+
+    } else {
+
+        /*
+         * Update the contact only when its data changed.
          */
-        if (!$existingAgency) {
+        $contactChanged = false;
 
-            $agency = Agency::create($agencyData);
+        foreach ($contactData as $field => $value) {
 
-            $inserted++;
+            if ($existingContact->{$field} != $value) {
+
+                $contactChanged = true;
+
+                break;
+            }
+        }
+
+        if ($contactChanged) {
+
+            $existingContact->update(
+                $contactData
+            );
 
             $recordChanged = true;
-
-        } else {
-
-            $agency = $existingAgency;
-
-            /*
-             * Restore the agency when it was soft-deleted.
-             */
-            if ($agency->trashed()) {
-
-                $agency->restore();
-
-                $restored++;
-
-                $recordChanged = true;
-            }
-
-            /*
-             * Check whether any agency field differs
-             * from the seeded value.
-             */
-            foreach ($agencyData as $field => $value) {
-
-                if ($agency->{$field} != $value) {
-
-                    $recordChanged = true;
-
-                    break;
-                }
-            }
-
-            /*
-             * Only update the database when something changed.
-             */
-            if ($recordChanged && !$agency->wasChanged()) {
-
-                $agency->update($agencyData);
-
-                $updated++;
-            }
         }
+    }
 
-        /*
-         * Process the agency's contacts.
-         */
-        foreach ($data['contacts'] as $index => $contact) {
+    /*
+     * Store the contact ID so obsolete contacts can be removed
+     * after the seeded contacts have been synchronized.
+     */
+    $seededContactIds[] = $existingContact->id;
+}
 
-            $contactTypeId = match ($contact['type']) {
+/*
+ * Remove contacts belonging to this agency that are no longer
+ * defined in the seeder.
+ *
+ * This removes old duplicate records such as:
+ *
+ * - DOST: Mobile
+ * - DOST: Official Email
+ * - LANDBANK: Branch Email
+ * - LANDBANK: hotline duplicate
+ */
+$obsoleteContactsQuery = AgencyContact::where(
+    'agency_id',
+    $agency->id
+);
 
-                'hotline' => $hotlineTypeId,
+if (!empty($seededContactIds)) {
 
-                'email' => $emailTypeId,
+    $obsoleteContactsQuery->whereNotIn(
+        'id',
+        $seededContactIds
+    );
+}
 
-                default => throw new RuntimeException(
-                    'Unsupported contact type in temporary agency dataset.'
-                ),
-            };
+$obsoleteContacts = $obsoleteContactsQuery->get();
 
-            /*
-             * Find the contact using the agency and contact type.
-             *
-             * We do not use the contact value here because the value
-             * itself may change. If a phone number changes, we want
-             * to update the existing hotline instead of creating
-             * another hotline record.
-             */
-            $existingContact = AgencyContact::where(
-                'agency_id',
-                $agency->id
-            )
-                ->where(
-                    'contact_type_id',
-                    $contactTypeId
-                )
-                ->first();
+if ($obsoleteContacts->isNotEmpty()) {
 
-            $contactData = [
-                'agency_id' => $agency->id,
-                'contact_type_id' => $contactTypeId,
-                'label' => $contact['label'],
-                'value' => $contact['value'],
-                'is_primary' => true,
-                'sort_order' => $index + 1,
-            ];
+    AgencyContact::whereIn(
+        'id',
+        $obsoleteContacts->pluck('id')
+    )->delete();
 
-            /*
-             * Create the contact when it does not exist.
-             */
-            if (!$existingContact) {
-
-                AgencyContact::create($contactData);
-
-                $recordChanged = true;
-
-                continue;
-            }
-
-            /*
-             * Check whether the existing contact differs
-             * from the seeded contact.
-             */
-            $contactChanged = false;
-
-            foreach ($contactData as $field => $value) {
-
-                if ($existingContact->{$field} != $value) {
-
-                    $contactChanged = true;
-
-                    break;
-                }
-            }
-
-            /*
-             * Update the contact only when necessary.
-             */
-            if ($contactChanged) {
-
-                $existingContact->update($contactData);
-
-                $recordChanged = true;
-            }
-        }
+    $recordChanged = true;
+}
 
         /*
          * An existing agency is unchanged only when:
