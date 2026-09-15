@@ -1111,6 +1111,149 @@ document.addEventListener("DOMContentLoaded", function () {
 
     ];
 
+        // =====================================================
+    // DUPLICATE AGENCY VALIDATION
+    // =====================================================
+
+    /*
+     * Normalize agency text before comparing it.
+     *
+     * This makes the comparison ignore:
+     *
+     * - Uppercase/lowercase differences
+     * - Leading and trailing spaces
+     * - Multiple spaces between words
+     *
+     * Example:
+     *
+     * "  Department   of Health "
+     *
+     * becomes:
+     *
+     * "department of health"
+     */
+    function normalizeAgencyText(value) {
+
+        return String(value ?? "")
+            .trim()
+            .replace(/\s+/g, " ")
+            .toLowerCase();
+
+    }
+
+
+    /*
+     * Check whether the current agency name and
+     * abbreviation already exist in the rendered table.
+     *
+     * The backend performs the authoritative check against
+     * the complete database, including soft-deleted agencies.
+     *
+     * This frontend check only improves user experience by
+     * warning the administrator before submission.
+     */
+    function findDuplicateAgency() {
+
+        const agencyNameInput =
+            document.getElementById(
+                "agency_name"
+            );
+
+
+        const abbreviationInput =
+            document.getElementById(
+                "agency_abbreviation"
+            );
+
+
+        if (
+            !agencyNameInput ||
+            !abbreviationInput
+        ) {
+
+            return null;
+
+        }
+
+
+        const normalizedName =
+            normalizeAgencyText(
+                agencyNameInput.value
+            );
+
+
+        const normalizedAbbreviation =
+            normalizeAgencyText(
+                abbreviationInput.value
+            );
+
+
+        if (
+            !normalizedName ||
+            !normalizedAbbreviation
+        ) {
+
+            return null;
+
+        }
+
+
+        /*
+         * Read every agency row currently rendered
+         * in the table.
+         */
+        const agencyRows =
+            document.querySelectorAll(
+                ".agency-row"
+            );
+
+
+        for (const row of agencyRows) {
+
+            /*
+             * During editing, ignore the agency currently
+             * being edited. Otherwise, an agency would be
+             * detected as a duplicate of itself.
+             */
+            if (
+                currentMode === "edit" &&
+                String(row.dataset.id) ===
+                String(form.dataset.agencyId || "")
+            ) {
+
+                continue;
+
+            }
+
+
+            const existingName =
+                normalizeAgencyText(
+                    row.dataset.name
+                );
+
+
+            const existingAbbreviation =
+                normalizeAgencyText(
+                    row.dataset.abbreviation
+                );
+
+
+            if (
+                existingName === normalizedName &&
+                existingAbbreviation === normalizedAbbreviation
+            ) {
+
+                return row;
+
+            }
+
+        }
+
+
+        return null;
+
+    }
+
 
     // =====================================================
     // VALIDATE AGENCY FORM
@@ -1647,6 +1790,85 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 }
 
+                                /*
+                 * Check for a possible duplicate agency.
+                 *
+                 * This is only a frontend convenience check.
+                 * Laravel still performs the authoritative
+                 * database validation after submission.
+                 */
+                const duplicateAgency =
+                    findDuplicateAgency();
+
+
+                if (duplicateAgency) {
+
+                    e.preventDefault();
+
+
+                    showAlertModal({
+
+                        title:
+                            "Duplicate Agency",
+
+                        text:
+                            "An agency with the same name and abbreviation already exists.",
+
+                        icon:
+                            "!",
+
+                        variant:
+                            "danger",
+
+                        confirmText:
+                            "OK",
+
+                        showCancel:
+                            false,
+
+                        loading:
+                            false,
+
+                        onConfirm:
+                            () => {
+
+                                closeAlertModal();
+
+
+                                const agencyNameInput =
+                                    document.getElementById(
+                                        "agency_name"
+                                    );
+
+
+                                if (
+                                    agencyNameInput
+                                ) {
+
+                                    agencyNameInput.focus();
+
+
+                                    agencyNameInput.scrollIntoView(
+                                        {
+                                            behavior:
+                                                "smooth",
+
+                                            block:
+                                                "center"
+                                        }
+                                    );
+
+                                }
+
+                            }
+
+                    });
+
+
+                    return;
+
+                }
+
 
                 /*
                  * Existing edit operations require
@@ -2168,8 +2390,19 @@ document.addEventListener("DOMContentLoaded", function () {
         data = null
     ) {
 
-        currentMode =
+                currentMode =
             mode;
+
+
+        /*
+         * Store the agency ID currently being edited.
+         *
+         * Add mode has no existing agency ID.
+         */
+        form.dataset.agencyId =
+            mode === "edit" && data
+                ? String(data.id)
+                : "";
 
 
         modal.style.display =

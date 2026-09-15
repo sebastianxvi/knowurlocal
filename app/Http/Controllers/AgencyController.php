@@ -438,6 +438,75 @@ public function getAll()
             'nullable|integer|min:0',
     ]);
 
+            /*
+     * =====================================================
+     * DUPLICATE AGENCY VALIDATION
+     * =====================================================
+     *
+     * Prevent the same agency from being registered more
+     * than once using the same agency name and abbreviation.
+     *
+     * withTrashed() is intentional because a soft-deleted
+     * agency still exists in the database and may later be
+     * restored.
+     */
+    $normalizedAgencyName = strtolower(
+        preg_replace(
+            '/\s+/',
+            ' ',
+            trim($validated['agency_name'])
+        )
+    );
+
+    $normalizedAgencyAbbreviation = strtolower(
+        preg_replace(
+            '/\s+/',
+            ' ',
+            trim($validated['agency_abbreviation'])
+        )
+    );
+
+    $duplicateAgency = Agency::withTrashed()
+        ->get()
+        ->first(function ($agency) use (
+            $normalizedAgencyName,
+            $normalizedAgencyAbbreviation
+        ) {
+
+            $existingAgencyName = strtolower(
+                preg_replace(
+                    '/\s+/',
+                    ' ',
+                    trim($agency->agency_name)
+                )
+            );
+
+            $existingAgencyAbbreviation = strtolower(
+                preg_replace(
+                    '/\s+/',
+                    ' ',
+                    trim($agency->agency_abbreviation)
+                )
+            );
+
+            return (
+                $existingAgencyName ===
+                $normalizedAgencyName
+            ) && (
+                $existingAgencyAbbreviation ===
+                $normalizedAgencyAbbreviation
+            );
+        });
+
+    if ($duplicateAgency) {
+
+        return back()
+            ->withErrors([
+                'agency_name' =>
+                    'This agency already exists with the same name and abbreviation.'
+            ])
+            ->withInput();
+    }
 
     /*
      * =====================================================
