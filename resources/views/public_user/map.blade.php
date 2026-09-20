@@ -261,78 +261,238 @@
 </aside>
 
 
-    <!-- Chatbot placeholder -->
-    <div id="chat-toggle">
-        <img src="{{asset('images/chatbot-icon.png')}}">
-    </div>
+    <!-- =========================================================
+     KNOWURLOCAL CHATBOT
+     ========================================================= -->
+
+<!-- Floating chatbot launcher -->
+<button
+    type="button"
+    id="chat-toggle"
+    class="chat-toggle"
+    aria-label="Open KNOWURLOCAL Helpdesk"
+    title="Open KNOWURLOCAL Helpdesk"
+>
+    <span
+        class="chat-toggle-icon"
+        aria-hidden="true"
+    >
+        <i class="ph-light ph-sparkle"></i>
+    </span>
+
+    <span
+        class="chat-toggle-label"
+        aria-hidden="true"
+    >
+        KNOWURLOCAL Helpdesk
+    </span>
+</button>
 
 
+<!-- Chatbot backdrop -->
+<div
+    id="chat-overlay"
+    aria-hidden="true"
+></div>
 
-    <!-- overlay -->
-    <div id="chat-overlay"></div>
 
-    <!-- chatbot panel -->
-    <div id="chatbot">
+<!-- Chatbot panel -->
+<section
+    id="chatbot"
+    aria-label="KNOWURLOCAL Assistant"
+>
 
-        <div id="chat-container">
-            <button id="drag-handle">
-                ━━
+    <div id="chat-container">
 
-                <span id="chat-close">
-                    <i class="ph-light ph-x"></i>
+        <!-- =================================================
+             CHAT HEADER
+             ================================================= -->
+
+        <header id="chat-header">
+
+            <div class="chat-assistant-identity">
+
+                <div class="chat-assistant-icon">
+                    <i
+                        class="ph-light ph-sparkle"
+                        aria-hidden="true"
+                    ></i>
+                </div>
+
+                <div class="chat-assistant-copy">
+
+                    <h2>
+                        KNOWURLOCAL Assistant
+                    </h2>
+
+                    <p>
+                        Information support
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- Header actions -->
+
+            <div class="chat-header-actions">
+
+                <button
+                    type="button"
+                    id="ask-human-btn"
+                    aria-label="Send a ticket"
+                    title="Send a ticket"
+                >
+                    <i
+                        class="ph-light ph-ticket"
+                        aria-hidden="true"
+                    ></i>
+
+                    <span>
+                        Send a ticket
+                    </span>
+                </button>
+
+
+                <button
+                    type="button"
+                    id="chat-close"
+                    aria-label="Close assistant"
+                    title="Close assistant"
+                >
+                    <i
+                        class="ph-light ph-x"
+                        aria-hidden="true"
+                    ></i>
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <!-- =================================================
+             CONVERSATION
+             ================================================= -->
+
+        <div id="chatbox">
+
+            <!-- Initial assistant message -->
+
+            <div class="message bot chatbot-welcome">
+
+                <div class="chat-message-content">
+
+                    <span class="chat-message-label">
+                        KNOWURLOCAL
+                    </span>
+
+                    <div class="bubble">
+                        You can search for the organization first,
+                        then view its services and available contact
+                        information.
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Dynamic FAQ suggestions -->
+
+            <div id="chat-suggestions"></div>
+
+        </div>
+
+
+        <!-- =================================================
+             MOBILE SUPPORT ACTION
+             ================================================= -->
+
+        <div class="chat-mobile-ticket">
+
+            <button
+                type="button"
+                class="chat-mobile-ticket-btn"
+                id="ask-human-mobile"
+            >
+                <i
+                    class="ph-light ph-ticket"
+                    aria-hidden="true"
+                ></i>
+
+                <span>
+                    Send a ticket
                 </span>
             </button>
 
-            
+        </div>
 
-            <div id="chatbox">
-                <div id="chat-header">
 
-                    <div class="chat-top-row">
+        <!-- =================================================
+             MESSAGE INPUT
+             ================================================= -->
 
-                        <div class="chat-greeting">
-                            <h2>
-                                Hello, {{ Auth::user()->first_name ?? 'User' }}!
-                            </h2>
-                            <p class="chat-subtext">
-                                What do you have in mind?
-                            </p>
-                        </div>
+        <div id="inputArea">
 
-                        <button id="ask-human-btn">
-                            <i class="ph-light ph-chat-circle-text"></i>
-                            Talk to human
-                        </button>
+            <input
+                type="text"
+                id="message"
+                class="chatbot-input"
+                placeholder="Ask a question..."
+                autocomplete="off"
+                maxlength="1000"
+                aria-label="Ask KNOWURLOCAL a question"
+            >
 
-                    </div>
-
-                    <!-- suggestion slider -->
-                    <div id="chat-suggestions"></div>
-
-                </div>
-            </div>
-
-            <div id="inputArea">
-                <input type="text" id="message" class="chatbot-input" placeholder="Type a message...">
-                <button
-    type="button"
-    class="chatbot-btn"
-    aria-label="Send message"
->
-    <i class="ph-light ph-paper-plane-tilt"></i>
-</button>
-            </div>
+            <button
+                type="button"
+                class="chatbot-btn"
+                aria-label="Send message"
+                title="Send message"
+            >
+                <i
+                    class="ph-light ph-arrow-up"
+                    aria-hidden="true"
+                ></i>
+            </button>
 
         </div>
+
     </div>
 
-    <div id="image-modal">
-        <span id="image-close">
-            <i class="ph-light ph-x"></i>
-        </span>
+</section>
 
-        <img id="modal-img" src="" alt="Preview">
-    </div>
+
+<!-- =========================================================
+     FAQ IMAGE MODAL
+     ========================================================= -->
+
+<div
+    id="image-modal"
+    aria-hidden="true"
+>
+
+    <button
+        type="button"
+        id="image-close"
+        aria-label="Close image preview"
+        title="Close image preview"
+    >
+        <i
+            class="ph-light ph-x"
+            aria-hidden="true"
+        ></i>
+    </button>
+
+    <img
+        id="modal-img"
+        src=""
+        alt="FAQ image preview"
+    >
+
+</div>
 
     
     
@@ -351,9 +511,9 @@
         };
     </script>
 
-    <script src="{{ asset('jsfiles/public_user/navbar.js')}}"></script>
-    <script src="{{ asset('jsfiles/public_user/map.js') }}" defer></script>
-    <script src="{{ asset('jsfiles/public_user/chatbot.js') }}"></script>
+    <script src="{{ asset('jsfiles/public_user/navbar.js') }}" defer></script>
+<script src="{{ asset('jsfiles/public_user/map.js') }}" defer></script>
+<script src="{{ asset('jsfiles/public_user/chatbot.js') }}" defer></script>
 
     
 

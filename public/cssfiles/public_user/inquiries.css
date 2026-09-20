@@ -4,24 +4,56 @@
 
 
 /* =========================================================
-   BOX SIZING & MOBILE OVERFLOW
+   DESIGN TOKENS
    ========================================================= */
 
-html {
-    box-sizing: border-box;
-    overflow-x: hidden;
+:root {
+
+    --inquiry-brand: #5272c9;
+    --inquiry-brand-dark: #435fa8;
+    --inquiry-brand-soft: #e8edfb;
+    --inquiry-brand-faint: #f4f6fc;
+
+    --inquiry-page: #f6f7fa;
+    --inquiry-surface: #ffffff;
+    --inquiry-surface-soft: #f7f8fc;
+    --inquiry-surface-muted: #eef0f4;
+
+    --inquiry-text: #1a1e28;
+    --inquiry-text-soft: #4b5362;
+    --inquiry-text-muted: #757d8c;
+    --inquiry-text-faint: #a0a6b1;
+
+    --inquiry-border: rgba(30, 38, 55, 0.09);
+    --inquiry-border-soft: rgba(30, 38, 55, 0.065);
+    --inquiry-border-strong: rgba(30, 38, 55, 0.15);
+
+    --inquiry-shadow-soft:
+        0 5px 20px rgba(35, 45, 70, 0.045);
+
+    --inquiry-shadow-medium:
+        0 14px 36px rgba(35, 45, 70, 0.075);
+
+    --inquiry-radius-sm: 10px;
+    --inquiry-radius-md: 14px;
+    --inquiry-radius-lg: 18px;
+
+    --inquiry-ease:
+        cubic-bezier(0.22, 1, 0.36, 1);
+
+    --inquiry-ease-soft:
+        cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-body {
-    font-family: "Inter", sans-serif;
-    margin: 0;
-    overflow-x: hidden;
-}
+
+/* =========================================================
+   BOX SIZING
+   ========================================================= */
 
 *,
 *::before,
 *::after {
-    box-sizing: inherit;
+    box-sizing: border-box;
 }
 
 
@@ -30,11 +62,30 @@ body {
    ========================================================= */
 
 .inquiries-page {
+
     width: 100%;
-    max-width: 1080px;
+    max-width: 1180px;
 
     margin: 0 auto;
-    padding: 32px 24px 60px;
+
+    padding: 40px 32px 72px;
+
+    /*
+     * Keep horizontal overflow containment local to this page.
+     *
+     * This avoids changing the scrolling behavior of the entire
+     * document, which is particularly important on mobile.
+     */
+    overflow-x: clip;
+
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
 }
 
 
@@ -43,13 +94,34 @@ body {
    ========================================================= */
 
 .inquiries-header {
-    position: static;
 
     display: flex;
     align-items: flex-start;
-    gap: 12px;
 
-    margin-bottom: 24px;
+    gap: 14px;
+
+    margin-bottom: 30px;
+
+    animation:
+        inquiriesHeaderIn
+        700ms
+        var(--inquiry-ease-soft)
+        both;
+}
+
+
+@keyframes inquiriesHeaderIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
 }
 
 
@@ -58,66 +130,68 @@ body {
    ========================================================= */
 
 .back-btn {
-    flex: 0 0 38px;
 
-    width: 38px;
-    height: 38px;
+    flex: 0 0 40px;
 
-    display: flex;
+    width: 40px;
+    height: 40px;
+
+    display: inline-flex;
+
     align-items: center;
     justify-content: center;
 
-    border: 1px solid #e2e8f0;
-    border-radius: 50%;
+    margin-top: 1px;
 
-    background: #ffffff;
-    color: #334155;
+    border: 1px solid var(--inquiry-border);
+    border-radius: 12px;
+
+    background: var(--inquiry-surface);
+    color: var(--inquiry-text-muted);
 
     cursor: pointer;
 
     box-shadow:
-        0 2px 6px rgba(15, 23, 42, 0.05);
+        0 4px 14px rgba(35, 45, 70, 0.05);
 
     transition:
-        transform 0.2s ease,
-        background 0.2s ease,
-        border-color 0.2s ease,
-        box-shadow 0.2s ease;
+        transform 220ms var(--inquiry-ease),
+        background-color 220ms ease,
+        border-color 220ms ease,
+        color 220ms ease,
+        box-shadow 220ms ease;
 }
 
 
-/*
- * Slightly move the button toward the left when
- * the user hovers over it.
- */
-
 .back-btn:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
 
     transform: translateX(-2px);
 
+    border-color:
+        rgba(82, 114, 201, 0.20);
+
+    background:
+        var(--inquiry-brand-faint);
+
+    color:
+        var(--inquiry-brand);
+
     box-shadow:
-        0 5px 12px rgba(15, 23, 42, 0.08);
+        0 8px 20px rgba(35, 45, 70, 0.08);
 }
 
-
-/*
- * Gives the button a small press effect.
- */
 
 .back-btn:active {
-    transform: translateX(-1px) scale(0.96);
+
+    transform:
+        translateX(-1px)
+        scale(0.96);
 }
 
 
-/*
- * Keeps the Phosphor arrow visually balanced
- * with the button.
- */
-
 .back-btn i {
-    font-size: 18px;
+
+    font-size: 17px;
 }
 
 
@@ -126,27 +200,39 @@ body {
    ========================================================= */
 
 .header-copy {
+
     min-width: 0;
 }
 
+
 .header-copy h1 {
-    margin: 1px 0 4px;
 
-    font-size: 22px;
-    line-height: 1.25;
+    margin: 0 0 5px;
 
-    font-weight: 600;
+    font-size:
+        clamp(24px, 3vw, 28px);
 
-    color: #0f172a;
+    line-height: 1.15;
+
+    font-weight: 650;
+
+    letter-spacing: -0.035em;
+
+    color:
+        var(--inquiry-text);
 }
 
+
 .header-copy p {
+
     margin: 0;
 
     font-size: 13px;
-    line-height: 1.5;
 
-    color: #64748b;
+    line-height: 1.55;
+
+    color:
+        var(--inquiry-text-muted);
 }
 
 
@@ -155,11 +241,27 @@ body {
    ========================================================= */
 
 .filter-bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
 
-    margin-bottom: 18px;
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 3px;
+
+    margin-bottom: 20px;
+
+    padding: 4px;
+
+    border:
+        1px solid var(--inquiry-border-soft);
+
+    border-radius: 13px;
+
+    background:
+        var(--inquiry-surface-muted);
+
+    box-shadow:
+        inset 0 1px 1px rgba(255, 255, 255, 0.65);
 }
 
 
@@ -167,69 +269,81 @@ body {
    FILTER BUTTON
    ========================================================= */
 
+
+
 .filter-btn {
-    height: 34px;
+
+    position: relative;
+
+    min-width: 96px;
+    min-height: 34px;
 
     display: inline-flex;
+
     align-items: center;
     justify-content: center;
 
-    padding: 0 14px;
+    padding: 0 16px;
 
-    border: 1px solid #e2e8f0;
-    border-radius: 999px;
+    border: 0;
+    border-radius: 9px;
 
-    background: #ffffff;
-    color: #475569;
+    background: transparent;
 
+    color:
+        var(--inquiry-text-muted);
+
+    font: inherit;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 550;
 
     cursor: pointer;
 
     transition:
-        background 0.2s ease,
-        border-color 0.2s ease,
-        color 0.2s ease,
-        transform 0.2s ease,
-        box-shadow 0.2s ease;
+        color 220ms ease,
+        background-color 220ms ease,
+        box-shadow 220ms ease,
+        transform 180ms ease;
 }
 
-
-/*
- * Gives inactive filters a subtle interactive response.
- */
 
 .filter-btn:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
 
-    transform: translateY(-1px);
+    color:
+        var(--inquiry-text-soft);
 }
 
 
-/*
- * The active filter uses the primary KNOWURLOCAL blue.
- */
+.filter-btn:active {
+
+    transform:
+        scale(0.97);
+}
+
 
 .filter-btn.active {
-    background: var(--blue-main);
-    border-color: var(--blue-main);
 
-    color: #ffffff;
+    background:
+        var(--inquiry-surface);
+
+    color:
+        var(--inquiry-brand);
 
     box-shadow:
-        0 4px 10px rgba(31, 58, 95, 0.16);
+        0 2px 7px rgba(35, 45, 70, 0.08),
+        0 1px 2px rgba(35, 45, 70, 0.04);
 }
-
 
 /* =========================================================
    INQUIRY LIST
    ========================================================= */
 
 .inquiries-list {
+
     display: flex;
+
     flex-direction: column;
+
     gap: 12px;
 }
 
@@ -239,43 +353,51 @@ body {
    ========================================================= */
 
 .inquiry-card {
-    background: #ffffff;
 
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
+    position: relative;
 
-    padding: 18px 20px;
+    background:
+        var(--inquiry-surface);
+
+    border:
+        1px solid var(--inquiry-border);
+
+    border-radius:
+        var(--inquiry-radius-lg);
+
+    padding:
+        20px 22px;
 
     box-shadow:
-        0 2px 8px rgba(15, 23, 42, 0.04);
+        var(--inquiry-shadow-soft);
 
     transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease,
-        border-color 0.2s ease;
+        transform 280ms var(--inquiry-ease),
+        border-color 280ms ease,
+        box-shadow 280ms ease;
 }
 
-
-/*
- * The hover effect provides feedback while keeping
- * the card visually stable.
- */
 
 .inquiry-card:hover {
-    border-color: #d8e0ea;
 
-    transform: translateY(-2px);
+    transform:
+        translateY(-2px);
+
+    border-color:
+        rgba(82, 114, 201, 0.16);
 
     box-shadow:
-        0 10px 24px rgba(15, 23, 42, 0.07);
+        var(--inquiry-shadow-medium);
 }
 
 
 /*
- * Hides filtered inquiry cards.
+ * Filtered cards are completely removed from the
+ * accessibility tree and visual layout.
  */
 
 .inquiry-card[hidden] {
+
     display: none;
 }
 
@@ -285,13 +407,16 @@ body {
    ========================================================= */
 
 .card-header {
+
     display: flex;
+
     align-items: center;
+
     justify-content: space-between;
 
     gap: 16px;
 
-    margin-bottom: 14px;
+    margin-bottom: 10px;
 }
 
 
@@ -300,26 +425,36 @@ body {
    ========================================================= */
 
 .status {
+
     display: inline-flex;
+
     align-items: center;
-    gap: 5px;
 
-    padding: 5px 9px;
+    gap: 6px;
 
-    border-radius: 999px;
+    min-height: 25px;
 
-    font-size: 11px;
-    font-weight: 600;
+    padding:
+        0 9px;
+
+    border:
+        1px solid transparent;
+
+    border-radius:
+        999px;
+
+    font-size: 10px;
+
+    font-weight: 650;
 
     line-height: 1;
+
+    letter-spacing: 0.01em;
 }
 
 
-/*
- * Keeps the status icon proportional to the label.
- */
-
 .status i {
+
     font-size: 13px;
 }
 
@@ -329,8 +464,15 @@ body {
    ========================================================= */
 
 .status.pending {
-    background: #fff7d6;
-    color: #a16207;
+
+    border-color:
+        rgba(184, 134, 11, 0.12);
+
+    background:
+        #fbf6e8;
+
+    color:
+        #98701a;
 }
 
 
@@ -339,8 +481,15 @@ body {
    ========================================================= */
 
 .status.answered {
-    background: #dcfce7;
-    color: #15803d;
+
+    border-color:
+        rgba(54, 133, 92, 0.12);
+
+    background:
+        #edf7f1;
+
+    color:
+        #347b58;
 }
 
 
@@ -349,11 +498,15 @@ body {
    ========================================================= */
 
 .inquiry-date {
+
     flex-shrink: 0;
 
-    font-size: 12px;
+    font-size: 11px;
 
-    color: #64748b;
+    font-weight: 500;
+
+    color:
+        var(--inquiry-text-faint);
 }
 
 
@@ -362,11 +515,15 @@ body {
    ========================================================= */
 
 .inquiry-toggle {
+
     min-width: 0;
+
     width: 100%;
 
     display: flex;
+
     align-items: center;
+
     justify-content: space-between;
 
     gap: 16px;
@@ -374,9 +531,11 @@ body {
     padding: 0;
 
     border: 0;
+
     background: transparent;
 
     color: inherit;
+
     font: inherit;
 
     text-align: left;
@@ -387,21 +546,24 @@ body {
 
 /*
  * Prevents the summary from becoming wider than
- * the available card space.
+ * the available card width.
  */
 
 .inquiry-summary {
+
     min-width: 0;
+
     flex: 1;
 }
 
 
 /*
- * Removes the default bottom spacing because the header
- * belongs to the clickable summary.
+ * The header belongs to the clickable inquiry
+ * toggle, so avoid unnecessary spacing.
  */
 
 .inquiry-toggle .card-header {
+
     margin-bottom: 10px;
 }
 
@@ -411,20 +573,24 @@ body {
    ========================================================= */
 
 .question-preview {
+
     margin: 0;
 
     font-size: 14px;
-    line-height: 1.5;
 
-    color: #172033;
+    line-height: 1.6;
 
-    /*
-     * Keeps the collapsed card compact even when a user
-     * submits a very long question.
-     */
+    font-weight: 500;
+
+    letter-spacing: -0.01em;
+
+    color:
+        #252a36;
 
     display: -webkit-box;
+
     -webkit-box-orient: vertical;
+
     -webkit-line-clamp: 2;
 
     overflow: hidden;
@@ -436,25 +602,52 @@ body {
    ========================================================= */
 
 .inquiry-chevron {
-    flex: 0 0 auto;
 
-    font-size: 18px;
+    flex:
+        0 0 auto;
 
-    color: #94a3b8;
+    width: 28px;
+    height: 28px;
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 8px;
+
+    font-size: 15px;
+
+    color:
+        var(--inquiry-text-faint);
 
     transition:
-        transform 0.25s ease,
-        color 0.2s ease;
+        transform 280ms var(--inquiry-ease),
+        color 200ms ease,
+        background-color 200ms ease;
 }
 
 
-/*
- * Gives users a subtle indication that the card
- * is interactive.
- */
-
 .inquiry-toggle:hover .inquiry-chevron {
-    color: #475569;
+
+    background:
+        var(--inquiry-brand-faint);
+
+    color:
+        var(--inquiry-brand);
+}
+
+
+.inquiry-card.expanded .inquiry-chevron {
+
+    transform:
+        rotate(180deg);
+
+    background:
+        var(--inquiry-brand-soft);
+
+    color:
+        var(--inquiry-brand);
 }
 
 
@@ -463,6 +656,7 @@ body {
    ========================================================= */
 
 .inquiry-details {
+
     display: grid;
 
     grid-template-rows: 0fr;
@@ -472,17 +666,18 @@ body {
     overflow: hidden;
 
     transition:
-        grid-template-rows 0.3s ease,
-        opacity 0.2s ease,
-        margin-top 0.3s ease;
+        grid-template-rows 320ms var(--inquiry-ease),
+        opacity 220ms ease,
+        margin-top 320ms var(--inquiry-ease);
 }
 
 
 /*
- * This wrapper is the element that actually collapses.
+ * This wrapper is the actual collapsing element.
  */
 
 .inquiry-details-inner {
+
     min-height: 0;
 
     overflow: hidden;
@@ -494,22 +689,13 @@ body {
    ========================================================= */
 
 .inquiry-card.expanded .inquiry-details {
-    grid-template-rows: 1fr;
+
+    grid-template-rows:
+        1fr;
 
     opacity: 1;
 
     margin-top: 15px;
-}
-
-
-/*
- * Rotates the arrow when the inquiry is open.
- */
-
-.inquiry-card.expanded .inquiry-chevron {
-    transform: rotate(180deg);
-
-    color: #475569;
 }
 
 
@@ -519,6 +705,7 @@ body {
  */
 
 .inquiry-card.expanded .inquiry-toggle {
+
     padding-bottom: 0;
 }
 
@@ -528,14 +715,20 @@ body {
    ========================================================= */
 
 .answer-block {
+
     margin-top: 15px;
 
-    padding: 13px 15px;
+    padding:
+        16px 17px;
 
-    border: 1px solid #dbeafe;
-    border-radius: 12px;
+    border:
+        1px solid rgba(82, 114, 201, 0.10);
 
-    background: #f8fbff;
+    border-radius:
+        var(--inquiry-radius-md);
+
+    background:
+        var(--inquiry-surface-soft);
 }
 
 
@@ -544,19 +737,26 @@ body {
    ========================================================= */
 
 .answer-header {
+
     display: flex;
+
     align-items: center;
+
     gap: 7px;
 
-    margin-bottom: 7px;
+    margin-bottom: 9px;
 
     font-size: 11px;
-    font-weight: 600;
 
-    color: #2563eb;
+    font-weight: 650;
+
+    color:
+        var(--inquiry-brand);
 }
 
+
 .answer-header i {
+
     font-size: 15px;
 }
 
@@ -566,12 +766,15 @@ body {
    ========================================================= */
 
 .answer {
+
     margin: 0;
 
     font-size: 13px;
-    line-height: 1.65;
 
-    color: #334155;
+    line-height: 1.7;
+
+    color:
+        var(--inquiry-text-soft);
 
     overflow-wrap: anywhere;
 }
@@ -593,12 +796,12 @@ body {
 
     width: 100%;
 
-    margin-top: 14px;
+    margin-top: 15px;
 
-    padding-top: 12px;
+    padding-top: 14px;
 
-    border-top: 1px solid #dbeafe;
-
+    border-top:
+        1px solid var(--inquiry-border-soft);
 }
 
 
@@ -618,19 +821,14 @@ body {
 
     font-weight: 600;
 
-    color: #2563eb;
-
+    color:
+        var(--inquiry-text-muted);
 }
 
-
-/* =========================================================
-   IMAGE HEADER ICON
-   ========================================================= */
 
 .inquiry-image-header i {
 
     font-size: 15px;
-
 }
 
 
@@ -638,13 +836,8 @@ body {
    IMAGE PREVIEW BUTTON
    ========================================================= */
 
-/*
- * The button must only be as wide as the image.
- * This prevents a global button width rule from
- * creating a large empty gray area.
- */
-
-.inquiry-image-block .inquiry-image-preview-trigger {
+.inquiry-image-block
+.inquiry-image-preview-trigger {
 
     display: inline-flex;
 
@@ -664,13 +857,16 @@ body {
 
     padding: 0;
 
-    border: 1px solid #dbe3ed;
+    border:
+        1px solid #dbe3ed;
 
-    border-radius: 10px;
+    border-radius:
+        10px;
 
     overflow: hidden;
 
-    background: #f8fafc;
+    background:
+        #f8fafc;
 
     cursor: zoom-in;
 
@@ -679,10 +875,31 @@ body {
     -webkit-appearance: none;
 
     transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease,
-        transform 0.2s ease;
+        border-color 220ms ease,
+        box-shadow 220ms ease,
+        transform 220ms var(--inquiry-ease);
+}
 
+
+.inquiry-image-block
+.inquiry-image-preview-trigger:hover {
+
+    border-color:
+        rgba(82, 114, 201, 0.30);
+
+    box-shadow:
+        0 8px 22px rgba(15, 23, 42, 0.10);
+
+    transform:
+        translateY(-2px);
+}
+
+
+.inquiry-image-block
+.inquiry-image-preview-trigger:active {
+
+    transform:
+        translateY(0);
 }
 
 
@@ -690,7 +907,8 @@ body {
    IMAGE THUMBNAIL
    ========================================================= */
 
-.inquiry-image-block .inquiry-attached-image {
+.inquiry-image-block
+.inquiry-attached-image {
 
     display: block;
 
@@ -710,37 +928,10 @@ body {
 
     border-radius: 0;
 
-    background: #ffffff;
+    background:
+        #ffffff;
 
     cursor: zoom-in;
-
-}
-
-
-/* =========================================================
-   IMAGE HOVER
-   ========================================================= */
-
-.inquiry-image-block .inquiry-image-preview-trigger:hover {
-
-    border-color: #93c5fd;
-
-    box-shadow:
-        0 8px 22px rgba(15, 23, 42, 0.10);
-
-    transform: translateY(-2px);
-
-}
-
-
-/* =========================================================
-   IMAGE ACTIVE STATE
-   ========================================================= */
-
-.inquiry-image-block .inquiry-image-preview-trigger:active {
-
-    transform: translateY(0);
-
 }
 
 
@@ -748,54 +939,14 @@ body {
    IMAGE KEYBOARD FOCUS
    ========================================================= */
 
-.inquiry-image-block .inquiry-image-preview-trigger:focus-visible {
+.inquiry-image-block
+.inquiry-image-preview-trigger:focus-visible {
 
-    outline: 2px solid #93c5fd;
+    outline:
+        2px solid var(--inquiry-brand);
 
-    outline-offset: 4px;
-
-}
-
-
-/* =========================================================
-   MOBILE IMAGE
-   ========================================================= */
-
-@media (max-width: 640px) {
-
-    .inquiry-image-block .inquiry-image-preview-trigger {
-
-        width: 100%;
-
-        max-width: 100%;
-
-    }
-
-    .inquiry-image-block .inquiry-attached-image {
-
-        width: 100%;
-
-        max-width: 100%;
-
-        max-height: 300px;
-
-    }
-
-}
-
-
-/* =========================================================
-   REDUCED MOTION
-   ========================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-
-    .inquiry-image-block .inquiry-image-preview-trigger {
-
-        transition: none;
-
-    }
-
+    outline-offset:
+        4px;
 }
 
 
@@ -804,38 +955,78 @@ body {
    ========================================================= */
 
 .pending-message {
-    display: flex;
-    align-items: center;
-    gap: 7px;
 
-    margin-top: 14px;
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    margin-top: 15px;
+
+    padding:
+        11px 13px;
+
+    border:
+        1px solid rgba(82, 114, 201, 0.08);
+
+    border-radius:
+        11px;
+
+    background:
+        var(--inquiry-surface-soft);
 
     font-size: 12px;
-    font-style: italic;
 
-    color: #94a3b8;
+    font-style: normal;
+
+    line-height: 1.45;
+
+    color:
+        var(--inquiry-text-muted);
 }
 
 
-/*
- * Prevents the icon from inheriting the italic styling.
- */
-
 .pending-message i {
-    font-size: 15px;
+
+    flex:
+        0 0 auto;
+
+    font-size: 16px;
+
     font-style: normal;
+
+    color:
+        var(--inquiry-brand);
 }
 
 
 /* =========================================================
-   FOCUS
+   FOCUS STATES
    ========================================================= */
 
 .inquiry-toggle:focus-visible {
-    outline: 2px solid #93c5fd;
-    outline-offset: 4px;
 
-    border-radius: 8px;
+    outline:
+        2px solid var(--inquiry-brand);
+
+    outline-offset:
+        4px;
+
+    border-radius:
+        8px;
+}
+
+
+.filter-btn:focus-visible,
+.back-btn:focus-visible,
+.ask-btn:focus-visible {
+
+    outline:
+        2px solid var(--inquiry-brand);
+
+    outline-offset:
+        3px;
 }
 
 
@@ -844,14 +1035,19 @@ body {
    ========================================================= */
 
 .empty-state {
+
     display: flex;
+
     flex-direction: column;
+
     align-items: center;
+
     justify-content: center;
 
-    min-height: 360px;
+    min-height: 400px;
 
-    padding: 40px 20px;
+    padding:
+        48px 24px;
 
     text-align: center;
 }
@@ -862,24 +1058,37 @@ body {
    ========================================================= */
 
 .empty-icon {
-    width: 48px;
-    height: 48px;
+
+    width: 54px;
+    height: 54px;
 
     display: flex;
+
     align-items: center;
     justify-content: center;
 
-    margin-bottom: 12px;
+    margin-bottom: 17px;
 
-    border: 1px solid #dbe3ed;
-    border-radius: 14px;
+    border:
+        1px solid rgba(82, 114, 201, 0.10);
 
-    background: #f8fafc;
-    color: #94a3b8;
+    border-radius:
+        16px;
+
+    background:
+        #eef1fa;
+
+    color:
+        var(--inquiry-brand);
+
+    box-shadow:
+        0 8px 24px rgba(35, 45, 70, 0.05);
 }
 
+
 .empty-icon i {
-    font-size: 23px;
+
+    font-size: 24px;
 }
 
 
@@ -888,20 +1097,36 @@ body {
    ========================================================= */
 
 .empty-state h2 {
-    margin: 0 0 5px;
 
-    font-size: 15px;
-    font-weight: 600;
+    margin:
+        0 0 7px;
 
-    color: #475569;
+    font-size: 17px;
+
+    line-height: 1.3;
+
+    font-weight: 650;
+
+    letter-spacing:
+        -0.02em;
+
+    color:
+        var(--inquiry-text);
 }
 
+
 .empty-state p {
+
+    max-width: 360px;
+
     margin: 0;
 
     font-size: 12px;
 
-    color: #94a3b8;
+    line-height: 1.6;
+
+    color:
+        var(--inquiry-text-muted);
 }
 
 
@@ -910,58 +1135,72 @@ body {
    ========================================================= */
 
 .ask-btn {
+
     display: inline-flex;
+
     align-items: center;
     justify-content: center;
-    gap: 7px;
 
-    margin-top: 18px;
+    gap: 8px;
 
-    min-height: 36px;
+    margin-top: 20px;
 
-    padding: 0 15px;
+    min-height: 40px;
 
-    border-radius: 999px;
+    padding:
+        0 17px;
 
-    background: var(--blue-main);
-    color: #ffffff;
+    border:
+        1px solid rgba(255, 255, 255, 0.45);
+
+    border-radius:
+        11px;
+
+    background:
+        var(--inquiry-brand);
+
+    color:
+        #ffffff;
 
     font-size: 12px;
-    font-weight: 500;
+
+    font-weight: 600;
 
     text-decoration: none;
 
     box-shadow:
-        0 5px 12px rgba(31, 58, 95, 0.16);
+        0 8px 20px rgba(82, 114, 201, 0.18);
 
     transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease,
-        background 0.2s ease;
+        transform 220ms var(--inquiry-ease),
+        background-color 220ms ease,
+        box-shadow 220ms ease;
 }
 
-
-/*
- * Lifts the button slightly when the pointer enters.
- */
 
 .ask-btn:hover {
-    transform: translateY(-1px);
+
+    transform:
+        translateY(-2px);
+
+    background:
+        var(--inquiry-brand-dark);
 
     box-shadow:
-        0 8px 16px rgba(31, 58, 95, 0.2);
+        0 12px 26px rgba(82, 114, 201, 0.23);
 }
 
-
-/*
- * Gives the button a subtle press effect.
- */
 
 .ask-btn:active {
-    transform: translateY(0) scale(0.98);
+
+    transform:
+        translateY(0)
+        scale(0.97);
 }
 
+
 .ask-btn i {
+
     font-size: 14px;
 }
 
@@ -971,6 +1210,7 @@ body {
    ========================================================= */
 
 .unread-inquiry-dot {
+
     display: inline-block;
 
     width: 6px;
@@ -982,131 +1222,16 @@ body {
 
     border-radius: 50%;
 
-    background: #ef4444;
+    background:
+        var(--inquiry-brand);
 
     box-shadow:
-        0 0 0 2px rgba(239, 68, 68, 0.10);
+        0 0 0 3px rgba(82, 114, 201, 0.10);
 }
 
-
-/* =========================================================
-   ACCESSIBILITY
-   ========================================================= */
-
-.filter-btn:focus-visible,
-.back-btn:focus-visible,
-.ask-btn:focus-visible {
-    outline: 2px solid #93c5fd;
-    outline-offset: 3px;
-}
-
-
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
-
-@media (max-width: 640px) {
-
-    /*
-     * Reduce page padding on smaller screens.
-     */
-
-    .inquiries-page {
-        padding: 20px 16px 40px;
-    }
-
-
-    /*
-     * Reduce spacing around the mobile header.
-     */
-
-    .inquiries-header {
-        margin-bottom: 20px;
-    }
-
-
-    /*
-     * Slightly reduce the title size on narrow screens.
-     */
-
-    .header-copy h1 {
-        font-size: 19px;
-    }
-
-
-    /*
-     * Keep the filters compact on mobile.
-     */
-
-    .filter-bar {
-        margin-bottom: 14px;
-    }
-
-
-    /*
-     * Reduce card padding while preserving readability.
-     */
-
-    .inquiry-card {
-        padding: 15px;
-
-        border-radius: 14px;
-    }
-
-
-    .card-header {
-        margin-bottom: 12px;
-    }
-
-
-    /*
-     * Improve long question wrapping on smaller screens.
-     */
-
-    .question-preview {
-        font-size: 13px;
-    }
-
-
-    /*
-     * Slightly reduce answer text size on mobile.
-     */
-
-    .answer {
-        font-size: 12px;
-    }
-
-
-    /*
-     * Keep the administrator image within the card width.
-     */
-
-    .inquiry-attached-image {
-        max-width: 100%;
-        max-height: 300px;
-
-        border-radius: 8px;
-    }
-
-
-    /*
-     * Reduce spacing inside the answer block.
-     */
-
-    .answer-block {
-        padding: 12px;
-    }
-
-}
 
 /* =========================================================
    FULL-SCREEN IMAGE LIGHTBOX
-   KNOWURLOCAL
-   ========================================================= */
-
-
-/* =========================================================
-   LIGHTBOX BACKDROP
    ========================================================= */
 
 .image-lightbox {
@@ -1120,16 +1245,15 @@ body {
     display: flex;
 
     align-items: center;
-
     justify-content: center;
 
     width: 100%;
-
     height: 100%;
 
     padding: 32px;
 
-    background: rgba(0, 0, 0, 0.88);
+    background:
+        rgba(10, 13, 20, 0.88);
 
     opacity: 0;
 
@@ -1140,12 +1264,11 @@ body {
     transition:
         opacity 180ms ease,
         visibility 180ms ease;
-
 }
 
 
 /* =========================================================
-   OPEN STATE
+   LIGHTBOX OPEN STATE
    ========================================================= */
 
 .image-lightbox.is-open {
@@ -1155,7 +1278,6 @@ body {
     visibility: visible;
 
     pointer-events: auto;
-
 }
 
 
@@ -1170,22 +1292,18 @@ body {
     display: flex;
 
     align-items: center;
-
     justify-content: center;
 
     width: 100%;
-
     height: 100%;
 
     max-width: 1400px;
-
     max-height: 100%;
-
 }
 
 
 /* =========================================================
-   PREVIEW IMAGE
+   LIGHTBOX IMAGE
    ========================================================= */
 
 .image-lightbox-image {
@@ -1198,20 +1316,22 @@ body {
 
     height: auto;
 
-    max-height: calc(100vh - 64px);
+    max-height:
+        calc(100vh - 64px);
 
     object-fit: contain;
 
-    border-radius: 12px;
+    border-radius:
+        12px;
 
     box-shadow:
         0 24px 80px rgba(0, 0, 0, 0.45);
 
-    transform: scale(0.96);
+    transform:
+        scale(0.96);
 
     transition:
-        transform 180ms ease;
-
+        transform 180ms var(--inquiry-ease);
 }
 
 
@@ -1219,15 +1339,16 @@ body {
    IMAGE OPEN ANIMATION
    ========================================================= */
 
-.image-lightbox.is-open .image-lightbox-image {
+.image-lightbox.is-open
+.image-lightbox-image {
 
-    transform: scale(1);
-
+    transform:
+        scale(1);
 }
 
 
 /* =========================================================
-   CLOSE BUTTON
+   LIGHTBOX CLOSE BUTTON
    ========================================================= */
 
 .image-lightbox-close {
@@ -1235,7 +1356,6 @@ body {
     position: absolute;
 
     top: 0;
-
     right: 0;
 
     z-index: 2;
@@ -1243,32 +1363,34 @@ body {
     display: inline-flex;
 
     align-items: center;
-
     justify-content: center;
 
     width: 44px;
-
     height: 44px;
 
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    border:
+        1px solid rgba(255, 255, 255, 0.18);
 
     border-radius: 50%;
 
-    color: #ffffff;
+    color:
+        #ffffff;
 
-    background: rgba(255, 255, 255, 0.10);
+    background:
+        rgba(255, 255, 255, 0.10);
 
     cursor: pointer;
 
-    backdrop-filter: blur(12px);
+    backdrop-filter:
+        blur(12px);
 
-    -webkit-backdrop-filter: blur(12px);
+    -webkit-backdrop-filter:
+        blur(12px);
 
     transition:
-        background 160ms ease,
+        background-color 160ms ease,
         border-color 160ms ease,
         transform 160ms ease;
-
 }
 
 
@@ -1281,7 +1403,6 @@ body {
     font-size: 22px;
 
     line-height: 1;
-
 }
 
 
@@ -1291,12 +1412,14 @@ body {
 
 .image-lightbox-close:hover {
 
-    background: rgba(255, 255, 255, 0.20);
+    background:
+        rgba(255, 255, 255, 0.20);
 
-    border-color: rgba(255, 255, 255, 0.35);
+    border-color:
+        rgba(255, 255, 255, 0.35);
 
-    transform: scale(1.05);
-
+    transform:
+        scale(1.05);
 }
 
 
@@ -1306,56 +1429,237 @@ body {
 
 .image-lightbox-close:active {
 
-    transform: scale(0.96);
-
+    transform:
+        scale(0.96);
 }
 
 
 /* =========================================================
-   KEYBOARD FOCUS
+   LIGHTBOX KEYBOARD FOCUS
    ========================================================= */
 
 .image-lightbox-close:focus-visible {
 
-    outline: 2px solid #ffffff;
+    outline:
+        2px solid #ffffff;
 
-    outline-offset: 4px;
+    outline-offset:
+        4px;
+}
+
+
+/* =========================================================
+   MOBILE IMAGE
+   ========================================================= */
+
+@media (max-width: 640px) {
+
+    .inquiry-image-block
+    .inquiry-image-preview-trigger {
+
+        width: 100%;
+
+        max-width: 100%;
+    }
+
+
+    .inquiry-image-block
+    .inquiry-attached-image {
+
+        width: 100%;
+
+        max-width: 100%;
+
+        max-height: 300px;
+    }
 
 }
 
 
 /* =========================================================
-   MOBILE RESPONSIVENESS
+   RESPONSIVE — TABLET / MOBILE
    ========================================================= */
 
-@media (max-width: 768px) {
+@media (max-width: 640px) {
 
-    .image-lightbox {
+    /*
+     * Reduce page padding while maintaining enough
+     * breathing room around the content.
+     */
 
-        padding: 20px;
+    .inquiries-page {
 
+        padding:
+            24px 16px 48px;
     }
 
-    .image-lightbox-image {
 
-        max-width: 100%;
+    .inquiries-header {
 
-        max-height: calc(100vh - 40px);
+        gap: 11px;
 
-        border-radius: 8px;
-
+        margin-bottom: 24px;
     }
 
-    .image-lightbox-close {
 
-        top: 8px;
+    .back-btn {
 
-        right: 8px;
+        flex-basis: 38px;
 
-        width: 40px;
+        width: 38px;
+        height: 38px;
+    }
 
-        height: 40px;
 
+    .header-copy h1 {
+
+        font-size: 21px;
+    }
+
+
+    .header-copy p {
+
+        font-size: 12px;
+    }
+
+
+    /*
+     * Make the segmented filter control span the
+     * available mobile width.
+     */
+
+    .filter-bar {
+
+        width: 100%;
+
+        margin-bottom: 16px;
+    }
+
+
+    .filter-btn {
+
+        flex: 1;
+
+        padding:
+            0 10px;
+    }
+
+
+    /*
+     * Slightly reduce card dimensions on phones.
+     */
+
+    .inquiry-card {
+
+        padding:
+            17px;
+
+        border-radius:
+            16px;
+    }
+
+
+    .card-header {
+
+        gap: 10px;
+
+        margin-bottom: 11px;
+    }
+
+
+    .inquiry-date {
+
+        font-size: 10px;
+    }
+
+
+    .question-preview {
+
+        font-size: 13px;
+
+        line-height: 1.55;
+    }
+
+
+    .answer-block {
+
+        padding:
+            14px;
+    }
+
+
+    .answer {
+
+        font-size: 12px;
+
+        line-height: 1.65;
+    }
+
+
+    .pending-message {
+
+        font-size: 11px;
+    }
+
+
+    .empty-state {
+
+        min-height: 340px;
+
+        padding:
+            40px 16px;
+    }
+
+}
+
+
+/* =========================================================
+   VERY SMALL PHONES
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+    .inquiries-page {
+
+        padding-left: 13px;
+        padding-right: 13px;
+    }
+
+
+    .filter-btn {
+
+        padding:
+            0 7px;
+
+        font-size: 11px;
+    }
+
+
+    .inquiry-card {
+
+        padding:
+            15px;
+    }
+
+
+    .status {
+
+        padding:
+            0 8px;
+
+        font-size: 9px;
+    }
+
+
+    .inquiry-date {
+
+        font-size: 9px;
+    }
+
+
+    .question-preview {
+
+        font-size: 12px;
     }
 
 }
@@ -1367,12 +1671,35 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
 
+    .inquiries-header,
+    .back-btn,
+    .filter-btn,
+    .inquiry-card,
+    .inquiry-chevron,
+    .inquiry-details,
+    .inquiry-image-preview-trigger,
+    .ask-btn,
     .image-lightbox,
     .image-lightbox-image,
     .image-lightbox-close {
 
-        transition: none;
+        animation: none !important;
 
+        transition: none !important;
     }
 
+
+    .inquiries-header {
+
+        transform: none;
+    }
+
+
+    .back-btn:hover,
+    .inquiry-card:hover,
+    .inquiry-image-preview-trigger:hover,
+    .ask-btn:hover {
+
+        transform: none;
+    }
 }

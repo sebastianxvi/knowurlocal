@@ -69,37 +69,31 @@
 
     <!-- ================= FILTERS ================= -->
 
-    <div
-        class="filter-bar"
-        role="group"
-        aria-label="Filter inquiries"
+<div
+    class="filter-bar"
+    role="group"
+    aria-label="Filter inquiries"
+>
+
+    <button
+        type="button"
+        class="filter-btn active"
+        data-filter="answered"
+        aria-pressed="true"
     >
+        Answered
+    </button>
 
-        <button
-            type="button"
-            class="filter-btn active"
-            data-filter="all"
-        >
-            All
-        </button>
+    <button
+        type="button"
+        class="filter-btn"
+        data-filter="pending"
+        aria-pressed="false"
+    >
+        Pending
+    </button>
 
-        <button
-            type="button"
-            class="filter-btn"
-            data-filter="pending"
-        >
-            Pending
-        </button>
-
-        <button
-            type="button"
-            class="filter-btn"
-            data-filter="answered"
-        >
-            Answered
-        </button>
-
-    </div>
+</div>
 
 
     <!-- ================= INQUIRIES ================= -->
@@ -109,219 +103,220 @@
         @forelse($requests as $req)
 
             <article
-                class="inquiry-card"
-                data-id="{{ $req->id }}"
-                data-status="{{ $req->status }}"
-            >
+    class="inquiry-card"
+    data-id="{{ $req->id }}"
+    data-status="{{ $req->status }}"
+>
 
-                <!-- ================= COLLAPSED HEADER ================= -->
+    <!-- =====================================================
+         COLLAPSED INQUIRY HEADER
+         ===================================================== -->
 
-                <button
-                    type="button"
-                    class="inquiry-toggle"
-                    aria-expanded="false"
+    <button
+        type="button"
+        class="inquiry-toggle"
+        aria-expanded="false"
+        aria-controls="inquiry-details-{{ $req->id }}"
+    >
+
+        <div class="inquiry-summary">
+
+            <div class="card-header">
+
+                <span class="status {{ $req->status }}">
+
+                    @if($req->status === 'answered')
+
+                        <i
+                            class="ph-light ph-check"
+                            aria-hidden="true"
+                        ></i>
+
+                    @else
+
+                        <i
+                            class="ph-light ph-clock"
+                            aria-hidden="true"
+                        ></i>
+
+                    @endif
+
+                    {{ ucfirst($req->status) }}
+
+                    @if(
+                        $req->status === 'answered' &&
+                        is_null($req->answer_seen_at)
+                    )
+
+                        <span
+                            class="unread-inquiry-dot"
+                            aria-label="New response"
+                            title="New response"
+                        ></span>
+
+                    @endif
+
+                </span>
+
+
+                <time
+                    datetime="{{ $req->created_at->toIso8601String() }}"
+                    class="inquiry-date"
                 >
+                    {{ $req->created_at->format('M d, Y') }}
+                </time>
 
-                    <div class="inquiry-summary">
-
-                        <div class="card-header">
-
-                            <span class="status {{ $req->status }}">
-
-                                @if($req->status === 'answered')
-
-                                    <i
-                                        class="ph-light ph-check"
-                                        aria-hidden="true"
-                                    ></i>
-
-                                @else
-
-                                    <i
-                                        class="ph-light ph-clock"
-                                        aria-hidden="true"
-                                    ></i>
-
-                                @endif
-
-                                {{ ucfirst($req->status) }}
-
-                                @if(
-                                    $req->status === 'answered' &&
-                                    is_null($req->answer_seen_at)
-                                )
-
-                                    <span
-                                        class="unread-inquiry-dot"
-                                        aria-label="New response"
-                                    ></span>
-
-                                @endif
-
-                            </span>
-
-                            <time
-                                datetime="{{ $req->created_at->toIso8601String() }}"
-                                class="inquiry-date"
-                            >
-                                {{ $req->created_at->format('M d, Y') }}
-                            </time>
-
-                        </div>
+            </div>
 
 
-                        <p class="question-preview">
-                            {{ $req->question }}
-                        </p>
+            <p class="question-preview">
+                {{ $req->question }}
+            </p>
+
+        </div>
+
+
+        <i
+            class="ph-light ph-caret-down inquiry-chevron"
+            aria-hidden="true"
+        ></i>
+
+    </button>
+
+
+    <!-- =====================================================
+         EXPANDABLE INQUIRY CONTENT
+         ===================================================== -->
+
+    <div
+        class="inquiry-details"
+        id="inquiry-details-{{ $req->id }}"
+    >
+
+        <div class="inquiry-details-inner">
+
+            @if($req->status === 'answered')
+
+                <!-- =================================================
+                     ADMINISTRATOR RESPONSE
+                     ================================================= -->
+
+                <div class="answer-block">
+
+                    <div class="answer-header">
+
+                        <i
+                            class="ph-light ph-chat-centered-text"
+                            aria-hidden="true"
+                        ></i>
+
+                        <span>
+                            Administrator response
+                        </span>
 
                     </div>
 
 
-                    <i
-                        class="ph-light ph-caret-down inquiry-chevron"
-                        aria-hidden="true"
-                    ></i>
-
-                </button>
+                    <p class="answer">
+                        {{ $req->answer }}
+                    </p>
 
 
-                <!-- ================= EXPANDABLE CONTENT ================= -->
+                    @if($req->answer_image)
 
-                <div class="inquiry-details">
+                        <!-- =========================================
+                             ATTACHED IMAGE
+                             ========================================= -->
 
-                    <div class="inquiry-details-inner">
+                        <div class="inquiry-image-block">
 
-                        @if($req->status === 'answered')
-
-                            <!-- ================= ADMIN ANSWER ================= -->
-
-                            <div class="answer-block">
-
-                                <div class="answer-header">
-
-                                    <i
-                                        class="ph-light ph-chat-centered-text"
-                                        aria-hidden="true"
-                                    ></i>
-
-                                    <span>
-                                        Administrator response
-                                    </span>
-
-                                </div>
-
-
-                                <p class="answer">
-                                    {{ $req->answer }}
-                                </p>
-
-
-                                <!-- ================= ATTACHED IMAGE ================= -->
-
-                                @if($req->answer_image)
-
-                                    <div class="inquiry-image-block">
-
-                                        <div class="inquiry-image-header">
-
-                                            <i
-                                                class="ph-light ph-image"
-                                                aria-hidden="true"
-                                            ></i>
-
-                                            <span>
-                                                Attached image
-                                            </span>
-
-                                        </div>
-
-
-                                        <button
-                                            type="button"
-                                            class="inquiry-image-preview-trigger"
-                                            data-image-preview
-                                            data-image-src="{{ asset('storage/' . $req->answer_image) }}"
-                                            aria-label="Open attached image in full view"
-                                        >
-
-                                            <img
-                                                src="{{ asset('storage/' . $req->answer_image) }}"
-                                                alt="Image attached by the administrator"
-                                                class="inquiry-attached-image"
-                                                loading="lazy"
-                                            >
-
-                                        </button>
-
-                                    </div>
-
-                                @endif
-
-                            </div>
-
-                        @else
-
-                            <!-- ================= PENDING STATE ================= -->
-
-                            <div class="pending-message">
+                            <div class="inquiry-image-header">
 
                                 <i
-                                    class="ph-light ph-hourglass"
+                                    class="ph-light ph-image"
                                     aria-hidden="true"
                                 ></i>
 
                                 <span>
-                                    Waiting for an administrator's response
+                                    Attached image
                                 </span>
 
                             </div>
 
-                        @endif
 
-                    </div>
+                            <button
+                                type="button"
+                                class="inquiry-image-preview-trigger"
+                                data-image-preview
+                                data-image-src="{{ asset('storage/' . $req->answer_image) }}"
+                                aria-label="Open attached image in full view"
+                            >
+
+                                <img
+                                    src="{{ asset('storage/' . $req->answer_image) }}"
+                                    alt="Image attached by the administrator"
+                                    class="inquiry-attached-image"
+                                    loading="lazy"
+                                >
+
+                            </button>
+
+                        </div>
+
+                    @endif
 
                 </div>
 
-            </article>
+            @else
+
+                <!-- =================================================
+                     PENDING STATE
+                     ================================================= -->
+
+                <div
+                    class="pending-message"
+                    role="status"
+                >
+
+                    <i
+                        class="ph-light ph-hourglass"
+                        aria-hidden="true"
+                    ></i>
+
+                    <span>
+                        Waiting for an administrator's response
+                    </span>
+
+                </div>
+
+            @endif
+
+        </div>
+
+    </div>
+
+</article>
 
         @empty
 
             <!-- ================= EMPTY STATE ================= -->
 
-            <div class="empty-state">
+            <div class="empty-state" hidden>
+    <div class="empty-icon" aria-hidden="true">
+        <i class="ph-light ph-chat-circle-dots"></i>
+    </div>
 
-                <div class="empty-icon">
+    <h2>No answered inquiries yet</h2>
 
-                    <i
-                        class="ph-light ph-chat-circle-dots"
-                        aria-hidden="true"
-                    ></i>
+    <p>
+        Your submitted questions will appear here once an office responds.
+    </p>
 
-                </div>
-
-                <h2>
-                    No inquiries yet
-                </h2>
-
-                <p>
-                    Ask a question and track the response here.
-                </p>
-
-                <a
-                    href="{{ route('map') }}"
-                    class="ask-btn"
-                >
-
-                    <i
-                        class="ph-light ph-paper-plane-tilt"
-                        aria-hidden="true"
-                    ></i>
-
-                    Ask a question
-
-                </a>
-
-            </div>
+    <a href="{{ route('map') }}" class="empty-action">
+        <i class="ph-light ph-paper-plane-tilt" aria-hidden="true"></i>
+        Ask a question
+    </a>
+</div>
 
         @endforelse
 
@@ -384,6 +379,6 @@
 
 <script src="{{ asset('jsfiles/public_user/inquiries.js') }}"></script>
 
-</body>
+</body> 
 
 </html>

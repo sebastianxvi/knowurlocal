@@ -10,19 +10,27 @@
         content="width=device-width, initial-scale=1.0"
     >
 
+    <meta
+        name="theme-color"
+        content="#f6f7fa"
+    >
+
     <title>KNOWURLOCAL | About</title>
 
 
-    <!-- =====================================================
+    {{-- =========================================================
          PHOSPHOR ICONS
-         ===================================================== -->
+         =========================================================
+         The application uses Phosphor's light icon weight
+         throughout the public interface.
+    ========================================================== --}}
 
     <script src="https://unpkg.com/phosphor-icons"></script>
 
 
-    <!-- =====================================================
-         NAVBAR STYLES
-         ===================================================== -->
+    {{-- =========================================================
+         SHARED NAVBAR
+         ========================================================== --}}
 
     <link
         rel="stylesheet"
@@ -30,9 +38,9 @@
     >
 
 
-    <!-- =====================================================
+    {{-- =========================================================
          ABOUT PAGE STYLES
-         ===================================================== -->
+         ========================================================== --}}
 
     <link
         rel="stylesheet"
@@ -40,9 +48,12 @@
     >
 
 
-    <!-- =====================================================
+    {{-- =========================================================
          CSRF TOKEN
-         ===================================================== -->
+         =========================================================
+         Kept available for JavaScript requests that may require
+         Laravel's CSRF protection.
+    ========================================================== --}}
 
     <meta
         name="csrf-token"
@@ -50,12 +61,9 @@
     >
 
 
-    <!-- =====================================================
-         NAVBAR JAVASCRIPT
-
-         defer ensures the script executes after the HTML has
-         been parsed, preventing DOM elements from being null.
-         ===================================================== -->
+    {{-- =========================================================
+         SHARED NAVBAR JAVASCRIPT
+         ========================================================== --}}
 
     <script
         src="{{ asset('jsfiles/public_user/navbar.js') }}"
@@ -63,9 +71,9 @@
     ></script>
 
 
-    <!-- =====================================================
+    {{-- =========================================================
          ABOUT PAGE JAVASCRIPT
-         ===================================================== -->
+         ========================================================== --}}
 
     <script
         src="{{ asset('jsfiles/public_user/about.js') }}"
@@ -78,29 +86,22 @@
 <body class="about-page-body">
 
 
-    <!-- =====================================================
+    {{-- =========================================================
          PUBLIC NAVBAR
-
-         hideSearch=true tells the shared navbar component
-         not to render its search interface on this page.
-
-         The navbar itself remains visible, including the
-         burger/menu control.
-         ===================================================== -->
+         =========================================================
+         Search is intentionally hidden because this page is
+         informational rather than an agency discovery page.
+    ========================================================== --}}
 
     <x-public.navbar :hideSearch="true" />
 
 
-    <!-- =====================================================
-         MAIN ABOUT PAGE
-         ===================================================== -->
-
     <main class="about-page">
 
 
-        <!-- =================================================
-             HERO
-             ================================================= -->
+        {{-- =====================================================
+             01. HERO
+             ====================================================== --}}
 
         <section class="about-hero">
 
@@ -143,9 +144,7 @@
             <div class="about-container about-hero-grid">
 
 
-                <!-- =============================================
-                     HERO COPY
-                     ============================================= -->
+                {{-- HERO COPY --}}
 
                 <div
                     class="
@@ -161,6 +160,7 @@
                                 ph-light
                                 ph-map-pin
                             "
+                            aria-hidden="true"
                         ></i>
 
                         <span>
@@ -171,21 +171,20 @@
 
 
                     <h1>
-
                         Know where to go.
-
                         <span>
                             Before you go.
                         </span>
-
                     </h1>
 
 
                     <p class="about-hero-description">
 
-                        KNOWURLOCAL helps citizens find local government agencies and organizations, 
-                        understand the services and information they need, 
-                        and get answers to common questions before making the trip.
+                        KNOWURLOCAL helps citizens discover
+                        local government agencies and organizations,
+                        understand the information they need,
+                        and get answers to common questions
+                        before making the trip.
 
                     </p>
 
@@ -193,7 +192,7 @@
                     <div class="about-hero-actions">
 
                         <a
-                            href="{{ url('/map') }}"
+                            href="{{ route('map') }}"
                             class="about-primary-button"
                         >
 
@@ -202,6 +201,7 @@
                                     ph-light
                                     ph-map-trifold
                                 "
+                                aria-hidden="true"
                             ></i>
 
                             <span>
@@ -212,7 +212,7 @@
 
 
                         <a
-                            href="#what-is"
+                            href="#how-it-works"
                             class="about-secondary-button"
                         >
 
@@ -225,6 +225,7 @@
                                     ph-light
                                     ph-arrow-down
                                 "
+                                aria-hidden="true"
                             ></i>
 
                         </a>
@@ -234,9 +235,9 @@
                 </div>
 
 
-                <!-- =============================================
-                     INTERACTIVE HERO PREVIEW
-                     ============================================= -->
+                {{-- =================================================
+                     INTERACTIVE PRODUCT PREVIEW
+                     ================================================== --}}
 
                 <div
                     class="
@@ -252,24 +253,17 @@
                     >
 
 
-                        <!-- =====================================
-                             PREVIEW HEADER
-                             ===================================== -->
+                        {{-- PREVIEW HEADER --}}
 
                         <div class="about-preview-header">
 
-                            <div
-                                class="
-                                    about-preview-dots
-                                "
-                            >
+                            <div class="about-preview-dots">
 
                                 <span></span>
                                 <span></span>
                                 <span></span>
 
                             </div>
-
 
                             <span>
                                 LOCAL INFORMATION
@@ -278,23 +272,17 @@
                         </div>
 
 
-                        <!-- =====================================
-                             SEARCH
-                             ===================================== -->
+                        {{-- SEARCH --}}
 
-                        <div
-                            class="
-                                about-preview-search
-                            "
-                        >
+                        <div class="about-preview-search">
 
                             <i
                                 class="
                                     ph-light
                                     ph-magnifying-glass
                                 "
+                                aria-hidden="true"
                             ></i>
-
 
                             <input
                                 type="text"
@@ -307,43 +295,30 @@
                         </div>
 
 
-                        <!-- =====================================
-                             SEARCH RESULTS
-                             ===================================== -->
+                        {{-- SEARCH RESULTS --}}
 
                         <div
-                            class="
-                                about-preview-results
-                            "
+                            class="about-preview-results"
                             id="aboutPreviewResults"
                         >
 
-
-                            <!-- AGENCY -->
-
                             <button
                                 type="button"
-                                class="
-                                    about-preview-row
-                                "
+                                class="about-preview-row"
                                 data-preview-action="agency"
                             >
 
-                                <div
-                                    class="
-                                        about-preview-icon
-                                    "
-                                >
+                                <div class="about-preview-icon">
 
                                     <i
                                         class="
                                             ph-light
                                             ph-buildings
                                         "
+                                        aria-hidden="true"
                                     ></i>
 
                                 </div>
-
 
                                 <div>
 
@@ -357,7 +332,6 @@
 
                                 </div>
 
-
                                 <i
                                     class="
                                         ph-light
@@ -369,31 +343,23 @@
                             </button>
 
 
-                            <!-- LOCATION -->
-
                             <button
                                 type="button"
-                                class="
-                                    about-preview-row
-                                "
+                                class="about-preview-row"
                                 data-preview-action="location"
                             >
 
-                                <div
-                                    class="
-                                        about-preview-icon
-                                    "
-                                >
+                                <div class="about-preview-icon">
 
                                     <i
                                         class="
                                             ph-light
                                             ph-map-pin
                                         "
+                                        aria-hidden="true"
                                     ></i>
 
                                 </div>
-
 
                                 <div>
 
@@ -407,7 +373,6 @@
 
                                 </div>
 
-
                                 <i
                                     class="
                                         ph-light
@@ -421,14 +386,10 @@
                         </div>
 
 
-                        <!-- =====================================
-                             EMPTY SEARCH
-                             ===================================== -->
+                        {{-- EMPTY SEARCH STATE --}}
 
                         <div
-                            class="
-                                about-preview-empty
-                            "
+                            class="about-preview-empty"
                             id="aboutPreviewEmpty"
                         >
 
@@ -437,6 +398,7 @@
                                     ph-light
                                     ph-magnifying-glass
                                 "
+                                aria-hidden="true"
                             ></i>
 
                             <span>
@@ -446,22 +408,16 @@
                         </div>
 
 
-                        <!-- =====================================
-                             AGENCY DETAIL STATE
-                             ===================================== -->
+                        {{-- AGENCY DETAIL STATE --}}
 
                         <div
-                            class="
-                                about-preview-detail
-                            "
+                            class="about-preview-detail"
                             id="aboutPreviewAgency"
                         >
 
                             <button
                                 type="button"
-                                class="
-                                    about-preview-back
-                                "
+                                class="about-preview-back"
                                 data-preview-back
                             >
 
@@ -470,6 +426,7 @@
                                         ph-light
                                         ph-arrow-left
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                                 <span>
@@ -496,10 +453,10 @@
                                             ph-light
                                             ph-buildings
                                         "
+                                        aria-hidden="true"
                                     ></i>
 
                                 </div>
-
 
                                 <div>
 
@@ -534,7 +491,6 @@
 
                                 </div>
 
-
                                 <div>
 
                                     <span>
@@ -561,6 +517,7 @@
                                         ph-light
                                         ph-arrow-up-right
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                                 <span>
@@ -572,22 +529,16 @@
                         </div>
 
 
-                        <!-- =====================================
-                             MAP STATE
-                             ===================================== -->
+                        {{-- MAP STATE --}}
 
                         <div
-                            class="
-                                about-preview-map
-                            "
+                            class="about-preview-map"
                             id="aboutPreviewMap"
                         >
 
                             <button
                                 type="button"
-                                class="
-                                    about-preview-back
-                                "
+                                class="about-preview-back"
                                 data-preview-back
                             >
 
@@ -596,6 +547,7 @@
                                         ph-light
                                         ph-arrow-left
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                                 <span>
@@ -605,11 +557,7 @@
                             </button>
 
 
-                            <div
-                                class="
-                                    about-preview-mini-map
-                                "
-                            >
+                            <div class="about-preview-mini-map">
 
                                 <span
                                     class="
@@ -645,6 +593,7 @@
                                             ph-light
                                             ph-map-pin
                                         "
+                                        aria-hidden="true"
                                     ></i>
 
                                 </span>
@@ -662,6 +611,7 @@
                                             ph-light
                                             ph-map-pin
                                         "
+                                        aria-hidden="true"
                                     ></i>
 
                                 </span>
@@ -679,22 +629,20 @@
                                             ph-light
                                             ph-map-pin
                                         "
+                                        aria-hidden="true"
                                     ></i>
 
                                 </span>
 
 
-                                <span
-                                    class="
-                                        about-mini-map-center
-                                    "
-                                >
+                                <span class="about-mini-map-center">
 
                                     <i
                                         class="
                                             ph-light
                                             ph-navigation-arrow
                                         "
+                                        aria-hidden="true"
                                     ></i>
 
                                 </span>
@@ -722,21 +670,16 @@
                         </div>
 
 
-                        <!-- =====================================
-                             STATUS
-                             ===================================== -->
+                        {{-- PREVIEW STATUS --}}
 
-                        <div
-                            class="
-                                about-preview-status
-                            "
-                        >
+                        <div class="about-preview-status">
 
                             <i
                                 class="
                                     ph-light
                                     ph-check-circle
                                 "
+                                aria-hidden="true"
                             ></i>
 
                             <span>
@@ -744,9 +687,7 @@
                             </span>
 
                             <span
-                                class="
-                                    about-preview-status-dot
-                                "
+                                class="about-preview-status-dot"
                                 aria-hidden="true"
                             ></span>
 
@@ -762,9 +703,9 @@
 
 
 
-        <!-- =================================================
-             WHAT IS KNOWURLOCAL?
-             ================================================= -->
+        {{-- =====================================================
+             02. WHAT IS KNOWURLOCAL?
+             ====================================================== --}}
 
         <section
             id="what-is"
@@ -775,7 +716,6 @@
         >
 
             <div class="about-container">
-
 
                 <div
                     class="
@@ -796,11 +736,8 @@
                 </div>
 
 
-                <div
-                    class="
-                        about-introduction-grid
-                    "
-                >
+                <div class="about-introduction-grid">
+
 
                     <div
                         class="
@@ -810,9 +747,7 @@
                         style="--reveal-delay: 80ms;"
                     >
 
-                        <p
-                            class="about-lead"
-                        >
+                        <p class="about-lead">
 
                             KNOWURLOCAL is an information-access
                             platform designed to help citizens of
@@ -825,19 +760,21 @@
 
                         <p>
 
-                            Citizens may sometimes need to search
-                            through different sources, contact an
-                            office directly, or travel to a location
-                            simply to ask a basic question.
+                            Instead of searching through different
+                            sources or traveling to an office simply
+                            to ask a basic question, citizens can
+                            start by checking the information
+                            available through the system.
 
                         </p>
 
 
                         <p>
 
-                            The system provides a convenient starting point where users can explore agency information, 
-                            services, locations, office hours, contact details, FAQs, and 
-                            submit questions when the information they need is not already available.
+                            Agency information, services, locations,
+                            office hours, contact details, FAQs,
+                            and submitted questions are brought
+                            together in one place.
 
                         </p>
 
@@ -852,62 +789,45 @@
                         style="--reveal-delay: 160ms;"
                     >
 
-                        <div
-                            class="
-                                about-information-icon
-                            "
-                        >
+                        <div class="about-information-icon">
 
                             <i
                                 class="
                                     ph-light
                                     ph-buildings
                                 "
+                                aria-hidden="true"
                             ></i>
 
                         </div>
 
-
-                        <span
-                            class="about-card-label"
-                        >
+                        <span class="about-card-label">
                             LOCAL INFORMATION
                         </span>
-
 
                         <h3>
                             Start with the information
                             you need.
                         </h3>
 
-
                         <p>
 
-                            Explore available information from one
-                            place before deciding where to go or
-                            who to contact.
+                            Explore available information from
+                            one place before deciding where to go
+                            or who to contact.
 
                         </p>
 
+                        <div class="about-information-line"></div>
 
-                        <div
-                            class="
-                                about-information-line
-                            "
-                        ></div>
-
-
-                        <div
-                            class="
-                                about-information-meta
-                            "
-                        >
+                        <div class="about-information-meta">
 
                             <i
                                 class="
                                     ph-light
                                     ph-check-circle
                                 "
+                                aria-hidden="true"
                             ></i>
 
                             <span>
@@ -926,9 +846,9 @@
 
 
 
-        <!-- =================================================
-             WHY WE BUILT IT
-             ================================================= -->
+        {{-- =====================================================
+             03. WHY WE BUILT IT
+             ====================================================== --}}
 
         <section
             class="
@@ -938,7 +858,6 @@
         >
 
             <div class="about-container">
-
 
                 <div
                     class="
@@ -968,14 +887,10 @@
                 </div>
 
 
-                <div
-                    class="
-                        about-problem-solution
-                    "
-                >
+                <div class="about-problem-solution">
 
 
-                    <!-- PROBLEM -->
+                    {{-- BEFORE --}}
 
                     <article
                         class="
@@ -985,42 +900,28 @@
                         style="--reveal-delay: 80ms;"
                     >
 
-                        <div
-                            class="
-                                about-story-number
-                            "
-                        >
+                        <div class="about-story-number">
                             BEFORE
                         </div>
 
-
-                        <div
-                            class="
-                                about-story-icon
-                            "
-                        >
+                        <div class="about-story-icon">
 
                             <i
                                 class="
                                     ph-light
                                     ph-map-pin
                                 "
+                                aria-hidden="true"
                             ></i>
 
                         </div>
-
 
                         <h3>
                             Finding basic information
                             can take a trip.
                         </h3>
 
-
-                        <div
-                            class="
-                                about-story-flow
-                            "
-                        >
+                        <div class="about-story-flow">
 
                             <span>
                                 Question
@@ -1031,6 +932,7 @@
                                     ph-light
                                     ph-arrow-down
                                 "
+                                aria-hidden="true"
                             ></i>
 
                             <span>
@@ -1042,6 +944,7 @@
                                     ph-light
                                     ph-arrow-down
                                 "
+                                aria-hidden="true"
                             ></i>
 
                             <span>
@@ -1053,6 +956,7 @@
                                     ph-light
                                     ph-arrow-down
                                 "
+                                aria-hidden="true"
                             ></i>
 
                             <span>
@@ -1064,7 +968,7 @@
                     </article>
 
 
-                    <!-- DIVIDER -->
+                    {{-- DIVIDER --}}
 
                     <div
                         class="
@@ -1084,7 +988,7 @@
                     </div>
 
 
-                    <!-- SOLUTION -->
+                    {{-- WITH KNOWURLOCAL --}}
 
                     <article
                         class="
@@ -1095,42 +999,28 @@
                         style="--reveal-delay: 180ms;"
                     >
 
-                        <div
-                            class="
-                                about-story-number
-                            "
-                        >
+                        <div class="about-story-number">
                             WITH KNOWURLOCAL
                         </div>
 
-
-                        <div
-                            class="
-                                about-story-icon
-                            "
-                        >
+                        <div class="about-story-icon">
 
                             <i
                                 class="
                                     ph-light
                                     ph-check-circle
                                 "
+                                aria-hidden="true"
                             ></i>
 
                         </div>
-
 
                         <h3>
                             Start with information
                             before you go.
                         </h3>
 
-
-                        <div
-                            class="
-                                about-story-flow
-                            "
-                        >
+                        <div class="about-story-flow">
 
                             <span>
                                 Search
@@ -1141,6 +1031,7 @@
                                     ph-light
                                     ph-arrow-down
                                 "
+                                aria-hidden="true"
                             ></i>
 
                             <span>
@@ -1152,6 +1043,7 @@
                                     ph-light
                                     ph-arrow-down
                                 "
+                                aria-hidden="true"
                             ></i>
 
                             <span>
@@ -1163,6 +1055,7 @@
                                     ph-light
                                     ph-arrow-down
                                 "
+                                aria-hidden="true"
                             ></i>
 
                             <span>
@@ -1181,682 +1074,12 @@
 
 
 
-        <!-- =================================================
-             WHO IS IT FOR?
-             ================================================= -->
+        {{-- =====================================================
+             04. HOW IT WORKS
+             ====================================================== --}}
 
         <section
-            class="
-                about-section
-                about-audience
-            "
-        >
-
-            <div class="about-container">
-
-
-                <div
-                    class="
-                        about-section-heading
-                        about-section-heading-centered
-                        about-reveal
-                    "
-                >
-
-                    <span class="about-section-label">
-                        WHO IS IT FOR?
-                    </span>
-
-                    <h2>
-                        Built around the people
-                        who need local information.
-                    </h2>
-
-                    <p>
-
-                        KNOWURLOCAL is designed to support different
-                        people who need to understand where to go
-                        and what to expect.
-
-                    </p>
-
-                </div>
-
-
-                <div
-                    class="
-                        about-audience-grid
-                    "
-                >
-
-
-                    <!-- RESIDENTS -->
-
-                    <article
-                        class="
-                            about-audience-card
-                            about-reveal
-                        "
-                        style="--reveal-delay: 0ms;"
-                    >
-
-                        <div
-                            class="
-                                about-audience-icon
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-house
-                                "
-                            ></i>
-
-                        </div>
-
-
-                        <span>
-                            RESIDENTS
-                        </span>
-
-
-                        <h3>
-                            People living in
-                            San Jose
-                        </h3>
-
-
-                        <p>
-
-                            Find agencies, services, locations,
-                            office hours, and contact information
-                            without having to search through
-                            multiple sources first.
-
-                        </p>
-
-                    </article>
-
-
-
-                    <!-- VISITORS -->
-
-                    <article
-                        class="
-                            about-audience-card
-                            about-reveal
-                        "
-                        style="--reveal-delay: 90ms;"
-                    >
-
-                        <div
-                            class="
-                                about-audience-icon
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-map-pin
-                                "
-                            ></i>
-
-                        </div>
-
-
-                        <span>
-                            VISITORS
-                        </span>
-
-
-                        <h3>
-                            People unfamiliar
-                            with local offices
-                        </h3>
-
-
-                        <p>
-
-                            Get a clearer idea of where an office
-                            is located and what it can help with
-                            before making the trip.
-
-                        </p>
-
-                    </article>
-
-
-
-                    <!-- STUDENTS -->
-
-                    <article
-                        class="
-                            about-audience-card
-                            about-reveal
-                        "
-                        style="--reveal-delay: 180ms;"
-                    >
-
-                        <div
-                            class="
-                                about-audience-icon
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-student
-                                "
-                            ></i>
-
-                        </div>
-
-
-                        <span>
-                            COMMUNITY MEMBERS
-                        </span>
-
-
-                        <h3>
-                            People who need local government information
-                        </h3>
-
-
-                        <p>
-
-                            Find agencies, services, requirements, locations, 
-                            and other information needed before contacting or visiting an office.
-
-                        </p>
-
-                    </article>
-
-
-
-                    <!-- COMMUNITY -->
-
-                    <article
-                        class="
-                            about-audience-card
-                            about-reveal
-                        "
-                        style="--reveal-delay: 270ms;"
-                    >
-
-                        <div
-                            class="
-                                about-audience-icon
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-users-three
-                                "
-                            ></i>
-
-                        </div>
-
-
-                        <span>
-                            COMMUNITY MEMBERS
-                        </span>
-
-
-                        <h3>
-                            People who simply
-                            need an answer
-                        </h3>
-
-
-                        <p>
-
-                            Check existing FAQs or submit a question
-                            when the information they need is not
-                            already available.
-
-                        </p>
-
-                    </article>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             YOU MIGHT BE HERE BECAUSE...
-             ================================================= -->
-
-        <section
-            class="
-                about-section
-                about-reasons
-            "
-        >
-
-            <div class="about-container">
-
-
-                <div
-                    class="
-                        about-section-heading
-                        about-reveal
-                    "
-                >
-
-                    <span class="about-section-label">
-                        SOUND FAMILIAR?
-                    </span>
-
-                    <h2>
-                        You might be here because...
-                    </h2>
-
-                    <p>
-
-                        KNOWURLOCAL is built around the small
-                        questions that can otherwise turn into
-                        an unnecessary trip.
-
-                    </p>
-
-                </div>
-
-
-                <div
-                    class="
-                        about-reasons-grid
-                    "
-                >
-
-
-                    <article
-                        class="
-                            about-reason-card
-                            about-reveal
-                        "
-                    >
-
-                        <div
-                            class="
-                                about-reason-number
-                            "
-                        >
-                            01
-                        </div>
-
-                        <div
-                            class="
-                                about-reason-icon
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-buildings
-                                "
-                            ></i>
-
-                        </div>
-
-                        <h3>
-                            "I need to find an office."
-                        </h3>
-
-                        <p>
-                            Find the local agency or organization that provides the service you need.
-                        </p>
-
-                    </article>
-
-
-                    <article
-                        class="
-                            about-reason-card
-                            about-reveal
-                        "
-                    >
-
-                        <div
-                            class="
-                                about-reason-number
-                            "
-                        >
-                            02
-                        </div>
-
-                        <div
-                            class="
-                                about-reason-icon
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-clock
-                                "
-                            ></i>
-
-                        </div>
-
-                        <h3>
-                            "I want to know their hours."
-                        </h3>
-
-                        <p>
-                            Check available office hours before
-                            planning your visit.
-                        </p>
-
-                    </article>
-
-
-                    <article
-                        class="
-                            about-reason-card
-                            about-reveal
-                        "
-                    >
-
-                        <div
-                            class="
-                                about-reason-number
-                            "
-                        >
-                            03
-                        </div>
-
-                        <div
-                            class="
-                                about-reason-icon
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-list-checks
-                                "
-                            ></i>
-
-                        </div>
-
-                        <h3>
-                            "What services do they offer?"
-                        </h3>
-
-                        <p>
-                            Learn about available services before
-                            going to an office.
-                        </p>
-
-                    </article>
-
-
-                    <article
-                        class="
-                            about-reason-card
-                            about-reveal
-                        "
-                    >
-
-                        <div
-                            class="
-                                about-reason-number
-                            "
-                        >
-                            04
-                        </div>
-
-                        <div
-                            class="
-                                about-reason-icon
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-chat-circle-text
-                                "
-                            ></i>
-
-                        </div>
-
-                        <h3>
-                            "I have a question first."
-                        </h3>
-
-                        <p>
-                            Check FAQs or submit an inquiry when
-                            you need more information.
-                        </p>
-
-                    </article>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             BEFORE YOU GO
-             ================================================= -->
-
-        <section
-            class="
-                about-section
-                about-before
-            "
-        >
-
-            <div class="about-container">
-
-
-                <div
-                    class="
-                        about-before-heading
-                        about-reveal
-                    "
-                >
-
-                    <span class="about-section-label">
-                        BEFORE YOU GO
-                    </span>
-
-                    <h2>
-                        A few things worth checking first.
-                    </h2>
-
-                    <p>
-
-                        Instead of making the trip first, get the
-                        basic information you need beforehand.
-
-                    </p>
-
-                </div>
-
-
-                <div
-                    class="
-                        about-check-grid
-                    "
-                >
-
-                    <article
-                        class="
-                            about-check-card
-                            about-reveal
-                        "
-                    >
-
-                        <div
-                            class="
-                                about-check-top
-                            "
-                        >
-
-                            <span>
-                                01
-                            </span>
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-clock
-                                "
-                            ></i>
-
-                        </div>
-
-                        <h3>
-                            Is it open?
-                        </h3>
-
-                        <p>
-                            Check the available office hours.
-                        </p>
-
-                    </article>
-
-
-                    <article
-                        class="
-                            about-check-card
-                            about-reveal
-                        "
-                    >
-
-                        <div
-                            class="
-                                about-check-top
-                            "
-                        >
-
-                            <span>
-                                02
-                            </span>
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-map-pin
-                                "
-                            ></i>
-
-                        </div>
-
-                        <h3>
-                            Where is it?
-                        </h3>
-
-                        <p>
-                            Locate the office on the interactive map.
-                        </p>
-
-                    </article>
-
-
-                    <article
-                        class="
-                            about-check-card
-                            about-reveal
-                        "
-                    >
-
-                        <div
-                            class="
-                                about-check-top
-                            "
-                        >
-
-                            <span>
-                                03
-                            </span>
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-list-checks
-                                "
-                            ></i>
-
-                        </div>
-
-                        <h3>
-                            What do they offer?
-                        </h3>
-
-                        <p>
-                            Review available services and information.
-                        </p>
-
-                    </article>
-
-
-                    <article
-                        class="
-                            about-check-card
-                            about-reveal
-                        "
-                    >
-
-                        <div
-                            class="
-                                about-check-top
-                            "
-                        >
-
-                            <span>
-                                04
-                            </span>
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-phone
-                                "
-                            ></i>
-
-                        </div>
-
-                        <h3>
-                            Who can I contact?
-                        </h3>
-
-                        <p>
-                            Find available contact information.
-                        </p>
-
-                    </article>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             HOW IT HELPS
-             ================================================= -->
-
-        <section
+            id="how-it-works"
             class="
                 about-section
                 about-how
@@ -1865,7 +1088,6 @@
 
             <div class="about-container">
 
-
                 <div
                     class="
                         about-section-heading
@@ -1875,54 +1097,47 @@
                 >
 
                     <span class="about-section-label">
-                        HOW IT HELPS
+                        HOW IT WORKS
                     </span>
 
                     <h2>
-                        From searching to asking,
-                        all in one place.
+                        Find. Know. Navigate. Ask. Go.
                     </h2>
 
                     <p>
 
-                        The system follows the simple steps citizens
-                        commonly take when looking for local information.
+                        KNOWURLOCAL follows the simple journey
+                        citizens can take when looking for
+                        local information.
 
                     </p>
 
                 </div>
 
 
-                <div
-                    class="
-                        about-process-grid
-                    "
-                >
+                <div class="about-process-grid">
+
+
+                    {{-- FIND --}}
 
                     <article
                         class="
                             about-process-card
                             about-reveal
                         "
+                        style="--reveal-delay: 0ms;"
                     >
 
-                        <div
-                            class="
-                                about-process-top
-                            "
-                        >
+                        <div class="about-process-top">
 
-                            <div
-                                class="
-                                    about-process-icon
-                                "
-                            >
+                            <div class="about-process-icon">
 
                                 <i
                                     class="
                                         ph-light
                                         ph-magnifying-glass
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                             </div>
@@ -1945,30 +1160,26 @@
                     </article>
 
 
+                    {{-- KNOW --}}
+
                     <article
                         class="
                             about-process-card
                             about-reveal
                         "
+                        style="--reveal-delay: 80ms;"
                     >
 
-                        <div
-                            class="
-                                about-process-top
-                            "
-                        >
+                        <div class="about-process-top">
 
-                            <div
-                                class="
-                                    about-process-icon
-                                "
-                            >
+                            <div class="about-process-icon">
 
                                 <i
                                     class="
                                         ph-light
-                                        ph-map-pin
+                                        ph-info
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                             </div>
@@ -1980,41 +1191,38 @@
                         </div>
 
                         <h3>
-                            Explore
+                            Know
                         </h3>
 
                         <p>
-                            View its location and learn more about
-                            the organization.
+                            Review services, office hours,
+                            contact details, and available
+                            agency information.
                         </p>
 
                     </article>
 
+
+                    {{-- NAVIGATE --}}
 
                     <article
                         class="
                             about-process-card
                             about-reveal
                         "
+                        style="--reveal-delay: 160ms;"
                     >
 
-                        <div
-                            class="
-                                about-process-top
-                            "
-                        >
+                        <div class="about-process-top">
 
-                            <div
-                                class="
-                                    about-process-icon
-                                "
-                            >
+                            <div class="about-process-icon">
 
                                 <i
                                     class="
                                         ph-light
-                                        ph-list-checks
+                                        ph-map-pin
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                             </div>
@@ -2026,41 +1234,37 @@
                         </div>
 
                         <h3>
-                            Check
+                            Navigate
                         </h3>
 
                         <p>
-                            Review services, requirements, office hours, 
-                            contact information, and other available guidance before visiting.
+                            Locate the office on the interactive
+                            map and plan where you need to go.
                         </p>
 
                     </article>
 
+
+                    {{-- ASK --}}
 
                     <article
                         class="
                             about-process-card
                             about-reveal
                         "
+                        style="--reveal-delay: 240ms;"
                     >
 
-                        <div
-                            class="
-                                about-process-top
-                            "
-                        >
+                        <div class="about-process-top">
 
-                            <div
-                                class="
-                                    about-process-icon
-                                "
-                            >
+                            <div class="about-process-icon">
 
                                 <i
                                     class="
                                         ph-light
                                         ph-chat-circle-text
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                             </div>
@@ -2082,6 +1286,48 @@
 
                     </article>
 
+
+                    {{-- GO --}}
+
+                    <article
+                        class="
+                            about-process-card
+                            about-reveal
+                        "
+                        style="--reveal-delay: 320ms;"
+                    >
+
+                        <div class="about-process-top">
+
+                            <div class="about-process-icon">
+
+                                <i
+                                    class="
+                                        ph-light
+                                        ph-navigation-arrow
+                                    "
+                                    aria-hidden="true"
+                                ></i>
+
+                            </div>
+
+                            <span>
+                                05
+                            </span>
+
+                        </div>
+
+                        <h3>
+                            Go
+                        </h3>
+
+                        <p>
+                            Visit with the information you need
+                            already in hand.
+                        </p>
+
+                    </article>
+
                 </div>
 
             </div>
@@ -2090,9 +1336,9 @@
 
 
 
-        <!-- =================================================
-             WHAT YOU CAN FIND
-             ================================================= -->
+        {{-- =====================================================
+             05. WHAT YOU CAN FIND
+             ====================================================== --}}
 
         <section
             class="
@@ -2103,12 +1349,7 @@
 
             <div class="about-container">
 
-
-                <div
-                    class="
-                        about-discover-grid
-                    "
-                >
+                <div class="about-discover-grid">
 
 
                     <div
@@ -2138,11 +1379,8 @@
                     </div>
 
 
-                    <div
-                        class="
-                            about-discover-list
-                        "
-                    >
+                    <div class="about-discover-list">
+
 
                         <article
                             class="
@@ -2151,17 +1389,14 @@
                             "
                         >
 
-                            <div
-                                class="
-                                    about-discover-icon
-                                "
-                            >
+                            <div class="about-discover-icon">
 
                                 <i
                                     class="
                                         ph-light
                                         ph-buildings
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                             </div>
@@ -2173,7 +1408,9 @@
                                 </h3>
 
                                 <p>
-                                    View basic information about an agency or organization and the services it provides.
+                                    View basic information about
+                                    an agency or organization and
+                                    the services it provides.
                                 </p>
 
                             </div>
@@ -2188,17 +1425,14 @@
                             "
                         >
 
-                            <div
-                                class="
-                                    about-discover-icon
-                                "
-                            >
+                            <div class="about-discover-icon">
 
                                 <i
                                     class="
                                         ph-light
                                         ph-map-pin
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                             </div>
@@ -2226,17 +1460,14 @@
                             "
                         >
 
-                            <div
-                                class="
-                                    about-discover-icon
-                                "
-                            >
+                            <div class="about-discover-icon">
 
                                 <i
                                     class="
                                         ph-light
                                         ph-list-checks
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                             </div>
@@ -2264,17 +1495,14 @@
                             "
                         >
 
-                            <div
-                                class="
-                                    about-discover-icon
-                                "
-                            >
+                            <div class="about-discover-icon">
 
                                 <i
                                     class="
                                         ph-light
                                         ph-clock
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                             </div>
@@ -2302,17 +1530,14 @@
                             "
                         >
 
-                            <div
-                                class="
-                                    about-discover-icon
-                                "
-                            >
+                            <div class="about-discover-icon">
 
                                 <i
                                     class="
                                         ph-light
                                         ph-phone
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                             </div>
@@ -2340,17 +1565,14 @@
                             "
                         >
 
-                            <div
-                                class="
-                                    about-discover-icon
-                                "
-                            >
+                            <div class="about-discover-icon">
 
                                 <i
                                     class="
                                         ph-light
                                         ph-chats
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                             </div>
@@ -2362,8 +1584,10 @@
                                 </h3>
 
                                 <p>
-                                    Find answers to common agency-related questions or 
-                                    submit your own question when the information you need is not already available.
+                                    Find answers to common agency-related
+                                    questions or submit your own question
+                                    when the information you need is not
+                                    already available.
                                 </p>
 
                             </div>
@@ -2380,9 +1604,9 @@
 
 
 
-        <!-- =================================================
-             HOW QUESTIONS WORK
-             ================================================= -->
+        {{-- =====================================================
+             06. QUESTIONS / HELPDESK
+             ====================================================== --}}
 
         <section
             class="
@@ -2392,7 +1616,6 @@
         >
 
             <div class="about-container">
-
 
                 <div
                     class="
@@ -2412,24 +1635,18 @@
 
                     <p>
 
-                        KNOWURLOCAL provides a way for users to
-                        submit questions when the information they
-                        need is not already covered by the available
-                        FAQs.
+                        KNOWURLOCAL provides a way for users
+                        to submit questions when the information
+                        they need is not already covered by
+                        available FAQs.
 
                     </p>
 
                 </div>
 
 
-                <div
-                    class="
-                        about-question-flow
-                    "
-                >
+                <div class="about-question-flow">
 
-
-                    <!-- STEP 1 -->
 
                     <article
                         class="
@@ -2442,17 +1659,14 @@
                             01
                         </span>
 
-                        <div
-                            class="
-                                about-question-step-icon
-                            "
-                        >
+                        <div class="about-question-step-icon">
 
                             <i
                                 class="
                                     ph-light
                                     ph-chat-circle
                                 "
+                                aria-hidden="true"
                             ></i>
 
                         </div>
@@ -2469,9 +1683,7 @@
 
 
                     <div
-                        class="
-                            about-question-arrow
-                        "
+                        class="about-question-arrow"
                         aria-hidden="true"
                     >
 
@@ -2485,8 +1697,6 @@
                     </div>
 
 
-                    <!-- STEP 2 -->
-
                     <article
                         class="
                             about-question-step
@@ -2498,17 +1708,14 @@
                             02
                         </span>
 
-                        <div
-                            class="
-                                about-question-step-icon
-                            "
-                        >
+                        <div class="about-question-step-icon">
 
                             <i
                                 class="
                                     ph-light
                                     ph-clock
                                 "
+                                aria-hidden="true"
                             ></i>
 
                         </div>
@@ -2525,9 +1732,7 @@
 
 
                     <div
-                        class="
-                            about-question-arrow
-                        "
+                        class="about-question-arrow"
                         aria-hidden="true"
                     >
 
@@ -2541,8 +1746,6 @@
                     </div>
 
 
-                    <!-- STEP 3 -->
-
                     <article
                         class="
                             about-question-step
@@ -2554,17 +1757,14 @@
                             03
                         </span>
 
-                        <div
-                            class="
-                                about-question-step-icon
-                            "
-                        >
+                        <div class="about-question-step-icon">
 
                             <i
                                 class="
                                     ph-light
                                     ph-chat-circle-text
                                 "
+                                aria-hidden="true"
                             ></i>
 
                         </div>
@@ -2594,6 +1794,7 @@
                             ph-light
                             ph-info
                         "
+                        aria-hidden="true"
                     ></i>
 
                     <p>
@@ -2613,236 +1814,9 @@
 
 
 
-        <!-- =================================================
-             VISIT JOURNEY
-             ================================================= -->
-
-        <section
-            class="
-                about-section
-                about-journey
-            "
-        >
-
-            <div class="about-container">
-
-
-                <div
-                    class="
-                        about-section-heading
-                        about-section-heading-centered
-                        about-reveal
-                    "
-                >
-
-                    <span class="about-section-label">
-                        YOUR VISIT, SIMPLIFIED
-                    </span>
-
-                    <h2>
-                        Don't start with the trip.
-                        Start with the information.
-                    </h2>
-
-                </div>
-
-
-                <div
-                    class="
-                        about-journey-track
-                    "
-                >
-
-                    <div
-                        class="
-                            about-journey-step
-                            about-reveal
-                        "
-                    >
-
-                        <span>
-                            01
-                        </span>
-
-                        <div
-                            class="
-                                about-journey-icon
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-magnifying-glass
-                                "
-                            ></i>
-
-                        </div>
-
-                        <h3>
-                            Search
-                        </h3>
-
-                    </div>
-
-
-                    <div
-                        class="
-                            about-journey-arrow
-                        "
-                    >
-
-                        <i
-                            class="
-                                ph-light
-                                ph-arrow-right
-                            "
-                        ></i>
-
-                    </div>
-
-
-                    <div
-                        class="
-                            about-journey-step
-                            about-reveal
-                        "
-                    >
-
-                        <span>
-                            02
-                        </span>
-
-                        <div
-                            class="
-                                about-journey-icon
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-info
-                                "
-                            ></i>
-
-                        </div>
-
-                        <h3>
-                            Check
-                        </h3>
-
-                    </div>
-
-
-                    <div
-                        class="
-                            about-journey-arrow
-                        "
-                    >
-
-                        <i
-                            class="
-                                ph-light
-                                ph-arrow-right
-                            "
-                        ></i>
-
-                    </div>
-
-
-                    <div
-                        class="
-                            about-journey-step
-                            about-reveal
-                        "
-                    >
-
-                        <span>
-                            03
-                        </span>
-
-                        <div
-                            class="
-                                about-journey-icon
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-map-pin
-                                "
-                            ></i>
-
-                        </div>
-
-                        <h3>
-                            Locate
-                        </h3>
-
-                    </div>
-
-
-                    <div
-                        class="
-                            about-journey-arrow
-                        "
-                    >
-
-                        <i
-                            class="
-                                ph-light
-                                ph-arrow-right
-                            "
-                        ></i>
-
-                    </div>
-
-
-                    <div
-                        class="
-                            about-journey-step
-                            about-reveal
-                        "
-                    >
-
-                        <span>
-                            04
-                        </span>
-
-                        <div
-                            class="
-                                about-journey-icon
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-navigation-arrow
-                                "
-                            ></i>
-
-                        </div>
-
-                        <h3>
-                            Go
-                        </h3>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             MAP FEATURE
-             ================================================= -->
+        {{-- =====================================================
+             07. MAP FEATURE
+             ====================================================== --}}
 
         <section
             class="
@@ -2853,7 +1827,6 @@
 
             <div class="about-container">
 
-
                 <div
                     class="
                         about-map-card
@@ -2861,10 +1834,11 @@
                     "
                 >
 
+
+                    {{-- MAP VISUAL --}}
+
                     <div
-                        class="
-                            about-map-visual
-                        "
+                        class="about-map-visual"
                         aria-hidden="true"
                     >
 
@@ -2948,11 +1922,7 @@
                         </div>
 
 
-                        <div
-                            class="
-                                about-map-center
-                            "
-                        >
+                        <div class="about-map-center">
 
                             <i
                                 class="
@@ -2966,26 +1936,18 @@
                     </div>
 
 
-                    <div
-                        class="
-                            about-map-copy
-                        "
-                    >
+                    {{-- MAP COPY --}}
 
-                        <span
-                            class="
-                                about-section-label
-                            "
-                        >
+                    <div class="about-map-copy">
+
+                        <span class="about-section-label">
                             LOCAL MAP
                         </span>
-
 
                         <h2>
                             Find agencies
                             around San Jose.
                         </h2>
-
 
                         <p>
 
@@ -2996,12 +1958,9 @@
 
                         </p>
 
-
                         <a
-                            href="{{ url('/map') }}"
-                            class="
-                                about-primary-button
-                            "
+                            href="{{ route('map') }}"
+                            class="about-primary-button"
                         >
 
                             <i
@@ -3009,6 +1968,7 @@
                                     ph-light
                                     ph-map-trifold
                                 "
+                                aria-hidden="true"
                             ></i>
 
                             <span>
@@ -3027,140 +1987,9 @@
 
 
 
-        <!-- =================================================
-             INFORMATION RELIABILITY
-             ================================================= -->
-
-        <section
-            class="
-                about-section
-                about-reliability
-            "
-        >
-
-            <div class="about-container">
-
-
-                <div
-                    class="
-                        about-reliability-card
-                        about-reveal
-                    "
-                >
-
-                    <div
-                        class="
-                            about-reliability-icon
-                        "
-                    >
-
-                        <i
-                            class="
-                                ph-light
-                                ph-arrows-clockwise
-                            "
-                        ></i>
-
-                    </div>
-
-
-                    <div>
-
-                        <span
-                            class="
-                                about-section-label
-                            "
-                        >
-                            KEEPING INFORMATION USEFUL
-                        </span>
-
-
-                        <h2>
-                            Information can change.
-                        </h2>
-
-
-                        <p>
-
-                            Office hours, contact details, services,
-                            and other information may change over time.
-                            KNOWURLOCAL is intended to make information
-                            easier to discover, while important or
-                            time-sensitive details should still be
-                            confirmed with the concerned agency or
-                            organization.
-
-                        </p>
-
-                    </div>
-
-
-                    <div
-                        class="
-                            about-reliability-points
-                        "
-                    >
-
-                        <div>
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-clock
-                                "
-                            ></i>
-
-                            <span>
-                                Office hours
-                            </span>
-
-                        </div>
-
-
-                        <div>
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-phone
-                                "
-                            ></i>
-
-                            <span>
-                                Contact details
-                            </span>
-
-                        </div>
-
-
-                        <div>
-
-                            <i
-                                class="
-                                    ph-light
-                                    ph-list-checks
-                                "
-                            ></i>
-
-                            <span>
-                                Services
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             SCOPE
-             ================================================= -->
+        {{-- =====================================================
+             08. INFORMATION & SCOPE
+             ====================================================== --}}
 
         <section
             class="
@@ -3180,25 +2009,30 @@
                 >
 
                     <span class="about-section-label">
-                        KNOW THE SCOPE
+                        INFORMATION & SCOPE
                     </span>
 
                     <h2>
-                        What KNOWURLOCAL is —
-                        and isn't.
+                        Use KNOWURLOCAL
+                        as your starting point.
                     </h2>
+
+                    <p>
+
+                        KNOWURLOCAL makes local information easier
+                        to discover, but important requirements,
+                        schedules, and official decisions should
+                        still be confirmed with the concerned office.
+
+                    </p>
 
                 </div>
 
 
-                <div
-                    class="
-                        about-scope-grid
-                    "
-                >
+                <div class="about-scope-grid">
 
 
-                    <!-- IS -->
+                    {{-- WHAT IT IS --}}
 
                     <div
                         class="
@@ -3208,23 +2042,16 @@
                         "
                     >
 
-                        <div
-                            class="
-                                about-scope-heading
-                            "
-                        >
+                        <div class="about-scope-heading">
 
-                            <div
-                                class="
-                                    about-scope-icon
-                                "
-                            >
+                            <div class="about-scope-icon">
 
                                 <i
                                     class="
                                         ph-light
                                         ph-check
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                             </div>
@@ -3245,6 +2072,7 @@
                                         ph-light
                                         ph-check-circle
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                                 <span>
@@ -3261,6 +2089,7 @@
                                         ph-light
                                         ph-check-circle
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                                 <span>
@@ -3278,10 +2107,13 @@
                                         ph-light
                                         ph-check-circle
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                                 <span>
-                                    A place to find agency services, locations, office hours, and contact information
+                                    A place to find services,
+                                    locations, office hours,
+                                    and contact information
                                 </span>
 
                             </li>
@@ -3294,13 +2126,16 @@
                                         ph-light
                                         ph-check-circle
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                                 <span>
-                                    A starting point for checking common agency-related questions
+                                    A starting point for common
+                                    agency-related questions
                                 </span>
 
                             </li>
+
 
                             <li>
 
@@ -3309,10 +2144,13 @@
                                         ph-light
                                         ph-check-circle
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                                 <span>
-                                    A way to submit questions when available information does not answer what you need
+                                    A way to submit questions when
+                                    available information does not
+                                    answer what you need
                                 </span>
 
                             </li>
@@ -3322,7 +2160,7 @@
                     </div>
 
 
-                    <!-- ISN'T -->
+                    {{-- WHAT IT IS NOT --}}
 
                     <div
                         class="
@@ -3332,23 +2170,16 @@
                         "
                     >
 
-                        <div
-                            class="
-                                about-scope-heading
-                            "
-                        >
+                        <div class="about-scope-heading">
 
-                            <div
-                                class="
-                                    about-scope-icon
-                                "
-                            >
+                            <div class="about-scope-icon">
 
                                 <i
                                     class="
                                         ph-light
                                         ph-minus
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                             </div>
@@ -3369,6 +2200,7 @@
                                         ph-light
                                         ph-minus-circle
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                                 <span>
@@ -3385,6 +2217,7 @@
                                         ph-light
                                         ph-minus-circle
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                                 <span>
@@ -3402,6 +2235,7 @@
                                         ph-light
                                         ph-minus-circle
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                                 <span>
@@ -3419,6 +2253,7 @@
                                         ph-light
                                         ph-minus-circle
                                     "
+                                    aria-hidden="true"
                                 ></i>
 
                                 <span>
@@ -3440,85 +2275,9 @@
 
 
 
-        <!-- =================================================
-             FINAL NOTE
-             ================================================= -->
-
-        <section
-            class="
-                about-section
-                about-information-note
-            "
-        >
-
-            <div class="about-container">
-
-
-                <div
-                    class="
-                        about-note-card
-                        about-reveal
-                    "
-                >
-
-                    <div
-                        class="
-                            about-note-icon
-                        "
-                    >
-
-                        <i
-                            class="
-                                ph-light
-                                ph-info
-                            "
-                        ></i>
-
-                    </div>
-
-
-                    <div>
-
-                        <span
-                            class="
-                                about-section-label
-                            "
-                        >
-                            A NOTE ABOUT INFORMATION
-                        </span>
-
-
-                        <h2>
-                            Use the information as
-                            your starting point.
-                        </h2>
-
-
-                        <p>
-
-                            KNOWURLOCAL provides information intended
-                            to help citizens locate and understand
-                            available services. When an important
-                            decision depends on current requirements,
-                            schedules, or official instructions,
-                            confirm the details directly with the
-                            concerned agency or organization.
-
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- =================================================
-             FINAL CTA
-             ================================================= -->
+        {{-- =====================================================
+             09. FINAL CTA
+             ====================================================== --}}
 
         <section
             class="
@@ -3529,7 +2288,6 @@
 
             <div class="about-container">
 
-
                 <div
                     class="
                         about-cta-content
@@ -3537,20 +2295,14 @@
                     "
                 >
 
-                    <span
-                        class="
-                            about-section-label
-                        "
-                    >
+                    <span class="about-section-label">
                         START EXPLORING
                     </span>
-
 
                     <h2>
                         Know where to go
                         before you go.
                     </h2>
-
 
                     <p>
 
@@ -3559,12 +2311,9 @@
 
                     </p>
 
-
                     <a
-                        href="{{ url('/map') }}"
-                        class="
-                            about-primary-button
-                        "
+                        href="{{ route('map') }}"
+                        class="about-primary-button"
                     >
 
                         <i
@@ -3572,6 +2321,7 @@
                                 ph-light
                                 ph-map-trifold
                             "
+                            aria-hidden="true"
                         ></i>
 
                         <span>
@@ -3588,7 +2338,6 @@
 
 
     </main>
-
 
 </body>
 

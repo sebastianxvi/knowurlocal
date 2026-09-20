@@ -734,6 +734,28 @@ function toggleAuth() {
         .classList.toggle("active");
 }
 
+/*
+ * =========================================================
+ * INITIAL AUTH MODE
+ * =========================================================
+ *
+ * The landing page can request registration mode by sending
+ * ?register=1 to the authentication page.
+ *
+ * This allows "Get started" and "Sign in" to share the same
+ * authentication page without creating duplicate pages.
+ */
+
+const urlParams =
+    new URLSearchParams(window.location.search);
+
+
+if (
+    urlParams.get("register") === "1"
+) {
+    toggleAuth();
+}
+
 
 
 /*

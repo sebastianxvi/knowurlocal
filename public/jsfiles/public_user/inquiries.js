@@ -1,333 +1,481 @@
 document.addEventListener("DOMContentLoaded", () => {
+    "use strict";
 
     /*
-     * =====================================================
-     * FILTERING
-     * =====================================================
-     */
+    |--------------------------------------------------------------------------
+    | DOM REFERENCES
+    |--------------------------------------------------------------------------
+    |
+    | Cache elements once instead of repeatedly querying the document.
+    | This keeps the interaction logic easier to read and avoids unnecessary
+    | DOM lookups.
+    |
+    */
 
-    const filterButtons =
-        document.querySelectorAll(".filter-btn");
+    const inquiryCards = Array.from(
+        document.querySelectorAll(".inquiry-card")
+    );
 
-    const inquiryCards =
-        document.querySelectorAll(".inquiry-card");
+    const filterButtons = Array.from(
+        document.querySelectorAll("[data-filter]")
+    );
 
+    const inquiryToggles = Array.from(
+        document.querySelectorAll(".inquiry-toggle")
+    );
 
-    filterButtons.forEach(button => {
+    const imageTriggers = Array.from(
+        document.querySelectorAll("[data-image-preview]")
+    );
 
-        button.addEventListener("click", () => {
+    const imageLightbox = document.getElementById("image-lightbox");
 
-            filterButtons.forEach(item => {
-                item.classList.remove("active");
-            });
+    const imageLightboxImage = document.getElementById(
+        "image-lightbox-image"
+    );
 
-            button.classList.add("active");
-
-
-            const filter =
-                button.dataset.filter;
-
-
-            inquiryCards.forEach(card => {
-
-                const status =
-                    card.dataset.status;
-
-                const shouldShow =
-                    filter === "all" ||
-                    filter === status;
-
-
-                card.hidden = !shouldShow;
-
-
-                /*
-                 * Collapse cards that become hidden.
-                 */
-
-                if (!shouldShow) {
-
-                    card.classList.remove("expanded");
-
-                    const toggle =
-                        card.querySelector(".inquiry-toggle");
-
-                    if (toggle) {
-
-                        toggle.setAttribute(
-                            "aria-expanded",
-                            "false"
-                        );
-
-                    }
-
-                }
-
-            });
-
-        });
-
-    });
+    const imageLightboxClose = document.getElementById(
+        "image-lightbox-close"
+    );
 
 
     /*
-     * =====================================================
-     * INQUIRY EXPANSION
-     * =====================================================
-     */
+    |--------------------------------------------------------------------------
+    | REDUCED MOTION
+    |--------------------------------------------------------------------------
+    |
+    | Respect users who have requested reduced motion at the operating-system
+    | level. The CSS also handles this, but keeping the preference available
+    | here lets us avoid unnecessary animation-related behavior in JavaScript.
+    |
+    */
 
-    inquiryCards.forEach(card => {
+    const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+    ).matches;
 
-        const toggle =
-            card.querySelector(".inquiry-toggle");
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACCORDION HELPERS
+    |--------------------------------------------------------------------------
+    |
+    | Keeping accordion state changes inside small functions prevents the
+    | click handlers from becoming difficult to maintain.
+    |
+    */
+
+    const closeInquiry = (card) => {
+        if (!card) {
+            return;
+        }
+
+        const toggle = card.querySelector(".inquiry-toggle");
+        const details = card.querySelector(".inquiry-details");
+
+        if (!toggle || !details) {
+            return;
+        }
+
+        card.classList.remove("expanded");
+
+        toggle.setAttribute("aria-expanded", "false");
+
+        /*
+        | Keep the details region semantically hidden when collapsed.
+        | The CSS controls the visual animation.
+        */
+        details.setAttribute("aria-hidden", "true");
+    };
+
+
+    const openInquiry = (card) => {
+        if (!card) {
+            return;
+        }
+
+        const toggle = card.querySelector(".inquiry-toggle");
+        const details = card.querySelector(".inquiry-details");
+
+        if (!toggle || !details) {
+            return;
+        }
+
+        card.classList.add("expanded");
+
+        toggle.setAttribute("aria-expanded", "true");
+
+        details.setAttribute("aria-hidden", "false");
+
+        /*
+        | Answered inquiries may contain an unread response.
+        | Marking it as seen happens only when the user actually opens it.
+        */
+        if (card.dataset.status === "answered") {
+            markAnswerAsSeen(card);
+        }
+    };
+
+
+    const toggleInquiry = (card) => {
+        if (!card) {
+            return;
+        }
+
+        const toggle = card.querySelector(".inquiry-toggle");
 
         if (!toggle) {
             return;
         }
 
+        const isExpanded =
+            toggle.getAttribute("aria-expanded") === "true";
 
-        toggle.addEventListener("click", async () => {
-
-            const isExpanded =
-                card.classList.contains("expanded");
-
-
-            /*
-             * Collapse every other inquiry first.
-             */
-
-            inquiryCards.forEach(otherCard => {
-
-                if (otherCard === card) {
-                    return;
-                }
-
-                otherCard.classList.remove("expanded");
-
-                const otherToggle =
-                    otherCard.querySelector(".inquiry-toggle");
-
-                if (otherToggle) {
-
-                    otherToggle.setAttribute(
-                        "aria-expanded",
-                        "false"
-                    );
-
-                }
-
-            });
-
-
-            /*
-             * Open or close the clicked inquiry.
-             */
-
-            card.classList.toggle(
-                "expanded",
-                !isExpanded
-            );
-
-
-            toggle.setAttribute(
-                "aria-expanded",
-                String(!isExpanded)
-            );
-
-
-            /*
-             * Only mark the inquiry as seen when:
-             *
-             * 1. The user is opening it.
-             * 2. The inquiry has already been answered.
-             */
-
-            if (
-                !isExpanded &&
-                card.dataset.status === "answered"
-            ) {
-
-                await markAnswerAsSeen(card);
-
+        /*
+        | Close every other card first.
+        | This keeps the page visually calm and prevents several large
+        | answers from being expanded simultaneously.
+        */
+        inquiryCards.forEach((otherCard) => {
+            if (otherCard !== card) {
+                closeInquiry(otherCard);
             }
-
         });
 
+        if (isExpanded) {
+            closeInquiry(card);
+            return;
+        }
+
+        openInquiry(card);
+    };
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | INITIALIZE ACCORDION ACCESSIBILITY STATE
+    |--------------------------------------------------------------------------
+    |
+    | The Blade now gives every details region an ID and connects it to its
+    | button using aria-controls.
+    |
+    | aria-hidden provides an additional semantic indication of whether the
+    | details content is currently exposed.
+    |
+    */
+
+    inquiryCards.forEach((card) => {
+        const toggle = card.querySelector(".inquiry-toggle");
+        const details = card.querySelector(".inquiry-details");
+
+        if (!toggle || !details) {
+            return;
+        }
+
+        const detailsId = details.id;
+
+        if (detailsId) {
+            toggle.setAttribute("aria-controls", detailsId);
+        }
+
+        closeInquiry(card);
     });
 
 
     /*
-     * =====================================================
-     * MARK ANSWER AS SEEN
-     * =====================================================
-     */
+    |--------------------------------------------------------------------------
+    | ACCORDION EVENTS
+    |--------------------------------------------------------------------------
+    */
 
-    async function markAnswerAsSeen(card) {
+    inquiryToggles.forEach((toggle) => {
+        toggle.addEventListener("click", () => {
+            const card = toggle.closest(".inquiry-card");
 
-        const requestId =
-            card.dataset.id;
+            toggleInquiry(card);
+        });
+    });
 
+
+    /*
+|--------------------------------------------------------------------------
+| FILTERING
+|--------------------------------------------------------------------------
+|
+| My Inquiries intentionally has only two states:
+|
+|   answered → questions that received a response
+|   pending  → questions still waiting for a response
+|
+| Answered is the default because it provides the user with useful
+| information immediately when they open the page.
+|
+*/
+
+const applyFilter = (filter) => {
+    inquiryCards.forEach((card) => {
+        const status = card.dataset.status;
+
+        const shouldShow = status === filter;
+
+        card.hidden = !shouldShow;
 
         /*
-         * Stop if the card does not have a valid ID.
-         */
+        | Collapse cards that are being hidden.
+        | This prevents an expanded inquiry from remaining visually open
+        | when the user switches between Answered and Pending.
+        */
+        if (!shouldShow) {
+            closeInquiry(card);
+        }
+    });
+
+    updateEmptyState(filter);
+};
+
+
+filterButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        const selectedFilter = button.dataset.filter;
+
+        if (!selectedFilter) {
+            return;
+        }
+
+        /*
+        | Update the selected tab visually and for assistive technology.
+        */
+        filterButtons.forEach((filterButton) => {
+            const isActive =
+                filterButton === button;
+
+            filterButton.classList.toggle(
+                "active",
+                isActive
+            );
+
+            filterButton.setAttribute(
+                "aria-pressed",
+                isActive ? "true" : "false"
+            );
+        });
+
+        applyFilter(selectedFilter);
+    });
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| DEFAULT FILTER
+|--------------------------------------------------------------------------
+|
+| Answered is intentionally selected when the page first loads.
+|
+*/
+
+const initialFilter = "answered";
+
+applyFilter(initialFilter);
+
+/*
+|--------------------------------------------------------------------------
+| CONTEXTUAL EMPTY STATE
+|--------------------------------------------------------------------------
+|
+| The empty state changes depending on which tab the user selected.
+| This gives the user a useful explanation instead of a generic
+| "No inquiries yet" message.
+|
+*/
+
+const updateEmptyState = (filter) => {
+    const emptyState = document.querySelector(".empty-state");
+
+    if (!emptyState) {
+        return;
+    }
+
+    const emptyIcon = emptyState.querySelector(".empty-icon");
+    const emptyHeading = emptyState.querySelector("h2");
+    const emptyMessage = emptyState.querySelector("p");
+
+    const visibleCards = inquiryCards.filter(
+        (card) => !card.hidden
+    );
+
+    const hasVisibleCards = visibleCards.length > 0;
+
+    emptyState.hidden = hasVisibleCards;
+
+    if (hasVisibleCards) {
+        return;
+    }
+
+    if (filter === "pending") {
+        if (emptyIcon) {
+            emptyIcon.innerHTML =
+                '<i class="ph-light ph-hourglass"></i>';
+        }
+
+        if (emptyHeading) {
+            emptyHeading.textContent =
+                "No pending inquiries";
+        }
+
+        if (emptyMessage) {
+            emptyMessage.textContent =
+                "You have no questions waiting for a response.";
+        }
+
+        return;
+    }
+
+    if (emptyIcon) {
+        emptyIcon.innerHTML =
+            '<i class="ph-light ph-chat-circle-dots"></i>';
+    }
+
+    if (emptyHeading) {
+        emptyHeading.textContent =
+            "No answered inquiries yet";
+    }
+
+    if (emptyMessage) {
+        emptyMessage.textContent =
+            "Your submitted questions will appear here once an office responds.";
+    }
+};
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | MARK ANSWER AS SEEN
+    |--------------------------------------------------------------------------
+    |
+    | The CSRF token is read from the page instead of being hard-coded.
+    | The request uses same-origin credentials and JSON headers.
+    |
+    */
+
+    async function markAnswerAsSeen(card) {
+        if (!card) {
+            return;
+        }
+
+        const requestId = card.dataset.id;
 
         if (!requestId) {
             return;
         }
 
-
         /*
-         * Laravel's CSRF token is required for this POST request.
-         */
+        | If the unread indicator is already gone, there is nothing left
+        | to update.
+        */
+        const unreadIndicator =
+            card.querySelector(".unread-dot");
+
+        if (!unreadIndicator) {
+            return;
+        }
 
         const csrfToken =
-            document.querySelector(
-                'meta[name="csrf-token"]'
-            )?.getAttribute("content");
-
+            document.querySelector('meta[name="csrf-token"]')
+                ?.getAttribute("content");
 
         if (!csrfToken) {
-
-            console.error(
-                "KNOWURLOCAL: CSRF token not found."
+            console.warn(
+                "KNOWURLOCAL: CSRF token was not found."
             );
 
             return;
         }
 
-
         try {
-
-            const response =
-                await fetch(
-                    `/my-inquiries/${encodeURIComponent(requestId)}/seen`,
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "X-CSRF-TOKEN": csrfToken,
-
-                            "Accept": "application/json",
-
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        credentials: "same-origin"
-                    }
-                );
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    `Request failed with status ${response.status}`
-                );
-
-            }
-
-
-            const data =
-                await response.json();
-
-
-            if (!data.success) {
-
-                console.error(
-                    "KNOWURLOCAL: Answer could not be marked as seen."
-                );
-
-            }
-
-        } catch (error) {
-
-            /*
-             * The inquiry remains visually open even if the
-             * notification request fails.
-             */
-
-            console.error(
-                "KNOWURLOCAL: Failed to mark answer as seen.",
-                error
+            const response = await fetch(
+                `/my-inquiries/${encodeURIComponent(requestId)}/seen`,
+                {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "X-CSRF-TOKEN": csrfToken,
+                        "Accept": "application/json",
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({}),
+                }
             );
 
-        }
+            if (!response.ok) {
+                throw new Error(
+                    `Request failed with status ${response.status}.`
+                );
+            }
 
+            /*
+            | Remove the unread indicator only after the server confirms
+            | that the request succeeded.
+            */
+            unreadIndicator.remove();
+
+        } catch (error) {
+            /*
+            | Do not block the user from reading their response if the
+            | "seen" request fails.
+            */
+            console.warn(
+                "KNOWURLOCAL: Unable to mark inquiry response as seen.",
+                error
+            );
+        }
     }
 
 
     /*
-     * =====================================================
-     * IMAGE LIGHTBOX ELEMENTS
-     * =====================================================
-     */
-
-    const imagePreviewTriggers =
-        document.querySelectorAll("[data-image-preview]");
-
-    const imageLightbox =
-        document.getElementById("image-lightbox");
-
-    const imageLightboxImage =
-        document.getElementById("image-lightbox-image");
-
-    const imageLightboxClose =
-        document.getElementById("image-lightbox-close");
-
-
-    /*
-     * Stores the element that opened the lightbox.
-     *
-     * This allows keyboard users to return to the same
-     * image button after closing the preview.
-     */
+    |--------------------------------------------------------------------------
+    | IMAGE LIGHTBOX
+    |--------------------------------------------------------------------------
+    |
+    | The lightbox intentionally remains independent from the accordion.
+    | This keeps image viewing from interfering with inquiry state.
+    |
+    */
 
     let previouslyFocusedElement = null;
-
-
-    /*
-     * Stores the body's original overflow value.
-     *
-     * This prevents the page from remaining locked if
-     * another script has already changed body overflow.
-     */
 
     let originalBodyOverflow = "";
 
 
-    /*
-     * =====================================================
-     * OPEN IMAGE LIGHTBOX
-     * =====================================================
-     */
-
-    function openImageLightbox(imageSource, imageAlt) {
-
-        if (
-            !imageLightbox ||
-            !imageLightboxImage ||
-            !imageLightboxClose ||
-            !imageSource
-        ) {
+    const openImageLightbox = (trigger) => {
+        if (!imageLightbox || !imageLightboxImage || !trigger) {
             return;
         }
 
+        const imageSource =
+            trigger.dataset.imagePreview ||
+            trigger.dataset.imageSrc;
+
+        if (!imageSource) {
+            return;
+        }
+
+        const imageAlt =
+            trigger.dataset.imageAlt ||
+            trigger
+                .closest(".inquiry-image-block")
+                ?.querySelector(".inquiry-attached-image")
+                ?.getAttribute("alt") ||
+            "Attached inquiry image";
 
         previouslyFocusedElement =
             document.activeElement;
 
-
         originalBodyOverflow =
             document.body.style.overflow;
 
-
-        imageLightboxImage.src =
-            imageSource;
-
-        imageLightboxImage.alt =
-            imageAlt || "Attached image";
-
+        imageLightboxImage.src = imageSource;
+        imageLightboxImage.alt = imageAlt;
 
         imageLightbox.classList.add("is-open");
 
@@ -336,39 +484,22 @@ document.addEventListener("DOMContentLoaded", () => {
             "false"
         );
 
+        /*
+        | Prevent background scrolling while the modal is open.
+        */
+        document.body.style.overflow = "hidden";
 
         /*
-         * Prevents the page behind the lightbox from scrolling.
-         */
-
-        document.body.style.overflow =
-            "hidden";
-
-
-        /*
-         * Moves keyboard focus to the close button.
-         */
-
-        imageLightboxClose.focus();
-
-    }
+        | Move keyboard focus into the dialog.
+        */
+        imageLightboxClose?.focus();
+    };
 
 
-    /*
-     * =====================================================
-     * CLOSE IMAGE LIGHTBOX
-     * =====================================================
-     */
-
-    function closeImageLightbox() {
-
-        if (
-            !imageLightbox ||
-            !imageLightboxImage
-        ) {
+    const closeImageLightbox = () => {
+        if (!imageLightbox || !imageLightboxImage) {
             return;
         }
-
 
         imageLightbox.classList.remove("is-open");
 
@@ -377,160 +508,133 @@ document.addEventListener("DOMContentLoaded", () => {
             "true"
         );
 
-
         /*
-         * Clear the image source after closing.
-         */
-
-        imageLightboxImage.src =
-            "";
-
-        imageLightboxImage.alt =
-            "";
-
-
-        /*
-         * Restore the body's previous scrolling behavior.
-         */
+        | Clear the image source after closing.
+        | This avoids keeping a potentially large image loaded unnecessarily.
+        */
+        imageLightboxImage.removeAttribute("src");
+        imageLightboxImage.removeAttribute("alt");
 
         document.body.style.overflow =
             originalBodyOverflow;
 
-
         /*
-         * Return focus to the image button that opened
-         * the lightbox.
-         */
-
+        | Return focus to the element that opened the dialog.
+        | This is important for keyboard and assistive-technology users.
+        */
         if (
             previouslyFocusedElement &&
-            typeof previouslyFocusedElement.focus === "function"
+            document.contains(previouslyFocusedElement)
         ) {
-
             previouslyFocusedElement.focus();
-
         }
 
-
-        previouslyFocusedElement =
-            null;
-
-    }
+        previouslyFocusedElement = null;
+    };
 
 
     /*
-     * =====================================================
-     * IMAGE PREVIEW BUTTONS
-     * =====================================================
-     */
+    |--------------------------------------------------------------------------
+    | IMAGE TRIGGER EVENTS
+    |--------------------------------------------------------------------------
+    */
 
-    imagePreviewTriggers.forEach(trigger => {
-
+    imageTriggers.forEach((trigger) => {
         trigger.addEventListener("click", () => {
-
-            const imageSource =
-                trigger.dataset.imageSrc;
-
-
-            const image =
-                trigger.querySelector("img");
-
-
-            const imageAlt =
-                image?.getAttribute("alt") ||
-                "Image attached by the administrator";
-
-
-            if (!imageSource) {
-
-                console.error(
-                    "KNOWURLOCAL: Image source is missing."
-                );
-
-                return;
-
-            }
-
-
-            openImageLightbox(
-                imageSource,
-                imageAlt
-            );
-
+            openImageLightbox(trigger);
         });
-
     });
 
 
     /*
-     * =====================================================
-     * CLOSE BUTTON
-     * =====================================================
-     */
+    |--------------------------------------------------------------------------
+    | LIGHTBOX CLOSE BUTTON
+    |--------------------------------------------------------------------------
+    */
 
-    if (imageLightboxClose) {
-
-        imageLightboxClose.addEventListener(
-            "click",
-            closeImageLightbox
-        );
-
-    }
+    imageLightboxClose?.addEventListener(
+        "click",
+        closeImageLightbox
+    );
 
 
     /*
-     * =====================================================
-     * CLOSE WHEN CLICKING THE OVERLAY
-     * =====================================================
-     */
+    |--------------------------------------------------------------------------
+    | LIGHTBOX BACKDROP
+    |--------------------------------------------------------------------------
+    |
+    | Clicking the dark backdrop closes the modal.
+    | Clicking the actual image does not.
+    |
+    */
 
-    if (imageLightbox) {
-
-        imageLightbox.addEventListener(
-            "click",
-            event => {
-
-                /*
-                 * Only close when the dark overlay itself
-                 * is clicked, not the image or close button.
-                 */
-
-                if (
-                    event.target === imageLightbox
-                ) {
-
-                    closeImageLightbox();
-
-                }
-
-            }
-        );
-
-    }
+    imageLightbox?.addEventListener("click", (event) => {
+        if (event.target === imageLightbox) {
+            closeImageLightbox();
+        }
+    });
 
 
     /*
-     * =====================================================
-     * ESCAPE KEY SUPPORT
-     * =====================================================
-     */
+    |--------------------------------------------------------------------------
+    | GLOBAL KEYBOARD HANDLING
+    |--------------------------------------------------------------------------
+    |
+    | Escape closes the lightbox first.
+    |
+    */
 
-    document.addEventListener(
-        "keydown",
-        event => {
+    document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") {
+            return;
+        }
 
-            if (
-                event.key === "Escape" &&
-                imageLightbox &&
-                imageLightbox.classList.contains("is-open")
-            ) {
+        if (
+            imageLightbox &&
+            imageLightbox.classList.contains("is-open")
+        ) {
+            closeImageLightbox();
+        }
+    });
 
-                closeImageLightbox();
 
-            }
+    /*
+    |--------------------------------------------------------------------------
+    | IMAGE LOAD FAILURE
+    |--------------------------------------------------------------------------
+    |
+    | If an attachment has been deleted or the storage URL becomes invalid,
+    | prevent the browser from displaying a broken-image state inside the
+    | modal.
+    |
+    */
 
+    imageLightboxImage?.addEventListener(
+        "error",
+        () => {
+            closeImageLightbox();
+
+            console.warn(
+                "KNOWURLOCAL: The inquiry image could not be loaded."
+            );
         }
     );
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | REDUCED MOTION SAFETY
+    |--------------------------------------------------------------------------
+    |
+    | The CSS handles the actual reduced-motion transition changes.
+    | This variable is intentionally kept available for future interaction
+    | enhancements without having to query the media preference repeatedly.
+    |
+    */
+
+    if (prefersReducedMotion) {
+        document.documentElement.classList.add(
+            "prefers-reduced-motion"
+        );
+    }
 });

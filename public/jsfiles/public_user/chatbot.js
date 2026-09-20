@@ -988,7 +988,7 @@ function sendMessage(){
                         type="button"
                         class="fallback-human-btn"
                     >
-                        Talk to a human
+                        Send a ticket
                     </button>
                 </div>
             `;
@@ -1172,17 +1172,19 @@ document.addEventListener(
                 question
             );
 
-        if(data?.success){
+        if (data?.success) {
 
             addMessage(
-                "Your question has been sent to a human assistant.",
+                "Your ticket has been sent successfully.",
                 "bot"
             );
 
-        }else{
+            input.value = "";
+
+        } else {
 
             addMessage(
-                "Failed to send your request.",
+                "Failed to send your ticket. Please try again.",
                 "bot"
             );
 
@@ -1196,8 +1198,27 @@ document.addEventListener(
 
 
 /*
- * Chatbot open/close controls.
+ * =========================================================
+ * CHATBOT OPEN / CLOSE CONTROLS
+ * =========================================================
+ *
+ * The chatbot can be opened in two ways:
+ *
+ * 1. The user clicks the floating chatbot button.
+ * 2. The user arrives at /map?open=chat from the
+ *    landing page's "Ask a question" CTA.
+ *
+ * Both paths use the same openChat() function so the
+ * chatbot's opening behavior stays centralized.
  */
+
+
+/*
+ * =========================================================
+ * CHATBOT ELEMENTS
+ * =========================================================
+ */
+
 const chatToggle =
     document.getElementById(
         "chat-toggle"
@@ -1213,10 +1234,87 @@ const overlay =
         "chat-overlay"
     );
 
+    /*
+|--------------------------------------------------------------------------
+| KNOWURLOCAL HELPDESK INTRO
+|--------------------------------------------------------------------------
+|
+| The floating launcher briefly expands to introduce the Helpdesk.
+|
+| This is intentionally handled as a temporary UI state instead of
+| modifying the actual chatbot-open state.
+|
+| That separation is important:
+|
+|     is-intro  → visual introduction
+|     active    → chatbot is open
+|
+| They are two different states and should not depend on each other.
+|
+*/
+
+const playHelpdeskIntro = () => {
+
+    /*
+     * Stop safely when the launcher does not exist.
+     */
+    if (!chatToggle) {
+        return;
+    }
+
+    /*
+     * Respect the user's operating-system reduced-motion
+     * accessibility preference.
+     */
+    if (
+        window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        ).matches
+    ) {
+        return;
+    }
+
+    /*
+     * Add the temporary visual state.
+     *
+     * CSS will handle the actual expansion, opacity,
+     * and collapse animation.
+     */
+    chatToggle.classList.add(
+        "is-helpdesk-intro"
+    );
+
+    /*
+     * Remove the temporary state after the animation
+     * has finished.
+     *
+     * The exact duration will match the CSS animation.
+     */
+    window.setTimeout(
+        () => {
+
+            chatToggle.classList.remove(
+                "is-helpdesk-intro"
+            );
+
+        },
+        4300
+    );
+
+};
+
 
 /*
- * Read the agency ID from the chatbot's data attribute.
+ * =========================================================
+ * AGENCY CONTEXT
+ * =========================================================
+ *
+ * The chatbot may optionally receive an agency ID/name
+ * through data attributes.
+ *
+ * These values are still validated before being used.
  */
+
 let agencyId =
     chatbot?.dataset.agency
         ? Number(
@@ -1224,50 +1322,159 @@ let agencyId =
         )
         : null;
 
-
-/*
- * Read the agency name when supplied.
- */
 let agencyName =
     chatbot?.dataset.agencyName ||
     null;
 
 
 /*
- * Open the chatbot.
+ * =========================================================
+ * OPEN CHATBOT
+ * =========================================================
+ *
+ * This function contains the complete opening behavior.
+ *
+ * Keeping this logic in one function prevents the normal
+ * button click and URL-based opening from behaving
+ * differently.
  */
-if(chatToggle){
+
+function openChat(){
+
+    /*
+     * Stop safely if the chatbot elements are unavailable.
+     */
+    if(
+        !chatbot ||
+        !overlay
+    ){
+        return;
+    }
+
+
+    /*
+     * Move the chatbot into its visible position.
+     */
+    chatbot.style.transform =
+        "translateY(0)";
+
+
+    /*
+     * Activate the chatbot panel.
+     */
+    chatbot.classList.add(
+        "active"
+    );
+
+
+    /*
+     * Activate the background overlay.
+     */
+    overlay.classList.add(
+        "active"
+    );
+
+
+    /*
+     * Load suggestions only once during
+     * the current page visit.
+     */
+    if(!greeted){
+
+        loadSuggestions();
+
+        greeted =
+            true;
+
+    }
+
+}
+
+
+/*
+ * =========================================================
+ * FLOATING CHAT BUTTON
+ * =========================================================
+ *
+ * The existing chatbot icon continues to work exactly
+ * as before, but now delegates to openChat().
+ */
+
+if (chatToggle) {
 
     chatToggle.addEventListener(
         "click",
         () => {
 
-            chatbot.style.transform =
-                "translateY(0)";
-
-            chatbot.classList.add(
-                "active"
-            );
-
-            overlay.classList.add(
-                "active"
+            /*
+             * If the user interacts with the launcher during
+             * the introduction, immediately remove the
+             * temporary Helpdesk label.
+             */
+            chatToggle.classList.remove(
+                "is-helpdesk-intro"
             );
 
             /*
-             * Load suggestions only once per page visit.
+             * Open the chatbot using the existing centralized
+             * openChat() function.
              */
-            if(!greeted){
-
-                loadSuggestions();
-
-                greeted =
-                    true;
-
-            }
+            openChat();
 
         }
     );
 
+}
+
+/*
+|--------------------------------------------------------------------------
+| Start Helpdesk introduction
+|--------------------------------------------------------------------------
+|
+| A short delay gives the map interface time to render first.
+| This makes the launcher feel intentionally introduced rather
+| than appearing simultaneously with every other map element.
+|
+*/
+
+window.setTimeout(
+    playHelpdeskIntro,
+    900
+);
+
+
+/*
+ * =========================================================
+ * LANDING PAGE CHAT REQUEST
+ * =========================================================
+ *
+ * The landing page uses:
+ *
+ *     /map?open=chat
+ *
+ * Only the explicit "chat" value is accepted.
+ *
+ * This is intentionally allowlisted instead of accepting
+ * arbitrary values from the URL.
+ */
+
+const urlParams =
+    new URLSearchParams(
+        window.location.search
+    );
+
+const requestedPanel =
+    urlParams.get("open");
+
+
+/*
+ * Automatically open the chatbot when the user arrived
+ * through the "Ask a question" CTA.
+ */
+if(
+    requestedPanel === "chat"
+){
+    openChat();
 }
 
 
@@ -1574,6 +1781,34 @@ if(askBtn){
 
             askBtn.disabled =
                 false;
+
+        }
+    );
+
+}
+
+/*
+ * =========================================================
+ * MOBILE SEND-A-TICKET BUTTON
+ * =========================================================
+ *
+ * The mobile button reuses the existing ticket handler.
+ *
+ * This keeps the actual support-request logic in one place
+ * instead of duplicating the API request here.
+ */
+
+const mobileAskBtn =
+    document.getElementById("ask-human-mobile");
+
+
+if (mobileAskBtn && askBtn) {
+
+    mobileAskBtn.addEventListener(
+        "click",
+        () => {
+
+            askBtn.click();
 
         }
     );

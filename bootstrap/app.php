@@ -36,23 +36,48 @@ return Application::configure(
     )
 
     ->withMiddleware(function (Middleware $middleware) {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Middleware Aliases
+        |--------------------------------------------------------------------------
+        |
+        | These aliases allow routes to reference your custom middleware
+        | using short names.
+        |
+        */
         $middleware->alias([
+
             /*
             |--------------------------------------------------------------------------
             | Authentication
             |--------------------------------------------------------------------------
-            |
-            | Uses your custom redirect behavior for public and admin pages.
-            |
             */
             'auth' => Authenticate::class,
 
+            /*
+            |--------------------------------------------------------------------------
+            | Cache Protection
+            |--------------------------------------------------------------------------
+            */
             'no.cache' => NoCache::class,
 
+            /*
+            |--------------------------------------------------------------------------
+            | Admin Authorization
+            |--------------------------------------------------------------------------
+            */
             'admin.only' => \App\Http\Middleware\AdminOnly::class,
 
+            /*
+            |--------------------------------------------------------------------------
+            | Superadmin Authorization
+            |--------------------------------------------------------------------------
+            */
             'superadmin.only' => \App\Http\Middleware\SuperAdminOnly::class,
         ]);
+
+       
     })
 
     ->withExceptions(function (Exceptions $exceptions): void {

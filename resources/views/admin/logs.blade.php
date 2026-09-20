@@ -180,46 +180,60 @@
                     </td>
 
                     <!-- TARGET -->
+<td class="col-target">
 
-                    <td class="col-target">
+    @if(
+        $log->log_target_name &&
+        $log->log_target !== 'System'
+    )
 
-                        @if(
-                            $log->log_target_name &&
-                            $log->log_target !== 'System'
-                        )
+        <div
+            class="target-cell"
+            title="{{ $log->log_target_name }}"
+        >
 
-                            <div
-                                class="target-cell"
-                                title="{{ $log->log_target_name }}"
-                            >
+            <span class="target-name">
+                {{ $log->log_target_name }}
+            </span>
 
-                                <span class="target-name">
-                                    {{ $log->log_target_name }}
-                                </span>
+            @if($log->log_target !== $log->log_target_name)
 
-                                @if($log->log_target !== $log->log_target_name)
+                <span class="target-meta">
+                    {{ $log->log_target }}
+                </span>
 
-                                    <span class="target-meta">
-                                        {{ $log->log_target }}
-                                    </span>
+            @endif
 
-                                @endif
+        </div>
 
-                            </div>
+    @else
 
-                        @else
+        @php
+            $targetLabel = match ($log->action) {
 
-                            <div class="target-cell">
+                'login',
+                'logout',
+                'admin_login',
+                'admin_logout',
+                'session_expired'
+                    => 'Authentication',
 
-                                <span class="target-name system-target">
-                                    System
-                                </span>
+                default
+                    => 'System',
+            };
+        @endphp
 
-                            </div>
+        <div class="target-cell">
 
-                        @endif
+            <span class="target-name system-target">
+                {{ $targetLabel }}
+            </span>
 
-                    </td>
+        </div>
+
+    @endif
+
+</td>
 
                     
                     <!-- ACTION -->
@@ -232,6 +246,7 @@
                 {{-- AUTH --}}
                 @case('login') ph-sign-in @break
                 @case('logout') ph-sign-out @break
+                @case('session_expired') ph-timer @break
                 @case('admin_login') ph-shield-check @break
                 @case('admin_logout') ph-shield-slash @break
 
@@ -946,41 +961,67 @@
 
     @else
 
-        {{-- Fallback for unrelated audit records. --}}
-        @if($log->old_value && $log->new_value)
+    @if(in_array($log->action, [
+        'login',
+        'logout',
+        'admin_login',
+        'admin_logout',
+        'session_expired'
+    ], true))
 
-            <div class="change-box">
+        <span class="change-status">
+            @switch($log->action)
 
-                <span class="old">
-                    {{ \Illuminate\Support\Str::limit(
-                        $log->old_value,
-                        32,
-                        '...'
-                    ) }}
-                </span>
+                @case('login')
+                @case('admin_login')
+                    Signed in
+                    @break
 
-                <i class="ph-light ph-arrow-right"></i>
+                @case('logout')
+                @case('admin_logout')
+                    Signed out
+                    @break
 
-                <span class="new">
-                    {{ \Illuminate\Support\Str::limit(
-                        $log->new_value,
-                        32,
-                        '...'
-                    ) }}
-                </span>
+                @case('session_expired')
+                    Session expired
+                    @break
 
-            </div>
+            @endswitch
+        </span>
 
+    @elseif($log->old_value && $log->new_value)
 
-        @else
+        <div class="change-box">
 
-            <span class="change-status">
-                System action
+            <span class="old">
+                {{ \Illuminate\Support\Str::limit(
+                    $log->old_value,
+                    32,
+                    '...'
+                ) }}
             </span>
 
-        @endif
+            <i class="ph-light ph-arrow-right"></i>
+
+            <span class="new">
+                {{ \Illuminate\Support\Str::limit(
+                    $log->new_value,
+                    32,
+                    '...'
+                ) }}
+            </span>
+
+        </div>
+
+    @else
+
+        <span class="change-status">
+            System action
+        </span>
 
     @endif
+
+@endif
 
 </td>
 

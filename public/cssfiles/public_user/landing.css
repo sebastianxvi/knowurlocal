@@ -1,0 +1,4429 @@
+/* ============================================================
+   KNOWURLOCAL
+   LANDING PAGE
+   landing.css
+   ============================================================
+
+   Architecture
+   ------------------------------------------------------------
+   01. Design tokens
+   02. Base / reset
+   03. Shared layout
+   04. Header
+   05. Buttons / links
+   06. Journey route
+   07. Hero
+   08. Shared section system
+   09. Discover
+   10. Know
+   11. Navigate
+   12. Ask
+   13. Arrive
+   14. Footer
+   15. Reveal animations
+   16. Responsive
+   17. Reduced motion
+   ============================================================ */
+
+
+/* ============================================================
+   01. DESIGN TOKENS
+   ============================================================ */
+
+:root {
+
+    /* ---------- Brand ---------- */
+
+    --color-brand: #5272c9;
+    --color-brand-dark: #435fa8;
+    --color-brand-soft: #e8edfb;
+    --color-brand-faint: #f4f6fc;
+
+
+    /* ---------- Accent ---------- */
+
+    --color-accent: #8274c4;
+    --color-accent-soft: #efedfa;
+
+
+    /* ---------- Backgrounds ---------- */
+
+    --color-page: #f6f7fa;
+    --color-surface: #ffffff;
+    --color-surface-soft: #f0f2f6;
+    --color-surface-muted: #e6e9ef;
+
+
+    /* ---------- Text ---------- */
+
+    --color-text: #1a1e28;
+    --color-text-soft: #555d6c;
+    --color-text-muted: #757d8c;
+    --color-text-faint: #a0a6b1;
+
+
+    /* ---------- Borders ---------- */
+
+    --color-border: rgba(30, 38, 55, 0.10);
+    --color-border-soft: rgba(30, 38, 55, 0.065);
+    --color-border-strong: rgba(30, 38, 55, 0.16);
+
+
+    /* ---------- Journey ---------- */
+
+    --route-color: rgba(82, 114, 201, 0.17);
+    --route-progress: rgba(82, 114, 201, 0.52);
+    --route-marker: #5272c9;
+
+
+    /* ---------- Typography ---------- */
+
+    --font-sans:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    --font-mono:
+        "SFMono-Regular",
+        Consolas,
+        "Liberation Mono",
+        monospace;
+
+
+    /* ---------- Radius ---------- */
+
+    --radius-xs: 6px;
+    --radius-sm: 10px;
+    --radius-md: 16px;
+    --radius-lg: 22px;
+    --radius-xl: 30px;
+
+
+    /* ---------- Shadows ---------- */
+
+    --shadow-soft:
+        0 12px 40px rgba(35, 45, 70, 0.07);
+
+    --shadow-medium:
+        0 24px 70px rgba(35, 45, 70, 0.11);
+
+
+    /* ---------- Layout ---------- */
+
+    --container-width: 1180px;
+    --page-padding: 32px;
+
+
+    /* ---------- Motion ---------- */
+
+    --ease-standard:
+        cubic-bezier(0.22, 1, 0.36, 1);
+
+    --ease-soft:
+        cubic-bezier(0.16, 1, 0.3, 1);
+
+    --transition-fast:
+        180ms var(--ease-standard);
+
+    --transition-standard:
+        320ms var(--ease-standard);
+
+}
+
+
+/* ============================================================
+   02. BASE / RESET
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    width: 100%;
+    max-width: 100%;
+    scroll-behavior: auto;
+}
+
+
+body {
+    width: 100%;
+    max-width: 100%;
+
+    margin: 0;
+
+    background: var(--color-page);
+    color: var(--color-text);
+
+    font-family: var(--font-sans);
+
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+
+body,
+button,
+a,
+input,
+textarea {
+    font: inherit;
+}
+
+
+button,
+a {
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+button {
+    border: 0;
+
+    background: none;
+
+    cursor: pointer;
+}
+
+
+a {
+    color: inherit;
+
+    text-decoration: none;
+}
+
+
+img,
+svg {
+    display: block;
+
+    max-width: 100%;
+}
+
+
+::selection {
+    background: rgba(15, 118, 110, 0.16);
+
+    color: var(--color-text);
+}
+
+
+/* ============================================================
+   03. SHARED LAYOUT
+   ============================================================ */
+
+.landing-page {
+    position: relative;
+
+    isolation: isolate;
+
+    width: 100%;
+    max-width: 100%;
+
+    overflow-x: clip;
+    overflow-y: visible;
+}
+
+
+.landing-container {
+    width: calc(100% - (var(--page-padding) * 2));
+
+    max-width: var(--container-width);
+
+    margin-inline: auto;
+
+    min-width: 0;
+}
+
+
+.landing-section-inner {
+    position: relative;
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 0.85fr)
+        minmax(0, 1.15fr);
+
+    align-items: center;
+
+    gap: clamp(60px, 8vw, 130px);
+
+    min-height: 100vh;
+
+    padding-block: 150px;
+
+    min-width: 0;
+}
+
+
+.landing-section-inner-reverse {
+    grid-template-columns:
+        minmax(0, 1.15fr)
+        minmax(0, 0.85fr);
+}
+
+
+.landing-section-inner > *,
+.landing-section-inner-reverse > * {
+    min-width: 0;
+}
+
+
+/* ============================================================
+   04. HEADER
+   ============================================================ */
+
+.landing-header {
+    position: fixed;
+
+    inset: 0 0 auto 0;
+
+    z-index: 100;
+
+    width: 100%;
+    max-width: 100%;
+
+    /*
+     * The header itself does not block the page.
+     * Only the inner navigation controls receive pointer events.
+     */
+    pointer-events: none;
+
+    /*
+     * IMPORTANT:
+     *
+     * There is intentionally NO background gradient here.
+     *
+     * The previous white gradient made the top of the page
+     * look like it had a permanent faded white overlay.
+     */
+    background: transparent;
+
+    /*
+     * The background, border and shadow are animated when
+     * the user begins scrolling.
+     */
+    transition:
+        background-color var(--transition-standard),
+        border-color var(--transition-standard),
+        box-shadow var(--transition-standard);
+}
+
+
+/*
+ * Once the page is scrolled, the navbar becomes a restrained
+ * translucent surface.
+ *
+ * This gives the navigation enough contrast over content
+ * without creating the large white fade that existed before.
+ */
+.landing-header.is-scrolled {
+    background:
+        rgba(255, 255, 255, 0.78);
+
+    border-bottom:
+        1px solid var(--color-border-soft);
+
+    box-shadow:
+        0 8px 30px rgba(35, 45, 70, 0.06);
+
+    backdrop-filter:
+        blur(14px);
+
+    -webkit-backdrop-filter:
+        blur(14px);
+}
+
+
+/*
+ * Main navbar content wrapper.
+ */
+.landing-header-inner {
+    width:
+        calc(100% - (var(--page-padding) * 2));
+
+    max-width: 1320px;
+
+    min-height: 78px;
+
+    margin-inline: auto;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 28px;
+
+    min-width: 0;
+
+    /*
+     * The inner navigation remains interactive even though
+     * the outer header uses pointer-events: none.
+     */
+    pointer-events: auto;
+
+    transition:
+        min-height var(--transition-standard),
+        transform var(--transition-standard);
+}
+
+
+/*
+ * Slightly compress the navbar after scrolling.
+ *
+ * This creates the impression of the navigation settling
+ * into the page rather than simply changing its background.
+ */
+.landing-header.is-scrolled .landing-header-inner {
+    min-height: 66px;
+}
+
+
+/* ============================================================
+   BRAND
+   ============================================================ */
+
+.landing-brand {
+    flex-shrink: 0;
+
+    color: var(--color-text);
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    letter-spacing: -0.025em;
+
+    transition:
+        color var(--transition-fast),
+        opacity var(--transition-fast);
+}
+
+
+.landing-brand:hover {
+    color: var(--color-brand);
+}
+
+
+/* ============================================================
+   DESKTOP NAVIGATION
+   ============================================================ */
+
+.landing-nav {
+    display: flex;
+
+    align-items: center;
+
+    gap: 30px;
+
+    margin-left: auto;
+
+    min-width: 0;
+}
+
+
+.landing-nav-link {
+    position: relative;
+
+    padding-block: 8px;
+
+    color: var(--color-text-soft);
+
+    font-size: 13px;
+
+    font-weight: 500;
+
+    white-space: nowrap;
+
+    transition:
+        color var(--transition-fast),
+        opacity var(--transition-fast);
+}
+
+
+/*
+ * Instead of the old full-width underline, the active
+ * navigation item uses a small contextual indicator.
+ *
+ * This is visually quieter and works better with the
+ * minimal SaaS-style navigation.
+ */
+.landing-nav-link::after {
+    content: "";
+
+    position: absolute;
+
+    left: 50%;
+
+    bottom: 1px;
+
+    width: 4px;
+
+    height: 4px;
+
+    border-radius: 50%;
+
+    background:
+        var(--color-brand);
+
+    opacity: 0;
+
+    transform:
+        translateX(-50%)
+        scale(0.6);
+
+    transition:
+        opacity var(--transition-fast),
+        transform var(--transition-standard);
+}
+
+
+.landing-nav-link:hover {
+    color: var(--color-text);
+}
+
+
+.landing-nav-link.is-active {
+    color: var(--color-brand);
+}
+
+
+.landing-nav-link.is-active::after {
+    opacity: 1;
+
+    transform:
+        translateX(-50%)
+        scale(1);
+}
+
+
+/* ============================================================
+   HEADER ACTIONS
+   ============================================================ */
+
+.landing-header-actions {
+    display: flex;
+
+    align-items: center;
+
+    gap: 18px;
+
+    flex-shrink: 0;
+}
+
+
+.landing-login {
+    color: var(--color-text-soft);
+
+    font-size: 13px;
+
+    font-weight: 500;
+
+    white-space: nowrap;
+
+    transition:
+        color var(--transition-fast);
+}
+
+
+.landing-login:hover {
+    color: var(--color-text);
+}
+
+
+/* ============================================================
+   MOBILE MENU BUTTON
+   ============================================================ */
+
+.landing-menu-toggle {
+    display: none;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 40px;
+
+    height: 40px;
+
+    padding: 0;
+
+    color: var(--color-text);
+
+    cursor: pointer;
+
+    pointer-events: auto;
+}
+
+
+.landing-menu-toggle i {
+    font-size: 23px;
+}
+
+
+/*
+ * Hidden on desktop.
+ *
+ * The mobile breakpoint later in the stylesheet changes
+ * this to display: flex.
+ */
+.landing-mobile-menu {
+    display: none;
+}
+
+
+/* ============================================================
+   05. BUTTONS / LINKS
+   ============================================================ */
+
+
+/* ============================================================
+   SHARED BUTTON
+   ============================================================ */
+
+.landing-button {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    min-height: 42px;
+
+    gap: 9px;
+
+    padding:
+        0 17px;
+
+    border-radius:
+        var(--radius-sm);
+
+    font-size: 13px;
+    font-weight: 600;
+
+    white-space: nowrap;
+
+    /*
+     * All button interaction is centralized here.
+     *
+     * This means every button variant gets the same
+     * movement and transition timing without duplicating
+     * hover animation rules throughout the stylesheet.
+     */
+    transition:
+        transform var(--transition-fast),
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        color var(--transition-fast),
+        box-shadow var(--transition-fast);
+}
+
+
+/*
+ * Button icons are intentionally small.
+ *
+ * The icon moves slightly on hover to communicate
+ * that the element is interactive without creating
+ * an exaggerated animation.
+ */
+.landing-button i {
+    flex-shrink: 0;
+
+    font-size: 16px;
+
+    transition:
+        transform var(--transition-fast);
+}
+
+
+/*
+ * Shared button lift.
+ *
+ * A 2px movement is enough to create depth while
+ * keeping the interface restrained and professional.
+ */
+.landing-button:hover {
+    transform:
+        translateY(-2px);
+}
+
+
+/*
+ * Directional icon movement.
+ *
+ * This works particularly well for:
+ * - arrows
+ * - navigation icons
+ * - external-link icons
+ */
+.landing-button:hover i {
+    transform:
+        translate(2px, -2px);
+}
+
+
+/* ============================================================
+   PRIMARY BUTTON
+   ============================================================ */
+
+.landing-button-primary {
+    background:
+        var(--color-brand);
+
+    color:
+        #ffffff;
+
+    box-shadow:
+        0 8px 20px
+        rgba(82, 114, 201, 0.14);
+}
+
+
+/*
+ * The hover state uses the darker brand token instead
+ * of introducing another arbitrary color.
+ */
+.landing-button-primary:hover {
+    background:
+        var(--color-brand-dark);
+
+    box-shadow:
+        0 12px 28px
+        rgba(82, 114, 201, 0.19);
+}
+
+
+/* ============================================================
+   HEADER PRIMARY CTA
+   ============================================================ */
+
+.landing-header .landing-button-primary {
+    min-height: 38px;
+
+    padding-inline:
+        15px;
+
+    border-radius:
+        9px;
+
+    font-size:
+        12px;
+
+    box-shadow:
+        0 6px 16px
+        rgba(82, 114, 201, 0.14);
+}
+
+
+.landing-header .landing-button-primary:hover {
+    box-shadow:
+        0 9px 22px
+        rgba(82, 114, 201, 0.19);
+}
+
+
+/* ============================================================
+   SECONDARY BUTTON
+   ============================================================ */
+
+.landing-button-secondary {
+    border:
+        1px solid var(--color-border);
+
+    background:
+        rgba(255, 255, 255, 0.62);
+
+    color:
+        var(--color-text-soft);
+
+    box-shadow:
+        0 2px 8px
+        rgba(35, 45, 70, 0.025);
+}
+
+
+.landing-button-secondary:hover {
+    border-color:
+        var(--color-border-strong);
+
+    background:
+        var(--color-surface);
+
+    color:
+        var(--color-text);
+
+    box-shadow:
+        0 8px 20px
+        rgba(35, 45, 70, 0.07);
+}
+
+
+/* ============================================================
+   LIGHT BUTTON
+   ============================================================ */
+
+.landing-button-light {
+    background:
+        #ffffff;
+
+    color:
+        var(--color-brand);
+
+    box-shadow:
+        0 12px 30px
+        rgba(0, 0, 0, 0.12);
+}
+
+
+/*
+ * The previous hover color used a leftover teal tint.
+ *
+ * The landing page now consistently uses the blue brand
+ * palette, so the hover state uses the existing
+ * --color-brand-faint token.
+ */
+.landing-button-light:hover {
+    background:
+        var(--color-brand-faint);
+
+    color:
+        var(--color-brand-dark);
+
+    box-shadow:
+        0 16px 34px
+        rgba(0, 0, 0, 0.16);
+}
+
+
+/* ============================================================
+   INLINE TEXT CTA
+   ============================================================ */
+
+.landing-inline-link {
+    position: relative;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    width: fit-content;
+
+    margin-top:
+        28px;
+
+    color:
+        var(--color-brand);
+
+    font-size:
+        13px;
+
+    font-weight:
+        650;
+
+    transition:
+        color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+
+/*
+ * Instead of turning a text link into a button,
+ * the underline is revealed only during interaction.
+ *
+ * This gives the CTA a stronger affordance while
+ * preserving the visual hierarchy of the section.
+ */
+.landing-inline-link::after {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    right: 0;
+
+    bottom: -4px;
+
+    height: 1px;
+
+    background:
+        currentColor;
+
+    transform:
+        scaleX(0);
+
+    transform-origin:
+        right;
+
+    transition:
+        transform var(--transition-standard);
+}
+
+
+.landing-inline-link i {
+    flex-shrink: 0;
+
+    font-size:
+        16px;
+
+    transition:
+        transform var(--transition-fast);
+}
+
+
+.landing-inline-link:hover {
+    color:
+        var(--color-brand-dark);
+
+    transform:
+        translateY(-1px);
+}
+
+
+.landing-inline-link:hover::after {
+    transform:
+        scaleX(1);
+
+    transform-origin:
+        left;
+}
+
+
+.landing-inline-link:hover i {
+    transform:
+        translate(3px, -3px);
+}
+
+
+/* ============================================================
+   LOCATION / MAP TEXT CTA
+   ============================================================ */
+
+.landing-location-link {
+    position: relative;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    width: fit-content;
+
+    max-width: 100%;
+
+    margin-top:
+        24px;
+
+    color:
+        var(--color-brand);
+
+    font-size:
+        12px;
+
+    font-weight:
+        650;
+
+    transition:
+        color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+
+/*
+ * Uses the same interaction language as the other
+ * text-based CTA, but remains independently scoped.
+ */
+.landing-location-link::after {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    right: 0;
+
+    bottom: -4px;
+
+    height: 1px;
+
+    background:
+        currentColor;
+
+    transform:
+        scaleX(0);
+
+    transform-origin:
+        right;
+
+    transition:
+        transform var(--transition-standard);
+}
+
+
+.landing-location-link i {
+    flex-shrink: 0;
+
+    font-size:
+        16px;
+
+    transition:
+        transform var(--transition-fast);
+}
+
+
+.landing-location-link:hover {
+    color:
+        var(--color-brand-dark);
+
+    transform:
+        translateY(-1px);
+}
+
+
+.landing-location-link:hover::after {
+    transform:
+        scaleX(1);
+
+    transform-origin:
+        left;
+}
+
+
+.landing-location-link:hover i {
+    transform:
+        translateX(3px);
+}
+
+
+/* ============================================================
+   ARRIVE SECONDARY CTA
+   ============================================================ */
+
+.landing-arrive-secondary {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    padding:
+        9px 0;
+
+    color:
+        rgba(255, 255, 255, 0.76);
+
+    font-size:
+        12px;
+
+    font-weight:
+        600;
+
+    transition:
+        color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+
+.landing-arrive-secondary i {
+    flex-shrink: 0;
+
+    font-size:
+        15px;
+
+    transition:
+        transform var(--transition-fast);
+}
+
+
+/*
+ * This CTA intentionally stays understated because
+ * it sits inside the ARRIVE section beside the primary
+ * white CTA.
+ */
+.landing-arrive-secondary:hover {
+    color:
+        #ffffff;
+
+    transform:
+        translateX(2px);
+}
+
+
+.landing-arrive-secondary:hover i {
+    transform:
+        translateX(4px);
+}
+
+
+/* ============================================================
+   INTERACTION PERFORMANCE HINTS
+   ============================================================ */
+
+/*
+ * These elements animate their transform frequently.
+ *
+ * will-change is limited to elements that actually use
+ * transform transitions so we don't unnecessarily consume
+ * browser compositing resources.
+ */
+.landing-discover-option,
+.landing-location-link,
+.landing-inline-link,
+.landing-button,
+.landing-arrive-secondary {
+    will-change:
+        transform;
+}
+
+
+/* ============================================================
+   MOBILE CTA ADJUSTMENTS
+   ============================================================ */
+
+@media (max-width: 760px) {
+
+    /*
+     * Mobile buttons already become full-width through
+     * the existing hero rules.
+     *
+     * We only make sure the text links remain easy to
+     * tap without changing their visual hierarchy.
+     */
+
+    .landing-inline-link,
+    .landing-location-link {
+        min-height:
+            40px;
+    }
+
+
+    .landing-arrive-secondary {
+        min-height:
+            40px;
+
+        padding-block:
+            8px;
+    }
+
+}
+
+
+/* ============================================================
+   06. JOURNEY ROUTE
+   ============================================================ */
+
+.landing-journey {
+    position: absolute;
+
+    inset: 0 auto auto 0;
+
+    width: 100%;
+    max-width: 100%;
+
+    min-height: 100%;
+
+    overflow: hidden;
+
+    z-index: 4;
+
+    pointer-events: none;
+}
+
+
+.landing-route {
+    position: absolute;
+
+    inset: 0;
+
+    width: 100%;
+    max-width: 100%;
+
+    height: 100%;
+
+    overflow: hidden;
+
+    transform: translateY(-18px);
+
+    pointer-events: none;
+}
+
+
+.landing-route path {
+    fill: none;
+
+    vector-effect: non-scaling-stroke;
+
+    stroke-linecap: round;
+
+    stroke-linejoin: round;
+}
+
+
+.landing-route-base {
+    stroke: var(--route-color);
+
+    stroke-width: 1.25;
+
+    opacity: 0.72;
+}
+
+
+.landing-route-progress {
+    stroke: var(--route-progress);
+    stroke-width: 2;
+    opacity: 0.62;
+}
+
+
+.landing-route-marker {
+    position: absolute;
+
+    width: 48px;
+    height: 48px;
+
+    margin: -24px 0 0 -24px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    z-index: 3;
+
+    transform: translate3d(0, 0, 0);
+}
+
+
+.landing-route-marker-ring {
+    position: absolute;
+
+    width: 44px;
+    height: 44px;
+
+    border:
+        1px solid rgba(15, 118, 110, 0.18);
+
+    border-radius: 50%;
+
+    background:
+        rgba(247, 250, 249, 0.82);
+
+    box-shadow:
+        0 0 0 5px rgba(247, 250, 249, 0.58);
+}
+
+
+.landing-route-marker-core {
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 25px;
+    height: 25px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.92);
+
+    border-radius: 50%;
+
+    background: var(--route-marker);
+
+    color: #ffffff;
+
+    box-shadow:
+        0 4px 14px rgba(15, 118, 110, 0.28);
+}
+
+
+.landing-route-marker-core i {
+    font-size: 13px;
+}
+
+
+.landing-route-marker.is-arrive .landing-route-marker-ring {
+    border-color:
+        rgba(255, 255, 255, 0.42);
+
+    background:
+        rgba(255, 255, 255, 0.16);
+
+    box-shadow:
+        0 0 0 5px rgba(15, 118, 110, 0.32);
+}
+
+
+.landing-route-marker.is-arrive .landing-route-marker-core {
+    background: #ffffff;
+
+    color: var(--color-brand);
+
+    border-color:
+        rgba(255, 255, 255, 0.96);
+
+    box-shadow:
+        0 4px 14px rgba(0, 0, 0, 0.16);
+}
+
+
+
+
+/* ============================================================
+   07. HERO
+   ============================================================ */
+
+.landing-hero {
+    position: relative;
+
+    z-index: 5;
+
+    width: 100%;
+    max-width: 100%;
+
+    min-height: 100vh;
+
+    display: flex;
+
+    align-items: center;
+
+    overflow-x: clip;
+}
+
+
+.landing-hero-inner {
+    position: relative;
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1.05fr)
+        minmax(0, 0.95fr);
+
+    align-items: center;
+
+    gap: clamp(60px, 9vw, 140px);
+
+    min-height: 100vh;
+
+    padding-top: 110px;
+    padding-bottom: 90px;
+
+    min-width: 0;
+}
+
+
+.landing-hero-inner > * {
+    min-width: 0;
+}
+
+
+.landing-hero-copy {
+    position: relative;
+
+    max-width: 680px;
+
+    min-width: 0;
+}
+
+
+.landing-eyebrow {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    margin-bottom: 24px;
+
+    color: var(--color-brand);
+
+    font-family: var(--font-mono);
+
+    font-size: 10px;
+    font-weight: 700;
+
+    letter-spacing: 0.12em;
+}
+
+
+.landing-eyebrow-dot {
+    width: 6px;
+    height: 6px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    background: var(--color-brand);
+
+    box-shadow:
+        0 0 0 5px rgba(15, 118, 110, 0.08);
+}
+
+
+.landing-hero-title {
+    max-width: 720px;
+
+    margin: 0;
+
+    color: var(--color-text);
+
+    font-size:
+        clamp(48px, 6vw, 82px);
+
+    font-weight: 650;
+
+    line-height: 0.98;
+
+    letter-spacing: -0.055em;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-hero-title span {
+    display: block;
+
+    color: var(--color-brand);
+}
+
+
+.landing-hero-description {
+    max-width: 590px;
+
+    margin:
+        30px 0 0;
+
+    color: var(--color-text-soft);
+
+    font-size: 16px;
+
+    line-height: 1.75;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-hero-actions {
+    display: flex;
+
+    align-items: center;
+
+    flex-wrap: wrap;
+
+    gap: 12px;
+
+    margin-top: 34px;
+
+    min-width: 0;
+}
+
+
+.landing-hero-visual {
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    min-height: 500px;
+
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+
+    overflow: hidden;
+}
+
+
+.landing-hero-preview {
+    position: relative;
+
+    width: min(100%, 440px);
+
+    max-width: 100%;
+
+    min-width: 0;
+
+    border:
+        1px solid var(--color-border);
+
+    border-radius: var(--radius-lg);
+
+    background:
+        rgba(255, 255, 255, 0.82);
+
+    box-shadow:
+        var(--shadow-medium);
+
+    overflow: hidden;
+
+    backdrop-filter: blur(18px);
+
+    transform:
+        rotate(1.5deg);
+
+    transition:
+        transform 500ms var(--ease-standard),
+        box-shadow 500ms var(--ease-standard);
+}
+
+
+.landing-hero-preview:hover {
+    transform:
+        rotate(0deg)
+        translateY(-5px);
+
+    box-shadow:
+        0 30px 90px rgba(20, 40, 32, 0.13);
+}
+
+
+.landing-preview-header {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 12px;
+
+    padding:
+        18px 20px;
+
+    border-bottom:
+        1px solid var(--color-border-soft);
+}
+
+
+.landing-preview-status {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    min-width: 0;
+
+    color: var(--color-text-muted);
+
+    font-family: var(--font-mono);
+
+    font-size: 9px;
+    font-weight: 700;
+
+    letter-spacing: 0.08em;
+}
+
+
+.landing-preview-header > i {
+    flex-shrink: 0;
+
+    color: var(--color-brand);
+
+    font-size: 17px;
+}
+
+
+.landing-status-dot {
+    width: 6px;
+    height: 6px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    background: var(--color-accent);
+}
+
+
+.landing-preview-question,
+.landing-preview-answer {
+    padding:
+        24px 24px 20px;
+
+    min-width: 0;
+}
+
+
+.landing-preview-answer {
+    background: var(--color-brand-faint);
+}
+
+
+.landing-preview-label {
+    display: block;
+
+    margin-bottom: 9px;
+
+    color: var(--color-text-faint);
+
+    font-family: var(--font-mono);
+
+    font-size: 8px;
+    font-weight: 700;
+
+    letter-spacing: 0.12em;
+}
+
+
+.landing-preview-question p,
+.landing-preview-answer p {
+    margin: 0;
+
+    color: var(--color-text);
+
+    font-size: 15px;
+
+    line-height: 1.55;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-preview-answer p {
+    color: var(--color-text-soft);
+}
+
+
+.landing-preview-actions {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 12px;
+
+    padding:
+        16px 20px;
+
+    border-top:
+        1px solid var(--color-border-soft);
+
+    color: var(--color-brand);
+
+    font-size: 12px;
+
+    font-weight: 650;
+}
+
+
+.landing-preview-actions i {
+    flex-shrink: 0;
+
+    font-size: 16px;
+}
+
+
+.landing-hero-orbit {
+    position: absolute;
+
+    width: 390px;
+    height: 390px;
+
+    max-width: 100%;
+    max-height: 100%;
+
+    border:
+        1px solid rgba(15, 118, 110, 0.07);
+
+    border-radius: 50%;
+
+    pointer-events: none;
+}
+
+
+.landing-orbit-dot {
+    position: absolute;
+
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: var(--color-brand);
+}
+
+
+.landing-orbit-dot-one {
+    top: 16%;
+    left: 8%;
+}
+
+
+.landing-orbit-dot-two {
+    top: 78%;
+    right: 5%;
+}
+
+
+.landing-orbit-dot-three {
+    bottom: 4%;
+    left: 30%;
+
+    opacity: 0.4;
+}
+
+
+/* ============================================================
+   08. SHARED SECTION SYSTEM
+   ============================================================ */
+
+.landing-section {
+    position: relative;
+
+    z-index: 5;
+
+    width: 100%;
+    max-width: 100%;
+
+    min-height: 100vh;
+
+    overflow-x: clip;
+}
+
+
+.landing-section-copy {
+    position: relative;
+
+    max-width: 500px;
+
+    min-width: 0;
+}
+
+
+.landing-section-kicker {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    margin-bottom: 22px;
+
+    color: var(--color-brand);
+
+    font-family: var(--font-mono);
+
+    font-size: 9px;
+    font-weight: 700;
+
+    letter-spacing: 0.12em;
+}
+
+
+.landing-section-kicker span {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 26px;
+    height: 26px;
+
+    flex-shrink: 0;
+
+    border:
+        1px solid rgba(15, 118, 110, 0.16);
+
+    border-radius: 50%;
+
+    background: var(--color-brand-faint);
+
+    font-size: 8px;
+}
+
+
+.landing-section-title {
+    margin: 0;
+
+    font-size:
+        clamp(38px, 4.6vw, 62px);
+
+    font-weight: 630;
+
+    line-height: 1.02;
+
+    letter-spacing: -0.045em;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-section-title span {
+    display: block;
+
+    color: var(--color-brand);
+}
+
+
+.landing-section-description {
+    max-width: 470px;
+
+    margin:
+        25px 0 0;
+
+    color: var(--color-text-soft);
+
+    font-size: 15px;
+
+    line-height: 1.8;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-panel-overline {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: var(--color-text-faint);
+
+    font-family: var(--font-mono);
+
+    font-size: 8px;
+    font-weight: 700;
+
+    letter-spacing: 0.12em;
+}
+
+
+.landing-section > .landing-container {
+    position: relative;
+
+    min-width: 0;
+}
+
+
+/* ============================================================
+   09. DISCOVER
+   ============================================================ */
+
+.landing-discover-panel {
+    position: relative;
+
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+
+    padding: 28px;
+
+    border:
+        1px solid var(--color-border);
+
+    border-radius: var(--radius-lg);
+
+    background:
+        rgba(255, 255, 255, 0.82);
+
+    box-shadow:
+        var(--shadow-soft);
+
+    backdrop-filter: blur(12px);
+}
+
+
+.landing-panel-heading {
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    min-width: 0;
+
+    padding-bottom: 24px;
+
+    border-bottom:
+        1px solid var(--color-border-soft);
+}
+
+
+.landing-panel-heading h3,
+.landing-information-heading h3 {
+    margin: 0;
+
+    font-size: 20px;
+    font-weight: 620;
+
+    letter-spacing: -0.025em;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-panel-heading > i,
+.landing-information-heading > i {
+    flex-shrink: 0;
+
+    color: var(--color-brand);
+
+    font-size: 22px;
+}
+
+
+.landing-discover-options {
+    display: grid;
+
+    gap: 10px;
+
+    margin-top: 18px;
+
+    min-width: 0;
+}
+
+
+.landing-discover-option {
+    display: grid;
+
+    grid-template-columns:
+        auto
+        minmax(0, 1fr)
+        auto;
+
+    align-items: center;
+
+    gap: 14px;
+
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+
+    padding: 15px;
+
+    border:
+        1px solid transparent;
+
+    border-radius: var(--radius-sm);
+
+    background: var(--color-surface-soft);
+
+    transition:
+        transform var(--transition-standard),
+        border-color var(--transition-standard),
+        background-color var(--transition-standard);
+}
+
+
+.landing-discover-option:hover {
+    transform: translateX(5px);
+
+    border-color:
+        rgba(15, 118, 110, 0.12);
+
+    background: var(--color-brand-faint);
+}
+
+
+.landing-option-icon {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 42px;
+    height: 42px;
+
+    flex-shrink: 0;
+
+    border-radius: 12px;
+
+    background: var(--color-surface);
+
+    color: var(--color-brand);
+
+    box-shadow:
+        0 4px 12px rgba(20, 40, 32, 0.04);
+}
+
+
+.landing-option-icon i {
+    font-size: 21px;
+}
+
+
+.landing-option-content {
+    min-width: 0;
+}
+
+
+.landing-option-content strong {
+    display: block;
+
+    color: var(--color-text);
+
+    font-size: 13px;
+    font-weight: 650;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-option-content small {
+    display: block;
+
+    margin-top: 4px;
+
+    color: var(--color-text-muted);
+
+    font-size: 11px;
+
+    line-height: 1.5;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-discover-option > i {
+    flex-shrink: 0;
+
+    color: var(--color-text-muted);
+
+    font-size: 17px;
+
+    transition:
+        transform var(--transition-fast),
+        color var(--transition-fast);
+}
+
+
+.landing-discover-option:hover > i {
+    color: var(--color-brand);
+
+    transform: translate(2px, -2px);
+}
+
+
+/* ============================================================
+   10. KNOW
+   ============================================================ */
+
+.landing-information-panel {
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+
+    padding: 30px;
+
+    border:
+        1px solid var(--color-border);
+
+    border-radius: var(--radius-lg);
+
+    background: var(--color-surface);
+
+    box-shadow:
+        var(--shadow-soft);
+}
+
+
+.landing-information-heading {
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    min-width: 0;
+
+    padding-bottom: 22px;
+
+    border-bottom:
+        1px solid var(--color-border-soft);
+}
+
+
+.landing-information-list {
+    display: grid;
+
+    margin-top: 8px;
+
+    min-width: 0;
+}
+
+
+.landing-information-item {
+    display: grid;
+
+    grid-template-columns:
+        auto
+        minmax(0, 1fr);
+
+    gap: 14px;
+
+    min-width: 0;
+
+    padding:
+        20px 0;
+
+    border-bottom:
+        1px solid var(--color-border-soft);
+}
+
+
+.landing-information-item:last-child {
+    border-bottom: 0;
+}
+
+
+.landing-information-icon {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 38px;
+    height: 38px;
+
+    flex-shrink: 0;
+
+    border-radius: 11px;
+
+    background: var(--color-brand-faint);
+
+    color: var(--color-brand);
+}
+
+
+.landing-information-icon i {
+    font-size: 19px;
+}
+
+
+.landing-information-item strong {
+    display: block;
+
+    font-size: 13px;
+    font-weight: 650;
+}
+
+
+.landing-information-item p {
+    margin:
+        5px 0 0;
+
+    color: var(--color-text-muted);
+
+    font-size: 11px;
+
+    line-height: 1.6;
+
+    overflow-wrap: break-word;
+}
+
+
+/* ============================================================
+   11. NAVIGATE
+   ============================================================ */
+
+.landing-location-panel {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1.15fr)
+        minmax(200px, 0.85fr);
+
+    width: 100%;
+    max-width: 100%;
+
+    min-height: 360px;
+
+    min-width: 0;
+
+    overflow: hidden;
+
+    border:
+        1px solid var(--color-border);
+
+    border-radius: var(--radius-lg);
+
+    background: var(--color-surface);
+
+    box-shadow:
+        var(--shadow-soft);
+}
+
+
+.landing-location-map {
+    position: relative;
+
+    min-width: 0;
+
+    min-height: 360px;
+
+    overflow: hidden;
+
+    background:
+        #edf5f3;
+}
+
+
+.landing-map-grid {
+    position: absolute;
+
+    inset: 0;
+
+    background-image:
+        linear-gradient(
+            rgba(15, 118, 110, 0.055) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(15, 118, 110, 0.055) 1px,
+            transparent 1px
+        );
+
+    background-size: 34px 34px;
+
+    transform:
+        rotate(-5deg)
+        scale(1.15);
+}
+
+
+.landing-map-road {
+    position: absolute;
+
+    height: 7px;
+
+    border-radius: 999px;
+
+    background:
+        rgba(255, 255, 255, 0.95);
+
+    box-shadow:
+        0 0 0 1px rgba(23, 32, 29, 0.04);
+}
+
+
+.landing-map-road-one {
+    width: 120%;
+
+    top: 26%;
+    left: -10%;
+
+    transform: rotate(-13deg);
+}
+
+
+.landing-map-road-two {
+    width: 110%;
+
+    top: 56%;
+    left: -5%;
+
+    transform: rotate(19deg);
+}
+
+
+.landing-map-road-three {
+    width: 80%;
+
+    top: 78%;
+    left: 16%;
+
+    transform: rotate(-38deg);
+}
+
+
+.landing-map-marker {
+    position: absolute;
+
+    top: 44%;
+    left: 52%;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 46px;
+    height: 46px;
+
+    border-radius: 50%;
+
+    background: var(--color-brand);
+
+    color: #ffffff;
+
+    box-shadow:
+        0 0 0 8px rgba(15, 118, 110, 0.10),
+        0 12px 28px rgba(15, 118, 110, 0.24);
+
+    transform:
+        translate(-50%, -50%);
+}
+
+
+.landing-map-marker span {
+    position: absolute;
+
+    inset: -10px;
+
+    border:
+        1px solid rgba(15, 118, 110, 0.18);
+
+    border-radius: 50%;
+
+    animation:
+        landing-pulse 2.5s ease-out infinite;
+}
+
+
+.landing-map-marker i {
+    font-size: 21px;
+}
+
+
+.landing-location-details {
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    min-width: 0;
+
+    padding: 32px;
+}
+
+
+.landing-location-details h3 {
+    margin: 0;
+
+    font-size: 22px;
+    font-weight: 630;
+
+    letter-spacing: -0.03em;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-location-details p {
+    margin:
+        12px 0 0;
+
+    color: var(--color-text-muted);
+
+    font-size: 12px;
+
+    line-height: 1.7;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-location-link {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    width: fit-content;
+
+    max-width: 100%;
+
+    margin-top: 24px;
+
+    color: var(--color-brand);
+
+    font-size: 12px;
+    font-weight: 650;
+}
+
+
+.landing-location-link i {
+    flex-shrink: 0;
+
+    font-size: 16px;
+
+    transition:
+        transform var(--transition-fast);
+}
+
+
+.landing-location-link:hover i {
+    transform: translateX(3px);
+}
+
+
+/* ============================================================
+   12. ASK
+   ============================================================ */
+
+.landing-chat-preview {
+    width: 100%;
+    max-width: 100%;
+
+    min-width: 0;
+
+    overflow: hidden;
+
+    border:
+        1px solid var(--color-border);
+
+    border-radius: var(--radius-lg);
+
+    background: var(--color-surface);
+
+    box-shadow:
+        var(--shadow-medium);
+}
+
+
+.landing-chat-header {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    min-width: 0;
+
+    padding:
+        18px 20px;
+
+    border-bottom:
+        1px solid var(--color-border-soft);
+}
+
+
+.landing-chat-profile {
+    display: flex;
+
+    align-items: center;
+
+    gap: 11px;
+
+    min-width: 0;
+}
+
+
+.landing-chat-avatar {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 38px;
+    height: 38px;
+
+    flex-shrink: 0;
+
+    border-radius: 11px;
+
+    background: var(--color-brand-faint);
+
+    color: var(--color-brand);
+}
+
+
+.landing-chat-avatar i {
+    font-size: 19px;
+}
+
+
+.landing-chat-profile strong {
+    display: block;
+
+    font-size: 12px;
+    font-weight: 650;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-chat-profile span:not(.landing-chat-avatar) {
+    display: block;
+
+    margin-top: 2px;
+
+    color: var(--color-text-faint);
+
+    font-size: 9px;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-chat-online {
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    flex-shrink: 0;
+
+    color: var(--color-text-muted);
+
+    font-family: var(--font-mono);
+
+    font-size: 8px;
+    font-weight: 700;
+
+    letter-spacing: 0.06em;
+}
+
+
+.landing-chat-online > span {
+    width: 5px;
+    height: 5px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+
+    background: #3f9d75;
+}
+
+
+.landing-chat-messages {
+    display: grid;
+
+    gap: 20px;
+
+    min-width: 0;
+
+    padding:
+        28px 24px;
+}
+
+
+.landing-chat-message {
+    max-width: 86%;
+
+    min-width: 0;
+}
+
+
+.landing-chat-message-user {
+    justify-self: end;
+}
+
+
+.landing-chat-message-bot {
+    justify-self: start;
+}
+
+
+.landing-chat-message-label {
+    display: block;
+
+    margin-bottom: 7px;
+
+    color: var(--color-text-faint);
+
+    font-family: var(--font-mono);
+
+    font-size: 8px;
+    font-weight: 700;
+
+    letter-spacing: 0.1em;
+}
+
+
+.landing-chat-message p {
+    margin: 0;
+
+    padding:
+        13px 15px;
+
+    border-radius: 14px;
+
+    color: var(--color-text-soft);
+
+    font-size: 12px;
+
+    line-height: 1.65;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-chat-message-user p {
+    border-bottom-right-radius: 4px;
+
+    background: var(--color-surface-soft);
+}
+
+
+.landing-chat-message-bot p {
+    border-bottom-left-radius: 4px;
+
+    background: var(--color-brand-faint);
+
+    color: var(--color-text);
+}
+
+
+.landing-chat-input {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 10px;
+
+    min-width: 0;
+
+    margin:
+        0 18px 18px;
+
+    padding:
+        12px 14px;
+
+    border:
+        1px solid var(--color-border);
+
+    border-radius: 11px;
+
+    color: var(--color-text-faint);
+
+    font-size: 11px;
+}
+
+
+.landing-chat-input span {
+    min-width: 0;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+}
+
+
+.landing-chat-input i {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 27px;
+    height: 27px;
+
+    flex-shrink: 0;
+
+    border-radius: 8px;
+
+    background: var(--color-brand);
+
+    color: #ffffff;
+
+    font-size: 14px;
+}
+
+
+/* ============================================================
+   13. ARRIVE
+   ============================================================ */
+
+.landing-arrive {
+    position: relative;
+
+    width: 100%;
+    max-width: 100%;
+
+    min-height: 90vh;
+
+    display: flex;
+
+    align-items: center;
+
+    overflow: hidden;
+
+    background: var(--color-brand);
+
+    color: #ffffff;
+}
+
+
+.landing-arrive::before {
+    content: "";
+
+    position: absolute;
+
+    width: 700px;
+    height: 700px;
+
+    top: -360px;
+    right: -220px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.10);
+
+    border-radius: 50%;
+
+    pointer-events: none;
+}
+
+
+.landing-arrive::after {
+    content: "";
+
+    position: absolute;
+
+    width: 480px;
+    height: 480px;
+
+    bottom: -300px;
+    left: -180px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.08);
+
+    border-radius: 50%;
+
+    pointer-events: none;
+}
+
+
+.landing-arrive-inner {
+    position: relative;
+
+    z-index: 5;
+
+    min-height: 90vh;
+
+    display: flex;
+
+    align-items: center;
+
+    min-width: 0;
+}
+
+
+.landing-arrive-content {
+    max-width: 680px;
+
+    min-width: 0;
+}
+
+
+.landing-section-kicker-light {
+    color:
+        rgba(255, 255, 255, 0.68);
+}
+
+
+.landing-section-kicker-light span {
+    border-color:
+        rgba(255, 255, 255, 0.18);
+
+    background:
+        rgba(255, 255, 255, 0.08);
+
+    color: #ffffff;
+}
+
+
+.landing-arrive-title {
+    margin: 0;
+
+    font-size:
+        clamp(52px, 7vw, 92px);
+
+    font-weight: 620;
+
+    line-height: 0.96;
+
+    letter-spacing: -0.06em;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-arrive-title span {
+    display: block;
+
+    color:
+        rgba(255, 255, 255, 0.54);
+}
+
+
+.landing-arrive-description {
+    max-width: 560px;
+
+    margin:
+        28px 0 0;
+
+    color:
+        rgba(255, 255, 255, 0.70);
+
+    font-size: 15px;
+
+    line-height: 1.8;
+
+    overflow-wrap: break-word;
+}
+
+
+.landing-arrive-actions {
+    display: flex;
+
+    align-items: center;
+
+    flex-wrap: wrap;
+
+    gap: 22px;
+
+    margin-top: 34px;
+}
+
+
+.landing-arrive-secondary {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    color:
+        rgba(255, 255, 255, 0.76);
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+
+.landing-arrive-secondary i {
+    font-size: 15px;
+
+    transition:
+        transform var(--transition-fast);
+}
+
+
+.landing-arrive-secondary:hover {
+    color: #ffffff;
+}
+
+
+.landing-arrive-secondary:hover i {
+    transform: translateX(3px);
+}
+
+
+/* ============================================================
+   14. FOOTER
+   ============================================================ */
+
+.landing-footer {
+    position: relative;
+
+    z-index: 5;
+
+    width: 100%;
+    max-width: 100%;
+
+    background: #f1f5f4;
+
+    border-top:
+        1px solid var(--color-border-soft);
+
+    overflow-x: clip;
+}
+
+
+.landing-footer-inner {
+    display: grid;
+
+    grid-template-columns:
+        1.3fr
+        1fr
+        auto;
+
+    align-items: center;
+
+    gap: 40px;
+
+    min-height: 180px;
+
+    padding-block: 42px;
+
+    min-width: 0;
+}
+
+
+.landing-footer-inner > * {
+    min-width: 0;
+}
+
+
+.landing-footer-wordmark {
+    color: var(--color-text);
+
+    font-size: 14px;
+    font-weight: 700;
+
+    letter-spacing: -0.025em;
+}
+
+
+.landing-footer-brand p {
+    margin:
+        7px 0 0;
+
+    color: var(--color-text-muted);
+
+    font-size: 11px;
+}
+
+
+.landing-footer-links {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 20px;
+
+    min-width: 0;
+}
+
+
+.landing-footer-links a {
+    color: var(--color-text-muted);
+
+    font-size: 11px;
+    font-weight: 500;
+
+    white-space: nowrap;
+
+    transition:
+        color var(--transition-fast);
+}
+
+
+.landing-footer-links a:hover {
+    color: var(--color-brand);
+}
+
+
+.landing-footer-meta {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: flex-end;
+
+    gap: 6px;
+
+    color: var(--color-text-faint);
+
+    font-size: 9px;
+
+    text-align: right;
+}
+
+
+/* ============================================================
+   15. REVEAL ANIMATIONS
+   ============================================================ */
+
+[data-reveal] {
+    opacity: 0;
+
+    transform:
+        translate3d(0, 28px, 0);
+
+    transition:
+        opacity 700ms var(--ease-soft),
+        transform 700ms var(--ease-soft);
+}
+
+
+[data-reveal].is-visible {
+    opacity: 1;
+
+    transform:
+        translate3d(0, 0, 0);
+}
+
+
+[data-reveal="up"] {
+    transform:
+        translate3d(0, 30px, 0);
+}
+
+
+[data-reveal="down"] {
+    transform:
+        translate3d(0, -30px, 0);
+}
+
+
+[data-reveal="left"] {
+    transform:
+        translate3d(-36px, 0, 0);
+}
+
+
+[data-reveal="right"] {
+    transform:
+        translate3d(36px, 0, 0);
+}
+
+
+[data-reveal="scale"] {
+    transform:
+        scale(0.96);
+}
+
+
+[data-reveal="up"].is-visible,
+[data-reveal="down"].is-visible,
+[data-reveal="left"].is-visible,
+[data-reveal="right"].is-visible {
+    transform:
+        translate3d(0, 0, 0);
+}
+
+
+[data-reveal="scale"].is-visible {
+    transform:
+        scale(1);
+}
+
+
+[data-reveal-delay="1"] {
+    transition-delay: 80ms;
+}
+
+
+[data-reveal-delay="2"] {
+    transition-delay: 160ms;
+}
+
+
+[data-reveal-delay="3"] {
+    transition-delay: 240ms;
+}
+
+
+[data-reveal-delay="4"] {
+    transition-delay: 320ms;
+}
+
+
+[data-reveal-delay="5"] {
+    transition-delay: 400ms;
+}
+
+
+[data-chat-reveal] {
+    opacity: 0;
+
+    transform:
+        translate3d(0, 18px, 0)
+        scale(0.985);
+
+    transition:
+        opacity 520ms var(--ease-soft),
+        transform 520ms var(--ease-soft);
+
+    will-change:
+        opacity,
+        transform;
+}
+
+
+[data-chat-reveal].is-visible {
+    opacity: 1;
+
+    transform:
+        translate3d(0, 0, 0)
+        scale(1);
+}
+
+
+.landing-discover-option,
+.landing-location-link,
+.landing-inline-link,
+.landing-button {
+    will-change: transform;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+
+    [data-reveal],
+    [data-chat-reveal] {
+        opacity: 1;
+
+        transform: none;
+
+        transition: none;
+
+        will-change: auto;
+    }
+
+}
+
+
+/* ============================================================
+   16. RESPONSIVE
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   TABLET
+   ------------------------------------------------------------ */
+
+@media (max-width: 980px) {
+
+    :root {
+        --page-padding: 24px;
+    }
+
+
+    .landing-nav {
+        gap: 20px;
+    }
+
+
+    .landing-header-actions {
+        gap: 12px;
+    }
+
+
+    .landing-hero-inner {
+        grid-template-columns:
+            minmax(0, 1fr)
+            minmax(0, 0.8fr);
+
+        gap: 50px;
+    }
+
+
+    .landing-section-inner,
+    .landing-section-inner-reverse {
+        grid-template-columns:
+            minmax(0, 1fr)
+            minmax(0, 1fr);
+
+        gap: 55px;
+    }
+
+
+    .landing-location-panel {
+        grid-template-columns: 1fr;
+    }
+
+
+    .landing-location-map {
+        min-height: 300px;
+    }
+
+
+    .landing-footer-inner {
+        grid-template-columns:
+            1fr 1fr;
+
+        gap: 30px;
+    }
+
+
+    .landing-footer-meta {
+        align-items: flex-start;
+
+        text-align: left;
+    }
+
+}
+
+
+/* ============================================================
+   MOBILE RESPONSIVE SYSTEM
+   ============================================================ */
+
+@media (max-width: 760px) {
+
+    :root {
+        --page-padding: 16px;
+    }
+
+
+    /* ========================================================
+       GLOBAL MOBILE CONTAINMENT
+       ======================================================== */
+
+   html,
+body {
+    width: 100%;
+    max-width: 100%;
+}
+
+.landing-page {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+}
+
+
+    .landing-container {
+        width: calc(100% - 32px);
+
+        max-width: 100%;
+
+        margin-inline: auto;
+    }
+
+
+    .landing-container,
+    .landing-header-inner,
+    .landing-hero-inner,
+    .landing-section-inner,
+    .landing-section-inner-reverse,
+    .landing-arrive-inner,
+    .landing-footer-inner,
+    .landing-hero-copy,
+    .landing-section-copy,
+    .landing-hero-visual,
+    .landing-discover-panel,
+    .landing-information-panel,
+    .landing-location-panel,
+    .landing-chat-preview,
+    .landing-arrive-content {
+        min-width: 0;
+
+        max-width: 100%;
+    }
+
+
+    /* ========================================================
+       HEADER
+       ======================================================== */
+
+    .landing-header-inner {
+        width: calc(100% - 32px);
+
+        min-height: 64px;
+    }
+
+
+    .landing-nav,
+    .landing-header-actions {
+        display: none;
+    }
+
+
+    .landing-menu-toggle {
+        display: flex;
+
+        width: 36px;
+        height: 36px;
+
+        flex-shrink: 0;
+    }
+
+
+    .landing-menu-toggle i {
+        font-size: 21px;
+    }
+
+
+    /* ========================================================
+       MOBILE MENU
+       ======================================================== */
+
+    .landing-mobile-menu {
+        display: flex;
+
+        flex-direction: column;
+
+        width: 100%;
+        max-width: 100%;
+
+        max-height: 0;
+
+        padding: 0 16px;
+
+        overflow: hidden;
+
+        /*
+         * The menu is visually hidden while closed.
+         * Opacity is used only for the opening animation.
+         */
+        opacity: 0;
+
+        /*
+         * Prevent users from clicking invisible menu items.
+         */
+        pointer-events: none;
+
+        /*
+         * Give the navigation its own solid surface.
+         *
+         * This prevents the hero, route and cards underneath
+         * from visually bleeding through the navigation.
+         */
+        background: var(--color-surface);
+
+        /*
+         * Separates the mobile navigation from the header.
+         */
+        border-top: 1px solid var(--color-border-soft);
+
+        /*
+         * Gives the expanded menu a subtle separation
+         * from the page underneath.
+         */
+        box-shadow:
+            0 18px 40px rgba(20, 40, 32, 0.08);
+
+        transition:
+            max-height 400ms var(--ease-standard),
+            opacity 250ms var(--ease-standard),
+            padding 400ms var(--ease-standard);
+    }
+
+
+    .landing-header.is-menu-open .landing-mobile-menu {
+
+        /*
+         * Gives the menu enough vertical space for all links.
+         */
+        max-height: 440px;
+
+        /*
+         * Restores the intended internal spacing when opened.
+         */
+        padding: 8px 16px 24px;
+
+        /*
+         * Makes the menu fully visible.
+         */
+        opacity: 1;
+
+        /*
+         * Allows interaction once the menu is open.
+         */
+        pointer-events: auto;
+    }
+
+
+    .landing-mobile-link {
+
+        /*
+         * Keeps each navigation item comfortably tappable.
+         */
+        padding: 12px 0;
+
+        /*
+         * Slightly larger than desktop navigation
+         * because mobile is touch-first.
+         */
+        font-size: 14px;
+
+        /*
+         * Gives the links enough visual weight without being bold.
+         */
+        font-weight: 550;
+    }
+
+
+    .landing-mobile-cta {
+
+        /*
+         * Prevents the CTA from stretching unnecessarily
+         * across the entire menu.
+         */
+        width: fit-content;
+
+        /*
+         * Protects against overflow on very narrow phones.
+         */
+        max-width: 100%;
+    }
+
+
+    /* ========================================================
+       HERO
+       ======================================================== */
+
+    .landing-hero {
+        min-height: auto;
+    }
+
+
+    .landing-hero-inner {
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: stretch;
+
+        width: calc(100% - 32px);
+
+        min-height: auto;
+
+        gap: 0;
+
+        padding-top: 112px;
+
+        padding-bottom: 72px;
+    }
+
+
+    .landing-eyebrow {
+        margin-bottom: 18px;
+
+        font-size: 8px;
+    }
+
+
+    .landing-hero-title {
+        width: 100%;
+
+        max-width: 100%;
+
+        font-size:
+            clamp(
+                36px,
+                10.5vw,
+                58px
+            );
+
+        line-height: 1;
+
+        letter-spacing: -0.052em;
+
+        overflow-wrap: anywhere;
+    }
+
+
+    .landing-hero-description {
+        width: 100%;
+
+        max-width: 100%;
+
+        margin-top: 22px;
+
+        font-size: 13px;
+
+        line-height: 1.7;
+
+        overflow-wrap: anywhere;
+    }
+
+
+    .landing-hero-actions {
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: stretch;
+
+        width: 100%;
+
+        max-width: 100%;
+
+        margin-top: 26px;
+
+        gap: 9px;
+    }
+
+
+    .landing-hero-actions .landing-button {
+        width: 100%;
+
+        max-width: 100%;
+    }
+
+
+    /* ========================================================
+       HERO VISUAL
+       ======================================================== */
+
+    .landing-hero-visual {
+        width: 100%;
+
+        max-width: 100%;
+
+        min-height: 300px;
+
+        margin-top: 22px;
+
+        overflow: hidden;
+    }
+
+
+    .landing-hero-orbit {
+        width: min(270px, 82vw);
+
+        height: min(270px, 82vw);
+
+        max-width: none;
+
+        max-height: none;
+    }
+
+
+    .landing-hero-preview {
+        width: 100%;
+
+        max-width: 100%;
+
+        transform: rotate(0deg);
+    }
+
+
+    .landing-preview-header {
+        padding:
+            15px 16px;
+    }
+
+
+    .landing-preview-question,
+    .landing-preview-answer {
+        padding:
+            18px 16px;
+    }
+
+
+    .landing-preview-question p,
+    .landing-preview-answer p {
+        font-size: 13px;
+    }
+
+
+    .landing-preview-actions {
+        padding:
+            14px 16px;
+    }
+
+
+    /* ========================================================
+       SECTIONS
+       ======================================================== */
+
+    .landing-section {
+        min-height: auto;
+    }
+
+
+    .landing-section-inner,
+    .landing-section-inner-reverse {
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: stretch;
+
+        width: calc(100% - 32px);
+
+        min-height: auto;
+
+        gap: 38px;
+
+        padding-block: 82px;
+    }
+
+
+    .landing-section-inner-reverse .landing-section-copy {
+        order: 1;
+    }
+
+
+    .landing-section-inner-reverse > :last-child {
+        order: 2;
+    }
+
+
+    .landing-section-kicker {
+        margin-bottom: 16px;
+    }
+
+
+    .landing-section-title {
+        width: 100%;
+
+        max-width: 100%;
+
+        font-size:
+            clamp(
+                34px,
+                9.8vw,
+                50px
+            );
+
+        line-height: 1.02;
+    }
+
+
+    .landing-section-description {
+        width: 100%;
+
+        max-width: 100%;
+
+        margin-top: 19px;
+
+        font-size: 13px;
+
+        line-height: 1.7;
+    }
+
+
+    /* ========================================================
+       ROUTE
+       ======================================================== */
+
+    .landing-route {
+        transform: translateY(-12px);
+    }
+
+
+    .landing-route-base {
+        stroke-width: 1;
+
+        opacity: 0.45;
+    }
+
+
+    .landing-route-progress {
+        stroke-width: 1.6;
+
+        opacity: 0.50;
+    }
+
+
+    .landing-route-marker {
+        width: 32px;
+
+        height: 32px;
+
+        margin:
+            -16px 0 0 -16px;
+    }
+
+
+    .landing-route-marker-ring {
+        width: 30px;
+
+        height: 30px;
+
+        box-shadow:
+            0 0 0 3px rgba(247, 250, 249, 0.65);
+    }
+
+
+    .landing-route-marker-core {
+        width: 18px;
+
+        height: 18px;
+    }
+
+
+    .landing-route-marker-core i {
+        font-size: 9px;
+    }
+
+
+    /* ========================================================
+       DISCOVER / KNOW PANELS
+       ======================================================== */
+
+    .landing-discover-panel,
+    .landing-information-panel {
+        width: 100%;
+
+        max-width: 100%;
+
+        padding: 18px;
+
+        border-radius: var(--radius-md);
+    }
+
+
+    .landing-panel-heading,
+    .landing-information-heading {
+        gap: 10px;
+    }
+
+
+    .landing-panel-heading h3,
+    .landing-information-heading h3 {
+        font-size: 17px;
+
+        line-height: 1.3;
+    }
+
+
+    .landing-discover-options {
+        gap: 8px;
+
+        margin-top: 14px;
+    }
+
+
+    .landing-discover-option {
+        grid-template-columns:
+            auto
+            minmax(0, 1fr);
+
+        position: relative;
+
+        width: 100%;
+
+        max-width: 100%;
+
+        padding:
+            12px 38px 12px 12px;
+    }
+
+
+    .landing-option-icon {
+        width: 36px;
+
+        height: 36px;
+    }
+
+
+    .landing-option-icon i {
+        font-size: 18px;
+    }
+
+
+    .landing-option-content strong {
+        font-size: 12px;
+    }
+
+
+    .landing-option-content small {
+        font-size: 10px;
+
+        line-height: 1.45;
+    }
+
+
+    .landing-discover-option > i {
+        position: absolute;
+
+        top: 50%;
+
+        right: 12px;
+
+        transform:
+            translateY(-50%);
+    }
+
+
+    .landing-discover-option:hover {
+        transform: translateX(2px);
+    }
+
+
+    .landing-discover-option:hover > i {
+        transform:
+            translate(2px, -50%);
+    }
+
+
+    /* ========================================================
+       INFORMATION ITEMS
+       ======================================================== */
+
+    .landing-information-item {
+        gap: 10px;
+
+        padding-block: 16px;
+    }
+
+
+    .landing-information-icon {
+        width: 34px;
+
+        height: 34px;
+    }
+
+
+    .landing-information-icon i {
+        font-size: 17px;
+    }
+
+
+    .landing-information-item strong {
+        font-size: 12px;
+    }
+
+
+    .landing-information-item p {
+        font-size: 10px;
+
+        line-height: 1.5;
+    }
+
+
+    /* ========================================================
+       NAVIGATE
+       ======================================================== */
+
+    .landing-location-panel {
+        display: flex;
+
+        flex-direction: column;
+
+        width: 100%;
+
+        max-width: 100%;
+    }
+
+
+    .landing-location-map {
+        width: 100%;
+
+        max-width: 100%;
+
+        min-height: 220px;
+    }
+
+
+    .landing-location-details {
+        width: 100%;
+
+        max-width: 100%;
+
+        padding: 20px;
+    }
+
+
+    .landing-location-details h3 {
+        font-size: 20px;
+    }
+
+
+    .landing-location-details p {
+        font-size: 11px;
+    }
+
+
+    /* ========================================================
+       ASK / CHAT
+       ======================================================== */
+
+    .landing-chat-preview {
+        width: 100%;
+
+        max-width: 100%;
+
+        border-radius: var(--radius-md);
+    }
+
+
+    .landing-chat-header {
+        padding:
+            14px 15px;
+    }
+
+
+    .landing-chat-profile {
+        gap: 8px;
+    }
+
+
+    .landing-chat-avatar {
+        width: 32px;
+
+        height: 32px;
+    }
+
+
+    .landing-chat-avatar i {
+        font-size: 17px;
+    }
+
+
+    .landing-chat-profile strong {
+        font-size: 11px;
+    }
+
+
+    .landing-chat-profile span:not(.landing-chat-avatar) {
+        font-size: 8px;
+    }
+
+
+    .landing-chat-online {
+        display: none;
+    }
+
+
+    .landing-chat-messages {
+        gap: 16px;
+
+        padding:
+            20px 16px;
+    }
+
+
+    .landing-chat-message {
+        max-width: 90%;
+    }
+
+
+    .landing-chat-message p {
+        padding:
+            11px 12px;
+
+        font-size: 11px;
+
+        line-height: 1.55;
+    }
+
+
+    .landing-chat-input {
+        margin:
+            0 12px 12px;
+
+        padding:
+            10px 12px;
+    }
+
+
+    /* ========================================================
+       ARRIVE
+       ======================================================== */
+
+    .landing-arrive {
+        min-height: 72vh;
+
+        display: flex;
+
+        align-items: center;
+    }
+
+
+    .landing-arrive-inner {
+        width: calc(100% - 32px);
+
+        min-height: 72vh;
+
+        display: flex;
+
+        align-items: center;
+
+        padding-block: 64px;
+    }
+
+
+    .landing-arrive-content {
+        width: 100%;
+
+        max-width: 100%;
+    }
+
+
+    /* ========================================================
+       ARRIVE TITLE
+       ======================================================== */
+
+    .landing-arrive-title {
+        width: 100%;
+
+        max-width: 100%;
+
+        font-size:
+            clamp(
+                40px,
+                10.8vw,
+                58px
+            );
+
+        line-height: 0.98;
+
+        letter-spacing: -0.055em;
+    }
+
+
+    .landing-arrive-description {
+        width: 100%;
+
+        max-width: 100%;
+
+        margin-top: 20px;
+
+        font-size: 13px;
+
+        line-height: 1.7;
+    }
+
+
+    /* ========================================================
+       ARRIVE CTA GROUP
+       ======================================================== */
+
+    .landing-arrive-actions {
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 6px;
+
+        width: fit-content;
+
+        max-width: 100%;
+
+        margin-top: 28px;
+    }
+
+
+    .landing-arrive-actions .landing-button {
+        width: fit-content;
+
+        max-width: 100%;
+
+        white-space: normal;
+
+        text-align: left;
+    }
+
+
+    .landing-arrive-actions .landing-arrive-secondary {
+        min-height: 34px;
+
+        padding:
+            6px 17px;
+
+        margin: 0;
+
+        border-radius:
+            var(--radius-sm);
+
+        transition:
+            color var(--transition-fast),
+            background-color var(--transition-fast),
+            transform var(--transition-fast);
+    }
+
+
+    .landing-arrive-actions .landing-arrive-secondary:hover {
+        background:
+            rgba(255, 255, 255, 0.08);
+
+        color:
+            #ffffff;
+
+        transform:
+            translateX(2px);
+    }
+
+
+    .landing-arrive-actions .landing-arrive-secondary i {
+        transition:
+            transform var(--transition-fast);
+    }
+
+
+    .landing-arrive-actions .landing-arrive-secondary:hover i {
+        transform:
+            translateX(3px);
+    }
+
+
+    /* ========================================================
+       FOOTER
+       ======================================================== */
+
+    .landing-footer {
+        background:
+            var(--color-surface);
+
+        border-top:
+            1px solid var(--color-border-soft);
+    }
+
+
+    .landing-footer-inner {
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        width:
+            calc(100% - 32px);
+
+        gap: 0;
+
+        min-height: auto;
+
+        padding-block:
+            32px 26px;
+    }
+
+
+    /* ========================================================
+       FOOTER BRAND
+       ======================================================== */
+
+    .landing-footer-brand {
+        width: 100%;
+
+        padding-bottom:
+            22px;
+
+        border-bottom:
+            1px solid var(--color-border-soft);
+    }
+
+
+    .landing-footer-wordmark {
+        color:
+            var(--color-text);
+
+        font-size:
+            14px;
+
+        font-weight:
+            700;
+
+        letter-spacing:
+            -0.025em;
+    }
+
+
+    .landing-footer-brand p {
+        max-width:
+            230px;
+
+        margin:
+            7px 0 0;
+
+        color:
+            var(--color-text-muted);
+
+        font-size:
+            10px;
+
+        line-height:
+            1.6;
+    }
+
+
+    /* ========================================================
+       FOOTER NAVIGATION
+       ======================================================== */
+
+    .landing-footer-links {
+        display: flex;
+
+        align-items: center;
+
+        flex-wrap: wrap;
+
+        width: 100%;
+
+        gap: 0;
+
+        padding:
+            18px 0 20px;
+    }
+
+
+    .landing-footer-links a {
+        position: relative;
+
+        display: inline-flex;
+
+        align-items: center;
+
+        min-height:
+            30px;
+
+        color:
+            var(--color-text-muted);
+
+        font-size:
+            10px;
+
+        font-weight:
+            550;
+
+        white-space:
+            nowrap;
+
+        transition:
+            color var(--transition-fast);
+    }
+
+
+    .landing-footer-links a:hover {
+        color:
+            var(--color-brand);
+    }
+
+
+    .landing-footer-links a:not(:last-child)::after {
+        content:
+            "·";
+
+        margin-inline:
+            9px;
+
+        color:
+            var(--color-text-faint);
+
+        pointer-events:
+            none;
+    }
+
+
+    /* ========================================================
+       FOOTER META
+       ======================================================== */
+
+    .landing-footer-meta {
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap:
+            5px;
+
+        width: 100%;
+
+        padding-top:
+            18px;
+
+        border-top:
+            1px solid var(--color-border-soft);
+
+        color:
+            var(--color-text-faint);
+
+        font-size:
+            8px;
+
+        line-height:
+            1.5;
+
+        text-align:
+            left;
+    }
+
+}
+
+
+/* ============================================================
+   VERY SMALL PHONES
+   ============================================================ */
+
+@media (max-width: 360px) {
+
+    :root {
+        --page-padding: 14px;
+    }
+
+
+    .landing-container {
+        width: calc(100% - 28px);
+    }
+
+
+    .landing-header-inner {
+        width: calc(100% - 28px);
+    }
+
+
+    .landing-hero-inner,
+    .landing-section-inner,
+    .landing-section-inner-reverse,
+    .landing-arrive-inner,
+    .landing-footer-inner {
+        width: calc(100% - 28px);
+    }
+
+
+    .landing-hero-inner {
+        padding-top: 104px;
+
+        padding-bottom: 60px;
+    }
+
+
+    .landing-hero-title {
+        font-size:
+            clamp(
+                32px,
+                10vw,
+                44px
+            );
+
+        letter-spacing: -0.045em;
+    }
+
+
+    .landing-hero-description {
+        font-size: 12px;
+
+        line-height: 1.65;
+    }
+
+
+    .landing-section-inner,
+    .landing-section-inner-reverse {
+        gap: 30px;
+
+        padding-block: 68px;
+    }
+
+
+    .landing-section-title {
+        font-size:
+            clamp(
+                31px,
+                9.5vw,
+                42px
+            );
+    }
+
+
+    .landing-section-description {
+        font-size: 12px;
+    }
+
+
+    .landing-hero-visual {
+        min-height: 270px;
+    }
+
+
+    .landing-hero-orbit {
+        width: 230px;
+
+        height: 230px;
+    }
+
+
+    .landing-discover-panel,
+    .landing-information-panel {
+        padding: 16px;
+    }
+
+
+    .landing-panel-heading h3,
+    .landing-information-heading h3 {
+        font-size: 16px;
+    }
+
+
+    .landing-option-content small {
+        max-width: 175px;
+    }
+
+
+    .landing-location-map {
+        min-height: 200px;
+    }
+
+
+    .landing-chat-messages {
+        padding:
+            18px 14px;
+    }
+
+
+    .landing-chat-message {
+        max-width: 94%;
+    }
+
+
+    .landing-arrive-title {
+        font-size:
+            clamp(
+                36px,
+                10.5vw,
+                52px
+            );
+
+        letter-spacing:
+            -0.05em;
+    }
+
+
+    .landing-arrive-actions {
+        margin-top:
+            24px;
+    }
+
+
+    .landing-arrive-actions .landing-button,
+    .landing-arrive-actions .landing-arrive-secondary {
+        max-width:
+            100%;
+    }
+
+}
+
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    html {
+        scroll-behavior: auto;
+    }
+
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+
+        animation-iteration-count: 1 !important;
+
+        transition-duration: 0.01ms !important;
+    }
+
+
+    [data-reveal] {
+        opacity: 1;
+
+        transform: none;
+    }
+
+}

@@ -15,11 +15,12 @@ window.Pusher = Pusher;
 
 /*
 |--------------------------------------------------------------------------
-| Temporary production diagnostics
+| Reverb diagnostics
 |--------------------------------------------------------------------------
 |
-| Pusher logs the WebSocket connection process and detailed failures.
-| Remove this after the issue is fixed.
+| Enable Pusher's console logging while troubleshooting the WebSocket
+| connection. Disable this in production once the connection is stable
+| because verbose WebSocket logs are unnecessary for normal users.
 |
 */
 
@@ -27,11 +28,16 @@ Pusher.logToConsole = true;
 
 /*
 |--------------------------------------------------------------------------
-| Read required configuration
+| Read Laravel configuration
 |--------------------------------------------------------------------------
 |
 | Vite exposes only variables prefixed with VITE_ to browser JavaScript.
-| Never place private secrets such as REVERB_APP_SECRET in this file.
+|
+| Never expose private values such as:
+|
+|     REVERB_APP_SECRET
+|
+| through VITE_ variables.
 |
 */
 
@@ -43,166 +49,375 @@ const broadcastAuthEndpoint = document.querySelector(
     'meta[name="broadcast-auth-endpoint"]'
 )?.content;
 
-const reverbAppKey = import.meta.env.VITE_REVERB_APP_KEY;
-const reverbHost = import.meta.env.VITE_REVERB_HOST;
-const reverbPort = Number(import.meta.env.VITE_REVERB_PORT || 8080);
-const reverbScheme = import.meta.env.VITE_REVERB_SCHEME || "http";
+const reverbAppKey =
+    import.meta.env.VITE_REVERB_APP_KEY;
+
+const reverbHost =
+    import.meta.env.VITE_REVERB_HOST;
+
+const reverbPort =
+    Number(
+        import.meta.env.VITE_REVERB_PORT || 8080
+    );
+
+const reverbScheme =
+    import.meta.env.VITE_REVERB_SCHEME || "http";
 
 /*
 |--------------------------------------------------------------------------
-| Validate public configuration
+| Validate required public configuration
 |--------------------------------------------------------------------------
 |
-| Fail early when required frontend configuration is missing.
-| This prevents confusing WebSocket connection errors later.
+| Fail early if required frontend configuration is missing.
+|
+| This is preferable to allowing Echo to initialize with undefined
+| connection settings and producing a much less useful WebSocket error.
 |
 */
 
 if (!reverbAppKey) {
-    throw new Error("VITE_REVERB_APP_KEY is missing.");
+    throw new Error(
+        "VITE_REVERB_APP_KEY is missing."
+    );
 }
 
 if (!reverbHost) {
-    throw new Error("VITE_REVERB_HOST is missing.");
+    throw new Error(
+        "VITE_REVERB_HOST is missing."
+    );
 }
 
 if (!broadcastAuthEndpoint) {
-    throw new Error("Broadcast authentication endpoint is missing.");
+    throw new Error(
+        "Broadcast authentication endpoint is missing."
+    );
 }
 
 /*
 |--------------------------------------------------------------------------
-| Determine WebSocket transport
+| Determine WebSocket security
 |--------------------------------------------------------------------------
 |
-| Reverb uses ws for HTTP and wss for HTTPS.
+| Local development normally uses:
+|
+|     HTTP  → WS
+|
+| Production normally uses:
+|
+|     HTTPS → WSS
+|
+| Instead of hardcoding either environment, derive the WebSocket
+| configuration from VITE_REVERB_SCHEME.
 |
 */
 
-const forceTLS = reverbScheme === "https";
+const forceTLS =
+    reverbScheme === "https";
 
 /*
 |--------------------------------------------------------------------------
 | Initialize Laravel Echo
 |--------------------------------------------------------------------------
 |
-| Echo manages channel subscriptions and event listeners.
-| Reverb handles the actual WebSocket connection.
+| Echo manages channels, subscriptions, authentication, and events.
+|
+| Reverb handles the actual WebSocket server.
+|
+| The connection settings are intentionally environment-driven so the
+| same JavaScript file works both locally and in production.
 |
 */
 
 window.Echo = new Echo({
+
     /*
-     * Use Laravel Reverb through the Pusher-compatible protocol.
+     * Laravel Reverb communicates through the Pusher-compatible
+     * WebSocket protocol.
      */
     broadcaster: "reverb",
 
     /*
      * Public Reverb application key.
+     *
+     * This is safe to expose to the browser.
      */
     key: reverbAppKey,
 
     /*
-     * Railway public Reverb hostname.
-     * Do not include https:// or wss:// here.
+     * Reverb hostname.
+     *
+     * Local example:
+     *
+     *     127.0.0.1
+     *
+     * Production example:
+     *
+     *     your-reverb-domain
      */
     wsHost: reverbHost,
 
     /*
-     * Standard secure WebSocket port.
+     * WebSocket port.
+     *
+     * Local:
+     *
+     *     8080
+     *
+     * Production:
+     *
+     *     Whatever port is exposed by the Reverb deployment.
      */
-    wsPort: 443,
+    wsPort: reverbPort,
 
     /*
      * Secure WebSocket port.
+     *
+     * We keep this environment-driven rather than hardcoding 443.
      */
-    wssPort: 443,
+    wssPort: reverbPort,
 
     /*
-     * Production Reverb uses encrypted WebSockets.
+     * Enable TLS only when Reverb is configured to use HTTPS.
+     *
+     * Local:
+     *
+     *     false
+     *
+     * Production:
+     *
+     *     true
      */
-    forceTLS: true,
+    forceTLS: forceTLS,
 
     /*
-     * Allow only secure WebSocket connections.
+     * Allow only the transport appropriate for the current environment.
+     *
+     * Local:
+     *
+     *     ws
+     *
+     * Production:
+     *
+     *     wss
+     *
+     * Restricting the transport is preferable to allowing unnecessary
+     * fallback transports.
      */
-    enabledTransports: ["wss"],
+    enabledTransports: forceTLS
+        ? ["wss"]
+        : ["ws"],
 
     /*
-     * Laravel private-channel authentication endpoint.
+     * Laravel's private-channel authentication endpoint.
+     *
+     * This endpoint verifies whether the currently authenticated
+     * Laravel user is allowed to subscribe to the private channel.
      */
-    authEndpoint: broadcastAuthEndpoint,
+    authEndpoint:
+        broadcastAuthEndpoint,
 
     /*
-     * Send Laravel's CSRF token when authenticating
-     * the private channel.
+     * Authentication headers.
+     *
+     * The CSRF token protects Laravel's POST authentication request.
+     *
+     * The token is read from Laravel's CSRF meta tag instead of being
+     * hardcoded into JavaScript.
      */
     auth: {
         headers: {
-            "X-CSRF-TOKEN": csrfToken,
-            Accept: "application/json",
+            "X-CSRF-TOKEN":
+                csrfToken,
+
+            Accept:
+                "application/json",
         },
     },
 });
 
 /*
 |--------------------------------------------------------------------------
-| Detailed Reverb connection diagnostics
+| Reverb connection diagnostics
 |--------------------------------------------------------------------------
 |
-| These listeners help identify whether the failure is caused by:
+| These listeners make it possible to distinguish between:
 |
-| - DNS or hostname resolution
-| - TLS / HTTPS certificate problems
-| - Railway WebSocket routing
-| - Incorrect Reverb application credentials
-| - Browser transport restrictions
+| - connecting
+| - successfully connected
+| - disconnected
+| - unavailable
+| - failed
+| - connection errors
+|
+| Keep these while troubleshooting.
 |
 */
 
 const pusherConnection =
-    window.Echo.connector.pusher.connection;
-
-pusherConnection.bind("state_change", (states) => {
-    console.info("Reverb state changed:", states);
-});
-
-pusherConnection.bind("connecting_in", (data) => {
-    console.info("Reverb connecting in:", data);
-});
-
-pusherConnection.bind("connected", () => {
-    console.info("Reverb WebSocket connected.");
-});
-
-pusherConnection.bind("disconnected", () => {
-    console.warn("Reverb WebSocket disconnected.");
-});
-
-pusherConnection.bind("unavailable", () => {
-    console.error("Reverb WebSocket unavailable.");
-});
-
-pusherConnection.bind("failed", () => {
-    console.error("Reverb WebSocket failed.");
-});
-
-pusherConnection.bind("error", (error) => {
-    console.error("DETAILED REVERB CONNECTION ERROR:", error);
-});
+    window.Echo
+        .connector
+        .pusher
+        .connection;
 
 /*
 |--------------------------------------------------------------------------
-| Diagnostics
+| State changes
+|--------------------------------------------------------------------------
+*/
+
+pusherConnection.bind(
+    "state_change",
+    (states) => {
+
+        console.info(
+            "Reverb state changed:",
+            states
+        );
+
+    }
+);
+
+/*
+|--------------------------------------------------------------------------
+| Connecting
+|--------------------------------------------------------------------------
+*/
+
+pusherConnection.bind(
+    "connecting_in",
+    (data) => {
+
+        console.info(
+            "Reverb connecting in:",
+            data
+        );
+
+    }
+);
+
+/*
+|--------------------------------------------------------------------------
+| Successfully connected
+|--------------------------------------------------------------------------
+*/
+
+pusherConnection.bind(
+    "connected",
+    () => {
+
+        console.info(
+            "Reverb WebSocket connected."
+        );
+
+    }
+);
+
+/*
+|--------------------------------------------------------------------------
+| Disconnected
+|--------------------------------------------------------------------------
+*/
+
+pusherConnection.bind(
+    "disconnected",
+    () => {
+
+        console.warn(
+            "Reverb WebSocket disconnected."
+        );
+
+    }
+);
+
+/*
+|--------------------------------------------------------------------------
+| Temporarily unavailable
+|--------------------------------------------------------------------------
+*/
+
+pusherConnection.bind(
+    "unavailable",
+    () => {
+
+        console.error(
+            "Reverb WebSocket unavailable."
+        );
+
+    }
+);
+
+/*
+|--------------------------------------------------------------------------
+| Connection failed
+|--------------------------------------------------------------------------
+*/
+
+pusherConnection.bind(
+    "failed",
+    () => {
+
+        console.error(
+            "Reverb WebSocket failed."
+        );
+
+    }
+);
+
+/*
+|--------------------------------------------------------------------------
+| Detailed connection error
+|--------------------------------------------------------------------------
+*/
+
+pusherConnection.bind(
+    "error",
+    (error) => {
+
+        console.error(
+            "DETAILED REVERB CONNECTION ERROR:",
+            error
+        );
+
+    }
+);
+
+/*
+|--------------------------------------------------------------------------
+| Safe configuration diagnostics
 |--------------------------------------------------------------------------
 |
-| These logs contain configuration status only.
-| Never log private keys, secrets, or authentication tokens.
+| These logs expose configuration information that is safe for the
+| browser to know.
+|
+| Never log:
+|
+|     REVERB_APP_SECRET
+|     database passwords
+|     API secrets
+|     authentication tokens
 |
 */
 
-console.info("Laravel Echo with Reverb initialized.");
-console.info("Reverb host:", reverbHost);
-console.info("Reverb port:", reverbPort);
-console.info("Reverb TLS enabled:", forceTLS);
-console.info("Broadcast auth endpoint:", broadcastAuthEndpoint);
+console.info(
+    "Laravel Echo with Reverb initialized."
+);
+
+console.info(
+    "Reverb host:",
+    reverbHost
+);
+
+console.info(
+    "Reverb port:",
+    reverbPort
+);
+
+console.info(
+    "Reverb TLS enabled:",
+    forceTLS
+);
+
+console.info(
+    "Reverb auth endpoint:",
+    broadcastAuthEndpoint
+);

@@ -229,6 +229,9 @@ public function supportRequest()
             'logout' =>
                 'Logout',
 
+            'session_expired' =>
+                'Session Expired',
+
             'admin_login' =>
                 'Admin Login',
 

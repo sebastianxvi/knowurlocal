@@ -1150,11 +1150,11 @@ public function resetPassword(Request $request)
                 'device' => $request->userAgent(),
             ]);
 
-            if (in_array(Auth::user()->role, ['admin','superadmin'])) {
+            if (in_array(Auth::user()->role, ['admin', 'superadmin'])) {
                 return redirect('/admin/dashboard');
             }
 
-            return redirect('/map');
+            return redirect()->intended('/map');
         }
 
         return back()->withErrors([
@@ -1187,9 +1187,9 @@ public function resetPassword(Request $request)
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        if ($user && in_array($user->role, ['admin','superadmin'])) {
-            return redirect('/admin/login');
-        }
+        // if ($user && in_array($user->role, ['admin','superadmin'])) {
+        //     return redirect('/admin/login');
+        // }
 
         return redirect('/login-page');
     }

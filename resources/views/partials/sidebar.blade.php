@@ -99,14 +99,15 @@
     </div>
 
     <!-- LOGOUT -->
-    <div class="logout">
-        <form action="{{ route('admin.logout') }}" method="POST">
-            @csrf
-            <button type="submit" class="logout-btn">
-                <i class="ph-light ph-sign-out"></i>
-                Logout
-            </button>
-        </form>
-    </div>
+<div class="logout">
+    <form action="{{ route('logout') }}" method="POST">
+        @csrf
+
+        <button type="submit" class="logout-btn">
+            <i class="ph-light ph-sign-out"></i>
+            Logout
+        </button>
+    </form>
+</div>
 
 </aside>

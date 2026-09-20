@@ -23,8 +23,9 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Landing → login page
-Route::redirect('/', '/login-page');
+// Public landing page
+Route::view('/', 'public_user.landing')
+    ->name('landing');
 
 /*
 |--------------------------------------------------------------------------
@@ -210,7 +211,7 @@ Route::resource('faqs', FaqController::class);
 */
 
 // Shortcut
-Route::redirect('/admin-login', '/admin/login');
+Route::redirect('/admin-login', '/login-page');
 
 Route::prefix('admin')->group(function () {
 
@@ -220,18 +221,18 @@ Route::prefix('admin')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    Route::get('/login', function () {
+    // Route::get('/login', function () {
 
-        if (auth()->check()) {
-            return redirect('/admin/dashboard');
-        }
+    //     if (auth()->check()) {
+    //         return redirect('/admin/dashboard');
+    //     }
 
-        return view('admin.login-page');
+    //     return view('admin.login-page');
 
-    })->name('admin.login');
+    // })->name('admin.login');
 
-    Route::post('/login', [AuthController::class, 'login'])
-        ->name('admin.login.submit');
+    // Route::post('/login', [AuthController::class, 'login'])
+    //     ->name('admin.login.submit');
 
     /*
     |--------------------------------------------------------------------------
@@ -324,11 +325,7 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     [FaqController::class, 'generateKeywords']
 )->name('admin.faqs.generateKeywords');
 
-    
 
-    // LOGOUT
-    Route::post('/logout', [AuthController::class, 'logout'])
-        ->name('admin.logout');
 
 });
 

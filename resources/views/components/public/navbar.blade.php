@@ -2,37 +2,55 @@
 
     <div class="nav-group">
 
+        {{-- =====================================================
+             SEARCH AREA
+             ===================================================== --}}
         <div class="search-area">
 
-            {{-- SEARCH CAPSULE --}}
             <div class="logo-search">
 
-                <div class="header-brand">
+                {{-- BRAND --}}
+                <a
+                    href="{{ route('map') }}"
+                    class="header-brand"
+                    aria-label="KNOWURLOCAL Map"
+                >
                     <span class="logo-short">KYL</span>
                     <span class="logo-full">KNOWURLOCAL</span>
-                </div>
+                </a>
 
+
+                {{-- SEARCH --}}
                 @if(!isset($hideSearch))
 
                     <div class="search-form">
 
                         <input
-                            type="text"
+                            type="search"
                             id="searchInput"
                             placeholder="Search agencies"
+                            autocomplete="off"
+                            spellcheck="false"
+                            aria-label="Search agencies"
                         >
 
                         <button
                             type="button"
                             id="searchBtn"
                             aria-label="Search agencies"
+                            title="Search agencies"
                         >
-                            <i class="ph-light ph-magnifying-glass"></i>
+                            <i
+                                class="ph-light ph-magnifying-glass"
+                                aria-hidden="true"
+                            ></i>
                         </button>
 
                         <div
                             id="searchResults"
                             class="search-results"
+                            role="listbox"
+                            aria-label="Agency search results"
                         ></div>
 
                     </div>
@@ -41,7 +59,10 @@
 
             </div>
 
-            {{-- CATEGORY FILTERS --}}
+
+            {{-- =================================================
+                 CATEGORY FILTERS
+                 ================================================= --}}
             @if(!isset($hideSearch))
 
                 <div
@@ -55,89 +76,177 @@
         </div>
 
 
+        {{-- =====================================================
+             MOBILE MENU TOGGLE
+             ===================================================== --}}
         <button
-    type="button"
-    class="menu-toggle"
-    id="menuToggle"
-    aria-label="Open navigation menu"
->
-    <i class="ph-light ph-list"></i>
+            type="button"
+            class="menu-toggle"
+            id="menuToggle"
+            aria-label="Open navigation menu"
+            aria-controls="navDrawer"
+            aria-expanded="false"
+        >
 
-    @if($hasUnreadInquiry ?? false)
-        <span
-            class="menu-notification-dot"
-            aria-label="You have an unread inquiry response"
-        ></span>
-    @endif
-</button>
+            <i
+                class="ph-light ph-list"
+                aria-hidden="true"
+            ></i>
 
-        <nav class="nav-drawer" id="navDrawer">
+            @if($hasUnreadInquiry ?? false)
 
+                <span
+                    class="menu-notification-dot"
+                    aria-label="You have an unread inquiry response"
+                ></span>
+
+            @endif
+
+        </button>
+
+
+        {{-- =====================================================
+             NAVIGATION
+             ===================================================== --}}
+        <nav
+            class="nav-drawer"
+            id="navDrawer"
+            aria-label="Main navigation"
+        >
+
+            {{-- MOBILE GREETING --}}
             <h2 id="greet">
                 Hi, {{ Auth::user()->first_name ?? 'User' }}!
             </h2>
 
-            {{-- <a href="{{ url('home') }}" class="nav-link">
-                <i class="ph-light ph-house"></i>
-                Home
-            </a> --}}
 
-            {{-- <a href="{{ url('agencies') }}" class="nav-link">
-                <i class="ph-light ph-buildings"></i>
-                Agencies
-            </a> --}}
+            {{-- =================================================
+                 MAP
+                 ================================================= --}}
+            <a
+                href="{{ route('map') }}"
+                class="nav-link {{ request()->routeIs('map') ? 'active' : '' }}"
+            >
+                <i
+                    class="ph-light ph-map-trifold"
+                    aria-hidden="true"
+                ></i>
 
-            <a href="{{ url('map') }}" class="nav-link">
-                <i class="ph-light ph-map-trifold"></i>
-                Map
+                <span>Map</span>
             </a>
 
-            <a href="{{ url('about') }}" class="nav-link">
-                <i class="ph-light ph-info"></i>
-                About
+
+            {{-- =================================================
+                 ABOUT
+                 ================================================= --}}
+            <a
+                href="{{ url('about') }}"
+                class="nav-link {{ request()->is('about') ? 'active' : '' }}"
+            >
+                <i
+                    class="ph-light ph-info"
+                    aria-hidden="true"
+                ></i>
+
+                <span>About</span>
             </a>
 
-            <div class="nav-link account-wrapper">
 
-                <div class="account-toggle" id="accountToggle">
+            {{-- =================================================
+                 ACCOUNT
+                 ================================================= --}}
+            <div class="account-wrapper">
 
-    <span class="account-label">
-        <i class="ph-light ph-user"></i>
-        Account
-    </span>
+                <div
+                    class="account-toggle"
+                    id="accountToggle"
+                    role="button"
+                    tabindex="0"
+                    aria-controls="accountDropdown"
+                    aria-expanded="false"
+                >
 
-    @if($hasUnreadInquiry ?? false)
-        <span
-            class="account-notification-dot"
-            aria-label="You have an unread inquiry response"
-        ></span>
-    @endif
+                    <span class="account-label">
 
-    <i class="ph-light ph-caret-down account-chevron"></i>
+                        <i
+                            class="ph-light ph-user"
+                            aria-hidden="true"
+                        ></i>
 
-</div>
+                        <span>Account</span>
 
-                <div class="account-dropdown" id="accountDropdown">
+                    </span>
+
+
+                    @if($hasUnreadInquiry ?? false)
+
+                        <span
+                            class="account-notification-dot"
+                            aria-label="You have an unread inquiry response"
+                        ></span>
+
+                    @endif
+
+
+                    <i
+                        class="ph-light ph-caret-down account-chevron"
+                        aria-hidden="true"
+                    ></i>
+
+                </div>
+
+
+                {{-- =================================================
+                     ACCOUNT DROPDOWN
+                     ================================================= --}}
+                <div
+                    class="account-dropdown"
+                    id="accountDropdown"
+                >
 
                     <a
-    href="{{ route('user.inquiries') }}"
-    class="dropdown-item inquiry-link"
->
-    <span>My Inquiries</span>
+                        href="{{ route('user.inquiries') }}"
+                        class="dropdown-item inquiry-link"
+                    >
+                        <span class="dropdown-item-label">
 
-    @if($hasUnreadInquiry ?? false)
-        <span
-            class="inquiry-notification-dot"
-            aria-label="You have an unread inquiry response"
-        ></span>
-    @endif
-</a>
+                            <i
+                                class="ph-light ph-chats-circle"
+                                aria-hidden="true"
+                            ></i>
 
-                    <form action="{{ route('logout') }}" method="POST">
+                            <span>My Inquiries</span> 
+
+                        </span>
+
+                        @if($hasUnreadInquiry ?? false)
+                            <span
+                                class="inquiry-notification-dot"
+                                aria-label="You have an unread inquiry response"
+                            ></span>
+                        @endif
+                    </a>
+
+
+                    <form
+                        action="{{ route('logout') }}"
+                        method="POST"
+                    >
+
                         @csrf
-                        <button type="submit" class="dropdown-item logout">
-                            Logout
+
+                        <button
+                            type="submit"
+                            class="dropdown-item logout"
+                        >
+                            <i
+                                class="ph-light ph-sign-out"
+                                aria-hidden="true"
+                            ></i>
+
+                            <span>Sign out</span>
                         </button>
+
                     </form>
 
                 </div>

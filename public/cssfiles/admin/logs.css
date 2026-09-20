@@ -257,6 +257,12 @@ body{
     color:#b91c1c;
 }
 
+/* SESSION EXPIRED */
+.badge.session_expired{
+    background:#fef3c7;
+    color:#92400e;
+}
+
 /* ================= CREATE ================= */
 .badge.create_agency,
 .badge.create_faq,
