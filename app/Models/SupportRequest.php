@@ -17,8 +17,6 @@ class SupportRequest extends Model
         'answer_image',
         'status',
         'ip_address',
-
-        // Answer lifecycle timestamps
         'answered_at',
         'answer_seen_at',
     ];
@@ -28,8 +26,14 @@ class SupportRequest extends Model
         'answer_seen_at' => 'datetime',
     ];
 
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
+
     /**
-     * 🔗 RELATION: SUPPORT REQUEST → USER
+     * The citizen who submitted the support request.
      */
     public function user()
     {
@@ -37,10 +41,27 @@ class SupportRequest extends Model
     }
 
     /**
-     * 🔗 RELATION: SUPPORT REQUEST → AGENCY
+     * The agency currently associated with the ticket.
      */
     public function agency()
     {
         return $this->belongsTo(Agency::class);
+    }
+
+    /**
+     * All official response attempts belonging to this ticket.
+     */
+    public function responses()
+    {
+        return $this->hasMany(SupportRequestResponse::class);
+    }
+
+    /**
+     * The most recently created response attempt.
+     */
+    public function latestResponse()
+    {
+        return $this->hasOne(SupportRequestResponse::class)
+            ->latestOfMany();
     }
 }

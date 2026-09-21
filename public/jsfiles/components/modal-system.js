@@ -11,14 +11,9 @@
      * from throwing JavaScript errors.
      */
     if (!modal) {
-        console.warn("Alert modal not found in DOM");
-
-        // Safe fallback functions.
-        window.showAlertModal = () => {};
-        window.closeAlertModal = () => {};
-
-        return;
-    }
+    console.warn("Alert modal not found in DOM");
+    return;
+}
 
 
     // ================= ELEMENT REFERENCES =================
@@ -76,8 +71,21 @@
         textEl.textContent =
             config.text || "";
 
-        iconEl.textContent =
-            config.icon || "";
+        
+            iconEl.replaceChildren();
+
+if (config.icon) {
+    const icon = document.createElement("i");
+
+    icon.className = config.icon;
+
+    icon.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    iconEl.appendChild(icon);
+}
 
 
         /*

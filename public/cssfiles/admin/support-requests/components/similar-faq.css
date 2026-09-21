@@ -1,0 +1,98 @@
+/* =========================================================
+   KNOWURLOCAL — SUPPORT REQUESTS
+   Similar FAQ
+   ========================================================= */
+
+
+/* =========================================================
+   FAQ MODAL SIZE
+   ========================================================= */
+
+.support-faq-modal {
+    width: min(650px, 100%);
+}
+
+
+/* =========================================================
+   MESSAGE
+   ========================================================= */
+
+.support-faq-message {
+    margin-bottom: 14px;
+
+    color:
+        var(--text-muted, #6b7280);
+
+    font-size: 12px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   RESULTS
+   ========================================================= */
+
+.support-faq-results {
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+.support-faq-message-inner {
+    padding: 12px;
+
+    border: 1px solid
+        var(--border-color, #e5e7eb);
+
+    border-radius: 8px;
+
+    color:
+        var(--text-muted, #6b7280);
+
+    font-size: 12px;
+}
+
+.support-faq-result {
+    padding: 13px;
+
+    border: 1px solid
+        var(--border-color, #e5e7eb);
+
+    border-radius: 9px;
+
+    background:
+        var(--surface, #ffffff);
+
+    transition:
+        border-color 140ms ease,
+        background-color 140ms ease;
+}
+
+.support-faq-result:hover {
+    border-color: #d1d5db;
+
+    background: #fafafa;
+}
+
+.support-faq-result-title {
+    margin: 0 0 5px;
+
+    color:
+        var(--text-primary, #374151);
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.support-faq-result-answer {
+    margin: 0;
+
+    color:
+        var(--text-muted, #6b7280);
+
+    font-size: 12px;
+
+    line-height: 1.55;
+}

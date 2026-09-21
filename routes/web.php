@@ -302,14 +302,35 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::get('/admin/users', [UserController::class, 'index'])
         ->name('admin.users');
 
-    Route::get('/admin/support-requests', [SupportRequestController::class, 'index'])
+    // ================= SUPPORT REQUESTS =================
+
+    Route::get('/support-requests', [SupportRequestController::class, 'index'])
         ->name('admin.support.requests');
 
-    Route::post('/admin/support-requests/reply', [SupportRequestController::class, 'reply'])
+    Route::post('/support-requests/reply', [SupportRequestController::class, 'reply'])
         ->name('admin.support.reply');
 
+    Route::post(
+        '/support-requests/forward-response',
+        [SupportRequestController::class, 'forwardResponse']
+    )->name('admin.support.forward-response');
+
+    Route::get(
+        '/support-requests/{id}/latest-response',
+        [SupportRequestController::class, 'latestResponse']
+    )->name('admin.support.latest-response');
+
     Route::put('/support-requests/{id}', [SupportRequestController::class, 'update'])
-        ->name('admin.support.update'); 
+        ->name('admin.support.update');
+
+    Route::get(
+        '/support-requests/{supportRequestId}/responses/{responseId}/components/{componentId}/attachment',
+        [SupportRequestController::class, 'viewResponseAttachment']
+    )->name('admin.support.response-attachment');
+
+
+
+
 
     Route::get('/users/{id}/inquiries', [UserController::class, 'inquiries']);
 
@@ -416,73 +437,34 @@ Route::post(
     Route::delete('/admins/delete/{id}', [AdminManagementController::class, 'delete'])
         ->name('admin.delete');
 
+
+        // ================= SUPERADMIN SUPPORT REQUESTS =================
+
     Route::delete('/support-requests/{id}', [SupportRequestController::class, 'destroy'])
         ->name('admin.support.delete');
 
-        /*
-|--------------------------------------------------------------------------
-| SUPPORT REQUEST DATA RECOVERY
-|--------------------------------------------------------------------------
-*/
-
-/*
- * Restore a Support Request from the trash.
- *
- * Only Superadmins can access this route because it is located
- * inside the superadmin.only middleware group.
- */
-Route::patch(
-    '/support-requests/{id}/restore',
-    [SupportRequestController::class, 'restore']
-)->name('admin.support.restore');
+    Route::patch(
+        '/support-requests/{id}/restore',
+        [SupportRequestController::class, 'restore']
+    )->name('admin.support.restore');
 
 
-/*
- * Permanently delete a Support Request.
- *
- * This is intentionally separate from the normal DELETE route.
- * The normal DELETE performs a soft delete, while this route
- * performs the irreversible force deletion.
- */
-Route::delete(
-    '/support-requests/{id}/force-delete',
-    [SupportRequestController::class, 'forceDestroy']
-)->name('admin.support.forceDelete');
+    Route::delete(
+        '/support-requests/{id}/force-delete',
+        [SupportRequestController::class, 'forceDestroy']
+    )->name('admin.support.forceDelete');
 
-    /*
-|--------------------------------------------------------------------------
-| SUPPORT REQUEST → FAQ
-|--------------------------------------------------------------------------
-*/
+    
+    Route::post(
+        '/support-requests/{id}/similar-faqs',
+        [SupportRequestController::class, 'findSimilarFaqs']
+    )->name('admin.support.similarFaqs');
 
-/*
-|--------------------------------------------------------------------------
-| SUPPORT REQUEST → FAQ SIMILARITY CHECK
-|--------------------------------------------------------------------------
-*/
 
-/*
- * Check whether an answered Support Request has potentially
- * similar FAQs already stored in the database.
- *
- * This route does NOT create, update, or delete anything.
- * It only returns similarity results for the administrator.
- */
-Route::post(
-    '/support-requests/{id}/similar-faqs',
-    [SupportRequestController::class, 'findSimilarFaqs']
-)->name('admin.support.similarFaqs');
-
-/*
- * Open the FAQ conversion workflow.
- *
- * This route only prepares the navigation/context.
- * It does NOT create an FAQ and does NOT call the AI.
- */
-Route::get(
-    '/support-requests/{id}/to-faq',
-    [SupportRequestController::class, 'toFaq']
-)->name('admin.support.toFaq');
+    Route::get(
+        '/support-requests/{id}/to-faq',
+        [SupportRequestController::class, 'toFaq']
+    )->name('admin.support.toFaq');
 
 /*
  * Generate the bilingual FAQ draft.

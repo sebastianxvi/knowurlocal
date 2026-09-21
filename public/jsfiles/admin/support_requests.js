@@ -1,1673 +1,1737 @@
 document.addEventListener("DOMContentLoaded", () => {
     /*
     |--------------------------------------------------------------------------
-    | GENERAL SUPPORT REQUEST ELEMENTS
+    | SUPPORT REQUEST PAGE
+    |--------------------------------------------------------------------------
+    |
+    | This script is responsible for:
+    |
+    | 1. Searchable agency selection
+    | 2. Support request management modal
+    | 3. Official response submission
+    | 4. Similar FAQ checking
+    | 5. Lifecycle confirmations
+    | 6. Realtime Support Request updates through Laravel Echo
+    |
+    | The Response Builder has its own JavaScript module.
+    | This file only coordinates the builder with the support ticket.
+    |
+    | The backend remains the source of truth.
+    |--------------------------------------------------------------------------
+    */
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DOM REFERENCES
+    |--------------------------------------------------------------------------
+    */
+
+    const supportModal =
+        document.getElementById("support-modal-back");
+
+    const replyForm =
+        document.getElementById("reply-form");
+
+    const methodInput =
+        document.getElementById("form-method");
+
+    /*
+     * The new response form uses #forward-response-btn.
+     *
+     * The previous selector looked for ".btn-save", which belonged
+     * to the old answer workflow.
+     */
+    const saveButton =
+        document.getElementById("forward-response-btn");
+
+    const supportRequestsTableBody =
+        document.getElementById("support-requests-table-body");
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CURRENT REQUEST STATE
     |--------------------------------------------------------------------------
     */
 
     let currentRequestId = null;
 
-    const modal = document.getElementById("support-modal-back");
-    const form = document.getElementById("reply-form");
-    const methodInput = document.getElementById("form-method");
-    const saveBtn = document.querySelector(".btn-save");
+
+    /*
+    |--------------------------------------------------------------------------
+    | CSRF TOKEN
+    |--------------------------------------------------------------------------
+    |
+    | Laravel's CSRF token is read from the page rather than hard-coded.
+    |--------------------------------------------------------------------------
+    */
+
+    const csrfToken =
+        document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content") || "";
 
 
     /*
-|--------------------------------------------------------------------------
-| SUPPORT AGENCY SEARCHABLE SELECT
-|--------------------------------------------------------------------------
-*/
+    |--------------------------------------------------------------------------
+    | UTILITY HELPERS
+    |--------------------------------------------------------------------------
+    */
 
-/*
- * Native select submitted to Laravel.
- */
-const supportAgencySelect =
-    document.getElementById("sr-agency");
-
-/*
- * Visible search input.
- */
-const supportAgencySearchInput =
-    document.getElementById("sr-agency-search");
-
-/*
- * Dropdown result container.
- */
-const supportAgencyOptionsContainer =
-    document.getElementById("sr-agency-options");
-
-/*
- * Main searchable-select wrapper.
- */
-const supportAgencySearchableWrapper =
-    document.getElementById("support-agency-searchable");
-
-/*
- * Stores normalized agency data for searching.
- */
-let searchableSupportAgencies = [];
-
-/*
- * Tracks whether the dropdown is open.
- */
-let supportAgencyDropdownOpen = false;
-
-
-/*
-|--------------------------------------------------------------------------
-| BUILD SEARCHABLE AGENCY DATA
-|--------------------------------------------------------------------------
-*/
-function buildSupportAgencyOptions() {
-
-    if (
-        !supportAgencySelect ||
-        !supportAgencyOptionsContainer
-    ) {
-        return;
-    }
-
-    searchableSupportAgencies =
-        Array.from(
-            supportAgencySelect.options
-        )
-        .filter(option => option.value !== "")
-        .map(option => {
-
-            const fullName =
-                option.dataset.fullName ||
-                option.textContent.trim();
-
-            const abbreviation =
-                option.dataset.abbr ||
-                "";
-
-            return {
-
-                value:
-                    option.value,
-
-                fullName:
-                    fullName.trim(),
-
-                abbreviation:
-                    abbreviation.trim(),
-
-                searchText:
-                    `${fullName} ${abbreviation}`
-                        .toLowerCase()
-                        .trim()
-
-            };
-
-        });
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| OPEN DROPDOWN
-|--------------------------------------------------------------------------
-*/
-
-function openSupportAgencyDropdown() {
-    if (
-        !supportAgencySearchInput ||
-        !supportAgencySearchableWrapper
-    ) {
-        return;
-    }
 
     /*
-     * Do not allow searching in view-only mode.
+     * Safely convert an unknown value to a string.
+     *
+     * This prevents values received from realtime events
+     * from being accidentally treated as objects.
      */
-    if (
-        supportAgencySearchInput.readOnly ||
-        supportAgencySearchInput.disabled
-    ) {
-        return;
+    function safeString(value, fallback = "") {
+        if (
+            value === null ||
+            value === undefined
+        ) {
+            return fallback;
+        }
+
+        return String(value);
     }
 
-    supportAgencyDropdownOpen = true;
 
-    supportAgencySearchableWrapper.classList.add(
-        "is-open"
-    );
+    /*
+     * Return the currently active table filters.
+     *
+     * These values come from the server-rendered Blade dataset.
+     */
+    function getCurrentTableFilters() {
+        if (!supportRequestsTableBody) {
+            return {
+                datasetStatus: "",
+                statusFilter: "",
+                agency: "",
+                search: ""
+            };
+        }
 
-    supportAgencySearchInput.setAttribute(
-        "aria-expanded",
-        "true"
-    );
+        return {
+            datasetStatus:
+                supportRequestsTableBody.dataset.status || "",
 
-    renderSupportAgencyOptions(
-        supportAgencySearchInput.value
-    );
-}
+            statusFilter:
+                supportRequestsTableBody.dataset.statusFilter || "",
+
+            agency:
+                supportRequestsTableBody.dataset.agency || "",
+
+            search:
+                (
+                    supportRequestsTableBody.dataset.search ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase()
+        };
+    }
 
 
-/*
-|--------------------------------------------------------------------------
-| CLOSE DROPDOWN
-|--------------------------------------------------------------------------
-*/
+    /*
+     * Safely change modal visibility.
+     *
+     * aria-hidden is updated together with the visual state
+     * so assistive technologies receive the same state.
+     */
+    function setModalState(modal, isOpen) {
+        if (!modal) {
+            return;
+        }
 
-function closeSupportAgencyDropdown() {
-    supportAgencyDropdownOpen = false;
+        modal.classList.toggle(
+            "active",
+            isOpen
+        );
 
-    if (supportAgencySearchableWrapper) {
-        supportAgencySearchableWrapper.classList.remove(
-            "is-open"
+        modal.setAttribute(
+            "aria-hidden",
+            isOpen ? "false" : "true"
         );
     }
 
-    if (supportAgencySearchInput) {
-        supportAgencySearchInput.setAttribute(
+
+    /*
+     * Display an application-level alert.
+     *
+     * The project already has a shared modal-system.js.
+     * We use it whenever available instead of creating another
+     * alert implementation.
+     */
+    function showClientMessage(
+        title,
+        text
+    ) {
+        if (
+            typeof window.showAlertModal ===
+            "function"
+        ) {
+            window.showAlertModal({
+                title,
+                text,
+                icon: "!",
+                variant: "danger",
+                confirmText: "OK",
+                showCancel: false,
+
+                onConfirm: () => {
+                    if (
+                        typeof window.closeAlertModal ===
+                        "function"
+                    ) {
+                        window.closeAlertModal();
+                    }
+                }
+            });
+
+            return;
+        }
+
+        /*
+         * Fallback only exists in case the shared alert
+         * component has not been loaded.
+         */
+        window.alert(text);
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SEARCHABLE AGENCY SELECT
+    |--------------------------------------------------------------------------
+    */
+
+    const agencySelect =
+        document.getElementById("sr-agency");
+
+    const agencySearchInput =
+        document.getElementById("sr-agency-search");
+
+    const agencyOptionsContainer =
+        document.getElementById("sr-agency-options");
+
+    const agencySelector =
+        document.getElementById(
+            "support-agency-searchable"
+        );
+
+    let searchableAgencies = [];
+
+    let agencyDropdownOpen = false;
+
+
+    /*
+     * Build a normalized JavaScript representation
+     * of the agencies provided by Laravel.
+     */
+    function buildAgencyData() {
+        if (
+            !agencySelect ||
+            !agencyOptionsContainer
+        ) {
+            return;
+        }
+
+        searchableAgencies =
+            Array.from(
+                agencySelect.options
+            )
+                .filter(
+                    option =>
+                        option.value !== ""
+                )
+                .map(option => {
+                    const fullName =
+                        option.dataset.fullName ||
+                        option.textContent.trim();
+
+                    const abbreviation =
+                        option.dataset.abbr || "";
+
+                    return {
+                        value: option.value,
+
+                        fullName:
+                            fullName.trim(),
+
+                        abbreviation:
+                            abbreviation.trim(),
+
+                        searchText:
+                            `${fullName} ${abbreviation}`
+                                .toLowerCase()
+                                .trim()
+                    };
+                });
+    }
+
+
+    /*
+     * Render the agency dropdown.
+     *
+     * textContent is intentionally used instead of innerHTML
+     * because agency names originate from database data.
+     */
+    function renderAgencyOptions(
+        searchTerm = ""
+    ) {
+        if (!agencyOptionsContainer) {
+            return;
+        }
+
+        const normalizedSearch =
+            searchTerm
+                .toLowerCase()
+                .trim();
+
+        const matches =
+            searchableAgencies.filter(
+                agency =>
+                    agency.searchText.includes(
+                        normalizedSearch
+                    )
+            );
+
+        agencyOptionsContainer.replaceChildren();
+
+        if (matches.length === 0) {
+            const emptyState =
+                document.createElement("div");
+
+            emptyState.className =
+                "searchable-select-empty";
+
+            emptyState.textContent =
+                "No matching agencies found.";
+
+            agencyOptionsContainer.appendChild(
+                emptyState
+            );
+
+            return;
+        }
+
+        matches.forEach(agency => {
+            const option =
+                document.createElement("button");
+
+            option.type = "button";
+
+            option.className =
+                "searchable-select-option";
+
+            option.setAttribute(
+                "role",
+                "option"
+            );
+
+            option.setAttribute(
+                "aria-selected",
+                agencySelect?.value === agency.value
+                    ? "true"
+                    : "false"
+            );
+
+            option.dataset.value =
+                agency.value;
+
+            option.textContent =
+                agency.fullName;
+
+            if (agency.abbreviation) {
+                option.textContent +=
+                    ` (${agency.abbreviation.toUpperCase()})`;
+            }
+
+            if (
+                agencySelect &&
+                agencySelect.value === agency.value
+            ) {
+                option.classList.add(
+                    "is-selected"
+                );
+            }
+
+            option.addEventListener(
+                "click",
+                () => {
+                    selectAgency(
+                        agency.value
+                    );
+                }
+            );
+
+            agencyOptionsContainer.appendChild(
+                option
+            );
+        });
+    }
+
+
+    /*
+     * Open the agency dropdown.
+     */
+    function openAgencyDropdown() {
+        if (
+            !agencySearchInput ||
+            !agencySelector
+        ) {
+            return;
+        }
+
+        if (
+            agencySearchInput.readOnly ||
+            agencySearchInput.disabled
+        ) {
+            return;
+        }
+
+        agencyDropdownOpen = true;
+
+        agencySelector.classList.add(
+            "is-open"
+        );
+
+        agencySearchInput.setAttribute(
+            "aria-expanded",
+            "true"
+        );
+
+        renderAgencyOptions(
+            agencySearchInput.value
+        );
+    }
+
+
+    /*
+     * Close the agency dropdown.
+     */
+    function closeAgencyDropdown() {
+        agencyDropdownOpen = false;
+
+        agencySelector?.classList.remove(
+            "is-open"
+        );
+
+        agencySearchInput?.setAttribute(
             "aria-expanded",
             "false"
         );
     }
-}
 
-
-/*
-|--------------------------------------------------------------------------
-| RENDER SEARCH RESULTS
-|--------------------------------------------------------------------------
-*/
-
-function renderSupportAgencyOptions(searchTerm = "") {
-    if (!supportAgencyOptionsContainer) {
-        return;
-    }
-
-const normalizedSearch =
-    searchTerm
-        .toLowerCase()
-        .trim();
-
-const filteredAgencies =
-    searchableSupportAgencies.filter(
-        agency => {
-
-            return agency.searchText.includes(
-                normalizedSearch
-            );
-
-        }
-    );
 
     /*
-     * Clear previous results safely.
+     * Select an agency using the actual native select.
+     *
+     * The native select remains the actual form field
+     * submitted to Laravel.
      */
-    supportAgencyOptionsContainer.replaceChildren();
-
-    /*
-     * Display an empty state when no agency matches.
-     */
-    if (filteredAgencies.length === 0) {
-        const emptyState =
-            document.createElement("div");
-
-        emptyState.className =
-            "searchable-select-empty";
-
-        emptyState.textContent =
-            "No matching agencies found.";
-
-        supportAgencyOptionsContainer.appendChild(
-            emptyState
-        );
-
-        return;
-    }
-
-    /*
-     * Create each result as a real button.
-     */
-    filteredAgencies.forEach(agency => {
-
-        const optionButton =
-            document.createElement("button");
-
-        optionButton.type = "button";
-
-        optionButton.className =
-            "searchable-select-option";
-
-        optionButton.setAttribute(
-            "role",
-            "option"
-        );
-
-        optionButton.dataset.value =
-            agency.value;
-
-        optionButton.textContent =
-            agency.fullName;
-
-        /*
-         * Display the abbreviation when available.
-         */
-        if (agency.abbreviation) {
-            optionButton.textContent +=
-                ` (${agency.abbreviation.toUpperCase()})`;
-        }
-
-        /*
-         * Mark the currently selected agency.
-         */
+    function selectAgency(agencyValue) {
         if (
-            supportAgencySelect &&
-            supportAgencySelect.value === agency.value
+            !agencySelect ||
+            !agencySearchInput
         ) {
-            optionButton.classList.add(
-                "is-selected"
-            );
-
-            optionButton.setAttribute(
-                "aria-selected",
-                "true"
-            );
-        } else {
-            optionButton.setAttribute(
-                "aria-selected",
-                "false"
-            );
+            return;
         }
 
-        /*
-         * Select the agency when clicked.
-         */
-        optionButton.addEventListener(
-            "click",
-            () => {
-                selectSupportAgency(agency.value);
-            }
-        );
-
-        supportAgencyOptionsContainer.appendChild(
-            optionButton
-        );
-    });
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| SELECT AGENCY
-|--------------------------------------------------------------------------
-*/
-
-function selectSupportAgency(agencyValue) {
-    if (
-        !supportAgencySelect ||
-        !supportAgencySearchInput
-    ) {
-        return;
-    }
-
-    const selectedOption =
-        Array.from(supportAgencySelect.options)
-            .find(option =>
-                option.value === String(agencyValue)
+        const selectedOption =
+            Array.from(
+                agencySelect.options
+            ).find(
+                option =>
+                    option.value ===
+                    String(agencyValue)
             );
 
-    /*
-     * Reject values that do not exist in the native select.
-     */
-    if (!selectedOption) {
-        supportAgencySelect.value = "";
+        if (!selectedOption) {
+            agencySelect.value = "";
 
-        supportAgencySearchInput.value = "";
+            agencySearchInput.value = "";
 
-        supportAgencySearchInput.setCustomValidity(
-            "Please select an agency from the list."
-        );
-
-        closeSupportAgencyDropdown();
-
-        return;
-    }
-
-    /*
-     * Update the real submitted field.
-     */
-    supportAgencySelect.value =
-        selectedOption.value;
-
-    /*
-     * Update the visible field.
-     */
-    supportAgencySearchInput.value =
-        selectedOption.dataset.fullName ||
-        selectedOption.textContent.trim();
-
-    /*
-     * Clear the custom validation error.
-     */
-    supportAgencySearchInput.setCustomValidity("");
-
-    closeSupportAgencyDropdown();
-
-    /*
-     * Preserve compatibility with existing code.
-     */
-    supportAgencySelect.dispatchEvent(
-        new Event("change", {
-            bubbles: true
-        })
-    );
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| SYNC SEARCH FIELD WITH NATIVE SELECT
-|--------------------------------------------------------------------------
-*/
-
-function syncSupportAgencySearchInput() {
-    if (
-        !supportAgencySelect ||
-        !supportAgencySearchInput
-    ) {
-        return;
-    }
-
-    const selectedOption =
-        supportAgencySelect.options[
-            supportAgencySelect.selectedIndex
-        ];
-
-    if (
-        !selectedOption ||
-        !selectedOption.value
-    ) {
-        supportAgencySearchInput.value = "";
-
-        supportAgencySearchInput.setCustomValidity(
-            "Please select an agency from the list."
-        );
-
-        return;
-    }
-
-    supportAgencySearchInput.value =
-        selectedOption.dataset.fullName ||
-        selectedOption.textContent.trim();
-
-    supportAgencySearchInput.setCustomValidity("");
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| SEARCH INPUT EVENTS
-|--------------------------------------------------------------------------
-*/
-
-if (supportAgencySearchInput) {
-
-    supportAgencySearchInput.addEventListener(
-        "focus",
-        openSupportAgencyDropdown
-    );
-
-    supportAgencySearchInput.addEventListener(
-        "click",
-        openSupportAgencyDropdown
-    );
-
-    supportAgencySearchInput.addEventListener(
-        "input",
-        function () {
-
-            /*
-             * Typing invalidates the previous selection.
-             */
-            if (supportAgencySelect) {
-                supportAgencySelect.value = "";
-            }
-
-            this.setCustomValidity(
+            agencySearchInput.setCustomValidity(
                 "Please select an agency from the list."
             );
 
-            openSupportAgencyDropdown();
+            closeAgencyDropdown();
 
-            renderSupportAgencyOptions(
-                this.value
+            return;
+        }
+
+        agencySelect.value =
+            selectedOption.value;
+
+        agencySearchInput.value =
+            selectedOption.dataset.fullName ||
+            selectedOption.textContent.trim();
+
+        agencySearchInput.setCustomValidity("");
+
+        closeAgencyDropdown();
+
+        /*
+         * Keep the native select synchronized with
+         * any other code listening for change events.
+         */
+        agencySelect.dispatchEvent(
+            new Event("change", {
+                bubbles: true
+            })
+        );
+    }
+
+
+    /*
+     * Synchronize the visible search input
+     * with the native select.
+     */
+    function syncAgencySearchInput() {
+        if (
+            !agencySelect ||
+            !agencySearchInput
+        ) {
+            return;
+        }
+
+        const selectedOption =
+            agencySelect.options[
+                agencySelect.selectedIndex
+            ];
+
+        if (
+            !selectedOption ||
+            !selectedOption.value
+        ) {
+            agencySearchInput.value = "";
+
+            agencySearchInput.setCustomValidity(
+                "Please select an agency from the list."
+            );
+
+            return;
+        }
+
+        agencySearchInput.value =
+            selectedOption.dataset.fullName ||
+            selectedOption.textContent.trim();
+
+        agencySearchInput.setCustomValidity("");
+    }
+
+
+    /*
+     * Agency search events.
+     */
+    if (agencySearchInput) {
+        agencySearchInput.addEventListener(
+            "focus",
+            openAgencyDropdown
+        );
+
+        agencySearchInput.addEventListener(
+            "click",
+            openAgencyDropdown
+        );
+
+        agencySearchInput.addEventListener(
+            "input",
+            () => {
+                /*
+                 * Typing means the previously selected
+                 * native value is no longer guaranteed to match.
+                 */
+                if (agencySelect) {
+                    agencySelect.value = "";
+                }
+
+                agencySearchInput.setCustomValidity(
+                    "Please select an agency from the list."
+                );
+
+                openAgencyDropdown();
+
+                renderAgencyOptions(
+                    agencySearchInput.value
+                );
+            }
+        );
+
+        agencySearchInput.addEventListener(
+            "keydown",
+            event => {
+                if (event.key === "Escape") {
+                    closeAgencyDropdown();
+                    return;
+                }
+
+                if (
+                    event.key === "Enter" &&
+                    agencyDropdownOpen
+                ) {
+                    const firstOption =
+                        agencyOptionsContainer?.querySelector(
+                            ".searchable-select-option"
+                        );
+
+                    if (firstOption) {
+                        event.preventDefault();
+
+                        selectAgency(
+                            firstOption.dataset.value
+                        );
+                    }
+                }
+            }
+        );
+    }
+
+
+    /*
+     * Close the dropdown when clicking outside.
+     */
+    document.addEventListener(
+        "click",
+        event => {
+            if (!agencySelector) {
+                return;
+            }
+
+            if (
+                !agencySelector.contains(
+                    event.target
+                )
+            ) {
+                closeAgencyDropdown();
+            }
+        }
+    );
+
+
+    /*
+     * Build agency data once after the DOM is ready.
+     */
+    buildAgencyData();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SUPPORT REQUEST MODAL
+    |--------------------------------------------------------------------------
+    */
+
+
+    /*
+     * Open a Support Request in the official response modal.
+     *
+     * The Response Builder is reset because this same modal
+     * can be reused for multiple tickets.
+     */
+    function prepareSupportRequest(
+        button
+    ) {
+        if (
+            !supportModal ||
+            !replyForm
+        ) {
+            return;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Reset official response builder
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            window.SupportResponseBuilder &&
+            typeof window.SupportResponseBuilder.reset ===
+                "function"
+        ) {
+            window.SupportResponseBuilder.reset();
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Set current request
+        |--------------------------------------------------------------------------
+        */
+
+        currentRequestId =
+            button.dataset.id || null;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Request information references
+        |--------------------------------------------------------------------------
+        */
+
+        const userInput =
+            document.getElementById(
+                "sr-user"
+            );
+
+        const questionInput =
+            document.getElementById(
+                "sr-question"
+            );
+
+        const requestIdInput =
+            document.getElementById(
+                "sr-id"
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Populate readonly request information
+        |--------------------------------------------------------------------------
+        */
+
+        if (requestIdInput) {
+            requestIdInput.value =
+                currentRequestId || "";
+        }
+
+        if (userInput) {
+            userInput.value =
+                button.dataset.user ||
+                "Guest";
+        }
+
+        if (questionInput) {
+            questionInput.value =
+                button.dataset.question ||
+                "";
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Configure official response endpoint
+        |--------------------------------------------------------------------------
+        |
+        | The new workflow always creates a response attempt.
+        | There is no longer a separate "Mark as Answered"
+        | or "Update Answer" JavaScript branch.
+        |
+        */
+
+        if (replyForm.dataset.forwardUrl) {
+            replyForm.action =
+                replyForm.dataset.forwardUrl;
+        }
+
+        if (methodInput) {
+            methodInput.value =
+                "POST";
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Reset submit state
+        |--------------------------------------------------------------------------
+        */
+
+        if (saveButton) {
+            saveButton.disabled =
+                false;
+
+            saveButton.dataset.submitting =
+                "false";
+
+            const label =
+                saveButton.querySelector(
+                    "[data-submit-label]"
+                );
+
+            if (label) {
+                label.textContent =
+                    "Forward to Citizen";
+            }
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Select assigned agency
+        |--------------------------------------------------------------------------
+        */
+
+        selectAgency(
+            button.dataset.agencyId ||
+            ""
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Open modal
+        |--------------------------------------------------------------------------
+        */
+
+        setModalState(
+            supportModal,
+            true
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Focus response builder
+        |--------------------------------------------------------------------------
+        |
+        | The old #sr-reply textarea no longer exists.
+        | The Add Response Component button is now the
+        | first interaction point.
+        |
+        */
+
+        window.setTimeout(
+            () => {
+                document
+                    .getElementById(
+                        "support-add-component"
+                    )
+                    ?.focus();
+            },
+            100
+        );
+    }
+
+
+    /*
+     * Close the support modal.
+     */
+    function closeSupportModal() {
+        setModalState(
+            supportModal,
+            false
+        );
+
+        currentRequestId =
+            null;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Reset form
+        |--------------------------------------------------------------------------
+        */
+
+        if (replyForm) {
+            replyForm.reset();
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Reset official response builder
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            window.SupportResponseBuilder &&
+            typeof window.SupportResponseBuilder.reset ===
+                "function"
+        ) {
+            window.SupportResponseBuilder.reset();
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Restore official response endpoint
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            replyForm?.dataset.forwardUrl
+        ) {
+            replyForm.action =
+                replyForm.dataset.forwardUrl;
+        }
+
+        if (methodInput) {
+            methodInput.value =
+                "POST";
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Reset agency selector
+        |--------------------------------------------------------------------------
+        */
+
+        if (agencySelect) {
+            agencySelect.value = "";
+        }
+
+        if (agencySearchInput) {
+            agencySearchInput.value = "";
+
+            agencySearchInput.setCustomValidity(
+                "Please select an agency from the list."
             );
         }
-    );
 
-    supportAgencySearchInput.addEventListener(
-        "keydown",
-        function (event) {
+        closeAgencyDropdown();
 
-            if (event.key === "Escape") {
-                closeSupportAgencyDropdown();
-                return;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Reset submit button
+        |--------------------------------------------------------------------------
+        */
+
+        if (saveButton) {
+            saveButton.disabled =
+                false;
+
+            saveButton.dataset.submitting =
+                "false";
+
+            const label =
+                saveButton.querySelector(
+                    "[data-submit-label]"
+                );
+
+            if (label) {
+                label.textContent =
+                    "Forward to Citizen";
             }
+        }
+    }
 
-            /*
-             * Select the first visible result with Enter.
-             */
+
+    /*
+     * Make the function available to the Blade's
+     * existing inline onclick handlers.
+     */
+    window.closeSupportModal =
+        closeSupportModal;
+
+
+    /*
+     * Clicking the backdrop closes the modal.
+     */
+    supportModal?.addEventListener(
+        "click",
+        event => {
             if (
-                event.key === "Enter" &&
-                supportAgencyDropdownOpen
+                event.target ===
+                supportModal
             ) {
-
-                const firstOption =
-                    supportAgencyOptionsContainer?.querySelector(
-                        ".searchable-select-option"
-                    );
-
-                if (firstOption) {
-                    event.preventDefault();
-
-                    selectSupportAgency(
-                        firstOption.dataset.value
-                    );
-                }
+                closeSupportModal();
             }
         }
     );
-}
 
-
-/*
-|--------------------------------------------------------------------------
-| CLOSE WHEN CLICKING OUTSIDE
-|--------------------------------------------------------------------------
-*/
-
-document.addEventListener("click", event => {
-
-    if (!supportAgencySearchableWrapper) {
-        return;
-    }
-
-    if (
-        !supportAgencySearchableWrapper.contains(
-            event.target
-        )
-    ) {
-        closeSupportAgencyDropdown();
-    }
-});
-
-
-/*
-|--------------------------------------------------------------------------
-| INITIALIZE AGENCY DATA
-|--------------------------------------------------------------------------
-*/
-
-buildSupportAgencyOptions();
-
-console.table(searchableSupportAgencies);
 
     /*
     |--------------------------------------------------------------------------
-    | SUPPORT ANSWER IMAGE ELEMENTS
+    | SUPPORT FORM SUBMISSION
     |--------------------------------------------------------------------------
+    |
+    | support-request.js owns the actual HTTP request.
+    |
+    | response-builder.js owns the creation and validation
+    | of individual response components.
+    |
     */
 
-    const supportImageUploadBox = document.getElementById(
-        "support-image-upload-box"
-    );
 
-    const supportUploadPlaceholder = document.getElementById(
-        "support-upload-placeholder"
-    );
-
-    const supportPreviewImg = document.getElementById(
-        "support-preview-img"
-    );
-
-    const supportImageInput = document.getElementById(
-        "support_answer_image"
-    );
-
-    const supportImageGroup = document.querySelector(
-        ".support-image-group"
-    );
-
-    /*
-     * Button used to remove the current image.
-     */
-    const removeSupportImageButton = document.getElementById(
-        "remove-support-image-btn"
-    );
-
-    /*
-     * Hidden input used to tell Laravel that the existing
-     * answer image should be deleted.
-     */
-    const removeAnswerImageInput = document.getElementById(
-        "remove_answer_image"
-    );
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SUPPORT ANSWER IMAGE HELPERS
-    |--------------------------------------------------------------------------
-    */
-
-    /*
-     * Show the remove-image button.
-     */
-    function showRemoveSupportImageButton() {
-        if (!removeSupportImageButton) {
-            return;
-        }
-
-        removeSupportImageButton.style.display = "flex";
-    }
-
-
-    /*
-     * Hide the remove-image button.
-     */
-    function hideRemoveSupportImageButton() {
-        if (!removeSupportImageButton) {
-            return;
-        }
-
-        removeSupportImageButton.style.display = "none";
-    }
-
-
-    /*
-     * Reset the uploader to its default empty state.
-     *
-     * This clears:
-     * - The preview image
-     * - The selected file
-     * - The removal flag
-     * - The remove button
-     */
-    function resetSupportImageState() {
-    /*
-     * Clear the displayed preview image.
-     */
-    if (supportPreviewImg) {
-        supportPreviewImg.removeAttribute("src");
-        supportPreviewImg.style.display = "none";
-    }
-
-    /*
-     * Show the upload instructions again.
-     */
-    if (supportUploadPlaceholder) {
-        supportUploadPlaceholder.style.display = "flex";
-    }
-
-    /*
-     * Clear the selected file from the browser input.
-     */
-    if (supportImageInput) {
-        supportImageInput.value = "";
-        supportImageInput.disabled = false;
-    }
-
-    /*
-     * Reset the deletion flag.
-     *
-     * This is only for opening or closing another request.
-     * Clicking the X button uses "1" through
-     * removeSupportImage().
-     */
-    if (removeAnswerImageInput) {
-        removeAnswerImageInput.value = "0";
-    }
-
-    /*
-     * Restore the uploader's normal editable state.
-     */
-    if (supportImageGroup) {
-        supportImageGroup.classList.remove("is-disabled");
-    }
-
-    /*
-     * Hide the remove-image button.
-     */
-    hideRemoveSupportImageButton();
-}
-
-
-    /*
-     * Display an existing answer image.
-     *
-     * imagePath is the stored Laravel path, for example:
-     *
-     * support-answers/example.webp
-     */
-    function showSupportImage(imagePath) {
-        if (!supportPreviewImg || !supportUploadPlaceholder) {
-            return;
-        }
-
-        /*
-         * If there is no stored image, keep the uploader empty.
-         */
-        if (!imagePath) {
-            resetSupportImageState();
-            return;
-        }
-
-        /*
-         * Load the stored image from Laravel public storage.
-         */
-        supportPreviewImg.src = `/storage/${imagePath}`;
-
-        /*
-         * Show the image preview.
-         */
-        supportPreviewImg.style.display = "block";
-
-        /*
-         * Hide the upload instructions.
-         */
-        supportUploadPlaceholder.style.display = "none";
-
-        /*
-         * The image currently exists, so the default state
-         * should not request deletion.
-         */
-        if (removeAnswerImageInput) {
-            removeAnswerImageInput.value = "0";
-        }
-
-        /*
-         * Show the X button.
-         */
-        showRemoveSupportImageButton();
-    }
-
-
-    /*
-     * Remove the currently displayed image.
-     *
-     * This clears the preview and sets the hidden removal
-     * field to 1 so Laravel can delete the stored image.
-     */
-    function removeSupportImage() {
-    /*
-     * Clear the selected file from the file input.
-     */
-    if (supportImageInput) {
-        supportImageInput.value = "";
-    }
-
-    /*
-     * Remove the preview image from the interface.
-     */
-    if (supportPreviewImg) {
-        supportPreviewImg.removeAttribute("src");
-        supportPreviewImg.style.display = "none";
-    }
-
-    /*
-     * Show the upload placeholder.
-     */
-    if (supportUploadPlaceholder) {
-        supportUploadPlaceholder.style.display = "flex";
-    }
-
-    /*
-     * Mark the existing database image for deletion.
-     *
-     * Laravel must read this value when the form is submitted.
-     */
-    if (removeAnswerImageInput) {
-        removeAnswerImageInput.value = "1";
-    }
-
-    /*
-     * Hide the X button because no image is currently shown.
-     */
-    hideRemoveSupportImageButton();
-}
-
-
-    /*
-     * Set the uploader's view/edit state.
-     *
-     * true  = view-only mode
-     * false = editable mode
-     */
-    function setSupportImageViewMode(isViewMode) {
-        if (!supportImageInput || !supportImageGroup) {
-            return;
-        }
-
-        /*
-         * Disable or enable the file input.
-         */
-        supportImageInput.disabled = isViewMode;
-
-        /*
-         * Apply or remove the disabled visual state.
-         */
-        supportImageGroup.classList.toggle(
-            "is-disabled",
-            isViewMode
-        );
-
-        /*
-         * The remove button should also be disabled visually
-         * when the uploader is in view-only mode.
-         */
-        if (removeSupportImageButton) {
-            removeSupportImageButton.disabled = isViewMode;
-        }
-    }
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SUPPORT ANSWER IMAGE UPLOAD
-    |--------------------------------------------------------------------------
-    */
-
-    /*
-     * Open the native file picker when the upload box
-     * is clicked.
-     */
-    if (supportImageUploadBox && supportImageInput) {
-        supportImageUploadBox.addEventListener("click", (event) => {
+    replyForm?.addEventListener(
+        "submit",
+        async event => {
             /*
-             * Do not open the file picker when the X button
-             * itself was clicked.
-             */
+            |--------------------------------------------------------------------------
+            | Stop normal browser navigation
+            |--------------------------------------------------------------------------
+            |
+            | The Laravel endpoint returns JSON.
+            | A normal browser submission would therefore display
+            | the raw JSON response instead of keeping the user
+            | inside the admin interface.
+            |
+            */
+
+            event.preventDefault();
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Prevent duplicate submissions
+            |--------------------------------------------------------------------------
+            */
+
             if (
-                removeSupportImageButton &&
-                event.target.closest("#remove-support-image-btn")
+                saveButton?.dataset.submitting ===
+                "true"
             ) {
                 return;
             }
 
+
             /*
-             * Do not open the file picker if the input
-             * is disabled.
-             */
-            if (supportImageInput.disabled) {
+            |--------------------------------------------------------------------------
+            | Run native browser validation
+            |--------------------------------------------------------------------------
+            */
+
+            if (
+                !replyForm.checkValidity()
+            ) {
+                replyForm.reportValidity();
                 return;
             }
 
+
             /*
-             * Open the native file picker.
-             */
-            supportImageInput.click();
-        });
-    }
+            |--------------------------------------------------------------------------
+            | Verify Response Builder availability
+            |--------------------------------------------------------------------------
+            */
 
+            if (
+                !window.SupportResponseBuilder ||
+                typeof window.SupportResponseBuilder.getComponentCount !==
+                    "function"
+            ) {
+                showClientMessage(
+                    "Response unavailable",
+                    "The official response builder is not ready. Please try again."
+                );
 
-    /*
-     * Remove the image when the X button is clicked.
-     */
-    if (removeSupportImageButton) {
-        removeSupportImageButton.addEventListener(
-            "click",
-            (event) => {
-                /*
-                 * Prevent the button from submitting the form.
-                 */
-                event.preventDefault();
-
-                /*
-                 * Prevent the click from bubbling to the
-                 * upload box and reopening the file picker.
-                 */
-                event.stopPropagation();
-
-                removeSupportImage();
+                return;
             }
-        );
-    }
 
 
-    /*
-     * Validate the selected image and display its preview.
-     */
-    if (supportImageInput) {
-        supportImageInput.addEventListener(
-            "change",
-            function () {
-                const file = this.files?.[0];
+            /*
+            |--------------------------------------------------------------------------
+            | Require at least one response component
+            |--------------------------------------------------------------------------
+            */
 
-                /*
-                 * Stop if the administrator cancelled
-                 * the file picker.
-                 */
-                if (!file) {
-                    return;
-                }
+            const componentCount =
+                window.SupportResponseBuilder
+                    .getComponentCount();
 
-                /*
-                 * Allowed image MIME types.
-                 */
-                const allowedTypes = [
-                    "image/jpeg",
-                    "image/png",
-                    "image/webp"
-                ];
+            if (
+                componentCount < 1
+            ) {
+                showClientMessage(
+                    "Response required",
+                    "Please add at least one component to the official response."
+                );
 
-                /*
-                 * Maximum file size: 5 MB.
-                 */
-                const maximumSize = 5 * 1024 * 1024;
+                return;
+            }
 
-                /*
-                 * Reject unsupported file types.
-                 */
-                if (!allowedTypes.includes(file.type)) {
-                    alert(
-                        "Only JPG, PNG, or WebP images are allowed."
+
+            /*
+            |--------------------------------------------------------------------------
+            | Lock submit button
+            |--------------------------------------------------------------------------
+            */
+
+            if (saveButton) {
+                saveButton.dataset.submitting =
+                    "true";
+
+                saveButton.disabled =
+                    true;
+
+                const label =
+                    saveButton.querySelector(
+                        "[data-submit-label]"
                     );
 
-                    resetSupportImageState();
-                    return;
+                if (label) {
+                    label.textContent =
+                        "Forwarding...";
                 }
+            }
 
+
+            try {
                 /*
-                 * Reject images larger than 5 MB.
-                 */
-                if (file.size > maximumSize) {
-                    alert(
-                        "The image must not be larger than 5MB."
+                |--------------------------------------------------------------------------
+                | Build multipart request
+                |--------------------------------------------------------------------------
+                |
+                | FormData automatically includes:
+                |
+                | - CSRF hidden field
+                | - request_id
+                | - agency
+                | - response component fields
+                | - uploaded files
+                |
+                */
+
+                const formData =
+                    new FormData(
+                        replyForm
                     );
 
-                    resetSupportImageState();
-                    return;
+
+                /*
+                |--------------------------------------------------------------------------
+                | Send request to Laravel
+                |--------------------------------------------------------------------------
+                */
+
+                const response =
+                    await fetch(
+                        replyForm.dataset.forwardUrl ||
+                            replyForm.action,
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "X-CSRF-TOKEN":
+                                    csrfToken,
+
+                                "Accept":
+                                    "application/json"
+                            },
+
+                            body:
+                                formData,
+
+                            credentials:
+                                "same-origin"
+                        }
+                    );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | Parse JSON response
+                |--------------------------------------------------------------------------
+                */
+
+                let data = null;
+
+                try {
+                    data =
+                        await response.json();
+                } catch {
+                    throw new Error(
+                        "The server returned an invalid response."
+                    );
                 }
 
-                /*
-                 * FileReader allows the image to be previewed
-                 * before the form is submitted.
-                 */
-                const reader = new FileReader();
 
                 /*
-                 * This runs after the file has been read.
-                 */
-                reader.onload = function (event) {
-                    if (supportPreviewImg) {
-                        supportPreviewImg.src =
-                            event.target.result;
+                |--------------------------------------------------------------------------
+                | Handle Laravel errors
+                |--------------------------------------------------------------------------
+                */
 
-                        supportPreviewImg.style.display =
-                            "block";
-                    }
+                if (
+                    !response.ok ||
+                    !data?.success
+                ) {
+                    throw new Error(
+                        data?.message ||
+                            "The official response could not be forwarded."
+                    );
+                }
 
-                    if (supportUploadPlaceholder) {
-                        supportUploadPlaceholder.style.display =
-                            "none";
-                    }
-
-                    /*
-                     * A newly selected image should not be
-                     * marked for deletion.
-                     */
-                    if (removeAnswerImageInput) {
-                        removeAnswerImageInput.value = "0";
-                    }
-
-                    /*
-                     * Show the X button for the new image.
-                     */
-                    showRemoveSupportImageButton();
-                };
 
                 /*
-                 * Read the image as a temporary browser data URL.
-                 */
-                reader.readAsDataURL(file);
+                |--------------------------------------------------------------------------
+                | Close the ticket modal
+                |--------------------------------------------------------------------------
+                */
+
+                closeSupportModal();
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | Show success message
+                |--------------------------------------------------------------------------
+                */
+
+                if (
+                    typeof window.showAlertModal ===
+                    "function"
+                ) {
+                    window.showAlertModal({
+                        title:
+                            "Response Forwarded",
+
+                        text:
+                            data.message ||
+                            "The official response has been forwarded to the citizen.",
+
+                        icon:
+                            "ph-light ph-paper-plane-tilt",
+
+                        variant:
+                            "success",
+
+                        confirmText:
+                            "OK",
+
+                        showCancel:
+                            false,
+
+                        onConfirm: () => {
+                            if (
+                                typeof window.closeAlertModal ===
+                                "function"
+                            ) {
+                                window.closeAlertModal();
+                            }
+                        }
+                    });
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | Refresh the page
+                |--------------------------------------------------------------------------
+                |
+                | The server is the source of truth for:
+                |
+                | - ticket status
+                | - response state
+                | - available actions
+                | - filters
+                |
+                */
+
+                window.setTimeout(
+                    () => {
+                        window.location.reload();
+                    },
+                    800
+                );
+
+            } catch (error) {
+                /*
+                |--------------------------------------------------------------------------
+                | Restore submit button after failure
+                |--------------------------------------------------------------------------
+                */
+
+                console.error(
+                    "Support response submission failed.",
+                    error
+                );
+
+                if (saveButton) {
+                    saveButton.dataset.submitting =
+                        "false";
+
+                    saveButton.disabled =
+                        false;
+
+                    const label =
+                        saveButton.querySelector(
+                            "[data-submit-label]"
+                        );
+
+                    if (label) {
+                        label.textContent =
+                            "Forward to Citizen";
+                    }
+                }
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | Display safe error message
+                |--------------------------------------------------------------------------
+                */
+
+                showClientMessage(
+                    "Unable to forward response",
+                    error?.message ||
+                        "Something went wrong while forwarding the official response."
+                );
             }
-        );
-    }
-
+        }
+    );
 
 
     /*
     |--------------------------------------------------------------------------
-    | SIMILAR FAQ MODAL ELEMENTS
+    | SIMILAR FAQ MODAL
     |--------------------------------------------------------------------------
     */
 
-    const similarFaqModal = document.getElementById(
-        "similar-faq-modal-back"
-    );
+    const similarFaqModal =
+        document.getElementById(
+            "similar-faq-modal-back"
+        );
 
-    const similarFaqMessage = document.getElementById(
-        "similar-faq-message"
-    );
+    const similarFaqMessage =
+        document.getElementById(
+            "similar-faq-message"
+        );
 
-    const similarFaqResults = document.getElementById(
-        "similar-faq-results"
-    );
+    const similarFaqResults =
+        document.getElementById(
+            "similar-faq-results"
+        );
 
-    const similarFaqCancel = document.getElementById(
-        "similar-faq-cancel"
-    );
+    const similarFaqCancel =
+        document.getElementById(
+            "similar-faq-cancel"
+        );
 
-    const similarFaqContinue = document.getElementById(
-        "similar-faq-continue"
-    );
+    const similarFaqContinue =
+        document.getElementById(
+            "similar-faq-continue"
+        );
 
-    /*
-     * Stores the original Laravel-generated FAQ URL.
-     */
     let pendingFaqUrl = null;
 
 
-
     /*
-    |--------------------------------------------------------------------------
-    | SUCCESS ALERT
-    |--------------------------------------------------------------------------
-    */
-
-    if (window.__FLASH_SUCCESS__) {
-        showAlertModal({
-            title: "Success",
-            text: window.__FLASH_SUCCESS__,
-            icon: "✓",
-            variant: "success",
-            confirmText: "OK",
-            showCancel: false,
-
-            onConfirm: () => {
-                closeAlertModal();
-            }
-        });
-
-        setTimeout(() => {
-            closeAlertModal();
-        }, 1500);
-
-        window.__FLASH_SUCCESS__ = null;
-    }
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SIMILAR FAQ MODAL FUNCTIONS
-    |--------------------------------------------------------------------------
-    */
-
-    /*
-     * Open the Similar FAQ modal.
+     * Open Similar FAQ modal.
      */
     function openSimilarFaqModal() {
-        if (!similarFaqModal) {
-            return;
-        }
-
-        similarFaqModal.classList.add("active");
-
-        similarFaqModal.setAttribute(
-            "aria-hidden",
-            "false"
+        setModalState(
+            similarFaqModal,
+            true
         );
     }
 
 
     /*
-     * Close the Similar FAQ modal.
+     * Close Similar FAQ modal.
      */
     function closeSimilarFaqModal() {
-        if (!similarFaqModal) {
-            return;
-        }
-
-        similarFaqModal.classList.remove("active");
-
-        similarFaqModal.setAttribute(
-            "aria-hidden",
-            "true"
+        setModalState(
+            similarFaqModal,
+            false
         );
 
-        /*
-         * Clear the stored FAQ URL so an old URL cannot
-         * accidentally be reused later.
-         */
-        pendingFaqUrl = null;
+        pendingFaqUrl =
+            null;
     }
 
 
     /*
-     * Check the database for potentially similar FAQs.
+     * Render the loading state safely.
      */
-    async function checkSimilarFaqs(faqBtn) {
-        const similarUrl = faqBtn.dataset.similarUrl;
-
-        /*
-         * Preserve the original To FAQ destination.
-         */
-        pendingFaqUrl = faqBtn.href;
-
-        /*
-         * Stop safely if the endpoint is missing.
-         */
-        if (!similarUrl) {
-            console.error(
-                "Similar FAQ URL is missing."
-            );
-
-            window.location.href = pendingFaqUrl;
+    function renderSimilarFaqLoading() {
+        if (!similarFaqResults) {
             return;
         }
 
-        /*
-         * Open the modal immediately.
-         */
-        openSimilarFaqModal();
+        similarFaqResults.replaceChildren();
+
+        const wrapper =
+            document.createElement("div");
+
+        wrapper.className =
+            "similar-faq-loading";
+
+        const icon =
+            document.createElement("i");
+
+        icon.className =
+            "ph-light ph-spinner-gap";
+
+        const text =
+            document.createElement("span");
+
+        text.textContent =
+            "Checking existing FAQs...";
+
+        wrapper.appendChild(icon);
+
+        wrapper.appendChild(text);
+
+        similarFaqResults.appendChild(
+            wrapper
+        );
+    }
+
+
+    /*
+     * Render a Similar FAQ empty/error state.
+     */
+    function renderSimilarFaqMessage(
+        iconClass,
+        message
+    ) {
+        if (!similarFaqResults) {
+            return;
+        }
+
+        similarFaqResults.replaceChildren();
+
+        const wrapper =
+            document.createElement("div");
+
+        wrapper.className =
+            "similar-faq-empty";
+
+        const icon =
+            document.createElement("i");
+
+        icon.className =
+            iconClass;
+
+        const text =
+            document.createElement("div");
+
+        text.textContent =
+            message;
+
+        wrapper.appendChild(icon);
+
+        wrapper.appendChild(text);
+
+        similarFaqResults.appendChild(
+            wrapper
+        );
+    }
+
+
+    /*
+     * Render returned FAQ matches.
+     *
+     * Database values are inserted with textContent
+     * rather than innerHTML.
+     */
+    function renderSimilarFaqMatches(
+        matches
+    ) {
+        if (!similarFaqResults) {
+            return;
+        }
+
+        similarFaqResults.replaceChildren();
+
+        matches.forEach(match => {
+            const item =
+                document.createElement("div");
+
+            item.className =
+                "similar-faq-item";
+
+
+            const score =
+                document.createElement("div");
+
+            score.className =
+                "similar-faq-score";
+
+            const percentage =
+                Number(
+                    match.percentage
+                );
+
+            score.textContent =
+                `${Number.isFinite(percentage)
+                    ? percentage
+                    : 0}%`;
+
+
+            const content =
+                document.createElement("div");
+
+            content.className =
+                "similar-faq-content";
+
+
+            const question =
+                document.createElement("p");
+
+            question.className =
+                "similar-faq-question";
+
+            question.textContent =
+                match.question ||
+                "Untitled FAQ";
+
+
+            const agency =
+                document.createElement("p");
+
+            agency.className =
+                "similar-faq-agency";
+
+            agency.textContent =
+                match.agency_name ||
+                "Unknown agency";
+
+
+            content.appendChild(
+                question
+            );
+
+            content.appendChild(
+                agency
+            );
+
+            item.appendChild(
+                score
+            );
+
+            item.appendChild(
+                content
+            );
+
+            similarFaqResults.appendChild(
+                item
+            );
+        });
+    }
+
+
+    /*
+     * Validate that a server-provided URL
+     * belongs to the current application origin.
+     *
+     * This prevents an unexpected payload from
+     * redirecting the administrator to another origin.
+     */
+    function isSameOriginUrl(
+        value
+    ) {
+        try {
+            const url =
+                new URL(
+                    value,
+                    window.location.origin
+                );
+
+            return (
+                url.origin ===
+                window.location.origin
+            );
+        } catch {
+            return false;
+        }
+    }
+
+
+    /*
+     * Check for similar FAQs before navigating
+     * to the FAQ creation page.
+     */
+    async function checkSimilarFaqs(
+        faqButton
+    ) {
+        const similarUrl =
+            faqButton.dataset.similarUrl;
+
+        const faqUrl =
+            faqButton.href;
+
 
         /*
-         * Show the loading message.
-         */
+        |--------------------------------------------------------------------------
+        | Validate destination
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !faqUrl ||
+            !isSameOriginUrl(faqUrl)
+        ) {
+            showClientMessage(
+                "Invalid destination",
+                "The FAQ destination could not be verified."
+            );
+
+            return;
+        }
+
+
+        pendingFaqUrl =
+            faqUrl;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Missing similarity endpoint
+        |--------------------------------------------------------------------------
+        |
+        | Safely continue to the server-generated FAQ route.
+        |
+        */
+
+        if (
+            !similarUrl ||
+            !isSameOriginUrl(similarUrl)
+        ) {
+            window.location.href =
+                pendingFaqUrl;
+
+            return;
+        }
+
+
+        openSimilarFaqModal();
+
+
         if (similarFaqMessage) {
             similarFaqMessage.textContent =
                 "Checking existing FAQs for similar questions...";
         }
 
-        /*
-         * Display a loading state.
-         */
-        if (similarFaqResults) {
-            similarFaqResults.innerHTML = `
-                <div class="similar-faq-loading">
-                    <i class="ph-light ph-spinner-gap"></i>
-                    <span>Checking existing FAQs...</span>
-                </div>
-            `;
+        renderSimilarFaqLoading();
+
+
+        if (similarFaqContinue) {
+            similarFaqContinue.disabled =
+                true;
         }
 
-        /*
-         * Prevent the Continue button from being clicked
-         * while the similarity check is running.
-         */
-        if (similarFaqContinue) {
-            similarFaqContinue.disabled = true;
-        }
 
         try {
-            /*
-             * Send a POST request to Laravel.
-             */
-            const response = await fetch(
-                similarUrl,
-                {
-                    method: "POST",
+            const response =
+                await fetch(
+                    similarUrl,
+                    {
+                        method: "POST",
 
-                    headers: {
-                        "X-CSRF-TOKEN":
-                            document.querySelector(
-                                'meta[name="csrf-token"]'
-                            )?.getAttribute("content") || "",
+                        headers: {
+                            "X-CSRF-TOKEN":
+                                csrfToken,
 
-                        "Accept": "application/json"
-                    },
+                            "Accept":
+                                "application/json"
+                        },
 
-                    /*
-                     * Keep the Laravel session attached.
-                     */
-                    credentials: "same-origin"
-                }
-            );
+                        credentials:
+                            "same-origin"
+                    }
+                );
+
 
             /*
-             * Convert the response to JSON.
+             * Some server errors return HTML instead of JSON,
+             * so parse defensively.
              */
-            const data = await response.json();
+            let data = null;
 
-            /*
-             * Treat HTTP errors and success:false responses
-             * as failed requests.
-             */
-            if (!response.ok || !data.success) {
+            try {
+                data =
+                    await response.json();
+            } catch {
                 throw new Error(
-                    data.message ||
+                    "The server returned an invalid response."
+                );
+            }
+
+
+            if (
+                !response.ok ||
+                !data?.success
+            ) {
+                throw new Error(
+                    data?.message ||
                     "Unable to check similar FAQs."
                 );
             }
 
-            /*
-             * Clear the loading state.
-             */
-            if (similarFaqResults) {
-                similarFaqResults.innerHTML = "";
-            }
 
-            /*
-             * Check whether matching FAQs were found.
-             */
+            const matches =
+                Array.isArray(
+                    data.matches
+                )
+                    ? data.matches
+                    : [];
+
+
             if (
-                !Array.isArray(data.matches) ||
-                data.matches.length === 0
+                matches.length === 0
             ) {
                 if (similarFaqMessage) {
                     similarFaqMessage.textContent =
                         "No similar FAQs were found. You can continue creating this FAQ.";
                 }
 
-                /*
-                 * Create the empty state safely.
-                 */
-                const emptyState =
-                    document.createElement("div");
+                renderSimilarFaqMessage(
+                    "ph-light ph-check-circle",
+                    "No existing FAQ appears to closely match this Support Request."
+                );
 
-                emptyState.className =
-                    "similar-faq-empty";
-
-                const icon =
-                    document.createElement("i");
-
-                icon.className =
-                    "ph-light ph-check-circle";
-
-                const message =
-                    document.createElement("div");
-
-                message.textContent =
-                    "No existing FAQ appears to closely match this Support Request.";
-
-                emptyState.appendChild(icon);
-                emptyState.appendChild(message);
-
-                if (similarFaqResults) {
-                    similarFaqResults.appendChild(
-                        emptyState
-                    );
-                }
             } else {
-                /*
-                 * Similar FAQs were found.
-                 */
                 if (similarFaqMessage) {
                     similarFaqMessage.textContent =
                         "We found existing FAQs that may be related to this Support Request. Review them before continuing.";
                 }
 
-                /*
-                 * Render each matching FAQ.
-                 */
-                data.matches.forEach((match) => {
-                    const item =
-                        document.createElement("div");
-
-                    item.className =
-                        "similar-faq-item";
-
-                    const score =
-                        document.createElement("div");
-
-                    score.className =
-                        "similar-faq-score";
-
-                    score.textContent =
-                        `${Number(match.percentage) || 0}%`;
-
-                    const content =
-                        document.createElement("div");
-
-                    content.className =
-                        "similar-faq-content";
-
-                    const question =
-                        document.createElement("p");
-
-                    question.className =
-                        "similar-faq-question";
-
-                    question.textContent =
-                        match.question ||
-                        "Untitled FAQ";
-
-                    const agency =
-                        document.createElement("p");
-
-                    agency.className =
-                        "similar-faq-agency";
-
-                    agency.textContent =
-                        match.agency_name ||
-                        "Unknown agency";
-
-                    content.appendChild(question);
-                    content.appendChild(agency);
-
-                    item.appendChild(score);
-                    item.appendChild(content);
-
-                    if (similarFaqResults) {
-                        similarFaqResults.appendChild(item);
-                    }
-                });
+                renderSimilarFaqMatches(
+                    matches
+                );
             }
 
-            /*
-             * Allow the administrator to continue.
-             */
+
             if (similarFaqContinue) {
-                similarFaqContinue.disabled = false;
+                similarFaqContinue.disabled =
+                    false;
             }
+
         } catch (error) {
             /*
-             * Keep technical details in the browser console.
+             * Technical errors are not exposed to
+             * the administrator.
              */
             console.error(
-                "Similar FAQ check failed:",
+                "Similar FAQ request failed.",
                 error
             );
 
-            /*
-             * Show a safe user-facing message.
-             */
             if (similarFaqMessage) {
                 similarFaqMessage.textContent =
                     "We could not check existing FAQs right now.";
             }
 
-            if (similarFaqResults) {
-                similarFaqResults.innerHTML = `
-                    <div class="similar-faq-empty">
-                        <i class="ph-light ph-warning-circle"></i>
+            renderSimilarFaqMessage(
+                "ph-light ph-warning-circle",
+                "The similarity check could not be completed. You can still continue to the FAQ creation page."
+            );
 
-                        <div>
-                            The similarity check could not be completed.
-                            You can still continue to the FAQ creation page.
-                        </div>
-                    </div>
-                `;
-            }
-
-            /*
-             * Allow the administrator to continue even
-             * when the similarity check fails.
-             */
             if (similarFaqContinue) {
-                similarFaqContinue.disabled = false;
+                similarFaqContinue.disabled =
+                    false;
             }
         }
     }
 
 
-
     /*
-    |--------------------------------------------------------------------------
-    | GLOBAL CLICK HANDLER
-    |--------------------------------------------------------------------------
-    */
-
-    document.addEventListener("click", (event) => {
-        /*
-        |--------------------------------------------------------------------------
-        | TO FAQ
-        |--------------------------------------------------------------------------
-        */
-
-        const faqBtn = event.target.closest(".faq-btn");
-
-        if (faqBtn) {
-            /*
-             * Stop the normal anchor navigation.
-             */
-            event.preventDefault();
-
-            /*
-             * Prevent duplicate similarity requests.
-             */
-            if (
-                faqBtn.dataset.processing === "true"
-            ) {
-                return;
-            }
-
-            faqBtn.dataset.processing = "true";
-
-            /*
-             * Run the similarity check.
-             */
-            checkSimilarFaqs(faqBtn).finally(() => {
-                faqBtn.dataset.processing = "false";
-            });
-
-            return;
-        }
-
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | SUPPORT REQUEST LIFECYCLE ACTIONS
-        |--------------------------------------------------------------------------
-        */
-
-        const lifecycleBtn = event.target.closest(
-            ".delete-btn, .restore-btn, .permanent-delete-btn"
-        );
-
-        if (lifecycleBtn) {
-            /*
-             * Prevent the form from submitting immediately.
-             */
-            event.preventDefault();
-
-            /*
-             * Find the form connected to the clicked button.
-             */
-            const lifecycleForm =
-                lifecycleBtn.closest("form");
-
-            if (!lifecycleForm) {
-                console.error(
-                    "Support request lifecycle form not found."
-                );
-
-                return;
-            }
-
-            let config;
-
-            /*
-             * MOVE TO TRASH
-             */
-            if (
-                lifecycleBtn.classList.contains(
-                    "delete-btn"
-                )
-            ) {
-                config = {
-                    title:
-                        "Move Support Request to Trash",
-
-                    text:
-                        "Are you sure you want to move this support request to trash? You can restore it later.",
-
-                    icon:
-                        "!",
-
-                    variant:
-                        "danger",
-
-                    confirmText:
-                        "Move to Trash"
-                };
-            }
-
-            /*
-             * RESTORE
-             */
-            else if (
-                lifecycleBtn.classList.contains(
-                    "restore-btn"
-                )
-            ) {
-                config = {
-                    title:
-                        "Restore Support Request",
-
-                    text:
-                        "Are you sure you want to restore this support request?",
-
-                    icon:
-                        "↶",
-
-                    variant:
-                        "success",
-
-                    confirmText:
-                        "Restore"
-                };
-            }
-
-            /*
-             * PERMANENT DELETE
-             */
-            else if (
-                lifecycleBtn.classList.contains(
-                    "permanent-delete-btn"
-                )
-            ) {
-                config = {
-                    title:
-                        "Delete Support Request Permanently",
-
-                    text:
-                        "This action permanently deletes the support request and cannot be undone. Are you sure you want to continue?",
-
-                    icon:
-                        "!",
-
-                    variant:
-                        "danger",
-
-                    confirmText:
-                        "Delete Permanently"
-                };
-            }
-
-            /*
-             * Show the confirmation dialog.
-             */
-            showAlertModal({
-                title: config.title,
-                text: config.text,
-                icon: config.icon,
-                variant: config.variant,
-                confirmText: config.confirmText,
-                showCancel: true,
-
-                /*
-                 * Submit the original Laravel form only
-                 * after explicit confirmation.
-                 */
-                onConfirm: () => {
-                    lifecycleForm.submit();
-                }
-            });
-
-            return;
-        }
-
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | MANAGE SUPPORT REQUEST
-        |--------------------------------------------------------------------------
-        */
-
-        const viewBtn = event.target.closest(".view-btn");
-
-        if (viewBtn) {
-            currentRequestId = viewBtn.dataset.id;
-
-            document.getElementById("sr-id").value =
-                currentRequestId;
-
-            document.getElementById("sr-user").value =
-                viewBtn.dataset.user;
-
-            document.getElementById("sr-question").value =
-                viewBtn.dataset.question;
-
-            document.getElementById("sr-reply").value =
-                viewBtn.dataset.answer || "";
-
-            selectSupportAgency(
-    viewBtn.dataset.agencyId || ""
-);
-
-            /*
-             * Clear the previous request's image.
-             */
-            resetSupportImageState();
-
-            /*
-             * Load the selected request's existing image.
-             */
-            showSupportImage(
-                viewBtn.dataset.answerImage
-            );
-
-            /*
-             * IMPORTANT:
-             *
-             * Manage mode must remain editable so the
-             * administrator can upload, replace, or remove
-             * the answer image.
-             */
-            setSupportImageViewMode(false);
-
-            /*
-             * Select update or reply mode.
-             */
-            if (viewBtn.dataset.answer) {
-                form.action =
-                    `${form.dataset.updateUrl}/${currentRequestId}`;
-
-                methodInput.value = "PUT";
-
-                saveBtn.innerText =
-                    "Update Answer";
-            } else {
-                form.action =
-                    form.dataset.replyUrl;
-
-                methodInput.value = "POST";
-
-                saveBtn.innerText =
-                    "Mark as Answered";
-            }
-
-            /*
-             * Open the support request modal.
-             */
-            modal.classList.add("active");
-
-            return;
-        }
-
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | EDIT MODE
-        |--------------------------------------------------------------------------
-        */
-
-        const editBtn = event.target.closest(".edit-btn");
-
-        if (editBtn) {
-            const id = editBtn.dataset.id;
-
-            const answer =
-                editBtn.dataset.answer || "";
-
-            currentRequestId = id;
-
-            document.getElementById("sr-id").value =
-                id;
-
-            document.getElementById("sr-reply").value =
-                answer;
-
-            selectSupportAgency(
-    editBtn.dataset.agencyId || ""
-);
-
-            /*
-             * Clear the previous image.
-             */
-            resetSupportImageState();
-
-            /*
-             * Load the existing image.
-             */
-            showSupportImage(
-                editBtn.dataset.answerImage
-            );
-
-            /*
-             * Keep image uploading enabled.
-             */
-            setSupportImageViewMode(false);
-
-            /*
-             * Use the existing update route.
-             */
-            form.action =
-                `${form.dataset.updateUrl}/${id}`;
-
-            methodInput.value = "PUT";
-
-            saveBtn.innerText =
-                "Update Answer";
-
-            /*
-             * Open the support request modal.
-             */
-            modal.classList.add("active");
-
-            return;
-        }
-    });
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SIMILAR FAQ MODAL CONTROLS
-    |--------------------------------------------------------------------------
-    */
-
-    /*
-     * Cancel button.
+     * Similar FAQ cancel button.
      */
-    if (similarFaqCancel) {
-        similarFaqCancel.addEventListener(
-            "click",
-            closeSimilarFaqModal
-        );
-    }
+    similarFaqCancel?.addEventListener(
+        "click",
+        closeSimilarFaqModal
+    );
 
 
     /*
-     * Clicking the backdrop closes the Similar FAQ modal.
+     * Similar FAQ backdrop.
      */
-    if (similarFaqModal) {
-        similarFaqModal.addEventListener(
-            "click",
-            (event) => {
-                if (event.target === similarFaqModal) {
-                    closeSimilarFaqModal();
-                }
-            }
-        );
-    }
-
-
-    /*
-     * Escape closes the Similar FAQ modal.
-     */
-    document.addEventListener(
-        "keydown",
-        (event) => {
+    similarFaqModal?.addEventListener(
+        "click",
+        event => {
             if (
-                event.key === "Escape" &&
-                similarFaqModal &&
-                similarFaqModal.classList.contains("active")
+                event.target ===
+                similarFaqModal
             ) {
                 closeSimilarFaqModal();
             }
@@ -1676,1055 +1740,1608 @@ console.table(searchableSupportAgencies);
 
 
     /*
-     * Continue to FAQ creation.
+     * Continue to FAQ.
      */
-    if (similarFaqContinue) {
-        similarFaqContinue.addEventListener(
-            "click",
-            () => {
-                if (!pendingFaqUrl) {
-                    return;
-                }
-
-                window.location.href =
-                    pendingFaqUrl;
+    similarFaqContinue?.addEventListener(
+        "click",
+        () => {
+            if (
+                !pendingFaqUrl ||
+                !isSameOriginUrl(
+                    pendingFaqUrl
+                )
+            ) {
+                return;
             }
-        );
-    }
 
+            window.location.href =
+                pendingFaqUrl;
+        }
+    );
 
 
     /*
     |--------------------------------------------------------------------------
-    | CLOSE SUPPORT REQUEST MODAL
+    | ACTION MENU
     |--------------------------------------------------------------------------
     */
 
-    /*
-     * Close the support request modal and reset
-     * the image uploader.
-     */
-    function closeSupportModal() {
-    if (modal) {
-        modal.classList.remove("active");
+    function closeAllActionMenus(
+        exceptMenu = null
+    ) {
+        document
+            .querySelectorAll(
+                ".support-action-menu.is-open"
+            )
+            .forEach(menu => {
+                if (menu !== exceptMenu) {
+                    menu.classList.remove(
+                        "is-open"
+                    );
+
+                    menu
+                        .querySelector(
+                            ".support-action-menu-trigger"
+                        )
+                        ?.setAttribute(
+                            "aria-expanded",
+                            "false"
+                        );
+                }
+            });
     }
 
-    /*
-     * Reset the native agency field.
-     */
-    if (supportAgencySelect) {
-        supportAgencySelect.value = "";
-    }
 
-    /*
-     * Reset the visible search field.
-     */
-    if (supportAgencySearchInput) {
-        supportAgencySearchInput.value = "";
+    function toggleActionMenu(
+        trigger
+    ) {
+        const menu =
+            trigger.closest(
+                ".support-action-menu"
+            );
 
-        supportAgencySearchInput.setCustomValidity(
-            "Please select an agency from the list."
+        if (!menu) {
+            return;
+        }
+
+        const shouldOpen =
+            !menu.classList.contains(
+                "is-open"
+            );
+
+        closeAllActionMenus(
+            menu
+        );
+
+        menu.classList.toggle(
+            "is-open",
+            shouldOpen
+        );
+
+        trigger.setAttribute(
+            "aria-expanded",
+            shouldOpen
+                ? "true"
+                : "false"
         );
     }
 
-    /*
-     * Close the agency dropdown.
-     */
-    closeSupportAgencyDropdown();
 
     /*
-     * Reset the image uploader.
-     */
-    resetSupportImageState();
+    |--------------------------------------------------------------------------
+    | LIFECYCLE CONFIRMATIONS
+    |--------------------------------------------------------------------------
+    */
+
+    function confirmLifecycleAction(
+        button
+    ) {
+        const form =
+            button.closest("form");
+
+        if (!form) {
+            return;
+        }
+
+        let config = null;
+
+
+        if (
+            button.classList.contains(
+                "delete-btn"
+            )
+        ) {
+            config = {
+                title:
+                    "Move Support Request to Trash",
+
+                text:
+                    "Are you sure you want to move this support request to trash? You can restore it later.",
+
+                icon:
+                    "ph-light ph-trash",
+
+                variant:
+                    "danger",
+
+                confirmText:
+                    "Move to Trash"
+            };
+        }
+
+
+        if (
+            button.classList.contains(
+                "restore-btn"
+            )
+        ) {
+            config = {
+                title:
+                    "Restore Support Request",
+
+                text:
+                    "Are you sure you want to restore this support request?",
+
+                icon:
+                    "ph-light ph-arrow-counter-clockwise",
+
+                variant:
+                    "success",
+
+                confirmText:
+                    "Restore"
+            };
+        }
+
+
+        if (
+            button.classList.contains(
+                "permanent-delete-btn"
+            )
+        ) {
+            config = {
+                title:
+                    "Delete Support Request Permanently",
+
+                text:
+                    "This action permanently deletes the support request and cannot be undone.",
+
+                icon:
+                    "ph-light ph-trash-simple",
+
+                variant:
+                    "danger",
+
+                confirmText:
+                    "Delete Permanently"
+            };
+        }
+
+
+        if (!config) {
+            return;
+        }
+
+
+        if (
+            typeof window.showAlertModal !==
+            "function"
+        ) {
+            form.submit();
+            return;
+        }
+
+
+        window.showAlertModal({
+            title:
+                config.title,
+
+            text:
+                config.text,
+
+            icon:
+                config.icon,
+
+            variant:
+                config.variant,
+
+            confirmText:
+                config.confirmText,
+
+            showCancel:
+                true,
+
+            onConfirm: () => {
+                form.submit();
+            }
+        });
+    }
+
 
     /*
-     * Restore editable mode for the next request.
+    |--------------------------------------------------------------------------
+    | REALTIME ROW HELPERS
+    |--------------------------------------------------------------------------
+    */
+
+
+    /*
+     * Create a hidden input.
+     *
+     * Used by dynamically created lifecycle forms.
      */
-    setSupportImageViewMode(false);
-}
+    function createHiddenInput(
+        name,
+        value
+    ) {
+        const input =
+            document.createElement(
+                "input"
+            );
+
+        input.type =
+            "hidden";
+
+        input.name =
+            name;
+
+        input.value =
+            value;
+
+        return input;
+    }
+
+
+    /*
+     * Create a lifecycle form.
+     *
+     * Laravel receives the same CSRF and method-spoofing
+     * fields that a normal Blade form would contain.
+     */
+    function createLifecycleForm(
+        action,
+        method,
+        buttonClass,
+        iconClass,
+        label
+    ) {
+        const form =
+            document.createElement(
+                "form"
+            );
+
+        form.method =
+            "POST";
+
+        form.action =
+            action;
+
+        form.className =
+            "support-lifecycle-form";
+
+
+        form.appendChild(
+            createHiddenInput(
+                "_token",
+                csrfToken
+            )
+        );
+
+
+        form.appendChild(
+            createHiddenInput(
+                "_method",
+                method
+            )
+        );
+
+
+        const button =
+            document.createElement(
+                "button"
+            );
+
+        button.type =
+            "submit";
+
+        button.className =
+            buttonClass;
+
+        button.setAttribute(
+            "role",
+            "menuitem"
+        );
+
+
+        const icon =
+            document.createElement(
+                "i"
+            );
+
+        icon.className =
+            iconClass;
+
+        icon.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+
+        const text =
+            document.createElement(
+                "span"
+            );
+
+        text.textContent =
+            label;
+
+
+        button.appendChild(
+            icon
+        );
+
+        button.appendChild(
+            text
+        );
+
+        form.appendChild(
+            button
+        );
+
+        return form;
+    }
+
+
+    /*
+     * Create a realtime row using the same
+     * semantic structure as the Blade table.
+     */
+    function createRealtimeSupportRequestRow(
+        request
+    ) {
+        const row =
+            document.createElement(
+                "tr"
+            );
+
+        row.className =
+            "support-request-row";
+
+        row.dataset.requestId =
+            safeString(
+                request.id
+            );
 
 
         /*
-|--------------------------------------------------------------------------
-| REALTIME SUPPORT REQUEST LISTENER
-|--------------------------------------------------------------------------
-*/
+        |--------------------------------------------------------------------------
+        | NORMALIZE EVENT DATA
+        |--------------------------------------------------------------------------
+        */
 
-/*
- * Find the table body where support requests are displayed.
- */
-const supportRequestsTableBody = document.getElementById(
-    "support-requests-table-body"
-);
+        const requestId =
+            safeString(
+                request.id
+            );
 
+        const question =
+            safeString(
+                request.question
+            );
 
-/*
- * Create a table row for a newly-created support request.
- */
-function createRealtimeSupportRequestRow(request) {
+        const status =
+            safeString(
+                request.status,
+                "pending"
+            );
 
-    /*
-     * Create the main table row.
-     */
-    const row = document.createElement("tr");
+        const agencyName =
+            safeString(
+                request.agency_name
+            );
 
-    /*
-     * Store the request ID on the row.
-     * This prevents duplicate rows.
-     */
-    row.dataset.requestId = String(request.id);
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | ID CELL
-    |--------------------------------------------------------------------------
-    */
-
-    const idCell = document.createElement("td");
-
-    idCell.textContent = request.id;
-
-    row.appendChild(idCell);
+        const agencyId =
+            safeString(
+                request.agency_id ??
+                request.agency?.id
+            );
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | USER CELL
-    |--------------------------------------------------------------------------
-    */
-
-    const userCell = document.createElement("td");
-
-    const actorCell = document.createElement("div");
-
-    actorCell.className = "actor-cell";
-
-    const actorName = document.createElement("span");
-
-    actorName.className = "actor-name";
-
-    actorName.textContent =
-        request.user_name || "Guest";
-
-    actorCell.appendChild(actorName);
-
-    userCell.appendChild(actorCell);
-
-    row.appendChild(userCell);
+        /*
+         * The actual user field is first_name.
+         * We do not invent an avatar or profile system.
+         */
+        const userName =
+            request.user?.first_name ||
+            request.first_name ||
+            request.user_name ||
+            "Guest";
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | QUESTION CELL
-    |--------------------------------------------------------------------------
-    */
+        /*
+        |--------------------------------------------------------------------------
+        | ID
+        |--------------------------------------------------------------------------
+        */
 
-    const questionCell = document.createElement("td");
+        const idCell =
+            document.createElement(
+                "td"
+            );
 
-    const question =
-        String(request.question || "");
+        idCell.className =
+            "support-request-id";
 
-    questionCell.textContent =
-        question.length > 60
-            ? `${question.substring(0, 60)}...`
-            : question;
+        const idSpan =
+            document.createElement(
+                "span"
+            );
 
-    row.appendChild(questionCell);
+        idSpan.textContent =
+            `#${requestId}`;
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | AGENCY CELL
-    |--------------------------------------------------------------------------
-    */
-
-    const agencyCell = document.createElement("td");
-
-    /*
-     * The agency can be null because users do not
-     * need to choose an agency when submitting.
-     */
-    agencyCell.textContent =
-        request.agency_name || "—";
-
-    row.appendChild(agencyCell);
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | STATUS CELL
-    |--------------------------------------------------------------------------
-    */
-
-    const statusCell = document.createElement("td");
-
-    const status =
-        String(request.status || "pending");
-
-    const statusBadge = document.createElement("span");
-
-    statusBadge.className =
-        `badge ${status}`;
-
-    statusBadge.textContent =
-        status.charAt(0).toUpperCase() +
-        status.slice(1);
-
-    statusCell.appendChild(statusBadge);
-
-    row.appendChild(statusCell);
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | DATE CELL
-    |--------------------------------------------------------------------------
-    */
-
-    const dateCell = document.createElement("td");
-
-    const createdDate =
-        request.created_at
-            ? new Date(request.created_at)
-            : new Date();
-
-    dateCell.textContent =
-        createdDate.toLocaleDateString(
-            "en-US",
-            {
-                month: "short",
-                day: "2-digit",
-                year: "numeric"
-            }
+        idCell.appendChild(
+            idSpan
         );
 
-    row.appendChild(dateCell);
-
-
-    /*
-|--------------------------------------------------------------------------
-| ACTION CELL
-|--------------------------------------------------------------------------
-*/
-
-/*
- * Create the table cell that will contain
- * all available row actions.
- */
-const actionCell = document.createElement("td");
-
-/*
- * Create the shared action wrapper.
- *
- * This matches the existing Blade structure:
- *
- * <div class="tablebtn">
- */
-const actionWrapper = document.createElement("div");
-
-actionWrapper.className = "tablebtn";
-
-
-/*
-|--------------------------------------------------------------------------
-| MANAGE BUTTON
-|--------------------------------------------------------------------------
-*/
-
-/*
- * Create the Manage button.
- */
-const manageButton = document.createElement("button");
-
-manageButton.type = "button";
-
-manageButton.className =
-    "btn btn-primary view-btn";
-
-/*
- * Store the support request ID.
- */
-manageButton.dataset.id =
-    String(request.id);
-
-/*
- * Store the question used by the support modal.
- */
-manageButton.dataset.question =
-    request.question || "";
-
-/*
- * Store the user name used by the support modal.
- */
-manageButton.dataset.user =
-    request.user_name || "Guest";
-
-/*
- * Store the agency name.
- */
-manageButton.dataset.agency =
-    request.agency_name || "Unknown";
-
-/*
- * Store the agency ID.
- */
-manageButton.dataset.agencyId =
-    request.agency_id || "";
-
-/*
- * Store the existing answer, if available.
- */
-manageButton.dataset.answer =
-    request.answer || "";
-
-/*
- * Store the existing answer image, if available.
- */
-manageButton.dataset.answerImage =
-    request.answer_image || "";
-
-
-/*
- * Create the Manage icon.
- */
-const manageIcon = document.createElement("i");
-
-manageIcon.className =
-    "ph-light ph-chat-centered-text";
-
-
-/*
- * Create the visible button label.
- */
-const manageText = document.createElement("span");
-
-manageText.textContent =
-    "Manage";
-
-
-/*
- * Assemble the Manage button.
- */
-manageButton.appendChild(manageIcon);
-
-manageButton.appendChild(manageText);
-
-
-/*
- * Add Manage to the action wrapper.
- */
-actionWrapper.appendChild(manageButton);
-
-
-/*
-|--------------------------------------------------------------------------
-| SUPERADMIN-ONLY ACTIONS
-|--------------------------------------------------------------------------
-*/
-
-/*
- * Locate the table body.
- *
- * The tbody contains the current user's permission
- * information through data-is-superadmin.
- */
-const tableBody =
-    document.getElementById(
-        "support-requests-table-body"
-    );
-
-
-/*
- * Read the permission flag safely.
- */
-const isSuperadmin =
-    tableBody?.dataset.isSuperadmin === "true";
-
-
-/*
- * Only create Trash and To FAQ actions
- * for superadmins.
- */
-if (isSuperadmin) {
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | MOVE TO TRASH
-    |--------------------------------------------------------------------------
-    */
-
-    /*
-     * Create the form required by Laravel.
-     *
-     * The existing delegated JavaScript handler
-     * expects .delete-btn to be inside a form.
-     */
-    const deleteForm =
-        document.createElement("form");
-
-    deleteForm.method =
-        "POST";
-
-    /*
-     * Read the base delete URL from the tbody.
-     */
-    const deleteBaseUrl =
-        tableBody.dataset.deleteUrl;
-
-
-    /*
-     * Build the request-specific delete URL.
-     *
-     * Example:
-     * /admin/support-requests/123
-     */
-    deleteForm.action =
-        `${deleteBaseUrl}/${encodeURIComponent(request.id)}`;
-
-
-    /*
-     * Create the CSRF token field.
-     *
-     * Laravel requires this for POST-based forms.
-     */
-    const csrfInput =
-        document.createElement("input");
-
-    csrfInput.type =
-        "hidden";
-
-    csrfInput.name =
-        "_token";
-
-    csrfInput.value =
-        document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute("content") || "";
-
-
-    /*
-     * Create Laravel's method spoofing field.
-     *
-     * This allows a POST form to behave as DELETE.
-     */
-    const methodInput =
-        document.createElement("input");
-
-    methodInput.type =
-        "hidden";
-
-    methodInput.name =
-        "_method";
-
-    methodInput.value =
-        "DELETE";
-
-
-    /*
-     * Create the Trash button.
-     */
-    const deleteButton =
-        document.createElement("button");
-
-    deleteButton.type =
-        "submit";
-
-    deleteButton.className =
-        "btn btn-danger delete-btn";
-
-
-    /*
-     * Create the Trash icon.
-     */
-    const deleteIcon =
-        document.createElement("i");
-
-    deleteIcon.className =
-        "ph-light ph-trash";
-
-
-    /*
-     * Create the Trash label.
-     */
-    const deleteText =
-        document.createElement("span");
-
-    deleteText.textContent =
-        "Trash";
-
-
-    /*
-     * Assemble the Trash button.
-     */
-    deleteButton.appendChild(deleteIcon);
-
-    deleteButton.appendChild(deleteText);
-
-
-    /*
-     * Assemble the delete form.
-     */
-    deleteForm.appendChild(csrfInput);
-
-    deleteForm.appendChild(methodInput);
-
-    deleteForm.appendChild(deleteButton);
-
-
-    /*
-     * Add the form to the action wrapper.
-     */
-    actionWrapper.appendChild(deleteForm);
-
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | ADD TO FAQ
-    |--------------------------------------------------------------------------
-    */
-
-    /*
-     * Create the FAQ link.
-     */
-    const faqButton =
-        document.createElement("a");
-
-    faqButton.className =
-        "btn btn-secondary faq-btn";
-
-    /*
-     * Prevent an empty href if the data attribute
-     * is missing.
-     */
-    const faqBaseUrl =
-        tableBody.dataset.faqUrl || "";
-
-
-    /*
-     * Build the FAQ preparation URL.
-     *
-     * Example:
-     * /admin/support-requests/123/to-faq
-     */
-    faqButton.href =
-        `${faqBaseUrl}/${encodeURIComponent(request.id)}/to-faq`;
-
-
-    /*
-     * Store the request ID for the existing
-     * similar-FAQ JavaScript handler.
-     */
-    faqButton.dataset.id =
-        String(request.id);
-
-
-    /*
-     * Build the similar FAQ endpoint.
-     *
-     * Example:
-     * /admin/support-requests/123/similar-faqs
-     */
-    faqButton.dataset.similarUrl =
-        `${tableBody.dataset.similarFaqUrl}/${encodeURIComponent(request.id)}/similar-faqs`;
-
-
-    /*
-     * Create the FAQ icon.
-     */
-    const faqIcon =
-        document.createElement("i");
-
-    faqIcon.className =
-        "ph-light ph-chat-centered-dots";
-
-
-    /*
-     * Create the FAQ label.
-     */
-    const faqText =
-        document.createElement("span");
-
-    faqText.textContent =
-        "To FAQ";
-
-
-    /*
-     * Assemble the FAQ link.
-     */
-    faqButton.appendChild(faqIcon);
-
-    faqButton.appendChild(faqText);
-
-
-    /*
-     * Add the FAQ link to the action wrapper.
-     */
-    actionWrapper.appendChild(faqButton);
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| FINAL ASSEMBLY
-|--------------------------------------------------------------------------
-*/
-
-/*
- * Add the action wrapper to the table cell.
- */
-actionCell.appendChild(actionWrapper);
-
-
-/*
- * Add the completed action cell to the row.
- */
-row.appendChild(actionCell);
-
-
-    /*
-     * Return the completed row.
-     */
-    return row;
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| HANDLE NEW SUPPORT REQUEST
-|--------------------------------------------------------------------------
-*/
-
-/*
- * This function handles the event received from Laravel.
- */
-function handleRealtimeSupportRequest(request) {
-
-    /*
-     * Stop if the table does not exist.
-     */
-    if (!supportRequestsTableBody) {
-        console.warn(
-            "Support request table body was not found."
+        row.appendChild(
+            idCell
         );
 
-        return;
+
+        /*
+        |--------------------------------------------------------------------------
+        | USER
+        |--------------------------------------------------------------------------
+        */
+
+        const userCell =
+            document.createElement(
+                "td"
+            );
+
+        userCell.className =
+            "support-request-user";
+
+        const userWrapper =
+            document.createElement(
+                "div"
+            );
+
+        userWrapper.className =
+            "support-user-cell";
+
+        const userDetails =
+            document.createElement(
+                "div"
+            );
+
+        userDetails.className =
+            "support-user-details";
+
+        const userNameElement =
+            document.createElement(
+                "span"
+            );
+
+        userNameElement.className =
+            "support-user-name";
+
+        userNameElement.textContent =
+            userName;
+
+        userDetails.appendChild(
+            userNameElement
+        );
+
+        userWrapper.appendChild(
+            userDetails
+        );
+
+        userCell.appendChild(
+            userWrapper
+        );
+
+        row.appendChild(
+            userCell
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | QUESTION
+        |--------------------------------------------------------------------------
+        */
+
+        const questionCell =
+            document.createElement(
+                "td"
+            );
+
+        questionCell.className =
+            "support-request-question";
+
+        const questionWrapper =
+            document.createElement(
+                "div"
+            );
+
+        questionWrapper.className =
+            "support-question-cell";
+
+        const questionElement =
+            document.createElement(
+                "span"
+            );
+
+        questionElement.className =
+            "support-question-text";
+
+        questionElement.title =
+            question;
+
+        questionElement.textContent =
+            question.length > 90
+                ? `${question.substring(0, 90)}...`
+                : question;
+
+        questionWrapper.appendChild(
+            questionElement
+        );
+
+        questionCell.appendChild(
+            questionWrapper
+        );
+
+        row.appendChild(
+            questionCell
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | AGENCY
+        |--------------------------------------------------------------------------
+        */
+
+        const agencyCell =
+            document.createElement(
+                "td"
+            );
+
+        agencyCell.className =
+            "support-request-agency";
+
+        const agencyElement =
+            document.createElement(
+                "span"
+            );
+
+        agencyElement.className =
+            agencyName
+                ? "support-agency-name"
+                : "support-agency-empty";
+
+        agencyElement.textContent =
+            agencyName ||
+            "Unassigned";
+
+        agencyCell.appendChild(
+            agencyElement
+        );
+
+        row.appendChild(
+            agencyCell
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | STATUS
+        |--------------------------------------------------------------------------
+        */
+
+        const statusCell =
+            document.createElement(
+                "td"
+            );
+
+        statusCell.className =
+            "support-request-status";
+
+        const statusBadge =
+            document.createElement(
+                "span"
+            );
+
+        statusBadge.className =
+            `support-status-badge ${status}`;
+
+        const statusDot =
+            document.createElement(
+                "span"
+            );
+
+        statusDot.className =
+            "support-status-dot";
+
+        statusDot.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+        const statusText =
+            document.createTextNode(
+                status.charAt(0).toUpperCase() +
+                status.slice(1)
+            );
+
+        statusBadge.appendChild(
+            statusDot
+        );
+
+        statusBadge.appendChild(
+            statusText
+        );
+
+        statusCell.appendChild(
+            statusBadge
+        );
+
+        row.appendChild(
+            statusCell
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | DATE
+        |--------------------------------------------------------------------------
+        */
+
+        const dateCell =
+            document.createElement(
+                "td"
+            );
+
+        dateCell.className =
+            "support-request-date";
+
+        const dateElement =
+            document.createElement(
+                "time"
+            );
+
+        const createdAt =
+            request.created_at
+                ? new Date(
+                    request.created_at
+                )
+                : new Date();
+
+        if (
+            !Number.isNaN(
+                createdAt.getTime()
+            )
+        ) {
+            dateElement.dateTime =
+                createdAt.toISOString();
+
+            dateElement.textContent =
+                createdAt.toLocaleDateString(
+                    "en-US",
+                    {
+                        month:
+                            "short",
+
+                        day:
+                            "2-digit",
+
+                        year:
+                            "numeric"
+                    }
+                );
+
+        } else {
+            dateElement.textContent =
+                "—";
+        }
+
+        dateCell.appendChild(
+            dateElement
+        );
+
+        row.appendChild(
+            dateCell
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ACTIONS
+        |--------------------------------------------------------------------------
+        */
+
+        const actionCell =
+            document.createElement(
+                "td"
+            );
+
+        actionCell.className =
+            "support-request-actions";
+
+        const actionWrapper =
+            document.createElement(
+                "div"
+            );
+
+        actionWrapper.className =
+            "support-row-actions";
+
+
+        /*
+         * Manage button.
+         */
+        const manageButton =
+            document.createElement(
+                "button"
+            );
+
+        manageButton.type =
+            "button";
+
+        manageButton.className =
+            "support-action-primary view-btn";
+
+        manageButton.dataset.id =
+            requestId;
+
+        manageButton.dataset.user =
+            userName;
+
+        manageButton.dataset.question =
+            question;
+
+        manageButton.dataset.agency =
+            agencyName;
+
+        manageButton.dataset.agencyId =
+            agencyId;
+
+        /*
+         * These legacy dataset values are intentionally
+         * empty because the new response system no longer
+         * reads answer or answer-image data.
+         */
+        manageButton.dataset.answer =
+            "";
+
+        manageButton.dataset.answerImage =
+            "";
+
+        manageButton.setAttribute(
+            "aria-label",
+            `Manage support request #${requestId}`
+        );
+
+
+        const manageIcon =
+            document.createElement(
+                "i"
+            );
+
+        manageIcon.className =
+            "ph-light ph-chat-centered-text";
+
+        manageIcon.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+
+        const manageText =
+            document.createElement(
+                "span"
+            );
+
+        manageText.textContent =
+            "Manage";
+
+
+        manageButton.appendChild(
+            manageIcon
+        );
+
+        manageButton.appendChild(
+            manageText
+        );
+
+        actionWrapper.appendChild(
+            manageButton
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Superadmin-only secondary actions
+        |--------------------------------------------------------------------------
+        */
+
+        const isSuperadmin =
+            supportRequestsTableBody?.dataset
+                .isSuperadmin === "true";
+
+
+        if (isSuperadmin) {
+            const menu =
+                document.createElement(
+                    "div"
+                );
+
+            menu.className =
+                "support-action-menu";
+
+
+            const trigger =
+                document.createElement(
+                    "button"
+                );
+
+            trigger.type =
+                "button";
+
+            trigger.className =
+                "support-action-menu-trigger";
+
+            trigger.setAttribute(
+                "aria-label",
+                `More actions for support request #${requestId}`
+            );
+
+            trigger.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+
+            trigger.setAttribute(
+                "aria-haspopup",
+                "menu"
+            );
+
+
+            const triggerIcon =
+                document.createElement(
+                    "i"
+                );
+
+            triggerIcon.className =
+                "ph-light ph-dots-three-vertical";
+
+            triggerIcon.setAttribute(
+                "aria-hidden",
+                "true"
+            );
+
+            trigger.appendChild(
+                triggerIcon
+            );
+
+
+            const menuContent =
+                document.createElement(
+                    "div"
+                );
+
+            menuContent.className =
+                "support-action-menu-content";
+
+            menuContent.setAttribute(
+                "role",
+                "menu"
+            );
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Move to trash
+            |--------------------------------------------------------------------------
+            */
+
+            const deleteBase =
+                supportRequestsTableBody?.dataset
+                    .deleteUrl || "";
+
+            const deleteForm =
+                createLifecycleForm(
+                    `${deleteBase}/${encodeURIComponent(requestId)}`,
+                    "DELETE",
+                    "support-menu-action support-menu-danger delete-btn",
+                    "ph-light ph-trash",
+                    "Move to trash"
+                );
+
+            menuContent.appendChild(
+                deleteForm
+            );
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Similar FAQ / To FAQ
+            |--------------------------------------------------------------------------
+            |
+            | These follow the existing Laravel route structure.
+            |--------------------------------------------------------------------------
+            */
+
+            const faqBase =
+                supportRequestsTableBody?.dataset
+                    .faqUrl || "";
+
+            const similarFaqBase =
+                supportRequestsTableBody?.dataset
+                    .similarFaqUrl || "";
+
+
+            const faqLink =
+                document.createElement(
+                    "a"
+                );
+
+            faqLink.href =
+                `${faqBase}/${encodeURIComponent(requestId)}/to-faq`;
+
+            faqLink.className =
+                "support-menu-action support-menu-faq faq-btn";
+
+            faqLink.dataset.id =
+                requestId;
+
+            faqLink.dataset.similarUrl =
+                `${similarFaqBase}/${encodeURIComponent(requestId)}/similar-faqs`;
+
+            faqLink.setAttribute(
+                "role",
+                "menuitem"
+            );
+
+
+            const faqIcon =
+                document.createElement(
+                    "i"
+                );
+
+            faqIcon.className =
+                "ph-light ph-chat-centered-dots";
+
+            faqIcon.setAttribute(
+                "aria-hidden",
+                "true"
+            );
+
+
+            const faqText =
+                document.createElement(
+                    "span"
+                );
+
+            faqText.textContent =
+                "Add to FAQ";
+
+
+            faqLink.appendChild(
+                faqIcon
+            );
+
+            faqLink.appendChild(
+                faqText
+            );
+
+            menuContent.appendChild(
+                faqLink
+            );
+
+
+            menu.appendChild(
+                trigger
+            );
+
+            menu.appendChild(
+                menuContent
+            );
+
+            actionWrapper.appendChild(
+                menu
+            );
+        }
+
+
+        actionCell.appendChild(
+            actionWrapper
+        );
+
+        row.appendChild(
+            actionCell
+        );
+
+
+        return row;
     }
 
+
     /*
-     * Log the received event during development.
-     */
-    console.log(
-        "Realtime support request received:",
+    |--------------------------------------------------------------------------
+    | REALTIME FILTER MATCHING
+    |--------------------------------------------------------------------------
+    */
+
+    function realtimeRequestMatchesCurrentView(
         request
-    );
-
-    /*
-     * Validate that the event contains an ID.
-     */
-    if (!request || !request.id) {
-        console.error(
-            "Realtime event received without a request ID:",
-            request
-        );
-
-        return;
-    }
-
-    /*
-     * Prevent duplicate rows.
-     */
-    const existingRow =
-        supportRequestsTableBody.querySelector(
-            `tr[data-request-id="${request.id}"]`
-        );
-
-    if (existingRow) {
-        console.info(
-            "Support request already exists in the table:",
-            request.id
-        );
-
-        return;
-    }
-
-    /*
-     * Remove the empty-state row if present.
-     *
-     * This supports both:
-     * - <td class="empty">
-     * - an empty-state element inside the row
-     */
-    const emptyCell =
-        supportRequestsTableBody.querySelector(
-            ".empty"
-        );
-
-    if (emptyCell) {
-        emptyCell.closest("tr")?.remove();
-    }
-
-    /*
-     * Create the new row.
-     */
-    const newRow =
-        createRealtimeSupportRequestRow(request);
-
-    /*
-     * Insert the newest request at the top.
-     */
-    supportRequestsTableBody.prepend(newRow);
-
-    /*
-     * Add a temporary visual highlight.
-     */
-    newRow.classList.add(
-        "realtime-new-row"
-    );
-
-    /*
-     * Remove the highlight after 2.5 seconds.
-     */
-    window.setTimeout(() => {
-        newRow.classList.remove(
-            "realtime-new-row"
-        );
-    }, 2500);
-}
+    ) {
+        const filters =
+            getCurrentTableFilters();
 
 
-/*
-|--------------------------------------------------------------------------
-| INITIALIZE ECHO LISTENER
-|--------------------------------------------------------------------------
-*/
+        /*
+         * Realtime creation only belongs to
+         * the active dataset.
+         */
+        if (
+            filters.datasetStatus !==
+            "active"
+        ) {
+            return false;
+        }
 
-/*
- * Prevent the listener from being initialized more than once.
- */
-let supportRequestRealtimeInitialized = false;
+
+        /*
+         * Normalize event status.
+         */
+        const requestStatus =
+            safeString(
+                request.status,
+                "pending"
+            );
 
 
-/*
- * Initialize the private support-request channel.
- */
-function initializeSupportRequestRealtime() {
+        /*
+         * Respect the current status filter.
+         */
+        if (
+            filters.statusFilter &&
+            requestStatus !==
+            filters.statusFilter
+        ) {
+            return false;
+        }
 
-    /*
-     * Prevent duplicate subscriptions.
-     */
-    if (supportRequestRealtimeInitialized) {
+
+        /*
+         * Respect the current agency filter.
+         */
+        if (filters.agency) {
+            const requestAgency =
+                safeString(
+                    request.agency_id ??
+                    request.agency?.id
+                );
+
+            if (
+                requestAgency !==
+                filters.agency
+            ) {
+                return false;
+            }
+        }
+
+
+        /*
+         * Respect the current search term.
+         *
+         * The backend searches questions.
+         */
+        if (filters.search) {
+            const question =
+                safeString(
+                    request.question
+                )
+                    .toLowerCase();
+
+            if (
+                !question.includes(
+                    filters.search
+                )
+            ) {
+                return false;
+            }
+        }
+
+
         return true;
     }
 
 
     /*
-     * Confirm that the table body exists.
-     */
-    if (!supportRequestsTableBody) {
-        console.warn(
-            "Realtime listener stopped: support request table was not found."
+    |--------------------------------------------------------------------------
+    | REALTIME SUPPORT REQUEST HANDLER
+    |--------------------------------------------------------------------------
+    */
+
+    function handleRealtimeSupportRequest(
+        request
+    ) {
+        if (
+            !supportRequestsTableBody ||
+            !request?.id
+        ) {
+            return;
+        }
+
+
+        /*
+         * Ignore events that do not belong
+         * to the current filtered view.
+         */
+        if (
+            !realtimeRequestMatchesCurrentView(
+                request
+            )
+        ) {
+            return;
+        }
+
+
+        const requestId =
+            safeString(
+                request.id
+            );
+
+
+        /*
+         * Prevent duplicates.
+         */
+        const existingRow =
+            supportRequestsTableBody.querySelector(
+                `tr[data-request-id="${CSS.escape(
+                    requestId
+                )}"]`
+            );
+
+        if (existingRow) {
+            return;
+        }
+
+
+        /*
+         * Remove the server-rendered empty state.
+         */
+        supportRequestsTableBody
+            .querySelector(
+                ".support-empty-row"
+            )
+            ?.remove();
+
+
+        /*
+         * Create the new row.
+         */
+        const newRow =
+            createRealtimeSupportRequestRow(
+                request
+            );
+
+
+        /*
+         * Put the newest request first.
+         */
+        supportRequestsTableBody.prepend(
+            newRow
         );
 
-        return false;
+
+        /*
+         * Visually identify the newly received row.
+         */
+        newRow.classList.add(
+            "realtime-new-row"
+        );
+
+        window.setTimeout(
+            () => {
+                newRow.classList.remove(
+                    "realtime-new-row"
+                );
+            },
+            2500
+        );
     }
 
 
     /*
-     * Confirm that Laravel Echo has loaded.
-     */
-    if (!window.Echo) {
-        console.warn(
-            "Realtime listener waiting: Laravel Echo is unavailable."
-        );
+    |--------------------------------------------------------------------------
+    | REALTIME ECHO
+    |--------------------------------------------------------------------------
+    */
 
-        return false;
-    }
+    let realtimeInitialized =
+        false;
 
+    let realtimeRetryTimer =
+        null;
 
-    /*
-|--------------------------------------------------------------------------
-| INSPECT REVERB CONNECTION
-|--------------------------------------------------------------------------
-|
-| Laravel Echo uses the Pusher-compatible connector when connected
-| to Laravel Reverb.
-|
-*/
-
-const echoConnector = window.Echo.connector;
-
-console.info(
-    "Echo connector:",
-    echoConnector
-);
-
-/*
- * Get the Pusher connection created by Laravel Echo.
- *
- * The optional chaining operator prevents JavaScript from
- * crashing if the connector is not ready yet.
- */
-const connection =
-    echoConnector?.pusher?.connection;
-
-console.info(
-    "Realtime connection state:",
-    connection?.state ||
-        "connection object not found"
-);
-
-/*
-|--------------------------------------------------------------------------
-| REVERB CONNECTION EVENTS
-|--------------------------------------------------------------------------
-|
-| Reverb uses Pusher's event API.
-| Therefore, use connection.bind(), not connection.on().
-|
-*/
-
-if (connection) {
 
     /*
-     * Runs when the WebSocket connection fails.
+     * Register the private Laravel Echo channel.
      */
-    connection.bind(
-        "failed",
-        (error) => {
-            console.error(
-                "Reverb WebSocket connection failed:",
-                error
+    function initializeRealtime() {
+        if (
+            realtimeInitialized
+        ) {
+            return true;
+        }
+
+        if (
+            !supportRequestsTableBody
+        ) {
+            return false;
+        }
+
+        if (
+            !window.Echo
+        ) {
+            return false;
+        }
+
+
+        const channel =
+            window.Echo.private(
+                "admin.support-requests"
+            );
+
+
+        /*
+         * Laravel Echo calls this when
+         * the private channel subscription succeeds.
+         *
+         * We intentionally do not log this in production.
+         */
+        if (
+            typeof channel.subscribed ===
+            "function"
+        ) {
+            channel.subscribed(
+                () => {}
             );
         }
-    );
-
-    /*
-     * Runs when the WebSocket connection succeeds.
-     */
-    connection.bind(
-        "connected",
-        () => {
-            console.info(
-                "Reverb WebSocket connected."
-            );
-        }
-    );
-
-    /*
-     * Runs when the WebSocket connection closes.
-     */
-    connection.bind(
-        "disconnected",
-        () => {
-            console.warn(
-                "Reverb WebSocket disconnected."
-            );
-        }
-    );
-
-    /*
-     * Runs when the connection becomes unavailable.
-     */
-    connection.bind(
-        "unavailable",
-        () => {
-            console.warn(
-                "Reverb WebSocket is unavailable."
-            );
-        }
-    );
-
-    /*
-     * Runs whenever the connection state changes.
-     */
-    connection.bind(
-        "state_change",
-        (stateChange) => {
-            console.info(
-                "Reverb connection state changed:",
-                stateChange.previous,
-                "→",
-                stateChange.current
-            );
-        }
-    );
-
-} else {
-
-    console.warn(
-        "Reverb connection object could not be found."
-    );
-
-}
 
 
-    /*
-     * Subscribe to the private Laravel channel.
-     */
-    const supportRequestChannel = window.Echo.private(
-    "admin.support-requests"
-);
-
-/*
-|--------------------------------------------------------------------------
-| Confirm private-channel subscription
-|--------------------------------------------------------------------------
-*/
-
-supportRequestChannel.subscribed(() => {
-
-    console.log(
-        "✅ SUBSCRIBED to private admin.support-requests channel."
-    );
-
-});
-
-/*
-|--------------------------------------------------------------------------
-| Listen for support request event
-|--------------------------------------------------------------------------
-*/
-
-supportRequestChannel.listen(
-    ".support.request.created",
-    (event) => {
-
-        console.log(
-            "🔥 LIVE EVENT RECEIVED:",
-            event
-        );
-
-        console.log(
-            "EVENT ID:",
-            event?.id
-        );
-
-        console.log(
-            "EVENT DATA:",
-            event
-        );
-
-
-        handleRealtimeSupportRequest(
-            event
-        );
-    }
-);
-
-
-/*
-|--------------------------------------------------------------------------
-| Listen for private-channel errors
-|--------------------------------------------------------------------------
-*/
-
-if (typeof supportRequestChannel.error === "function") {
-
-    supportRequestChannel.error((error) => {
-
-        console.error(
-            "❌ PRIVATE CHANNEL ERROR:",
-            {
-                code: error?.code,
-                message: error?.message,
-                statusCode: error?.statusCode,
-                name: error?.name,
-                raw: error
+        /*
+         * Listen for the Laravel broadcast event.
+         */
+        channel.listen(
+            ".support.request.created",
+            event => {
+                handleRealtimeSupportRequest(
+                    event
+                );
             }
         );
 
-    });
 
-}
+        /*
+         * Register exactly one channel error handler.
+         *
+         * We deliberately avoid logging the complete
+         * error object because it can expose implementation
+         * details in production browser consoles.
+         */
+        if (
+            typeof channel.error ===
+            "function"
+        ) {
+            channel.error(
+                () => {}
+            );
+        }
 
 
-supportRequestRealtimeInitialized = true;
+        realtimeInitialized =
+            true;
 
-console.info(
-    "Echo listener registered for private admin.support-requests."
-);
-
-return true;
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| WAIT FOR ECHO TO LOAD
-|--------------------------------------------------------------------------
-*/
-
-/*
- * Try to initialize immediately.
- */
-if (!initializeSupportRequestRealtime()) {
-
-    /*
-     * Retry while Echo is still loading.
-     */
-    let realtimeAttempts = 0;
-
-    const maximumRealtimeAttempts = 40;
+        return true;
+    }
 
 
     /*
-     * Retry every 500 milliseconds.
+     * Retry initialization while Echo is loading.
+     *
+     * This is useful when the main application JavaScript
+     * initializes Echo asynchronously.
      */
-    const realtimeRetryTimer =
-        window.setInterval(() => {
-
-            realtimeAttempts++;
-
-
-            const initialized =
-                initializeSupportRequestRealtime();
+    function startRealtimeInitialization() {
+        if (
+            initializeRealtime()
+        ) {
+            return;
+        }
 
 
+        let attempts = 0;
+
+        const maximumAttempts =
+            40;
+
+
+        realtimeRetryTimer =
+            window.setInterval(
+                () => {
+                    attempts++;
+
+                    if (
+                        initializeRealtime()
+                    ) {
+                        window.clearInterval(
+                            realtimeRetryTimer
+                        );
+
+                        realtimeRetryTimer =
+                            null;
+
+                        return;
+                    }
+
+
+                    if (
+                        attempts >=
+                        maximumAttempts
+                    ) {
+                        window.clearInterval(
+                            realtimeRetryTimer
+                        );
+
+                        realtimeRetryTimer =
+                            null;
+                    }
+                },
+                500
+            );
+    }
+
+
+    /*
+     * Start realtime initialization.
+     */
+    startRealtimeInitialization();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | GLOBAL CLICK HANDLING
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "click",
+        event => {
             /*
-             * Stop retrying after successful initialization.
-             */
-            if (initialized) {
+            |--------------------------------------------------------------------------
+            | Action menu trigger
+            |--------------------------------------------------------------------------
+            */
 
-                window.clearInterval(
-                    realtimeRetryTimer
+            const menuTrigger =
+                event.target.closest(
+                    ".support-action-menu-trigger"
+                );
+
+            if (menuTrigger) {
+                event.preventDefault();
+
+                toggleActionMenu(
+                    menuTrigger
                 );
 
                 return;
-
             }
 
 
             /*
-             * Stop after approximately 20 seconds.
-             */
-            if (
-                realtimeAttempts >=
-                maximumRealtimeAttempts
-            ) {
+            |--------------------------------------------------------------------------
+            | FAQ conversion
+            |--------------------------------------------------------------------------
+            */
 
-                window.clearInterval(
-                    realtimeRetryTimer
+            const faqButton =
+                event.target.closest(
+                    ".faq-btn"
                 );
 
-                console.error(
-                    "Realtime listener could not initialize after 20 seconds."
-                );
+            if (faqButton) {
+                event.preventDefault();
 
+                if (
+                    faqButton.dataset.processing ===
+                    "true"
+                ) {
+                    return;
+                }
+
+                faqButton.dataset.processing =
+                    "true";
+
+                checkSimilarFaqs(
+                    faqButton
+                ).finally(() => {
+                    faqButton.dataset.processing =
+                        "false";
+                });
+
+                return;
             }
 
-        }, 500);
 
-}
+            /*
+            |--------------------------------------------------------------------------
+            | Lifecycle actions
+            |--------------------------------------------------------------------------
+            */
+
+            const lifecycleButton =
+                event.target.closest(
+                    ".delete-btn, .restore-btn, .permanent-delete-btn"
+                );
+
+            if (lifecycleButton) {
+                event.preventDefault();
+
+                confirmLifecycleAction(
+                    lifecycleButton
+                );
+
+                return;
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Manage Support Request
+            |--------------------------------------------------------------------------
+            */
+
+            const manageButton =
+                event.target.closest(
+                    ".view-btn"
+                );
+
+            if (manageButton) {
+                event.preventDefault();
+
+                closeAllActionMenus();
+
+                prepareSupportRequest(
+                    manageButton
+                );
+
+                return;
+            }
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Clicking anywhere else closes action menus.
+            |--------------------------------------------------------------------------
+            */
+
+            closeAllActionMenus();
+        }
+    );
 
 
     /*
-     * Make the function available to Blade inline
-     * onclick attributes.
-     */
-    window.closeSupportModal = closeSupportModal;
-    
+    |--------------------------------------------------------------------------
+    | KEYBOARD HANDLING
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        "keydown",
+        event => {
+            if (
+                event.key !==
+                "Escape"
+            ) {
+                return;
+            }
+
+
+            closeAllActionMenus();
+
+
+            /*
+             * Close Similar FAQ first if it is open.
+             */
+            if (
+                similarFaqModal?.classList.contains(
+                    "active"
+                )
+            ) {
+                closeSimilarFaqModal();
+
+                return;
+            }
+
+
+            /*
+             * Otherwise close the Support Request modal.
+             */
+            if (
+                supportModal?.classList.contains(
+                    "active"
+                )
+            ) {
+                closeSupportModal();
+            }
+        }
+    );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | FLASH SUCCESS MESSAGE
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        window.__FLASH_SUCCESS__
+    ) {
+        if (
+            typeof window.showAlertModal ===
+            "function"
+        ) {
+            window.showAlertModal({
+                title:
+                    "Success",
+
+                text:
+                    window.__FLASH_SUCCESS__,
+
+                icon:
+                    "ph-light ph-check-circle",
+
+                variant:
+                    "success",
+
+                confirmText:
+                    "OK",
+
+                showCancel:
+                    false,
+
+                onConfirm: () => {
+                    if (
+                        typeof window.closeAlertModal ===
+                        "function"
+                    ) {
+                        window.closeAlertModal();
+                    }
+                }
+            });
+
+
+            window.setTimeout(
+                () => {
+                    if (
+                        typeof window.closeAlertModal ===
+                        "function"
+                    ) {
+                        window.closeAlertModal();
+                    }
+                },
+                1500
+            );
+        }
+
+        window.__FLASH_SUCCESS__ =
+            null;
+    }
 });

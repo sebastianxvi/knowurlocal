@@ -1,6 +1,9 @@
 FROM php:8.2-cli
 
-# Install system packages required by Laravel and the frontend build.
+# ---------------------------------------------------------
+# System dependencies
+# ---------------------------------------------------------
+
 RUN apt-get update && apt-get install -y \
     unzip \
     git \
@@ -16,54 +19,93 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Configure PHP upload limits for agency images.
+
+# ---------------------------------------------------------
+# PHP upload configuration
+# ---------------------------------------------------------
+
 RUN printf "upload_max_filesize=5M\npost_max_size=8M\n" \
     > /usr/local/etc/php/conf.d/uploads.ini
 
-# Copy Composer from the official Composer image.
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set the working directory inside the container.
+# ---------------------------------------------------------
+# Composer
+# ---------------------------------------------------------
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+
+# ---------------------------------------------------------
+# Application directory
+# ---------------------------------------------------------
+
 WORKDIR /app
 
-# Copy the Laravel project into the container.
+
+# ---------------------------------------------------------
+# Copy application
+# ---------------------------------------------------------
+
 COPY . .
 
-# Install production PHP dependencies.
+
+# ---------------------------------------------------------
+# PHP dependencies
+# ---------------------------------------------------------
+
 RUN composer install \
     --no-dev \
     --optimize-autoloader \
     --no-interaction
 
-# Create Laravel's public storage symlink.
+
+# ---------------------------------------------------------
+# Laravel public storage
+# ---------------------------------------------------------
+
 RUN php artisan storage:link
 
+
 # ---------------------------------------------------------
-# Production Reverb configuration for the frontend build.
+# Frontend dependencies
 # ---------------------------------------------------------
-#
-# These values are intentionally public because Vite places
-# VITE_* values inside the browser JavaScript bundle.
-#
-# Never place REVERB_APP_SECRET or another private secret here.
-#
 
-ENV VITE_REVERB_APP_KEY=knowurlocal-key
-ENV VITE_REVERB_HOST=knowurlocal-reverb-production.up.railway.app
-ENV VITE_REVERB_PORT=443
-ENV VITE_REVERB_SCHEME=https
+RUN npm ci
 
-# Install frontend dependencies.
-RUN npm install
 
-# Build Vite production assets using the public Reverb values.
+# ---------------------------------------------------------
+# Reverb configuration for Vite build
+# ---------------------------------------------------------
+
+ARG VITE_REVERB_APP_KEY
+ARG VITE_REVERB_HOST
+ARG VITE_REVERB_PORT=443
+ARG VITE_REVERB_SCHEME=https
+
+ENV VITE_REVERB_APP_KEY=${VITE_REVERB_APP_KEY}
+ENV VITE_REVERB_HOST=${VITE_REVERB_HOST}
+ENV VITE_REVERB_PORT=${VITE_REVERB_PORT}
+ENV VITE_REVERB_SCHEME=${VITE_REVERB_SCHEME}
+
+
+# ---------------------------------------------------------
+# Frontend production build
+# ---------------------------------------------------------
+
 RUN npm run build
 
-# Document the port used by the application.
+
+# ---------------------------------------------------------
+# Application port
+# ---------------------------------------------------------
+
 EXPOSE 10000
 
-# Run migrations and start Laravel.
-CMD php artisan migrate --force && \
-    php artisan serve \
-        --host=0.0.0.0 \
-        --port="${PORT:-10000}"
+
+# ---------------------------------------------------------
+# Start Laravel
+# ---------------------------------------------------------
+
+CMD php artisan serve \
+    --host=0.0.0.0 \
+    --port="${PORT:-10000}"

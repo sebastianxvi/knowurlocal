@@ -8,6 +8,7 @@ use App\Models\UserLog;
 use App\Services\FaqSimilarityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Services\SupportRequestResponseService;
 
 class SupportRequestController extends Controller
 {
@@ -81,29 +82,61 @@ class SupportRequestController extends Controller
 
 
         /*
-         * =====================================================
-         * 🔍 STATUS FILTER
-         * =====================================================
-         *
-         * Status is only meaningful for normal active requests.
-         *
-         * Trashed records retain their historical status, so the
-         * same filter can still technically be applied to them.
-         */
-        if (
-            $request->filled('status_filter') &&
-            in_array(
-                $request->status_filter,
-                ['pending', 'answered'],
-                true
-            )
-        ) {
+ * =====================================================
+ * 🔍 STATUS FILTER
+ * =====================================================
+ *
+ * Active Support Requests default to "pending".
+ *
+ * Trashed Support Requests default to showing all
+ * historical statuses unless the administrator explicitly
+ * chooses a status filter.
+ */
+$statusFilter = $request->has('status_filter')
+    ? $request->input('status_filter')
+    : 'pending';
 
-            $query->where(
-                'status',
-                $request->status_filter
-            );
-        }
+$allowedStatusFilters = [
+    '',
+    'pending',
+    'awaiting_confirmation',
+    'needs_follow_up',
+    'answered',
+];
+
+if (!in_array($statusFilter, $allowedStatusFilters, true)) {
+    $statusFilter = '';
+}
+
+/*
+ * Apply the status filter only when a specific status
+ * has been selected.
+ */
+if ($statusFilter !== '') {
+    $query->where(
+        'status',
+        $statusFilter
+    );
+}
+
+/*
+ * =====================================================
+ * 🔎 QUESTION SEARCH
+ * =====================================================
+ *
+ * Search only the Support Request question.
+ */
+$search = trim(
+    $request->input('search', '')
+);
+
+if ($search !== '') {
+    $query->where(
+        'question',
+        'like',
+        '%' . $search . '%'
+    );
+}
 
 
         /*
@@ -111,27 +144,64 @@ class SupportRequestController extends Controller
          * 🏢 AGENCY FILTER
          * =====================================================
          */
-        if ($request->filled('agency')) {
+        $agencyFilter = $request->input('agency', '');
 
+        if ($agencyFilter !== '') {
             $query->where(
                 'agency_id',
-                $request->agency
+                $agencyFilter
             );
         }
 
 
         /*
-         * =====================================================
-         * 📄 PAGINATION
-         * =====================================================
-         *
-         * withQueryString() keeps the current filters when the
-         * administrator changes pages.
-         */
-        $requests = $query
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
+|--------------------------------------------------------------------------
+| 🔃 SORT ORDER
+|--------------------------------------------------------------------------
+|
+| The administrator can choose whether Support Requests
+| should be displayed from newest to oldest or oldest
+| to newest.
+|
+| Only explicitly allowed values are accepted.
+| This prevents arbitrary request input from reaching
+| the database ORDER BY clause.
+*/
+
+$sort = $request->input('sort', 'newest');
+
+$allowedSorts = [
+    'newest',
+    'oldest',
+];
+
+if (!in_array($sort, $allowedSorts, true)) {
+    $sort = 'newest';
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| 📄 PAGINATION
+|--------------------------------------------------------------------------
+|
+| The selected sort order is applied at the database level.
+|
+| This is important because the table is paginated.
+| Sorting only the rows already loaded into the browser
+| would produce incorrect ordering across multiple pages.
+|
+| withQueryString() preserves the active filters and
+| sort order when the administrator changes pages.
+*/
+
+$requests = $query
+    ->orderBy(
+        'created_at',
+        $sort === 'oldest' ? 'asc' : 'desc'
+    )
+    ->paginate(10)
+    ->withQueryString();
 
 
         /*
@@ -163,11 +233,15 @@ $agencies = Agency::select(
 
 
         return view(
-            'admin.support_requests',
+            'admin.support-requests.index',
             compact(
                 'requests',
                 'agencies',
                 'status',
+                'statusFilter',
+                'agencyFilter',
+                'search',
+                'sort',
                 'activeCount',
                 'trashedCount'
             )
@@ -256,6 +330,439 @@ if ($request->hasFile('answer_image')) {
             'Reply sent successfully.'
         );
     }
+
+
+    /**
+ * Create and forward an official response to a citizen.
+ */
+public function forwardResponse(
+    Request $request,
+    SupportRequestResponseService $responseService
+) {
+    $validated = $request->validate([
+        'request_id' => [
+            'required',
+            'integer',
+            'exists:support_requests,id',
+        ],
+
+        'agency_id' => [
+            'required',
+            'integer',
+            'exists:agencies,id',
+        ],
+
+        'components' => [
+            'required',
+            'array',
+            'min:1',
+            'max:10',
+        ],
+
+        'components.*.type' => [
+            'required',
+            'string',
+            'in:text,image,file,link,qr_code',
+        ],
+
+        'components.*.content' => [
+            'nullable',
+            'string',
+            'max:5000',
+        ],
+
+        'components.*.label' => [
+            'nullable',
+            'string',
+            'max:255',
+        ],
+
+        'components.*.file' => [
+            'nullable',
+            'file',
+            'max:5120',
+            'mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx',
+        ],
+    ]);
+
+    /*
+     * Retrieve the ticket without including soft-deleted
+     * records. This prevents a deleted ticket from receiving
+     * a new official response.
+     */
+    $supportRequest = SupportRequest::findOrFail(
+        $validated['request_id']
+    );
+
+    /*
+ * Prevent a new official response from being created while
+ * the previous response is awaiting citizen confirmation
+ * or has already been accepted.
+ *
+ * This is a server-side authorization/workflow check.
+ * The frontend disabled button is not considered a security
+ * boundary because browser controls can be modified.
+ */
+if (
+    in_array(
+        $supportRequest->status,
+        [
+            'awaiting_confirmation',
+            'answered',
+        ],
+        true
+    )
+) {
+    return response()->json([
+        'success' => false,
+        'message' =>
+            'This ticket is not currently available for a new official response.',
+    ], 409);
+}
+
+    /*
+     * Build a clean component array for the service.
+     *
+     * We do not pass the entire Request object into the
+     * service. This keeps the service independent from HTTP.
+     */
+    $components = [];
+
+    foreach ($validated['components'] as $index => $component) {
+        $type = $component['type'];
+
+        /*
+         * Text components require actual text.
+         */
+        if ($type === 'text') {
+            if (
+                !isset($component['content'])
+                || trim($component['content']) === ''
+            ) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Text responses cannot be empty.',
+                ], 422);
+            }
+        }
+
+        /*
+         * Links and QR codes must contain valid HTTP/HTTPS URLs.
+         */
+        if (in_array($type, ['link', 'qr_code'], true)) {
+            if (
+                empty($component['content'])
+                || !filter_var(
+                    $component['content'],
+                    FILTER_VALIDATE_URL
+                )
+                || !in_array(
+                    strtolower(
+                        parse_url(
+                            $component['content'],
+                            PHP_URL_SCHEME
+                        ) ?? ''
+                    ),
+                    ['http', 'https'],
+                    true
+                )
+            ) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Links and QR codes must use a valid HTTP or HTTPS URL.',
+                ], 422);
+            }
+        }
+
+        /*
+         * Uploaded components must actually contain an upload.
+         */
+        if (in_array($type, ['image', 'file'], true)) {
+            if (!isset($component['file'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => ucfirst($type) . ' components require a file.',
+                ], 422);
+            }
+        }
+
+        $components[] = [
+            'type' => $type,
+            'content' => $component['content'] ?? null,
+            'label' => $component['label'] ?? null,
+            'file' => $component['file'] ?? null,
+        ];
+    }
+
+    /*
+     * Create the official response and move the ticket
+     * into the citizen-confirmation stage.
+     */
+    $response = $responseService->createAndForward(
+        $supportRequest,
+        auth()->id(),
+        $validated['agency_id'],
+        $components
+    );
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Official response forwarded successfully.',
+        'response_id' => $response->id,
+    ]);
+}
+
+/**
+ * =========================================================
+ * 📄 GET LATEST OFFICIAL RESPONSE
+ * =========================================================
+ *
+ * Returns the latest response for a Support Request.
+ *
+ * This endpoint is read-only.
+ * It does not modify the ticket or response.
+ */
+public function latestResponse($id)
+{
+
+abort_unless(
+    auth()->check() &&
+    in_array(
+        auth()->user()->role,
+        ['admin', 'superadmin'],
+        true
+    ),
+    403
+);
+    /*
+     * Retrieve only active Support Requests.
+     *
+     * Soft-deleted tickets must not be exposed through
+     * the normal Manage modal.
+     */
+    $supportRequest = SupportRequest::findOrFail($id);
+
+    /*
+     * Load the latest official response together with
+     * its ordered components.
+     *
+     * The relationship already defines the component
+     * ordering through sort_order.
+     */
+    $response = $supportRequest
+        ->latestResponse()
+        ->with('components')
+        ->first();
+
+    /*
+     * A pending ticket may legitimately have no response yet.
+     *
+     * Returning null instead of a 404 allows the frontend
+     * to distinguish "no response yet" from "ticket missing".
+     */
+    return response()->json([
+        'success' => true,
+
+        'support_request_id' =>
+            $supportRequest->id,
+
+        'status' =>
+            $supportRequest->status,
+
+        'response' =>
+            $response
+                ? [
+                    'id' => $response->id,
+
+                    'status' =>
+                        $response->status,
+
+                    'forwarded_at' =>
+                        $response->forwarded_at?->toISOString(),
+
+                    'responded_at' =>
+                        $response->responded_at?->toISOString(),
+
+                    'follow_up_reason' =>
+                        $response->follow_up_reason,
+
+                     'components' =>
+                        $response->components->map(
+                            function ($component) use (
+                                $supportRequest,
+                                $response
+                            ) {
+                                return [
+                                    'id' =>
+                                        $component->id,
+
+                                    'type' =>
+                                        $component->type,
+
+                                    'content' =>
+                                        $component->content,
+
+                                    'label' =>
+                                        $component->label,
+
+                                    'sort_order' =>
+                                        $component->sort_order,
+
+                                    /*
+                                    * Never expose the private storage path.
+                                    *
+                                    * The frontend receives an authenticated Laravel
+                                    * endpoint instead.
+                                    */
+                                    'attachment_url' =>
+                                        in_array(
+                                            $component->type,
+                                            ['image', 'file'],
+                                            true
+                                        )
+                                            ? route(
+                                                'admin.support.response-attachment',
+                                                [
+                                                    'supportRequestId' =>
+                                                        $supportRequest->id,
+
+                                                    'responseId' =>
+                                                        $response->id,
+
+                                                    'componentId' =>
+                                                        $component->id,
+                                                ]
+                                            )
+                                            : null,
+                                ];
+                            }
+                        )->values(),
+                ]
+                : null,
+    ]);
+}
+
+/**
+ * =========================================================
+ * 🔐 VIEW SUPPORT RESPONSE ATTACHMENT
+ * =========================================================
+ *
+ * Serves an image or document from the private disk.
+ *
+ * The file is never exposed through /storage.
+ * Access is restricted to authenticated administrators.
+ */
+public function viewResponseAttachment(
+    $supportRequestId,
+    $responseId,
+    $componentId
+) {
+    /*
+     * Defense-in-depth authorization.
+     *
+     * Even if the route is already protected by admin middleware,
+     * the controller independently verifies the user's role.
+     */
+    abort_unless(
+        auth()->check() &&
+        in_array(
+            auth()->user()->role,
+            ['admin', 'superadmin'],
+            true
+        ),
+        403
+    );
+
+    /*
+     * Locate the component while simultaneously verifying
+     * the entire ownership chain:
+     *
+     * component
+     *     ↓
+     * response
+     *     ↓
+     * support request
+     *
+     * This prevents an administrator from changing IDs in the
+     * URL to access an attachment belonging to another ticket.
+     */
+    $component = \App\Models\SupportResponseComponent::query()
+        ->where('id', $componentId)
+        ->where(
+            'support_request_response_id',
+            $responseId
+        )
+        ->whereHas(
+            'response.supportRequest',
+            function ($query) use ($supportRequestId) {
+                $query->where(
+                    'id',
+                    $supportRequestId
+                );
+            }
+        )
+        ->firstOrFail();
+
+    /*
+     * Only image and file components are allowed to use
+     * this endpoint.
+     *
+     * Text, links, and QR destination URLs must never be
+     * interpreted as storage paths.
+     */
+    abort_unless(
+        in_array(
+            $component->type,
+            ['image', 'file'],
+            true
+        ),
+        404
+    );
+
+    /*
+     * The database contains the private storage path.
+     */
+    $path = $component->content;
+
+    /*
+     * Confirm that a path exists and that the file actually
+     * exists on the private filesystem.
+     */
+    abort_unless(
+        $path &&
+        Storage::disk('private')->exists($path),
+        404
+    );
+
+    /*
+     * Stream the private file through Laravel.
+     *
+     * The actual storage location remains hidden from the browser.
+     */
+    return Storage::disk('private')->response(
+        $path,
+        basename($path),
+        [
+            /*
+             * "inline" allows browsers to display supported
+             * content such as images directly.
+             *
+             * Unsupported documents may still be downloaded
+             * by the browser.
+             */
+            'Content-Disposition' =>
+                'inline; filename="' .
+                addslashes(basename($path)) .
+                '"',
+
+            /*
+             * Prevent MIME-sniffing.
+             */
+            'X-Content-Type-Options' =>
+                'nosniff',
+        ]
+    );
+}
 
 
     /**

@@ -1,0 +1,642 @@
+/* =========================================================
+   KNOWURLOCAL — SUPPORT REQUESTS
+   Request table
+   ========================================================= */
+
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.support-table-shell {
+    width: 100%;
+
+    overflow: hidden;
+
+    border: 1px solid
+        var(--border-color, #e5e7eb);
+
+    border-radius: 10px;
+
+    background: var(--surface, #ffffff);
+}
+
+.support-table-scroll {
+    width: 100%;
+
+    overflow-x: auto;
+}
+
+.support-table {
+    width: 100%;
+
+    min-width: 850px;
+
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.support-table thead th {
+    height: 42px;
+
+    padding: 0 14px;
+
+    border-bottom: 1px solid
+        var(--border-color, #e5e7eb);
+
+    background:
+        var(--surface-secondary, #f9fafb);
+
+    color:
+        var(--text-muted, #6b7280);
+
+    font-size: 11px;
+    font-weight: 650;
+
+    letter-spacing: 0.04em;
+
+    text-align: left;
+
+    text-transform: uppercase;
+
+    white-space: nowrap;
+}
+
+.support-table tbody td {
+    height: 58px;
+
+    padding: 10px 14px;
+
+    border-bottom: 1px solid
+        var(--border-color, #f0f1f3);
+
+    color:
+        var(--text-primary, #1f2937);
+
+    font-size: 13px;
+
+    vertical-align: middle;
+}
+
+.support-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.support-request-row {
+    transition:
+        background-color 140ms ease;
+}
+
+.support-request-row:hover {
+    background:
+        var(--surface-hover, #fafafa);
+}
+
+
+/* =========================================================
+   COLUMN WIDTHS
+   ========================================================= */
+
+.support-col-id,
+.support-request-id {
+    width: 70px;
+}
+
+.support-col-user {
+    width: 150px;
+}
+
+.support-col-question {
+    min-width: 300px;
+}
+
+.support-col-agency {
+    width: 190px;
+}
+
+.support-col-status {
+    width: 120px;
+}
+
+.support-col-date {
+    width: 125px;
+}
+
+.support-col-actions {
+    width: 130px;
+}
+
+
+/* =========================================================
+   REQUEST ID
+   ========================================================= */
+
+.support-request-id span {
+    color: var(--text-muted, #9ca3af);
+
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        monospace;
+
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   USER
+   ========================================================= */
+
+.support-user-cell {
+    display: flex;
+    align-items: center;
+
+    min-width: 0;
+}
+
+.support-user-details {
+    min-width: 0;
+}
+
+.support-user-name {
+    display: block;
+
+    overflow: hidden;
+
+    color:
+        var(--text-primary, #111827);
+
+    font-size: 13px;
+    font-weight: 550;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   QUESTION
+   ========================================================= */
+
+.support-question-cell {
+    min-width: 0;
+}
+
+.support-question-text {
+    display: block;
+
+    overflow: hidden;
+
+    color:
+        var(--text-primary, #374151);
+
+    line-height: 1.45;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.support-question-text:hover {
+    color:
+        var(--primary-color, #2563eb);
+}
+
+
+/* =========================================================
+   AGENCY
+   ========================================================= */
+
+.support-agency-name {
+    display: block;
+
+    overflow: hidden;
+
+    color:
+        var(--text-secondary, #4b5563);
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.support-agency-empty {
+    color:
+        var(--text-muted, #9ca3af);
+}
+
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+.support-status-badge {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 6px;
+
+    padding: 4px 8px;
+
+    border-radius: 999px;
+
+    background:
+        var(--surface-secondary, #f3f4f6);
+
+    color:
+        var(--text-muted, #6b7280);
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.support-status-dot {
+    width: 6px;
+    height: 6px;
+
+    border-radius: 50%;
+
+    background: currentColor;
+}
+
+.support-status-badge.pending {
+    background: #fff7ed;
+
+    color: #c2410c;
+}
+
+.support-status-badge.awaiting_confirmation {
+    background: #eff6ff;
+
+    color: #2563eb;
+}
+
+.support-status-badge.needs_follow_up {
+    background: #fff7ed;
+
+    color: #b45309;
+}
+
+.support-status-badge.answered {
+    background: #f0fdf4;
+
+    color: #15803d;
+}
+
+
+/* =========================================================
+   DATE
+   ========================================================= */
+
+.support-request-date {
+    color:
+        var(--text-muted, #6b7280) !important;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   ROW ACTIONS
+   ========================================================= */
+
+.support-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 6px;
+}
+
+.support-action-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 6px;
+
+    min-height: 34px;
+
+    padding: 0 10px;
+
+    border: 1px solid
+        var(--border-color, #e5e7eb);
+
+    border-radius: 7px;
+
+    background: var(--surface, #ffffff);
+
+    color:
+        var(--text-primary, #374151);
+
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background-color 140ms ease,
+        border-color 140ms ease,
+        color 140ms ease;
+}
+
+.support-action-primary:hover {
+    border-color:
+        var(--primary-color, #2563eb);
+
+    background:
+        var(--primary-soft, #eff6ff);
+
+    color:
+        var(--primary-color, #2563eb);
+}
+
+.support-action-primary i {
+    font-size: 15px;
+}
+
+
+/* =========================================================
+   THREE-DOT ACTION MENU
+   ========================================================= */
+
+.support-action-menu {
+    position: relative;
+}
+
+.support-action-menu-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 34px;
+    height: 34px;
+
+    border: 1px solid transparent;
+
+    border-radius: 7px;
+
+    background: transparent;
+
+    color:
+        var(--text-muted, #9ca3af);
+
+    font: inherit;
+
+    cursor: pointer;
+
+    transition:
+        background-color 140ms ease,
+        color 140ms ease,
+        border-color 140ms ease;
+}
+
+.support-action-menu-trigger:hover,
+.support-action-menu-trigger[aria-expanded="true"] {
+    border-color:
+        var(--border-color, #e5e7eb);
+
+    background:
+        var(--surface-secondary, #f9fafb);
+
+    color:
+        var(--text-primary, #374151);
+}
+
+.support-action-menu-trigger i {
+    font-size: 18px;
+}
+
+.support-action-menu-content {
+    /*
+     * Fixed positioning makes the menu relative to the
+     * browser viewport instead of the table container.
+     *
+     * This allows the menu to escape the table's overflow
+     * boundary.
+     */
+    position: fixed;
+
+    /*
+     * JavaScript calculates these coordinates based on
+     * the three-dot trigger's viewport position.
+     */
+    top: 0;
+    left: 0;
+
+    z-index: 1000;
+
+    display: none;
+
+    min-width: 175px;
+
+    padding: 5px;
+
+    border: 1px solid
+        var(--border-color, #e5e7eb);
+
+    border-radius: 9px;
+
+    background:
+        var(--surface, #ffffff);
+
+    box-shadow:
+        0 10px 30px
+        rgba(15, 23, 42, 0.10),
+        0 2px 8px
+        rgba(15, 23, 42, 0.06);
+
+    /*
+     * Prevent long menu labels from unexpectedly
+     * stretching the menu.
+     */
+    max-width: min(
+        240px,
+        calc(100vw - 16px)
+    );
+}
+
+.support-action-menu.is-open
+.support-action-menu-content {
+    display: block;
+}
+
+.support-menu-action {
+    display: flex;
+    align-items: center;
+
+    gap: 9px;
+
+    width: 100%;
+    min-height: 34px;
+
+    padding: 0 9px;
+
+    border: 0;
+
+    border-radius: 6px;
+
+    background: transparent;
+
+    color:
+        var(--text-secondary, #4b5563);
+
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+
+    text-decoration: none;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    transition:
+        background-color 120ms ease,
+        color 120ms ease;
+}
+
+.support-menu-action:hover {
+    background:
+        var(--surface-secondary, #f3f4f6);
+
+    color:
+        var(--text-primary, #111827);
+}
+
+.support-menu-action i {
+    flex: 0 0 auto;
+
+    font-size: 16px;
+}
+
+.support-menu-danger {
+    color: #dc2626;
+}
+
+.support-menu-danger:hover {
+    background: #fef2f2;
+
+    color: #b91c1c;
+}
+
+.support-menu-faq {
+    color: #4f46e5;
+}
+
+.support-menu-faq:hover {
+    background: #eef2ff;
+
+    color: #4338ca;
+}
+
+
+/* =========================================================
+   TRASH ACTIONS
+   ========================================================= */
+
+.support-trash-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 7px;
+}
+
+.support-trash-actions form {
+    margin: 0;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.support-empty-row td {
+    height: 260px !important;
+
+    padding: 30px !important;
+}
+
+.support-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 14px;
+
+    max-width: 460px;
+
+    margin: 0 auto;
+}
+
+.support-empty-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 42px;
+    height: 42px;
+
+    flex: 0 0 42px;
+
+    border: 1px solid
+        var(--border-color, #e5e7eb);
+
+    border-radius: 10px;
+
+    background:
+        var(--surface-secondary, #f9fafb);
+
+    color:
+        var(--text-muted, #9ca3af);
+}
+
+.support-empty-icon i {
+    font-size: 20px;
+}
+
+.support-empty-content h3 {
+    margin: 0 0 3px;
+
+    color:
+        var(--text-primary, #374151);
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.support-empty-content p {
+    margin: 0;
+
+    color:
+        var(--text-muted, #9ca3af);
+
+    font-size: 12px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   REALTIME HIGHLIGHT
+   ========================================================= */
+
+.support-request-row.support-request-new {
+    animation:
+        supportRequestHighlight 1.4s ease;
+}
+
+@keyframes supportRequestHighlight {
+
+    0% {
+        background: #eff6ff;
+    }
+
+    100% {
+        background: transparent;
+    }
+
+}
