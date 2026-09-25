@@ -1,350 +1,265 @@
 /* =========================================================
    KNOWURLOCAL — MY INQUIRIES
-   ========================================================= */
-
-
-/* =========================================================
-   DESIGN TOKENS
-   ========================================================= */
-
-:root {
-
-    --inquiry-brand: #5272c9;
-    --inquiry-brand-dark: #435fa8;
-    --inquiry-brand-soft: #e8edfb;
-    --inquiry-brand-faint: #f4f6fc;
-
-    --inquiry-page: #f6f7fa;
-    --inquiry-surface: #ffffff;
-    --inquiry-surface-soft: #f7f8fc;
-    --inquiry-surface-muted: #eef0f4;
-
-    --inquiry-text: #1a1e28;
-    --inquiry-text-soft: #4b5362;
-    --inquiry-text-muted: #757d8c;
-    --inquiry-text-faint: #a0a6b1;
-
-    --inquiry-border: rgba(30, 38, 55, 0.09);
-    --inquiry-border-soft: rgba(30, 38, 55, 0.065);
-    --inquiry-border-strong: rgba(30, 38, 55, 0.15);
-
-    --inquiry-shadow-soft:
-        0 5px 20px rgba(35, 45, 70, 0.045);
-
-    --inquiry-shadow-medium:
-        0 14px 36px rgba(35, 45, 70, 0.075);
-
-    --inquiry-radius-sm: 10px;
-    --inquiry-radius-md: 14px;
-    --inquiry-radius-lg: 18px;
-
-    --inquiry-ease:
-        cubic-bezier(0.22, 1, 0.36, 1);
-
-    --inquiry-ease-soft:
-        cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-
-/* =========================================================
-   BOX SIZING
-   ========================================================= */
-
-*,
-*::before,
-*::after {
-    box-sizing: border-box;
-}
-
-
-/* =========================================================
-   PAGE
+   Standardized citizen support interface
    ========================================================= */
 
 .inquiries-page {
-
     width: 100%;
     max-width: 1180px;
-
+    min-width: 0;
     margin: 0 auto;
+    padding: 32px 28px 64px;
+    color: var(--text-primary, #111827);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
 
-    padding: 40px 32px 72px;
+.inquiries-page *,
+.inquiries-page *::before,
+.inquiries-page *::after {
+    box-sizing: border-box;
+}
 
-    /*
-     * Keep horizontal overflow containment local to this page.
-     *
-     * This avoids changing the scrolling behavior of the entire
-     * document, which is particularly important on mobile.
-     */
-    overflow-x: clip;
+.inquiries-page button,
+.inquiries-page input,
+.inquiries-page textarea,
+.inquiries-page select {
+    font: inherit;
+}
 
-    font-family:
-        Inter,
-        ui-sans-serif,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
+.inquiries-page [hidden] {
+    display: none !important;
 }
 
 
 /* =========================================================
-   HEADER
+   ACCESSIBILITY
    ========================================================= */
 
-.inquiries-header {
-
-    display: flex;
-    align-items: flex-start;
-
-    gap: 14px;
-
-    margin-bottom: 30px;
-
-    animation:
-        inquiriesHeaderIn
-        700ms
-        var(--inquiry-ease-soft)
-        both;
+.inquiries-page .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 
-@keyframes inquiriesHeaderIn {
+/* =========================================================
+   PAGE HEADER
+   ========================================================= */
 
+.inquiries-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 26px;
+    animation: inquiriesPageIn 420ms ease both;
+}
+
+@keyframes inquiriesPageIn {
     from {
         opacity: 0;
-        transform: translateY(12px);
+        transform: translateY(8px);
     }
 
     to {
         opacity: 1;
         transform: translateY(0);
     }
-
 }
 
-
-/* =========================================================
-   BACK BUTTON
-   ========================================================= */
-
-.back-btn {
-
-    flex: 0 0 40px;
-
-    width: 40px;
-    height: 40px;
-
-    display: inline-flex;
-
-    align-items: center;
-    justify-content: center;
-
-    margin-top: 1px;
-
-    border: 1px solid var(--inquiry-border);
-    border-radius: 12px;
-
-    background: var(--inquiry-surface);
-    color: var(--inquiry-text-muted);
-
-    cursor: pointer;
-
-    box-shadow:
-        0 4px 14px rgba(35, 45, 70, 0.05);
-
-    transition:
-        transform 220ms var(--inquiry-ease),
-        background-color 220ms ease,
-        border-color 220ms ease,
-        color 220ms ease,
-        box-shadow 220ms ease;
-}
-
-
-.back-btn:hover {
-
-    transform: translateX(-2px);
-
-    border-color:
-        rgba(82, 114, 201, 0.20);
-
-    background:
-        var(--inquiry-brand-faint);
-
-    color:
-        var(--inquiry-brand);
-
-    box-shadow:
-        0 8px 20px rgba(35, 45, 70, 0.08);
-}
-
-
-.back-btn:active {
-
-    transform:
-        translateX(-1px)
-        scale(0.96);
-}
-
-
-.back-btn i {
-
-    font-size: 17px;
-}
-
-
-/* =========================================================
-   HEADER COPY
-   ========================================================= */
-
-.header-copy {
-
+.inquiries-header-copy {
     min-width: 0;
 }
 
-
-.header-copy h1 {
-
-    margin: 0 0 5px;
-
-    font-size:
-        clamp(24px, 3vw, 28px);
-
-    line-height: 1.15;
-
-    font-weight: 650;
-
-    letter-spacing: -0.035em;
-
-    color:
-        var(--inquiry-text);
-}
-
-
-.header-copy p {
-
-    margin: 0;
-
-    font-size: 13px;
-
-    line-height: 1.55;
-
-    color:
-        var(--inquiry-text-muted);
-}
-
-
-/* =========================================================
-   FILTER BAR
-   ========================================================= */
-
-.filter-bar {
-
+.inquiries-header-eyebrow {
     display: inline-flex;
-
     align-items: center;
-
-    gap: 3px;
-
-    margin-bottom: 20px;
-
-    padding: 4px;
-
-    border:
-        1px solid var(--inquiry-border-soft);
-
-    border-radius: 13px;
-
-    background:
-        var(--inquiry-surface-muted);
-
-    box-shadow:
-        inset 0 1px 1px rgba(255, 255, 255, 0.65);
+    gap: 7px;
+    margin-bottom: 7px;
+    color: var(--text-muted, #6b7280);
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
 }
 
+.inquiries-header-eyebrow i {
+    font-size: 15px;
+    opacity: 0.9;
+}
 
-/* =========================================================
-   FILTER BUTTON
-   ========================================================= */
+.inquiries-header-copy h1 {
+    margin: 0;
+    color: var(--text-primary, #111827);
+    font-size: 26px;
+    line-height: 1.2;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+}
 
+.inquiries-header-copy p {
+    max-width: 680px;
+    margin: 6px 0 0;
+    color: var(--text-muted, #6b7280);
+    font-size: 13px;
+    line-height: 1.55;
+}
 
-
-.filter-btn {
-
-    position: relative;
-
-    min-width: 96px;
-    min-height: 34px;
-
+.inquiries-back-button {
     display: inline-flex;
-
     align-items: center;
     justify-content: center;
+    gap: 7px;
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 11px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    background: var(--surface, #ffffff);
+    color: var(--text-secondary, #4b5563);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
 
-    padding: 0 16px;
+.inquiries-back-button:hover {
+    border-color: var(--border-hover, #d1d5db);
+    background: var(--surface-secondary, #f9fafb);
+    color: var(--text-primary, #111827);
+}
 
-    border: 0;
+.inquiries-back-button:active {
+    transform: translateY(1px);
+}
+
+.inquiries-back-button i {
+    font-size: 15px;
+}
+
+
+/* =========================================================
+   FILTER TOOLBAR
+   ========================================================= */
+
+.inquiries-toolbar {
+    margin-bottom: 22px;
+}
+
+.inquiries-filter-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 4px;
+    border: 1px solid var(--border-color, #e5e7eb);
     border-radius: 9px;
+    background: var(--surface-secondary, #f9fafb);
+}
 
+.inquiries-filter-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 7px;
     background: transparent;
-
-    color:
-        var(--inquiry-text-muted);
-
-    font: inherit;
+    color: var(--text-muted, #6b7280);
     font-size: 12px;
     font-weight: 550;
-
+    white-space: nowrap;
     cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
 
-    transition:
-        color 220ms ease,
-        background-color 220ms ease,
-        box-shadow 220ms ease,
-        transform 180ms ease;
+.inquiries-filter-tab i {
+    font-size: 15px;
+    opacity: 0.88;
+}
+
+.inquiries-filter-tab:hover {
+    color: var(--text-primary, #111827);
+}
+
+.inquiries-filter-tab.active {
+    border-color: var(--border-color, #e5e7eb);
+    background: var(--surface, #ffffff);
+    color: var(--text-primary, #111827);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.07);
+}
+
+.inquiries-filter-tab.active i {
+    color: var(--primary-color, #2563eb);
+    opacity: 1;
 }
 
 
-.filter-btn:hover {
+/* =========================================================
+   SECTION HEADING
+   ========================================================= */
 
-    color:
-        var(--inquiry-text-soft);
+.inquiries-section {
+    min-width: 0;
 }
 
-
-.filter-btn:active {
-
-    transform:
-        scale(0.97);
+.inquiries-section-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 12px;
 }
 
-
-.filter-btn.active {
-
-    background:
-        var(--inquiry-surface);
-
-    color:
-        var(--inquiry-brand);
-
-    box-shadow:
-        0 2px 7px rgba(35, 45, 70, 0.08),
-        0 1px 2px rgba(35, 45, 70, 0.04);
+.inquiries-section-eyebrow {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--text-muted, #9ca3af);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
 }
+
+.inquiries-section-heading h2 {
+    margin: 0;
+    color: var(--text-primary, #111827);
+    font-size: 18px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+
+.inquiries-section-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted, #6b7280);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.inquiries-section-meta i {
+    font-size: 16px;
+}
+
 
 /* =========================================================
    INQUIRY LIST
    ========================================================= */
 
 .inquiries-list {
-
     display: flex;
-
     flex-direction: column;
-
-    gap: 12px;
+    gap: 8px;
 }
 
 
@@ -353,301 +268,183 @@
    ========================================================= */
 
 .inquiry-card {
-
     position: relative;
-
-    background:
-        var(--inquiry-surface);
-
-    border:
-        1px solid var(--inquiry-border);
-
-    border-radius:
-        var(--inquiry-radius-lg);
-
-    padding:
-        20px 22px;
-
-    box-shadow:
-        var(--inquiry-shadow-soft);
-
-    transition:
-        transform 280ms var(--inquiry-ease),
-        border-color 280ms ease,
-        box-shadow 280ms ease;
+    min-width: 0;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 10px;
+    background: var(--surface, #ffffff);
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.035);
+    overflow: visible;
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
-
 
 .inquiry-card:hover {
-
-    transform:
-        translateY(-2px);
-
-    border-color:
-        rgba(82, 114, 201, 0.16);
-
-    box-shadow:
-        var(--inquiry-shadow-medium);
+    border-color: var(--border-hover, #d1d5db);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.055);
+    transform: translateY(-1px);
 }
 
-
-/*
- * Filtered cards are completely removed from the
- * accessibility tree and visual layout.
- */
-
-.inquiry-card[hidden] {
-
-    display: none;
+.inquiry-card.expanded {
+    border-color: rgba(37, 99, 235, 0.22);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.065);
 }
 
-
-/* =========================================================
-   CARD HEADER
-   ========================================================= */
-
-.card-header {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 16px;
-
-    margin-bottom: 10px;
+.inquiry-card.realtime-response {
+    animation: inquiryRealtimeHighlight 1.8s ease;
 }
 
+@keyframes inquiryRealtimeHighlight {
+    0% {
+        border-color: rgba(37, 99, 235, 0.55);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+    }
 
-/* =========================================================
-   STATUS
-   ========================================================= */
-
-.status {
-
-    display: inline-flex;
-
-    align-items: center;
-
-    gap: 6px;
-
-    min-height: 25px;
-
-    padding:
-        0 9px;
-
-    border:
-        1px solid transparent;
-
-    border-radius:
-        999px;
-
-    font-size: 10px;
-
-    font-weight: 650;
-
-    line-height: 1;
-
-    letter-spacing: 0.01em;
+    100% {
+        border-color: var(--border-color, #e5e7eb);
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.035);
+    }
 }
-
-
-.status i {
-
-    font-size: 13px;
-}
-
-
-/* =========================================================
-   PENDING STATUS
-   ========================================================= */
-
-.status.pending {
-
-    border-color:
-        rgba(184, 134, 11, 0.12);
-
-    background:
-        #fbf6e8;
-
-    color:
-        #98701a;
-}
-
-
-/* =========================================================
-   ANSWERED STATUS
-   ========================================================= */
-
-.status.answered {
-
-    border-color:
-        rgba(54, 133, 92, 0.12);
-
-    background:
-        #edf7f1;
-
-    color:
-        #347b58;
-}
-
-
-/* =========================================================
-   DATE
-   ========================================================= */
-
-.inquiry-date {
-
-    flex-shrink: 0;
-
-    font-size: 11px;
-
-    font-weight: 500;
-
-    color:
-        var(--inquiry-text-faint);
-}
-
-
-/* =========================================================
-   INQUIRY TOGGLE
-   ========================================================= */
 
 .inquiry-toggle {
-
-    min-width: 0;
-
-    width: 100%;
-
     display: flex;
-
     align-items: center;
-
     justify-content: space-between;
-
-    gap: 16px;
-
-    padding: 0;
-
+    gap: 18px;
+    width: 100%;
+    min-width: 0;
+    padding: 15px 16px;
     border: 0;
-
+    border-radius: 10px;
     background: transparent;
-
     color: inherit;
-
-    font: inherit;
-
     text-align: left;
-
     cursor: pointer;
 }
 
-
-/*
- * Prevents the summary from becoming wider than
- * the available card width.
- */
-
 .inquiry-summary {
-
     min-width: 0;
-
-    flex: 1;
+    flex: 1 1 auto;
 }
 
-
-/*
- * The header belongs to the clickable inquiry
- * toggle, so avoid unnecessary spacing.
- */
-
-.inquiry-toggle .card-header {
-
-    margin-bottom: 10px;
+.inquiry-card-topline {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+    margin-bottom: 8px;
 }
 
+.inquiry-id {
+    color: var(--text-muted, #9ca3af);
+    font-size: 11px;
+    font-weight: 600;
+}
 
-/* =========================================================
-   QUESTION PREVIEW
-   ========================================================= */
+.inquiry-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 23px;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 1;
+}
 
-.question-preview {
+.inquiry-status-badge i {
+    font-size: 13px;
+}
 
-    margin: 0;
+.inquiry-status-badge.pending {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #c2410c;
+}
 
-    font-size: 14px;
+.inquiry-status-badge.awaiting_confirmation {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #2563eb;
+}
 
-    line-height: 1.6;
+.inquiry-status-badge.needs_follow_up {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #b45309;
+}
 
+.inquiry-status-badge.answered {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.inquiry-date {
+    margin-left: auto;
+    color: var(--text-muted, #9ca3af);
+    font-size: 11px;
     font-weight: 500;
-
-    letter-spacing: -0.01em;
-
-    color:
-        #252a36;
-
-    display: -webkit-box;
-
-    -webkit-box-orient: vertical;
-
-    -webkit-line-clamp: 2;
-
-    overflow: hidden;
+    white-space: nowrap;
 }
 
+.inquiry-card-content {
+    min-width: 0;
+}
 
-/* =========================================================
-   CHEVRON
-   ========================================================= */
+.inquiry-question {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 0;
+    color: var(--text-primary, #111827);
+    font-size: 13px;
+    line-height: 1.55;
+    font-weight: 550;
+    letter-spacing: -0.005em;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.inquiry-agency {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 7px;
+    color: var(--text-muted, #6b7280);
+    font-size: 11px;
+}
+
+.inquiry-agency i {
+    font-size: 14px;
+}
 
 .inquiry-chevron {
-
-    flex:
-        0 0 auto;
-
-    width: 28px;
-    height: 28px;
-
     display: inline-flex;
-
     align-items: center;
     justify-content: center;
-
-    border-radius: 8px;
-
-    font-size: 15px;
-
-    color:
-        var(--inquiry-text-faint);
-
-    transition:
-        transform 280ms var(--inquiry-ease),
-        color 200ms ease,
-        background-color 200ms ease;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    color: var(--text-muted, #9ca3af);
+    transition: background-color 160ms ease, color 160ms ease, transform 220ms ease;
 }
 
+.inquiry-chevron i {
+    font-size: 16px;
+}
 
 .inquiry-toggle:hover .inquiry-chevron {
-
-    background:
-        var(--inquiry-brand-faint);
-
-    color:
-        var(--inquiry-brand);
+    background: var(--surface-secondary, #f9fafb);
+    color: var(--text-primary, #374151);
 }
 
-
 .inquiry-card.expanded .inquiry-chevron {
-
-    transform:
-        rotate(180deg);
-
-    background:
-        var(--inquiry-brand-soft);
-
-    color:
-        var(--inquiry-brand);
+    background: var(--primary-soft, #eff6ff);
+    color: var(--primary-color, #2563eb);
+    transform: rotate(180deg);
 }
 
 
@@ -656,377 +453,388 @@
    ========================================================= */
 
 .inquiry-details {
-
     display: grid;
-
     grid-template-rows: 0fr;
-
+    margin: 0 16px;
     opacity: 0;
-
     overflow: hidden;
-
-    transition:
-        grid-template-rows 320ms var(--inquiry-ease),
-        opacity 220ms ease,
-        margin-top 320ms var(--inquiry-ease);
+    transition: grid-template-rows 220ms ease, opacity 160ms ease, margin-bottom 220ms ease;
 }
-
-
-/*
- * This wrapper is the actual collapsing element.
- */
 
 .inquiry-details-inner {
-
     min-height: 0;
-
     overflow: hidden;
 }
 
-
-/* =========================================================
-   EXPANDED STATE
-   ========================================================= */
-
 .inquiry-card.expanded .inquiry-details {
-
-    grid-template-rows:
-        1fr;
-
+    grid-template-rows: 1fr;
+    margin-bottom: 16px;
     opacity: 1;
-
-    margin-top: 15px;
-}
-
-
-/*
- * Keeps the clickable summary separated from
- * the expanded content.
- */
-
-.inquiry-card.expanded .inquiry-toggle {
-
-    padding-bottom: 0;
 }
 
 
 /* =========================================================
-   ANSWER BLOCK
+   QUESTION DETAIL
    ========================================================= */
 
-.answer-block {
-
-    margin-top: 15px;
-
-    padding:
-        16px 17px;
-
-    border:
-        1px solid rgba(82, 114, 201, 0.10);
-
-    border-radius:
-        var(--inquiry-radius-md);
-
-    background:
-        var(--inquiry-surface-soft);
+.inquiry-question-full {
+    padding-top: 14px;
+    border-top: 1px solid var(--border-color, #e5e7eb);
 }
 
-
-/* =========================================================
-   ANSWER HEADER
-   ========================================================= */
-
-.answer-header {
-
+.inquiry-detail-heading {
     display: flex;
-
     align-items: center;
-
     gap: 7px;
-
-    margin-bottom: 9px;
-
+    margin-bottom: 7px;
+    color: var(--text-muted, #6b7280);
     font-size: 11px;
-
     font-weight: 650;
-
-    color:
-        var(--inquiry-brand);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
-
-.answer-header i {
-
+.inquiry-detail-heading i {
+    color: var(--primary-color, #2563eb);
     font-size: 15px;
 }
 
-
-/* =========================================================
-   ANSWER TEXT
-   ========================================================= */
-
-.answer {
-
+.inquiry-question-full p {
     margin: 0;
-
+    color: var(--text-secondary, #4b5563);
     font-size: 13px;
-
-    line-height: 1.7;
-
-    color:
-        var(--inquiry-text-soft);
-
+    line-height: 1.65;
     overflow-wrap: anywhere;
 }
 
 
 /* =========================================================
-   ADMINISTRATOR ATTACHED IMAGE
+   OFFICIAL RESPONSE
    ========================================================= */
 
-.inquiry-image-block {
-
-    display: flex;
-
-    flex-direction: column;
-
-    align-items: flex-start;
-
-    gap: 10px;
-
-    width: 100%;
-
-    margin-top: 15px;
-
-    padding-top: 14px;
-
-    border-top:
-        1px solid var(--inquiry-border-soft);
+.official-response {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid rgba(37, 99, 235, 0.12);
+    border-radius: 9px;
+    background: #f8fafc;
 }
 
-
-/* =========================================================
-   IMAGE HEADER
-   ========================================================= */
-
-.inquiry-image-header {
-
+.official-response-header {
     display: flex;
-
     align-items: center;
-
-    gap: 7px;
-
-    font-size: 11px;
-
-    font-weight: 600;
-
-    color:
-        var(--inquiry-text-muted);
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
 }
 
-
-.inquiry-image-header i {
-
-    font-size: 15px;
-}
-
-
-/* =========================================================
-   IMAGE PREVIEW BUTTON
-   ========================================================= */
-
-.inquiry-image-block
-.inquiry-image-preview-trigger {
-
+.official-response-title {
     display: inline-flex;
-
     align-items: center;
-
-    justify-content: center;
-
-    align-self: flex-start;
-
-    width: fit-content;
-
-    max-width: 100%;
-
-    min-width: 0;
-
-    margin: 0;
-
-    padding: 0;
-
-    border:
-        1px solid #dbe3ed;
-
-    border-radius:
-        10px;
-
-    overflow: hidden;
-
-    background:
-        #f8fafc;
-
-    cursor: zoom-in;
-
-    appearance: none;
-
-    -webkit-appearance: none;
-
-    transition:
-        border-color 220ms ease,
-        box-shadow 220ms ease,
-        transform 220ms var(--inquiry-ease);
-}
-
-
-.inquiry-image-block
-.inquiry-image-preview-trigger:hover {
-
-    border-color:
-        rgba(82, 114, 201, 0.30);
-
-    box-shadow:
-        0 8px 22px rgba(15, 23, 42, 0.10);
-
-    transform:
-        translateY(-2px);
-}
-
-
-.inquiry-image-block
-.inquiry-image-preview-trigger:active {
-
-    transform:
-        translateY(0);
-}
-
-
-/* =========================================================
-   IMAGE THUMBNAIL
-   ========================================================= */
-
-.inquiry-image-block
-.inquiry-attached-image {
-
-    display: block;
-
-    width: auto;
-
-    max-width: 520px;
-
-    height: auto;
-
-    max-height: 320px;
-
-    object-fit: contain;
-
-    object-position: center;
-
-    border: 0;
-
-    border-radius: 0;
-
-    background:
-        #ffffff;
-
-    cursor: zoom-in;
-}
-
-
-/* =========================================================
-   IMAGE KEYBOARD FOCUS
-   ========================================================= */
-
-.inquiry-image-block
-.inquiry-image-preview-trigger:focus-visible {
-
-    outline:
-        2px solid var(--inquiry-brand);
-
-    outline-offset:
-        4px;
-}
-
-
-/* =========================================================
-   PENDING MESSAGE
-   ========================================================= */
-
-.pending-message {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 9px;
-
-    margin-top: 15px;
-
-    padding:
-        11px 13px;
-
-    border:
-        1px solid rgba(82, 114, 201, 0.08);
-
-    border-radius:
-        11px;
-
-    background:
-        var(--inquiry-surface-soft);
-
+    gap: 7px;
+    color: var(--primary-color, #2563eb);
     font-size: 12px;
-
-    font-style: normal;
-
-    line-height: 1.45;
-
-    color:
-        var(--inquiry-text-muted);
+    font-weight: 650;
 }
 
-
-.pending-message i {
-
-    flex:
-        0 0 auto;
-
+.official-response-title i {
     font-size: 16px;
+}
 
-    font-style: normal;
+.response-date {
+    color: var(--text-muted, #9ca3af);
+    font-size: 10px;
+    white-space: nowrap;
+}
 
-    color:
-        var(--inquiry-brand);
+.response-components {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.response-component-text {
+    color: var(--text-secondary, #4b5563);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.response-component-text p {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.response-component-image {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px;
+}
+
+.response-component-label {
+    display: block;
+    color: var(--text-muted, #6b7280);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.response-image-trigger {
+    display: inline-flex;
+    max-width: 100%;
+    padding: 0;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    background: #ffffff;
+    overflow: hidden;
+    cursor: zoom-in;
+    transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.response-image-trigger:hover {
+    border-color: rgba(37, 99, 235, 0.28);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+}
+
+.response-image-trigger img {
+    display: block;
+    width: auto;
+    max-width: min(520px, 100%);
+    max-height: 320px;
+    object-fit: contain;
+}
+
+.response-component-file,
+.response-component-link,
+.response-component-qr {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 10px 11px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.response-component-file > i,
+.response-component-link > i,
+.response-component-qr > i {
+    flex: 0 0 auto;
+    color: var(--primary-color, #2563eb);
+    font-size: 18px;
+}
+
+.response-file-info,
+.response-link-info,
+.response-qr-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 2px;
+}
+
+.response-file-info a,
+.response-link-info a,
+.response-qr-info a {
+    color: var(--primary-color, #2563eb);
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    text-decoration: none;
+}
+
+.response-file-info a:hover,
+.response-link-info a:hover,
+.response-qr-info a:hover {
+    text-decoration: underline;
 }
 
 
 /* =========================================================
-   FOCUS STATES
+   CONFIRMATION
    ========================================================= */
 
-.inquiry-toggle:focus-visible {
+.response-confirmation {
+    margin-top: 12px;
+    padding: 14px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 9px;
+    background: #ffffff;
+}
 
-    outline:
-        2px solid var(--inquiry-brand);
+.response-confirmation-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
 
-    outline-offset:
-        4px;
+.response-confirmation-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #2563eb;
+}
 
-    border-radius:
-        8px;
+.response-confirmation-icon i {
+    font-size: 16px;
+}
+
+.response-confirmation-header h3 {
+    margin: 1px 0 3px;
+    color: var(--text-primary, #111827);
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.response-confirmation-header p {
+    margin: 0;
+    color: var(--text-muted, #6b7280);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.confirmation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 12px;
+}
+
+.confirmation-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 34px;
+    padding: 0 11px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.confirmation-btn:active {
+    transform: translateY(1px);
+}
+
+.confirmation-btn-primary {
+    border: 1px solid var(--primary-color, #2563eb);
+    background: var(--primary-color, #2563eb);
+    color: #ffffff;
+}
+
+.confirmation-btn-primary:hover {
+    background: var(--primary-hover, #1d4ed8);
+}
+
+.confirmation-btn-secondary {
+    border: 1px solid var(--border-color, #e5e7eb);
+    background: #ffffff;
+    color: var(--text-secondary, #4b5563);
+}
+
+.confirmation-btn-secondary:hover {
+    border-color: var(--border-hover, #d1d5db);
+    background: var(--surface-secondary, #f9fafb);
+    color: var(--text-primary, #111827);
+}
+
+.confirmation-btn i {
+    font-size: 14px;
+}
+
+.follow-up-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.follow-up-form label {
+    color: var(--text-secondary, #4b5563);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.follow-up-form textarea {
+    width: 100%;
+    min-height: 96px;
+    resize: vertical;
+    padding: 9px 10px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 7px;
+    background: #ffffff;
+    color: var(--text-primary, #111827);
+    font-size: 12px;
+    line-height: 1.55;
+    outline: none;
+}
+
+.follow-up-form textarea:focus {
+    border-color: var(--primary-color, #2563eb);
+    box-shadow: 0 0 0 3px var(--primary-soft, rgba(37, 99, 235, 0.10));
+}
+
+.follow-up-form-actions {
+    display: flex;
+    justify-content: flex-end;
 }
 
 
-.filter-btn:focus-visible,
-.back-btn:focus-visible,
-.ask-btn:focus-visible {
+/* =========================================================
+   PENDING STATE
+   ========================================================= */
 
-    outline:
-        2px solid var(--inquiry-brand);
+.inquiry-pending-message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 11px 12px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    background: var(--surface-secondary, #f9fafb);
+}
 
-    outline-offset:
-        3px;
+.inquiry-pending-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.inquiry-pending-icon i {
+    font-size: 16px;
+}
+
+.inquiry-pending-message strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--text-secondary, #4b5563);
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.inquiry-pending-message p {
+    margin: 0;
+    color: var(--text-muted, #6b7280);
+    font-size: 11px;
+    line-height: 1.45;
 }
 
 
@@ -1035,671 +843,299 @@
    ========================================================= */
 
 .empty-state {
-
     display: flex;
-
     flex-direction: column;
-
     align-items: center;
-
     justify-content: center;
-
-    min-height: 400px;
-
-    padding:
-        48px 24px;
-
+    min-height: 260px;
+    padding: 40px 24px;
+    border: 1px dashed var(--border-color, #e5e7eb);
+    border-radius: 10px;
+    background: var(--surface, #ffffff);
     text-align: center;
 }
 
-
-/* =========================================================
-   EMPTY STATE ICON
-   ========================================================= */
-
 .empty-icon {
-
-    width: 54px;
-    height: 54px;
-
-    display: flex;
-
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-
-    margin-bottom: 17px;
-
-    border:
-        1px solid rgba(82, 114, 201, 0.10);
-
-    border-radius:
-        16px;
-
-    background:
-        #eef1fa;
-
-    color:
-        var(--inquiry-brand);
-
-    box-shadow:
-        0 8px 24px rgba(35, 45, 70, 0.05);
+    width: 42px;
+    height: 42px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 9px;
+    background: var(--surface-secondary, #f9fafb);
+    color: var(--text-muted, #9ca3af);
 }
-
 
 .empty-icon i {
-
-    font-size: 24px;
+    font-size: 20px;
 }
-
-
-/* =========================================================
-   EMPTY STATE TEXT
-   ========================================================= */
 
 .empty-state h2 {
-
-    margin:
-        0 0 7px;
-
-    font-size: 17px;
-
-    line-height: 1.3;
-
+    margin: 0 0 4px;
+    color: var(--text-primary, #374151);
+    font-size: 13px;
     font-weight: 650;
-
-    letter-spacing:
-        -0.02em;
-
-    color:
-        var(--inquiry-text);
 }
-
 
 .empty-state p {
-
-    max-width: 360px;
-
+    max-width: 400px;
     margin: 0;
-
-    font-size: 12px;
-
-    line-height: 1.6;
-
-    color:
-        var(--inquiry-text-muted);
+    color: var(--text-muted, #6b7280);
+    font-size: 11px;
+    line-height: 1.55;
 }
 
-
-/* =========================================================
-   ASK BUTTON
-   ========================================================= */
-
+.empty-action,
 .ask-btn {
-
     display: inline-flex;
-
     align-items: center;
     justify-content: center;
-
-    gap: 8px;
-
-    margin-top: 20px;
-
-    min-height: 40px;
-
-    padding:
-        0 17px;
-
-    border:
-        1px solid rgba(255, 255, 255, 0.45);
-
-    border-radius:
-        11px;
-
-    background:
-        var(--inquiry-brand);
-
-    color:
-        #ffffff;
-
-    font-size: 12px;
-
+    gap: 7px;
+    margin-top: 15px;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--primary-color, #2563eb);
+    border-radius: 7px;
+    background: var(--primary-color, #2563eb);
+    color: #ffffff;
+    font-size: 11px;
     font-weight: 600;
-
     text-decoration: none;
-
-    box-shadow:
-        0 8px 20px rgba(82, 114, 201, 0.18);
-
-    transition:
-        transform 220ms var(--inquiry-ease),
-        background-color 220ms ease,
-        box-shadow 220ms ease;
+    transition: background-color 150ms ease, transform 150ms ease;
 }
 
-
+.empty-action:hover,
 .ask-btn:hover {
-
-    transform:
-        translateY(-2px);
-
-    background:
-        var(--inquiry-brand-dark);
-
-    box-shadow:
-        0 12px 26px rgba(82, 114, 201, 0.23);
+    background: var(--primary-hover, #1d4ed8);
+    transform: translateY(-1px);
 }
 
-
-.ask-btn:active {
-
-    transform:
-        translateY(0)
-        scale(0.97);
-}
-
-
+.empty-action i,
 .ask-btn i {
-
     font-size: 14px;
 }
 
 
 /* =========================================================
-   UNREAD INQUIRY INDICATOR
-   ========================================================= */
-
-.unread-inquiry-dot {
-
-    display: inline-block;
-
-    width: 6px;
-    height: 6px;
-
-    margin-left: 5px;
-
-    vertical-align: middle;
-
-    border-radius: 50%;
-
-    background:
-        var(--inquiry-brand);
-
-    box-shadow:
-        0 0 0 3px rgba(82, 114, 201, 0.10);
-}
-
-
-/* =========================================================
-   FULL-SCREEN IMAGE LIGHTBOX
+   IMAGE LIGHTBOX
    ========================================================= */
 
 .image-lightbox {
-
     position: fixed;
-
     inset: 0;
-
     z-index: 9999;
-
     display: flex;
-
     align-items: center;
     justify-content: center;
-
-    width: 100%;
-    height: 100%;
-
-    padding: 32px;
-
-    background:
-        rgba(10, 13, 20, 0.88);
-
+    padding: 28px;
+    background: rgba(15, 23, 42, 0.88);
     opacity: 0;
-
     visibility: hidden;
-
     pointer-events: none;
-
-    transition:
-        opacity 180ms ease,
-        visibility 180ms ease;
+    transition: opacity 160ms ease, visibility 160ms ease;
 }
 
-
-/* =========================================================
-   LIGHTBOX OPEN STATE
-   ========================================================= */
-
 .image-lightbox.is-open {
-
     opacity: 1;
-
     visibility: visible;
-
     pointer-events: auto;
 }
 
-
-/* =========================================================
-   LIGHTBOX CONTENT
-   ========================================================= */
-
 .image-lightbox-content {
-
     position: relative;
-
     display: flex;
-
     align-items: center;
     justify-content: center;
-
     width: 100%;
     height: 100%;
-
     max-width: 1400px;
     max-height: 100%;
 }
 
-
-/* =========================================================
-   LIGHTBOX IMAGE
-   ========================================================= */
-
 .image-lightbox-image {
-
     display: block;
-
-    width: auto;
-
     max-width: 100%;
-
+    max-height: calc(100vh - 56px);
+    width: auto;
     height: auto;
-
-    max-height:
-        calc(100vh - 64px);
-
-    object-fit: contain;
-
-    border-radius:
-        12px;
-
-    box-shadow:
-        0 24px 80px rgba(0, 0, 0, 0.45);
-
-    transform:
-        scale(0.96);
-
-    transition:
-        transform 180ms var(--inquiry-ease);
+    border-radius: 9px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    transform: scale(0.98);
+    transition: transform 160ms ease;
 }
 
-
-/* =========================================================
-   IMAGE OPEN ANIMATION
-   ========================================================= */
-
-.image-lightbox.is-open
-.image-lightbox-image {
-
-    transform:
-        scale(1);
+.image-lightbox.is-open .image-lightbox-image {
+    transform: scale(1);
 }
-
-
-/* =========================================================
-   LIGHTBOX CLOSE BUTTON
-   ========================================================= */
 
 .image-lightbox-close {
-
     position: absolute;
-
     top: 0;
     right: 0;
-
     z-index: 2;
-
     display: inline-flex;
-
     align-items: center;
     justify-content: center;
-
-    width: 44px;
-    height: 44px;
-
-    border:
-        1px solid rgba(255, 255, 255, 0.18);
-
-    border-radius: 50%;
-
-    color:
-        #ffffff;
-
-    background:
-        rgba(255, 255, 255, 0.10);
-
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.10);
+    color: #ffffff;
     cursor: pointer;
-
-    backdrop-filter:
-        blur(12px);
-
-    -webkit-backdrop-filter:
-        blur(12px);
-
-    transition:
-        background-color 160ms ease,
-        border-color 160ms ease,
-        transform 160ms ease;
+    transition: background-color 150ms ease, transform 150ms ease;
 }
-
-
-/* =========================================================
-   CLOSE ICON
-   ========================================================= */
-
-.image-lightbox-close i {
-
-    font-size: 22px;
-
-    line-height: 1;
-}
-
-
-/* =========================================================
-   CLOSE BUTTON HOVER
-   ========================================================= */
 
 .image-lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.18);
+    transform: scale(1.03);
+}
 
-    background:
-        rgba(255, 255, 255, 0.20);
-
-    border-color:
-        rgba(255, 255, 255, 0.35);
-
-    transform:
-        scale(1.05);
+.image-lightbox-close i {
+    font-size: 19px;
 }
 
 
 /* =========================================================
-   CLOSE BUTTON ACTIVE
+   FOCUS STATES
    ========================================================= */
 
-.image-lightbox-close:active {
-
-    transform:
-        scale(0.96);
-}
-
-
-/* =========================================================
-   LIGHTBOX KEYBOARD FOCUS
-   ========================================================= */
-
+.inquiries-back-button:focus-visible,
+.inquiries-filter-tab:focus-visible,
+.inquiry-toggle:focus-visible,
+.response-image-trigger:focus-visible,
+.confirmation-btn:focus-visible,
+.empty-action:focus-visible,
 .image-lightbox-close:focus-visible {
-
-    outline:
-        2px solid #ffffff;
-
-    outline-offset:
-        4px;
+    outline: 2px solid var(--primary-color, #2563eb);
+    outline-offset: 3px;
 }
 
 
 /* =========================================================
-   MOBILE IMAGE
+   RESPONSIVE
    ========================================================= */
 
-@media (max-width: 640px) {
-
-    .inquiry-image-block
-    .inquiry-image-preview-trigger {
-
-        width: 100%;
-
-        max-width: 100%;
-    }
-
-
-    .inquiry-image-block
-    .inquiry-attached-image {
-
-        width: 100%;
-
-        max-width: 100%;
-
-        max-height: 300px;
-    }
-
-}
-
-
-/* =========================================================
-   RESPONSIVE — TABLET / MOBILE
-   ========================================================= */
-
-@media (max-width: 640px) {
-
-    /*
-     * Reduce page padding while maintaining enough
-     * breathing room around the content.
-     */
-
+@media (max-width: 760px) {
     .inquiries-page {
-
-        padding:
-            24px 16px 48px;
+        padding: 24px 18px 48px;
     }
 
-
-    .inquiries-header {
-
-        gap: 11px;
-
-        margin-bottom: 24px;
+    .inquiries-page-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 14px;
     }
 
-
-    .back-btn {
-
-        flex-basis: 38px;
-
-        width: 38px;
-        height: 38px;
+    .inquiries-back-button {
+        order: -1;
     }
 
-
-    .header-copy h1 {
-
-        font-size: 21px;
+    .inquiries-filter-tabs {
+        width: 100%;
+        overflow-x: auto;
     }
 
+    .inquiries-filter-tab {
+        flex: 1 0 auto;
+    }
 
-    .header-copy p {
+    .inquiries-section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+    }
+}
 
+@media (max-width: 520px) {
+    .inquiries-page {
+        padding: 20px 14px 40px;
+    }
+
+    .inquiries-header-copy h1 {
+        font-size: 23px;
+    }
+
+    .inquiries-header-copy p {
         font-size: 12px;
     }
 
-
-    /*
-     * Make the segmented filter control span the
-     * available mobile width.
-     */
-
-    .filter-bar {
-
-        width: 100%;
-
-        margin-bottom: 16px;
+    .inquiries-filter-tabs {
+        gap: 2px;
+        padding: 3px;
     }
 
-
-    .filter-btn {
-
-        flex: 1;
-
-        padding:
-            0 10px;
+    .inquiries-filter-tab {
+        min-height: 33px;
+        padding: 0 9px;
+        font-size: 11px;
     }
 
-
-    /*
-     * Slightly reduce card dimensions on phones.
-     */
-
-    .inquiry-card {
-
-        padding:
-            17px;
-
-        border-radius:
-            16px;
+    .inquiries-filter-tab span {
+        display: none;
     }
 
+    .inquiries-filter-tab i {
+        font-size: 16px;
+    }
 
-    .card-header {
-
+    .inquiry-toggle {
         gap: 10px;
-
-        margin-bottom: 11px;
+        padding: 13px;
     }
 
+    .inquiry-card-topline {
+        gap: 6px;
+    }
 
     .inquiry-date {
-
-        font-size: 10px;
+        margin-left: 0;
+        width: 100%;
     }
 
-
-    .question-preview {
-
-        font-size: 13px;
-
-        line-height: 1.55;
+    .inquiry-details {
+        margin-left: 13px;
+        margin-right: 13px;
     }
 
-
-    .answer-block {
-
-        padding:
-            14px;
+    .official-response,
+    .response-confirmation {
+        padding: 12px;
     }
 
-
-    .answer {
-
-        font-size: 12px;
-
-        line-height: 1.65;
+    .confirmation-actions {
+        flex-direction: column;
     }
 
-
-    .pending-message {
-
-        font-size: 11px;
+    .confirmation-btn {
+        width: 100%;
     }
 
-
-    .empty-state {
-
-        min-height: 340px;
-
-        padding:
-            40px 16px;
+    .image-lightbox {
+        padding: 16px;
     }
-
 }
-
-
-/* =========================================================
-   VERY SMALL PHONES
-   ========================================================= */
-
-@media (max-width: 380px) {
-
-    .inquiries-page {
-
-        padding-left: 13px;
-        padding-right: 13px;
-    }
-
-
-    .filter-btn {
-
-        padding:
-            0 7px;
-
-        font-size: 11px;
-    }
-
-
-    .inquiry-card {
-
-        padding:
-            15px;
-    }
-
-
-    .status {
-
-        padding:
-            0 8px;
-
-        font-size: 9px;
-    }
-
-
-    .inquiry-date {
-
-        font-size: 9px;
-    }
-
-
-    .question-preview {
-
-        font-size: 12px;
-    }
-
-}
-
-
-/* =========================================================
-   REDUCED MOTION
-   ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
-
-    .inquiries-header,
-    .back-btn,
-    .filter-btn,
+    .inquiries-page-header,
     .inquiry-card,
     .inquiry-chevron,
     .inquiry-details,
-    .inquiry-image-preview-trigger,
-    .ask-btn,
+    .response-image-trigger,
     .image-lightbox,
     .image-lightbox-image,
-    .image-lightbox-close {
-
+    .inquiries-back-button,
+    .inquiries-filter-tab {
         animation: none !important;
-
         transition: none !important;
     }
 
-
-    .inquiries-header {
-
-        transform: none;
-    }
-
-
-    .back-btn:hover,
     .inquiry-card:hover,
-    .inquiry-image-preview-trigger:hover,
+    .response-image-trigger:hover,
+    .empty-action:hover,
     .ask-btn:hover {
-
         transform: none;
     }
 }

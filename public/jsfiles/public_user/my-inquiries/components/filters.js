@@ -429,7 +429,7 @@ function initializeFilters() {
     const filterButtons =
         Array.from(
             document.querySelectorAll(
-                "[data-filter]"
+                ".inquiries-filter-tab[data-filter], [data-filter].filter-btn"
             )
         );
 

@@ -1,5 +1,19 @@
 @php
     $latestResponse = $req->latestResponse;
+
+    $statusLabels = [
+        'pending' => 'Waiting for response',
+        'awaiting_confirmation' => 'Response available',
+        'needs_follow_up' => 'Follow-up needed',
+        'answered' => 'Resolved',
+    ];
+
+    $statusIcons = [
+        'pending' => 'ph-clock',
+        'awaiting_confirmation' => 'ph-seal-question',
+        'needs_follow_up' => 'ph-arrow-counter-clockwise',
+        'answered' => 'ph-check',
+    ];
 @endphp
 
 <article
@@ -15,109 +29,52 @@
     >
         <div class="inquiry-summary">
 
-            <div class="inquiry-status-icon {{ $req->status }}">
+            <div class="inquiry-card-topline">
 
-                @switch($req->status)
+                <span class="inquiry-id">
+                    #{{ $req->id }}
+                </span>
 
-                    @case('pending')
+                <span class="inquiry-status-badge {{ $req->status }}">
+                    <i
+                        class="ph-light {{ $statusIcons[$req->status] ?? 'ph-clock' }}"
+                        aria-hidden="true"
+                    ></i>
 
-                        <i
-                            class="ph-light ph-clock"
-                            aria-hidden="true"
-                        ></i>
+                    {{ $statusLabels[$req->status] ?? ucfirst(str_replace('_', ' ', $req->status)) }}
+                </span>
 
-                        @break
-
-                    @case('awaiting_confirmation')
-
-                        <i
-                            class="ph-light ph-seal-question"
-                            aria-hidden="true"
-                        ></i>
-
-                        @break
-
-                    @case('needs_follow_up')
-
-                        <i
-                            class="ph-light ph-arrow-counter-clockwise"
-                            aria-hidden="true"
-                        ></i>
-
-                        @break
-
-                    @case('answered')
-
-                        <i
-                            class="ph-light ph-check"
-                            aria-hidden="true"
-                        ></i>
-
-                        @break
-
-                    @default
-
-                        <i
-                            class="ph-light ph-clock"
-                            aria-hidden="true"
-                        ></i>
-
-                @endswitch
+                @if ($req->created_at)
+                    <time
+                        datetime="{{ $req->created_at->toISOString() }}"
+                        class="inquiry-date"
+                    >
+                        {{ $req->created_at->format('M d, Y') }}
+                    </time>
+                @endif
 
             </div>
 
-            <div class="inquiry-summary-content">
-
-                <div class="inquiry-meta">
-
-                    <span class="inquiry-status">
-                        @switch($req->status)
-
-                            @case('pending')
-                                Waiting for response
-                                @break
-
-                            @case('awaiting_confirmation')
-                                Response available
-                                @break
-
-                            @case('needs_follow_up')
-                                Follow-up needed
-                                @break
-
-                            @case('answered')
-                                Resolved
-                                @break
-
-                            @default
-                                {{ ucfirst(str_replace('_', ' ', $req->status)) }}
-
-                        @endswitch
-                    </span>
-
-                    @if ($req->created_at)
-                        <time
-                            datetime="{{ $req->created_at->toISOString() }}"
-                            class="inquiry-date"
-                        >
-                            {{ $req->created_at->format('M d, Y') }}
-                        </time>
-                    @endif
-
-                </div>
+            <div class="inquiry-card-content">
 
                 <p class="inquiry-question">
                     {{ $req->question }}
                 </p>
 
+                @if ($req->agency)
+                    <span class="inquiry-agency">
+                        <i class="ph-light ph-buildings" aria-hidden="true"></i>
+                        {{ $req->agency->agency_name }}
+                    </span>
+                @endif
+
             </div>
 
-            <i
-                class="ph-light ph-caret-down inquiry-chevron"
-                aria-hidden="true"
-            ></i>
-
         </div>
+
+        <span class="inquiry-chevron" aria-hidden="true">
+            <i class="ph-light ph-caret-down"></i>
+        </span>
     </button>
 
 
@@ -125,118 +82,119 @@
         id="inquiry-details-{{ $req->id }}"
         class="inquiry-details"
         hidden
+        aria-hidden="true"
     >
+        <div class="inquiry-details-inner">
 
-        <div class="inquiry-question-full">
+            <section class="inquiry-question-full">
 
-            <span class="inquiry-section-label">
-                Your Question
-            </span>
+                <div class="inquiry-detail-heading">
+                    <i class="ph-light ph-quotes" aria-hidden="true"></i>
+                    <span>Your Question</span>
+                </div>
 
-            <p>
-                {{ $req->question }}
-            </p>
+                <p>
+                    {{ $req->question }}
+                </p>
 
-        </div>
+            </section>
 
 
-        @if ($latestResponse)
+            @if ($latestResponse)
 
-            <section class="official-response">
+                <section class="official-response">
 
-                <div class="official-response-header">
+                    <div class="official-response-header">
 
-                    <div class="official-response-title">
+                        <div class="official-response-title">
 
-                        <i
-                            class="ph-light ph-seal-check"
-                            aria-hidden="true"
-                        ></i>
+                            <i
+                                class="ph-light ph-seal-check"
+                                aria-hidden="true"
+                            ></i>
 
-                        <span>
-                            Official Response
-                        </span>
+                            <span>Official Response</span>
+
+                        </div>
+
+                        @if ($latestResponse->forwarded_at)
+                            <time
+                                datetime="{{ $latestResponse->forwarded_at->toISOString() }}"
+                                class="response-date"
+                            >
+                                {{ $latestResponse->forwarded_at->format('M d, Y') }}
+                            </time>
+                        @endif
 
                     </div>
 
-                    @if ($latestResponse->forwarded_at)
 
-                        <time
-                            datetime="{{ $latestResponse->forwarded_at->toISOString() }}"
-                            class="response-date"
-                        >
-                            {{ $latestResponse->forwarded_at->format('M d, Y') }}
-                        </time>
+                    <div class="response-components">
 
-                    @endif
+                        @foreach ($latestResponse->components as $component)
 
-                </div>
+                            @switch($component->type)
 
-
-                <div class="response-components">
-
-                    @foreach ($latestResponse->components as $component)
-
-                        @switch($component->type)
-
-                            @case('text')
-
-                                <div class="response-component response-component-text">
-
-                                    <p>
-                                        {{ $component->content }}
-                                    </p>
-
-                                </div>
-
-                                @break
-
-
-                            @case('image')
-
-                                @if ($component->attachment_url)
-
-                                    <div class="response-component response-component-image">
-
-                                        @if ($component->label)
-                                            <span class="response-component-label">
-                                                {{ $component->label }}
-                                            </span>
-                                        @endif
-
-                                        <button
-                                            type="button"
-                                            class="response-image-trigger"
-                                            data-image-url="{{ $component->attachment_url }}"
-                                            aria-label="View response image"
-                                        >
-                                            <img
-                                                src="{{ $component->attachment_url }}"
-                                                alt="{{ $component->label ?: 'Official response image' }}"
-                                                loading="lazy"
-                                            >
-                                        </button>
-
+                                @case('text')
+                                    <div class="response-component response-component-text">
+                                        <p>{{ $component->content }}</p>
                                     </div>
+                                    @break
 
-                                @endif
+                                @case('image')
+                                    @if ($component->attachment_url)
+                                        <div class="response-component response-component-image">
+                                            @if ($component->label)
+                                                <span class="response-component-label">
+                                                    {{ $component->label }}
+                                                </span>
+                                            @endif
 
-                                @break
+                                            <button
+                                                type="button"
+                                                class="response-image-trigger"
+                                                data-image-url="{{ $component->attachment_url }}"
+                                                aria-label="View response image"
+                                            >
+                                                <img
+                                                    src="{{ $component->attachment_url }}"
+                                                    alt="{{ $component->label ?: 'Official response image' }}"
+                                                    loading="lazy"
+                                                >
+                                            </button>
+                                        </div>
+                                    @endif
+                                    @break
 
+                                @case('file')
+                                    @if ($component->attachment_url)
+                                        <div class="response-component response-component-file">
+                                            <i class="ph-light ph-file" aria-hidden="true"></i>
 
-                            @case('file')
+                                            <div class="response-file-info">
+                                                @if ($component->label)
+                                                    <span class="response-component-label">
+                                                        {{ $component->label }}
+                                                    </span>
+                                                @endif
 
-                                @if ($component->attachment_url)
+                                                <a
+                                                    href="{{ $component->attachment_url }}"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                >
+                                                    View document
+                                                </a>
+                                            </div>
+                                        </div>
+                                    @endif
+                                    @break
 
-                                    <div class="response-component response-component-file">
+                                @case('link')
+                                    <div class="response-component response-component-link">
+                                        <i class="ph-light ph-link" aria-hidden="true"></i>
 
-                                        <i
-                                            class="ph-light ph-file"
-                                            aria-hidden="true"
-                                        ></i>
-
-                                        <div class="response-file-info">
-
+                                        <div class="response-link-info">
                                             @if ($component->label)
                                                 <span class="response-component-label">
                                                     {{ $component->label }}
@@ -244,122 +202,73 @@
                                             @endif
 
                                             <a
-                                                href="{{ $component->attachment_url }}"
+                                                href="{{ $component->content }}"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                             >
-                                                View document
+                                                {{ $component->content }}
                                             </a>
-
                                         </div>
-
                                     </div>
+                                    @break
 
-                                @endif
+                                @case('qr_code')
+                                    <div class="response-component response-component-qr">
+                                        <i class="ph-light ph-qr-code" aria-hidden="true"></i>
 
-                                @break
+                                        <div class="response-qr-info">
+                                            @if ($component->label)
+                                                <span class="response-component-label">
+                                                    {{ $component->label }}
+                                                </span>
+                                            @endif
 
-
-                            @case('link')
-
-                                <div class="response-component response-component-link">
-
-                                    <i
-                                        class="ph-light ph-link"
-                                        aria-hidden="true"
-                                    ></i>
-
-                                    <div class="response-link-info">
-
-                                        @if ($component->label)
-                                            <span class="response-component-label">
-                                                {{ $component->label }}
-                                            </span>
-                                        @endif
-
-                                        <a
-                                            href="{{ $component->content }}"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                        >
-                                            {{ $component->content }}
-                                        </a>
-
+                                            <a
+                                                href="{{ $component->content }}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                Open QR destination
+                                            </a>
+                                        </div>
                                     </div>
+                                    @break
 
-                                </div>
+                            @endswitch
 
-                                @break
+                        @endforeach
 
+                    </div>
 
-                            @case('qr_code')
+                </section>
 
-                                <div class="response-component response-component-qr">
+                @if ($req->status === 'awaiting_confirmation')
+                    @include(
+                        'public_user.my-inquiries.components.response-confirmation',
+                        ['req' => $req]
+                    )
+                @endif
 
-                                    <i
-                                        class="ph-light ph-qr-code"
-                                        aria-hidden="true"
-                                    ></i>
+            @else
 
-                                    <div class="response-qr-info">
+                <section class="inquiry-pending-message">
 
-                                        @if ($component->label)
-                                            <span class="response-component-label">
-                                                {{ $component->label }}
-                                            </span>
-                                        @endif
+                    <div class="inquiry-pending-icon" aria-hidden="true">
+                        <i class="ph-light ph-clock"></i>
+                    </div>
 
-                                        <a
-                                            href="{{ $component->content }}"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                        >
-                                            Open QR destination
-                                        </a>
+                    <div>
+                        <strong>Waiting for an official response</strong>
 
-                                    </div>
+                        <p>
+                            The office has not submitted a response to this inquiry yet.
+                        </p>
+                    </div>
 
-                                </div>
+                </section>
 
-                                @break
-
-                        @endswitch
-
-                    @endforeach
-
-                </div>
-
-            </section>
-
-            @if ($req->status === 'awaiting_confirmation')
-                @include(
-                    'public_user.my-inquiries.components.response-confirmation',
-                    ['req' => $req]
-                )
             @endif
 
-        @else
-
-            <section class="inquiry-pending-message">
-
-                <i
-                    class="ph-light ph-clock"
-                    aria-hidden="true"
-                ></i>
-
-                <div>
-                    <strong>
-                        Waiting for an official response
-                    </strong>
-
-                    <p>
-                        The office has not submitted a response to this inquiry yet.
-                    </p>
-                </div>
-
-            </section>
-
-        @endif
-
+        </div>
     </div>
 </article>

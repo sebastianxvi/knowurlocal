@@ -125,7 +125,7 @@ function initializeConfirmation() {
 
     const updateStatusLabel = (card, status) => {
         const statusElement = card?.querySelector(
-            ".inquiry-status"
+            ".inquiry-status-badge"
         );
 
         if (!statusElement) {
@@ -151,16 +151,26 @@ function initializeConfirmation() {
         }
 
         /*
-        | Update only the textual status.
-        | We intentionally avoid innerHTML because status content
-        | can eventually be influenced by server-side data.
+        | Rebuild the complete badge through DOM APIs.
+        | This keeps the status label and icon synchronized
+        | without injecting server-provided HTML.
         */
-        const label = document.createElement("span");
+        statusElement.className =
+            `inquiry-status-badge ${status}`;
 
-        label.textContent = config.label;
+        const icon = document.createElement("i");
+
+        icon.className =
+            `ph-light ${config.icon}`;
+
+        icon.setAttribute(
+            "aria-hidden",
+            "true"
+        );
 
         statusElement.replaceChildren(
-            label
+            icon,
+            document.createTextNode(config.label)
         );
     };
 

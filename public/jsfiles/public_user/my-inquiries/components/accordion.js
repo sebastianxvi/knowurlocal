@@ -44,6 +44,13 @@ function initializeAccordion() {
             "aria-hidden",
             "true"
         );
+
+        /*
+        | The hidden attribute is semantic and visual.
+        | Removing it is required before the CSS grid transition
+        | can reveal the detail region.
+        */
+        details.hidden = true;
     };
 
 
@@ -161,6 +168,12 @@ function initializeAccordion() {
             "aria-hidden",
             "false"
         );
+
+        /*
+        | Release the native hidden state so the expandable
+        | region can participate in the CSS grid animation.
+        */
+        details.hidden = false;
 
         /*
         | The legacy "seen" endpoint is only relevant once

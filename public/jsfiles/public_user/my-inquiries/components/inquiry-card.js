@@ -489,31 +489,19 @@ function updateStatus(card, status) {
     /**
      * Update the status icon container.
      */
-    const iconContainer =
+    const statusBadge =
         card.querySelector(
-            '.inquiry-status-icon'
+            '.inquiry-status-badge'
         );
 
-    if (iconContainer) {
-        iconContainer.className =
-            `inquiry-status-icon ${status}`;
+    if (statusBadge) {
+        statusBadge.className =
+            `inquiry-status-badge ${status}`;
 
-        iconContainer.replaceChildren(
-            createIcon(config.icon)
+        statusBadge.replaceChildren(
+            createIcon(config.icon),
+            document.createTextNode(config.label)
         );
-    }
-
-    /**
-     * Update the status text.
-     */
-    const statusElement =
-        card.querySelector(
-            '.inquiry-status'
-        );
-
-    if (statusElement) {
-        statusElement.textContent =
-            config.label;
     }
 }
 

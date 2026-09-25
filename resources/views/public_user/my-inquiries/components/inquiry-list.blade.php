@@ -1,78 +1,91 @@
-<!-- ================= FILTERS ================= -->
+<section class="inquiries-toolbar" aria-label="Inquiry filters">
 
-<div
-    class="filter-bar"
-    role="group"
-    aria-label="Filter inquiries"
->
+    <div class="inquiries-filter-tabs" role="group" aria-label="Filter inquiries">
 
-    {{-- NEEDS ATTENTION --}}
+        <button
+            type="button"
+            class="inquiries-filter-tab active"
+            data-filter="needs_attention"
+            aria-pressed="true"
+        >
+            <i class="ph-light ph-seal-question" aria-hidden="true"></i>
+            <span>Needs Attention</span>
+        </button>
 
-    <button
-        type="button"
-        class="filter-btn active"
-        data-filter="needs_attention"
-        aria-pressed="true"
-    >
-        Needs Attention
-    </button>
+        <button
+            type="button"
+            class="inquiries-filter-tab"
+            data-filter="pending"
+            aria-pressed="false"
+        >
+            <i class="ph-light ph-clock" aria-hidden="true"></i>
+            <span>Pending</span>
+        </button>
 
+        <button
+            type="button"
+            class="inquiries-filter-tab"
+            data-filter="follow_up"
+            aria-pressed="false"
+        >
+            <i class="ph-light ph-arrow-counter-clockwise" aria-hidden="true"></i>
+            <span>Follow-up</span>
+        </button>
 
-    {{-- PENDING --}}
+        <button
+            type="button"
+            class="inquiries-filter-tab"
+            data-filter="answered"
+            aria-pressed="false"
+        >
+            <i class="ph-light ph-check-circle" aria-hidden="true"></i>
+            <span>Answered</span>
+        </button>
 
-    <button
-        type="button"
-        class="filter-btn"
-        data-filter="pending"
-        aria-pressed="false"
-    >
-        Pending
-    </button>
+    </div>
 
-
-    {{-- FOLLOW-UP --}}
-
-    <button
-        type="button"
-        class="filter-btn"
-        data-filter="follow_up"
-        aria-pressed="false"
-    >
-        Follow-up
-    </button>
-
-
-    {{-- ANSWERED --}}
-
-    <button
-        type="button"
-        class="filter-btn"
-        data-filter="answered"
-        aria-pressed="false"
-    >
-        Answered
-    </button>
-
-</div>
+</section>
 
 
-<!-- ================= INQUIRIES ================= -->
+<section class="inquiries-section" aria-labelledby="inquiries-section-title">
 
-<main class="inquiries-list">
+    <div class="inquiries-section-heading">
 
-    @forelse($requests as $req)
+        <div>
+            <span class="inquiries-section-eyebrow">Your activity</span>
 
-        @include(
-            'public_user.my-inquiries.components.inquiry-card',
-            ['req' => $req]
-        )
+            <h2 id="inquiries-section-title">
+                Inquiry history
+            </h2>
+        </div>
 
-    @empty
+        <div class="inquiries-section-meta">
+            <i class="ph-light ph-list-dashes" aria-hidden="true"></i>
+            <span>
+                {{ $requests->count() }}
+                {{ Str::plural('inquiry', $requests->count()) }}
+            </span>
+        </div>
 
-        @include(
-            'public_user.my-inquiries.components.empty-state'
-        )
+    </div>
 
-    @endforelse
+    <main class="inquiries-list">
 
-</main>
+        @forelse($requests as $req)
+
+            @include(
+                'public_user.my-inquiries.components.inquiry-card',
+                ['req' => $req]
+            )
+
+        @empty
+
+            @include(
+                'public_user.my-inquiries.components.empty-state'
+            )
+
+        @endforelse
+
+    </main>
+
+</section>
