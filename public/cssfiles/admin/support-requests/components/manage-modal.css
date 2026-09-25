@@ -11,7 +11,6 @@
 .support-modal-back {
     position: fixed;
     inset: 0;
-
     z-index: 1000;
 
     display: flex;
@@ -20,8 +19,9 @@
 
     padding: 24px;
 
-    background:
-        rgba(15, 23, 42, 0.46);
+    background: rgba(15, 23, 42, 0.52);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 
     opacity: 0;
     visibility: hidden;
@@ -36,9 +36,7 @@
 .support-modal-back[aria-hidden="false"],
 .support-modal-back.active {
     opacity: 1;
-
     visibility: visible;
-
     pointer-events: auto;
 }
 
@@ -51,39 +49,31 @@
     display: flex;
     flex-direction: column;
 
-    width: min(760px, 100%);
+    width: min(820px, 100%);
 
-    max-height:
-        min(860px, calc(100vh - 48px));
+    max-height: min(880px, calc(100vh - 40px));
 
     overflow: hidden;
 
-    border: 1px solid
-        rgba(229, 231, 235, 0.95);
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 16px;
 
-    border-radius: 14px;
-
-    background:
-        var(--surface, #ffffff);
+    background: #ffffff;
 
     box-shadow:
-        0 24px 70px
-        rgba(15, 23, 42, 0.18),
-        0 6px 20px
-        rgba(15, 23, 42, 0.08);
+        0 32px 80px rgba(15, 23, 42, 0.18),
+        0 12px 30px rgba(15, 23, 42, 0.08);
 
-    transform:
-        translateY(8px) scale(0.985);
+    transform: translateY(10px) scale(0.985);
 
     transition:
-        transform 180ms ease;
+        transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .support-modal-back.is-open .support-modal,
 .support-modal-back[aria-hidden="false"] .support-modal,
 .support-modal-back.active .support-modal {
-    transform:
-        translateY(0) scale(1);
+    transform: translateY(0) scale(1);
 }
 
 
@@ -98,13 +88,13 @@
 
     flex: 0 0 auto;
 
-    padding: 18px 20px;
+    min-height: 70px;
 
-    border-bottom: 1px solid
-        var(--border-color, #e5e7eb);
+    padding: 15px 20px;
 
-    background:
-        var(--surface, #ffffff);
+    border-bottom: 1px solid #eef2f7;
+
+    background: #ffffff;
 }
 
 .support-modal-heading {
@@ -117,20 +107,19 @@
 }
 
 .support-modal-icon {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
 
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
 
-    flex: 0 0 38px;
+    flex: 0 0 40px;
 
     border: 1px solid #dbeafe;
+    border-radius: 10px;
 
-    border-radius: 9px;
-
-    background: #eff6ff;
+    background: #f5f9ff;
 
     color: #2563eb;
 }
@@ -141,24 +130,23 @@
 
 .support-modal-icon-faq {
     border-color: #e0e7ff;
-
-    background: #eef2ff;
-
+    background: #f5f6ff;
     color: #4f46e5;
 }
 
 .support-modal-eyebrow {
     display: block;
 
-    margin-bottom: 2px;
+    margin-bottom: 3px;
 
-    color:
-        var(--text-muted, #9ca3af);
+    color: #94a3b8;
 
     font-size: 10px;
-    font-weight: 650;
+    font-weight: 700;
 
-    letter-spacing: 0.07em;
+    letter-spacing: 0.08em;
+
+    line-height: 1.2;
 
     text-transform: uppercase;
 }
@@ -166,13 +154,14 @@
 .support-modal-heading h2 {
     margin: 0;
 
-    color:
-        var(--text-primary, #111827);
+    color: #0f172a;
 
     font-size: 17px;
-    font-weight: 650;
+    font-weight: 700;
 
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
+
+    line-height: 1.3;
 }
 
 .support-modal-close {
@@ -186,31 +175,31 @@
     flex: 0 0 34px;
 
     border: 1px solid transparent;
-
-    border-radius: 7px;
+    border-radius: 8px;
 
     background: transparent;
 
-    color:
-        var(--text-muted, #9ca3af);
+    color: #94a3b8;
 
     cursor: pointer;
 
     transition:
         background-color 140ms ease,
+        border-color 140ms ease,
         color 140ms ease,
-        border-color 140ms ease;
+        transform 140ms ease;
 }
 
 .support-modal-close:hover {
-    border-color:
-        var(--border-color, #e5e7eb);
+    border-color: #e2e8f0;
 
-    background:
-        var(--surface-secondary, #f9fafb);
+    background: #f8fafc;
 
-    color:
-        var(--text-primary, #374151);
+    color: #334155;
+}
+
+.support-modal-close:active {
+    transform: scale(0.95);
 }
 
 .support-modal-close i {
@@ -239,15 +228,16 @@
     overflow-y: auto;
     overflow-x: hidden;
 
-    padding: 20px;
+    padding: 22px;
 
     overscroll-behavior: contain;
 
     scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
 }
 
 .support-modal-body::-webkit-scrollbar {
-    width: 7px;
+    width: 6px;
 }
 
 .support-modal-body::-webkit-scrollbar-track {
@@ -257,11 +247,11 @@
 .support-modal-body::-webkit-scrollbar-thumb {
     border-radius: 999px;
 
-    background: #d1d5db;
+    background: #cbd5e1;
 }
 
 .support-modal-body::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: #94a3b8;
 }
 
 
@@ -273,42 +263,47 @@
     padding: 0;
 }
 
-.support-modal-section
-+ .support-modal-section {
-    margin-top: 22px;
+.support-modal-section + .support-modal-section {
+    margin-top: 26px;
 
-    padding-top: 22px;
+    padding-top: 26px;
 
-    border-top: 1px solid
-        var(--border-color, #eef0f2);
+    border-top: 1px solid #eef2f7;
 }
 
 .support-modal-section-heading {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
-.support-modal-section-heading > span,
+.support-modal-section-heading > div {
+    display: flex;
+    flex-direction: column;
+
+    gap: 3px;
+}
+
 .support-modal-section-heading > div > span {
     display: block;
 
-    color:
-        var(--text-primary, #374151);
+    color: #334155;
 
     font-size: 12px;
-    font-weight: 650;
+    font-weight: 700;
+
+    line-height: 1.35;
 }
 
 .support-modal-section-heading small {
     display: block;
 
-    margin-top: 3px;
+    margin: 0;
 
-    color:
-        var(--text-muted, #9ca3af);
+    color: #94a3b8;
 
     font-size: 11px;
+    font-weight: 400;
 
-    line-height: 1.45;
+    line-height: 1.5;
 }
 
 
@@ -335,11 +330,12 @@
 
     margin-bottom: 6px;
 
-    color:
-        var(--text-muted, #6b7280);
+    color: #64748b;
 
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 650;
+
+    line-height: 1.3;
 }
 
 .support-detail-value input,
@@ -349,21 +345,31 @@
 
     padding: 0 11px;
 
-    border: 1px solid
-        var(--border-color, #e5e7eb);
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
 
-    border-radius: 8px;
+    background: #f8fafc;
 
-    background:
-        var(--surface-secondary, #f9fafb);
-
-    color:
-        var(--text-secondary, #4b5563);
+    color: #475569;
 
     font: inherit;
     font-size: 13px;
 
     outline: none;
+
+    transition:
+        border-color 140ms ease,
+        background-color 140ms ease,
+        box-shadow 140ms ease;
+}
+
+.support-detail-value input:focus,
+#sr-user:focus {
+    border-color: #bfdbfe;
+
+    background: #ffffff;
+
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
 
@@ -384,16 +390,12 @@
 
     padding: 0 36px 0 11px;
 
-    border: 1px solid
-        var(--border-color, #e5e7eb);
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
 
-    border-radius: 8px;
+    background: #ffffff;
 
-    background:
-        var(--surface, #ffffff);
-
-    color:
-        var(--text-primary, #374151);
+    color: #334155;
 
     font: inherit;
     font-size: 13px;
@@ -402,19 +404,19 @@
 
     transition:
         border-color 140ms ease,
-        box-shadow 140ms ease;
+        box-shadow 140ms ease,
+        background-color 140ms ease;
+}
+
+#sr-agency-search:hover {
+    border-color: #cbd5e1;
 }
 
 #sr-agency-search:focus {
-    border-color:
-        var(--primary-color, #2563eb);
+    border-color: #93c5fd;
 
     box-shadow:
-        0 0 0 3px
-        var(
-            --primary-soft,
-            rgba(37, 99, 235, 0.10)
-        );
+        0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
 .support-agency-caret {
@@ -423,26 +425,23 @@
     top: 50%;
     right: 11px;
 
-    color:
-        var(--text-muted, #9ca3af);
+    color: #94a3b8;
 
     font-size: 15px;
 
     pointer-events: none;
 
-    transform:
-        translateY(-50%);
+    transform: translateY(-50%);
 }
 
-#support-agency-searchable.is-open
-#sr-agency-options {
+#support-agency-searchable.is-open #sr-agency-options {
     display: block;
 }
 
 #sr-agency-options {
     position: absolute;
 
-    top: calc(100% + 5px);
+    top: calc(100% + 6px);
 
     right: 0;
     left: 0;
@@ -457,17 +456,14 @@
 
     padding: 5px;
 
-    border: 1px solid
-        var(--border-color, #e5e7eb);
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
 
-    border-radius: 8px;
-
-    background:
-        var(--surface, #ffffff);
+    background: #ffffff;
 
     box-shadow:
-        0 12px 30px
-        rgba(15, 23, 42, 0.10);
+        0 18px 40px rgba(15, 23, 42, 0.12),
+        0 4px 12px rgba(15, 23, 42, 0.05);
 }
 
 .searchable-select-option {
@@ -476,18 +472,16 @@
 
     width: 100%;
 
-    min-height: 36px;
+    min-height: 38px;
 
-    padding: 0 9px;
+    padding: 0 10px;
 
     border: 0;
-
-    border-radius: 6px;
+    border-radius: 7px;
 
     background: transparent;
 
-    color:
-        var(--text-secondary, #4b5563);
+    color: #475569;
 
     font: inherit;
     font-size: 12px;
@@ -503,18 +497,15 @@
 
 .searchable-select-option:hover,
 .searchable-select-option.is-selected {
-    background:
-        var(--surface-secondary, #f3f4f6);
+    background: #f1f5f9;
 
-    color:
-        var(--text-primary, #111827);
+    color: #0f172a;
 }
 
 .searchable-select-empty {
-    padding: 10px;
+    padding: 11px;
 
-    color:
-        var(--text-muted, #9ca3af);
+    color: #94a3b8;
 
     font-size: 12px;
 
@@ -542,17 +533,19 @@
 .support-question-display {
     display: flex;
 
-    gap: 11px;
+    gap: 12px;
 
-    padding: 13px;
+    padding: 15px;
 
-    border: 1px solid
-        var(--border-color, #e5e7eb);
-
-    border-radius: 9px;
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
 
     background:
-        var(--surface-secondary, #f9fafb);
+        linear-gradient(
+            180deg,
+            #f8fafc 0%,
+            #f5f7fa 100%
+        );
 }
 
 .support-question-display-icon {
@@ -564,8 +557,7 @@
 
     flex: 0 0 28px;
 
-    color:
-        var(--text-muted, #9ca3af);
+    color: #64748b;
 }
 
 .support-question-display-icon i {
@@ -587,16 +579,84 @@
 
     background: transparent;
 
-    color:
-        var(--text-secondary, #4b5563);
+    color: #334155;
 
     font: inherit;
 
     font-size: 13px;
 
-    line-height: 1.55;
+    line-height: 1.6;
 
     outline: none;
+}
+
+
+/* =========================================================
+   RESPONSE AREA — VISUAL SEPARATION
+   ========================================================= */
+
+.support-response-history,
+.support-response-latest,
+.support-response-new {
+    position: relative;
+}
+
+
+/*
+ * Historical information is intentionally quieter than
+ * the editable response area.
+ */
+
+.support-response-history {
+    margin-top: 4px;
+}
+
+
+/*
+ * The new response is the primary task of this modal,
+ * so it receives stronger visual separation.
+ */
+
+.support-response-new {
+    position: relative;
+
+    margin-top: 22px;
+    padding-top: 20px;
+
+    border-top: 1px solid #e2e8f0;
+}
+
+/* =========================================================
+   OFFICIAL RESPONSE SECTION
+   =========================================================
+   Creates deliberate breathing room between the citizen's
+   question/follow-up context and the response-building area.
+   ========================================================= */
+
+.support-modal-official-response {
+    margin-top: 24px;
+}
+
+
+/* =========================================================
+   RESPONSE SECTION HEADERS
+   ========================================================= */
+
+.support-response-section-eyebrow {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #94a3b8;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    letter-spacing: 0.07em;
+
+    line-height: 1.3;
+
+    text-transform: uppercase;
 }
 
 
@@ -613,13 +673,14 @@
 
     flex: 0 0 auto;
 
-    padding: 13px 20px;
+    min-height: 62px;
 
-    border-top: 1px solid
-        var(--border-color, #e5e7eb);
+    padding: 12px 20px;
+
+    border-top: 1px solid #eef2f7;
 
     background:
-        var(--surface, #ffffff);
+        rgba(255, 255, 255, 0.98);
 }
 
 .support-modal-button {
@@ -629,15 +690,15 @@
 
     gap: 7px;
 
-    min-height: 36px;
+    min-height: 37px;
 
-    padding: 0 13px;
+    padding: 0 14px;
 
-    border-radius: 7px;
+    border-radius: 8px;
 
     font: inherit;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 650;
 
     cursor: pointer;
 
@@ -645,41 +706,8 @@
         background-color 140ms ease,
         border-color 140ms ease,
         color 140ms ease,
+        box-shadow 140ms ease,
         transform 140ms ease;
-}
-
-.support-modal-cancel {
-    border: 1px solid
-        var(--border-color, #e5e7eb);
-
-    background:
-        var(--surface, #ffffff);
-
-    color:
-        var(--text-secondary, #4b5563);
-}
-
-.support-modal-cancel:hover {
-    background:
-        var(--surface-secondary, #f9fafb);
-
-    border-color:
-        var(--border-hover, #d1d5db);
-}
-
-.support-modal-save {
-    border: 1px solid
-        var(--primary-color, #2563eb);
-
-    background:
-        var(--primary-color, #2563eb);
-
-    color: #ffffff;
-}
-
-.support-modal-save:hover {
-    background:
-        var(--primary-hover, #1d4ed8);
 }
 
 .support-modal-button:active {
@@ -688,6 +716,86 @@
 
 .support-modal-button i {
     font-size: 15px;
+}
+
+
+/* =========================================================
+   CANCEL BUTTON
+   ========================================================= */
+
+.support-modal-cancel {
+    border: 1px solid #e2e8f0;
+
+    background: #ffffff;
+
+    color: #475569;
+}
+
+.support-modal-cancel:hover {
+    border-color: #cbd5e1;
+
+    background: #f8fafc;
+
+    color: #1e293b;
+}
+
+
+/* =========================================================
+   PRIMARY ACTION
+   ========================================================= */
+
+.support-modal-save {
+    border: 1px solid #2563eb;
+
+    background: #2563eb;
+
+    color: #ffffff;
+
+    box-shadow:
+        0 1px 2px rgba(37, 99, 235, 0.12);
+}
+
+.support-modal-save:hover {
+    border-color: #1d4ed8;
+
+    background: #1d4ed8;
+
+    box-shadow:
+        0 4px 12px rgba(37, 99, 235, 0.18);
+}
+
+
+/* =========================================================
+   DISABLED FORWARD BUTTON
+   ========================================================= */
+
+#forward-response-btn:disabled {
+    opacity: 0.55;
+
+    border-color: #e2e8f0;
+
+    background: #e2e8f0;
+
+    color: #64748b;
+
+    cursor: not-allowed;
+
+    box-shadow: none;
+
+    transform: none;
+}
+
+#forward-response-btn:disabled:hover,
+#forward-response-btn:disabled:active {
+    border-color: #e2e8f0;
+
+    background: #e2e8f0;
+
+    color: #64748b;
+
+    box-shadow: none;
+
+    transform: none;
 }
 
 
@@ -715,10 +823,9 @@ body.support-modal-open {
     .support-modal {
         width: 100%;
 
-        max-height: 92vh;
+        max-height: 94vh;
 
-        border-radius:
-            14px 14px 0 0;
+        border-radius: 16px 16px 0 0;
     }
 
     .support-request-details-grid {
@@ -726,70 +833,250 @@ body.support-modal-open {
     }
 
     .support-modal-header {
-        padding: 15px 16px;
+        min-height: 64px;
+
+        padding: 14px 16px;
     }
 
     .support-modal-body {
-        padding: 16px;
+        padding: 18px 16px;
     }
 
     .support-modal-footer {
-        padding: 12px 16px;
-    }
+        min-height: 60px;
 
+        padding: 11px 16px;
+    }
 }
 
+
 @media (max-width: 480px) {
+
+    .support-modal-heading {
+        gap: 9px;
+    }
+
+    .support-modal-icon {
+        width: 36px;
+        height: 36px;
+
+        flex-basis: 36px;
+    }
+
+    .support-modal-heading h2 {
+        font-size: 16px;
+    }
 
     .support-modal-footer {
         display: grid;
 
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1.35fr;
     }
 
     .support-modal-button {
         width: 100%;
     }
-
 }
 
-/*
-|--------------------------------------------------------------------------
-| DISABLED FORWARD BUTTON
-|--------------------------------------------------------------------------
-|
-| Visually communicates that forwarding is unavailable because
-| the ticket is currently waiting for citizen confirmation or
-| has already been answered.
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   CITIZEN FOLLOW-UP / CLARIFICATION REQUEST
+   ========================================================= */
 
-#forward-response-btn:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-    background: #e5e7eb;
-    border-color: #d1d5db;
-    color: #6b7280;
-    box-shadow: none;
-    transform: none;
+.support-follow-up {
+    position: relative;
+
+    margin-top: 14px;
+
+    padding: 13px 14px 14px;
+
+    border: 1px solid #fed7aa;
+    border-radius: 11px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #fffaf5 0%,
+            #ffffff 100%
+        );
+
+    box-shadow:
+        0 2px 8px rgba(234, 88, 12, 0.035);
 }
 
 
 /*
- * Prevent hover styling from making a disabled button appear active.
+ * Small accent line establishes that this is a
+ * special workflow state rather than normal content.
  */
-#forward-response-btn:disabled:hover {
-    background: #e5e7eb;
-    border-color: #d1d5db;
-    color: #6b7280;
-    box-shadow: none;
-    transform: none;
+
+.support-follow-up::before {
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    left: 14px;
+
+    width: 28px;
+    height: 3px;
+
+    border-radius: 0 0 999px 999px;
+
+    background: #f59e0b;
 }
 
 
-/*
- * Keep the disabled state visually stable during interaction.
- */
-#forward-response-btn:disabled:active {
-    transform: none;
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.support-follow-up-header {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    min-width: 0;
+}
+
+
+/* =========================================================
+   ICON
+   ========================================================= */
+
+.support-follow-up-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 34px;
+    height: 34px;
+
+    flex: 0 0 34px;
+
+    border: 1px solid #fed7aa;
+    border-radius: 9px;
+
+    background: #fff7ed;
+
+    color: #d97706;
+}
+
+.support-follow-up-icon i {
+    font-size: 16px;
+}
+
+
+/* =========================================================
+   HEADER TEXT
+   ========================================================= */
+
+.support-follow-up-header > div:last-child {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 0;
+}
+
+.support-follow-up-header span {
+    color: #a16207;
+
+    font-size: 9px;
+    font-weight: 700;
+
+    letter-spacing: 0.08em;
+
+    line-height: 1.3;
+
+    text-transform: uppercase;
+}
+
+.support-follow-up-header strong {
+    margin-top: 2px;
+
+    color: #78350f;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    line-height: 1.35;
+}
+
+
+/* =========================================================
+   CITIZEN MESSAGE
+   ========================================================= */
+
+.support-follow-up p {
+    margin: 11px 0 0;
+
+    padding: 11px 12px;
+
+    border: 1px solid #f3e8dc;
+    border-radius: 8px;
+
+    background: rgba(255, 255, 255, 0.78);
+
+    color: #475569;
+
+    font-size: 12px;
+
+    line-height: 1.6;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    .support-follow-up {
+        padding: 12px;
+    }
+
+    .support-follow-up-header {
+        align-items: flex-start;
+    }
+
+    .support-follow-up-icon {
+        width: 32px;
+        height: 32px;
+
+        flex-basis: 32px;
+    }
+}
+
+/* =========================================================
+   TYPOGRAPHY ALIGNMENT
+   Keep the manage modal consistent with the
+   response-builder typography system.
+   ========================================================= */
+
+/* Section heading */
+.support-modal-section-heading > div > span {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+/* Section description */
+.support-modal-section-heading small {
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+/* Detail labels */
+.support-detail-label {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+/* Question text */
+#sr-question {
+    font-size: 13px;
+    line-height: 1.6;
 }

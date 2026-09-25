@@ -29,8 +29,13 @@
 
 .support-table {
     width: 100%;
-
     min-width: 850px;
+
+    /*
+     * Prevent long content such as agency names
+     * from expanding the entire table.
+     */
+    table-layout: fixed;
 
     border-collapse: collapse;
     border-spacing: 0;
@@ -107,11 +112,12 @@
 }
 
 .support-col-question {
-    min-width: 300px;
+    min-width: 280px;
 }
 
 .support-col-agency {
-    width: 190px;
+    width: 300px;
+    max-width: 300px;
 }
 
 .support-col-status {
@@ -212,10 +218,10 @@
 .support-agency-name {
     display: block;
 
+    max-width: 100%;
     overflow: hidden;
 
-    color:
-        var(--text-secondary, #4b5563);
+    color: var(--text-secondary, #4b5563);
 
     text-overflow: ellipsis;
     white-space: nowrap;

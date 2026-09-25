@@ -43,6 +43,14 @@ let builder = null;
 
 let componentsContainer = null;
 
+let latestResponseContainer = null;
+
+let latestResponseComponentsContainer = null;
+
+let historyContainer = null;
+
+let historyComponentsContainer = null;
+
 let emptyState = null;
 
 let addButton = null;
@@ -1240,6 +1248,321 @@ const createSavedComponent = (
     return null;
 };
 
+
+/*
+|--------------------------------------------------------------------------
+| RENDER PREVIOUS RESPONSE HISTORY
+|--------------------------------------------------------------------------
+|
+| Historical responses are displayed separately from the editable
+| response builder.
+|
+| This is important because previously forwarded components must
+| never become part of the new FormData submission.
+|--------------------------------------------------------------------------
+*/
+
+export const renderSavedResponseHistory = (
+    response
+) => {
+
+    if (
+        !latestResponseContainer ||
+        !latestResponseComponentsContainer
+    ) {
+        return;
+    }
+
+
+    /*
+     * Start clean so opening another ticket cannot display
+     * the previous ticket's response history.
+     */
+    latestResponseComponentsContainer.replaceChildren();
+
+
+    /*
+     * Make sure the response contains a valid component collection.
+     */
+    const components =
+        Array.isArray(response?.components)
+            ? [...response.components]
+            : [];
+
+
+    /*
+     * Preserve the official component order.
+     */
+    components.sort(
+        (first, second) =>
+            Number(first?.sort_order ?? 0) -
+            Number(second?.sort_order ?? 0)
+    );
+
+
+    /*
+     * Only render component types that the application recognizes.
+     */
+    const validComponents =
+        components.filter(
+            component =>
+                ALLOWED_COMPONENT_TYPES.includes(
+                    component?.type
+                )
+        );
+
+
+    /*
+     * Render every previous component as read-only.
+     */
+    validComponents.forEach(
+        component => {
+
+            const index =
+                getNextComponentIndex();
+
+
+            const markup =
+                createSavedComponent(
+                    component,
+                    index
+                );
+
+
+            if (!markup) {
+                return;
+            }
+
+
+            latestResponseComponentsContainer.insertAdjacentHTML(
+                'beforeend',
+                markup
+            );
+        }
+    );
+
+
+    /*
+     * Remove destructive controls from historical components.
+     */
+    latestResponseComponentsContainer
+        .querySelectorAll(
+            '[data-action="remove-component"]'
+        )
+        .forEach(
+            button => button.remove()
+        );
+
+
+    /*
+     * Only show the history section when there is actually
+     * something meaningful to display.
+     */
+    latestResponseContainer.hidden =
+        validComponents.length === 0;
+};
+
+/**
+ * Render one historical response attempt.
+ *
+ * This creates a compact, collapsible record.
+ * The historical response remains display-only.
+ */
+export const renderResponseHistoryItem = (response) => {
+    if (!historyComponentsContainer) {
+        return;
+    }
+
+    const components = Array.isArray(response?.components)
+        ? [...response.components]
+        : [];
+
+    components.sort(
+        (first, second) =>
+            Number(first?.sort_order ?? 0) -
+            Number(second?.sort_order ?? 0)
+    );
+
+    const validComponents = components.filter(
+        component =>
+            ALLOWED_COMPONENT_TYPES.includes(component?.type)
+    );
+
+    const wrapper = document.createElement('div');
+
+    wrapper.className = 'support-response-history-item';
+
+    wrapper.dataset.responseId = String(
+        response?.id ?? ''
+    );
+
+    const header = document.createElement('button');
+
+    header.type = 'button';
+
+    header.className =
+        'support-response-history-item-toggle';
+
+    header.setAttribute(
+        'aria-expanded',
+        'false'
+    );
+
+    const adminName =
+        response?.admin
+            ? [
+                response.admin.first_name,
+                response.admin.last_name,
+            ]
+                .filter(Boolean)
+                .join(' ')
+            : 'Administrator';
+
+    const status =
+        String(response?.status ?? '')
+            .replaceAll('_', ' ');
+
+    const formattedStatus =
+        status
+            ? status.charAt(0).toUpperCase() + status.slice(1)
+            : 'Response';
+
+    const forwardedAt =
+        response?.forwarded_at
+            ? new Date(response.forwarded_at)
+                .toLocaleString()
+            : 'Date unavailable';
+
+    header.innerHTML = `
+        <span class="support-response-history-item-main">
+            <span class="support-response-history-item-title">
+                Official Response #${escapeHtml(response?.id)}
+            </span>
+
+            <span class="support-response-history-item-meta">
+                ${escapeHtml(formattedStatus)}
+                ·
+                ${escapeHtml(adminName)}
+                ·
+                ${escapeHtml(forwardedAt)}
+            </span>
+        </span>
+
+        <i
+            class="ph-light ph-caret-down"
+            aria-hidden="true"
+        ></i>
+    `;
+
+    const content = document.createElement('div');
+
+    content.className =
+        'support-response-history-item-content';
+
+    content.hidden = true;
+
+    if (response?.follow_up_reason) {
+        const followUp = document.createElement('div');
+
+        followUp.className =
+            'support-response-history-follow-up';
+
+        const label = document.createElement('strong');
+
+        label.textContent =
+            'Citizen follow-up';
+
+        const reason = document.createElement('p');
+
+        reason.textContent =
+            response.follow_up_reason;
+
+        followUp.append(
+            label,
+            reason
+        );
+
+        content.appendChild(followUp);
+    }
+
+    const componentContainer =
+        document.createElement('div');
+
+    componentContainer.className =
+        'support-response-history-components';
+
+    validComponents.forEach(
+        (component) => {
+
+            const index =
+                getNextComponentIndex();
+
+            const markup =
+                createSavedComponent(
+                    component,
+                    index
+                );
+
+            if (!markup) {
+                return;
+            }
+
+            componentContainer.insertAdjacentHTML(
+                'beforeend',
+                markup
+            );
+        }
+    );
+
+    componentContainer
+        .querySelectorAll(
+            '[data-action="remove-component"]'
+        )
+        .forEach(
+            button => button.remove()
+        );
+
+    content.appendChild(
+        componentContainer
+    );
+
+    header.addEventListener(
+        'click',
+        () => {
+
+            const isExpanded =
+                header.getAttribute(
+                    'aria-expanded'
+                ) === 'true';
+
+            header.setAttribute(
+                'aria-expanded',
+                isExpanded
+                    ? 'false'
+                    : 'true'
+            );
+
+            content.hidden =
+                isExpanded;
+
+            wrapper.classList.toggle(
+                'is-expanded',
+                !isExpanded
+            );
+        }
+    );
+
+    wrapper.append(
+        header,
+        content
+    );
+
+    historyComponentsContainer.appendChild(
+        wrapper
+    );
+};
+
+
 /*
 |--------------------------------------------------------------------------
 | BUILDER READ-ONLY STATE
@@ -1982,6 +2305,22 @@ export const resetResponseBuilder = () => {
 
     componentsContainer.replaceChildren();
 
+    if (latestResponseComponentsContainer) {
+        latestResponseComponentsContainer.replaceChildren();
+    }
+
+    if (latestResponseContainer) {
+        latestResponseContainer.hidden = true;
+    }
+
+    if (historyComponentsContainer) {
+        historyComponentsContainer.replaceChildren();
+    }
+
+    if (historyContainer) {
+        historyContainer.hidden = true;
+    }
+
 
     /*
     |--------------------------------------------------------------------------
@@ -2060,6 +2399,26 @@ export function initializeResponseBuilder() {
     componentsContainer =
         document.getElementById(
             'support-response-components'
+        );
+
+    latestResponseContainer =
+        document.getElementById(
+            'support-response-latest'
+        );
+
+    latestResponseComponentsContainer =
+        document.getElementById(
+            'support-response-latest-components'
+        );
+        
+    historyContainer =
+        document.getElementById(
+            'support-response-history'
+        );
+
+    historyComponentsContainer =
+        document.getElementById(
+            'support-response-history-components'
         );
 
     emptyState =

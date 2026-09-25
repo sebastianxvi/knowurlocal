@@ -144,6 +144,12 @@
 
     width: 100%;
     min-width: 0;
+
+    /*
+     * Allow individual controls to shrink when the available
+     * content width becomes slightly smaller, such as when
+     * the browser's vertical scrollbar appears.
+     */
 }
 
 .support-filter-field {
@@ -152,7 +158,13 @@
     display: flex;
     align-items: center;
 
-    min-width: 180px;
+    /*
+     * This is important.
+     *
+     * The previous 180px minimum could force the entire
+     * toolbar wider than its available content area.
+     */
+    min-width: 0;
 }
 
 .support-filter-field i {
@@ -213,6 +225,7 @@
 
 .support-search-field {
     flex: 1 1 360px;
+    min-width: 220px;
 }
 
 .support-filter-field select {

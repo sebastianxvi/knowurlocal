@@ -28,7 +28,8 @@
 import {
     resetResponseBuilder,
     validateResponseBuilder,
-    loadSavedResponse,
+    renderSavedResponseHistory,
+    renderResponseHistoryItem,
 } from './response-builder.js';
 
 
@@ -46,6 +47,9 @@ let methodInput = null;
 
 let saveButton = null;
 
+let followUpSection = null;
+
+let followUpReason = null;
 
 /*
 |--------------------------------------------------------------------------
@@ -73,6 +77,22 @@ let currentRequestId = null;
 let searchableAgencies = [];
 
 let agencyDropdownOpen = false;
+
+/*
+|--------------------------------------------------------------------------
+| RESPONSE HISTORY STATE
+|--------------------------------------------------------------------------
+|
+| Only five historical responses are loaded at a time.
+| This keeps large support-request histories lightweight.
+|--------------------------------------------------------------------------
+*/
+
+let responseHistoryPage = 1;
+
+let responseHistoryLastPage = 1;
+
+let responseHistoryLoading = false;
 
 let isInitialized = false;
 
@@ -1044,6 +1064,209 @@ const responseUrl =
     return data.response || null;
 };
 
+
+/*
+|--------------------------------------------------------------------------
+| LOAD RESPONSE HISTORY
+|--------------------------------------------------------------------------
+|
+| Retrieves historical official response attempts in small pages.
+|
+| Five responses are loaded at a time so a ticket with dozens of
+| follow-ups does not create a huge DOM tree inside the modal.
+|--------------------------------------------------------------------------
+*/
+
+const loadResponseHistory = async (
+    requestId,
+    page = 1
+) => {
+
+    if (
+        !requestId ||
+        responseHistoryLoading
+    ) {
+        return;
+    }
+
+    responseHistoryLoading = true;
+
+    try {
+
+        const responseUrl =
+            `/admin/support-requests/${encodeURIComponent(requestId)}/responses?page=${page}`;
+
+        const response =
+            await fetch(
+                responseUrl,
+                {
+                    method: 'GET',
+
+                    headers: {
+                        'Accept':
+                            'application/json',
+
+                        'X-Requested-With':
+                            'XMLHttpRequest',
+                    },
+
+                    credentials:
+                        'same-origin',
+
+                    cache:
+                        'no-store',
+                }
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | PARSE SERVER RESPONSE
+        |--------------------------------------------------------------------------
+        */
+
+        let data = null;
+
+        try {
+
+            data =
+                await response.json();
+
+        } catch {
+
+            throw new Error(
+                'The server returned an invalid response.'
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | VALIDATE SERVER RESPONSE
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            !response.ok ||
+            !data?.success ||
+            !Array.isArray(data.responses)
+        ) {
+
+            throw new Error(
+                data?.message ||
+                'The response history could not be loaded.'
+            );
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | UPDATE PAGINATION STATE
+        |--------------------------------------------------------------------------
+        */
+
+        responseHistoryPage =
+            Number(
+                data.pagination?.current_page ??
+                page
+            );
+
+        responseHistoryLastPage =
+            Number(
+                data.pagination?.last_page ??
+                page
+            );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | RENDER HISTORICAL RESPONSES
+        |--------------------------------------------------------------------------
+        */
+
+        data.responses.forEach(
+            responseAttempt => {
+
+                renderResponseHistoryItem(
+                    responseAttempt
+                );
+
+            }
+        );
+
+        const historySection =
+            document.getElementById(
+                'support-response-history'
+            );
+
+        if (historySection) {
+            historySection.hidden =
+                data.responses.length === 0 &&
+                responseHistoryPage === 1;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | UPDATE LOAD-MORE CONTROL
+        |--------------------------------------------------------------------------
+        */
+
+        updateResponseHistoryControls();
+
+
+        return data;
+
+    } finally {
+
+        responseHistoryLoading =
+            false;
+    }
+};
+
+/*
+|--------------------------------------------------------------------------
+| UPDATE RESPONSE HISTORY CONTROLS
+|--------------------------------------------------------------------------
+|
+| Shows the Load Older Responses button only when another page exists.
+|--------------------------------------------------------------------------
+*/
+
+const updateResponseHistoryControls = () => {
+
+    const loadMoreButton =
+        document.getElementById(
+            'support-response-history-load-more'
+        );
+
+
+    if (!loadMoreButton) {
+        return;
+    }
+
+
+    const hasMore =
+        responseHistoryPage <
+        responseHistoryLastPage;
+
+
+    loadMoreButton.hidden =
+        !hasMore;
+
+
+    loadMoreButton.disabled =
+        responseHistoryLoading;
+
+
+    loadMoreButton.setAttribute(
+        'aria-hidden',
+        hasMore
+            ? 'false'
+            : 'true'
+    );
+};
+
 /*
 |--------------------------------------------------------------------------
 | PREPARE SUPPORT REQUEST
@@ -1104,6 +1327,12 @@ export const prepareSupportRequest = async (
     */
 
     resetResponseBuilder();
+
+    responseHistoryPage = 1;
+
+    responseHistoryLastPage = 1;
+
+    responseHistoryLoading = false;
 
 
     /*
@@ -1221,59 +1450,142 @@ export const prepareSupportRequest = async (
 
 
     /*
+|--------------------------------------------------------------------------
+| LOAD SAVED RESPONSE
+|--------------------------------------------------------------------------
+*/
+
+let savedResponse = null;
+
+try {
+
+    savedResponse =
+        await loadLatestResponse(
+            currentRequestId
+        );
+
+
+    /*
     |--------------------------------------------------------------------------
-    | LOAD SAVED RESPONSE
+    | LATEST OFFICIAL RESPONSE
+    |--------------------------------------------------------------------------
+    |
+    | Keep the latest response prominent.
     |--------------------------------------------------------------------------
     */
 
-    try {
+    if (savedResponse) {
 
-        const savedResponse =
-            await loadLatestResponse(
-                currentRequestId
-            );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | EXISTING RESPONSE
-        |--------------------------------------------------------------------------
-        |
-        | If a response already exists, give it to the Response Builder.
-        |--------------------------------------------------------------------------
-        */
-
-        if (savedResponse) {
-
-            loadSavedResponse(
-                savedResponse
-            );
-        }
-
-    } catch (error) {
-
-        /*
-        |--------------------------------------------------------------------------
-        | FAIL SAFELY
-        |--------------------------------------------------------------------------
-        |
-        | The ticket itself can still be viewed even if loading the
-        | saved response fails.
-        |--------------------------------------------------------------------------
-        */
-
-        console.error(
-            'Failed to load saved support response.',
-            error
-        );
-
-
-        showClientMessage(
-            'Unable to load response',
-            error?.message ||
-                'The existing official response could not be loaded.'
+        renderSavedResponseHistory(
+            savedResponse
         );
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESPONSE HISTORY
+    |--------------------------------------------------------------------------
+    |
+    | Load the first five historical attempts.
+    |--------------------------------------------------------------------------
+    */
+
+    await loadResponseHistory(
+        currentRequestId,
+        1
+    );
+
+
+    /*
+     * ================================================================
+     * CITIZEN FOLLOW-UP
+     * ================================================================
+     *
+     * A needs_follow_up ticket contains the reason submitted by the
+     * citizen when they rejected the previous official response.
+     *
+     * This information belongs to the previous response attempt,
+     * not to the new response being prepared.
+     */
+    if (
+        button.dataset.status ===
+            'needs_follow_up' &&
+        savedResponse?.follow_up_reason
+    ) {
+
+        if (followUpReason) {
+
+            followUpReason.textContent =
+                savedResponse.follow_up_reason;
+        }
+
+
+        if (followUpSection) {
+
+            followUpSection.hidden =
+                false;
+        }
+
+    } else {
+
+        /*
+         * Clear any previous ticket's follow-up information.
+         *
+         * This is important because the same modal instance is reused
+         * for different Support Requests.
+         */
+        if (followUpReason) {
+
+            followUpReason.textContent =
+                '';
+        }
+
+
+        if (followUpSection) {
+
+            followUpSection.hidden =
+                true;
+        }
+    }
+
+} catch (error) {
+
+    /*
+     * Fail safely.
+     *
+     * The ticket itself can still be viewed even if the existing
+     * response could not be loaded.
+     */
+    console.error(
+        'Failed to load saved support response.',
+        error
+    );
+
+
+    /*
+     * Do not leave stale follow-up information from another ticket.
+     */
+    if (followUpReason) {
+
+        followUpReason.textContent =
+            '';
+    }
+
+
+    if (followUpSection) {
+
+        followUpSection.hidden =
+            true;
+    }
+
+
+    showClientMessage(
+        'Unable to load response',
+        error?.message ||
+            'The existing official response could not be loaded.'
+    );
+}
 
 
     /*
@@ -1340,6 +1652,18 @@ export const closeSupportModal = () => {
     */
 
     resetResponseBuilder();
+
+    if (followUpReason) {
+
+        followUpReason.textContent =
+            '';
+    }
+
+    if (followUpSection) {
+
+        followUpSection.hidden =
+            true;
+    }
 
 
     /*
@@ -1777,6 +2101,21 @@ export function initializeManageModal() {
             'support-agency-searchable'
         );
 
+    followUpSection =
+        document.getElementById(
+            'support-follow-up'
+        );
+
+    followUpReason =
+        document.getElementById(
+            'support-follow-up-reason'
+        );
+
+    const responseHistoryLoadMoreButton =
+        document.getElementById(
+            'support-response-history-load-more'
+        );
+
 
     /*
     |--------------------------------------------------------------------------
@@ -1791,6 +2130,58 @@ export function initializeManageModal() {
         return;
     }
 
+    /*
+|--------------------------------------------------------------------------
+| LOAD OLDER RESPONSE HISTORY
+|--------------------------------------------------------------------------
+*/
+
+responseHistoryLoadMoreButton?.addEventListener(
+    'click',
+    async () => {
+
+        if (
+            responseHistoryLoading ||
+            responseHistoryPage >=
+                responseHistoryLastPage
+        ) {
+            return;
+        }
+
+
+        responseHistoryLoadMoreButton.disabled =
+            true;
+
+
+        try {
+
+            await loadResponseHistory(
+                currentRequestId,
+                responseHistoryPage + 1
+            );
+
+        } catch (error) {
+
+            console.error(
+                'Failed to load older response history.',
+                error
+            );
+
+            showClientMessage(
+                'Unable to load response history',
+                error?.message ||
+                    'Older responses could not be loaded.'
+            );
+
+        } finally {
+
+            responseHistoryLoadMoreButton.disabled =
+                false;
+
+            updateResponseHistoryControls();
+        }
+    }
+);
 
     /*
     |--------------------------------------------------------------------------

@@ -170,6 +170,36 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     ->middleware('throttle:60,1')
     ->name('user.inquiries.seen');
 
+    Route::get(
+        '/my-inquiries/{supportRequestId}/responses/{responseId}/components/{componentId}/attachment',
+        [SupportRequestController::class, 'viewCitizenResponseAttachment']
+    )
+    ->middleware('throttle:60,1')
+    ->name('user.inquiries.response-attachment');
+
+    Route::post(
+        '/my-inquiries/{id}/confirm',
+        [SupportRequestController::class, 'confirmResponse']
+    )
+    ->middleware('throttle:30,1')
+    ->name('user.inquiries.confirm');
+
+    Route::post(
+        '/my-inquiries/{id}/follow-up',
+        [SupportRequestController::class, 'requestFollowUp']
+    )
+    ->middleware('throttle:30,1')
+    ->name('user.inquiries.follow-up');
+
+    Route::get(
+        '/my-inquiries/{id}',
+        [SupportRequestController::class, 'userInquiry']
+    )
+    ->middleware('throttle:60,1')
+    ->name('user.inquiries.show');
+
+
+
     Route::get('/chat', fn() => view('public_user.chatbot'))->name('chat');
     Route::get('/chat/suggestions', [ChatbotController::class, 'suggestions']);
 
@@ -319,6 +349,11 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
         '/support-requests/{id}/latest-response',
         [SupportRequestController::class, 'latestResponse']
     )->name('admin.support.latest-response');
+
+    Route::get(
+        '/support-requests/{id}/responses',
+        [SupportRequestController::class, 'responseHistory']
+    )->name('admin.support.responses');
 
     Route::put('/support-requests/{id}', [SupportRequestController::class, 'update'])
         ->name('admin.support.update');

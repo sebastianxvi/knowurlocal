@@ -248,11 +248,49 @@
                 </section>
 
 
+                <section
+                    id="support-follow-up"
+                    class="support-follow-up"
+                    hidden
+                    aria-labelledby="support-follow-up-title"
+                >
+
+                    <div class="support-follow-up-header">
+
+                        <div
+                            class="support-follow-up-icon"
+                            aria-hidden="true"
+                        >
+                            <i class="ph-light ph-arrow-counter-clockwise"></i>
+                        </div>
+
+                        <div>
+
+                            <span>
+                                Citizen Follow-up
+                            </span>
+
+                            <strong id="support-follow-up-title">
+                                Clarification requested
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+                    <p id="support-follow-up-reason"></p>
+
+                </section>
+
+                
+
+
                 {{-- =================================================
                      OFFICIAL RESPONSE
                      ================================================= --}}
 
-                <section class="support-modal-section">
+                <section class="support-modal-section support-modal-official-response">
 
                     <div class="support-modal-section-heading">
 

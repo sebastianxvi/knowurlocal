@@ -9,6 +9,7 @@ use App\Services\FaqSimilarityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Services\SupportRequestResponseService;
+use App\Events\SupportRequestResponseCreated;
 
 class SupportRequestController extends Controller
 {
@@ -138,21 +139,31 @@ if ($search !== '') {
     );
 }
 
+       /*
+ * =====================================================
+ * 🏢 AGENCY FILTER
+ * =====================================================
+ *
+ * Only apply the agency condition when the administrator
+ * actually selected an agency.
+ *
+ * Laravel's filled() treats null and empty strings as
+ * empty, preventing an accidental:
+ *
+ *     where('agency_id', null)
+ *
+ * which becomes:
+ *
+ *     agency_id IS NULL
+ */
+$agencyFilter = $request->input('agency');
 
-        /*
-         * =====================================================
-         * 🏢 AGENCY FILTER
-         * =====================================================
-         */
-        $agencyFilter = $request->input('agency', '');
-
-        if ($agencyFilter !== '') {
-            $query->where(
-                'agency_id',
-                $agencyFilter
-            );
-        }
-
+if ($request->filled('agency')) {
+    $query->where(
+        'agency_id',
+        $agencyFilter
+    );
+}
 
         /*
 |--------------------------------------------------------------------------
@@ -179,7 +190,6 @@ if (!in_array($sort, $allowedSorts, true)) {
     $sort = 'newest';
 }
 
-
 /*
 |--------------------------------------------------------------------------
 | 📄 PAGINATION
@@ -202,6 +212,7 @@ $requests = $query
     )
     ->paginate(10)
     ->withQueryString();
+    
 
 
         /*
@@ -505,10 +516,106 @@ if (
         $components
     );
 
+    /*
+    * The response service has successfully completed its
+    * database transaction at this point.
+    *
+    * The support request now has an official response
+    * waiting for citizen confirmation.
+    *
+    * Only now do we notify the citizen through Reverb.
+    */
+    broadcast(new SupportRequestResponseCreated(
+        userId: (int) $supportRequest->user_id,
+        supportRequestId: (int) $supportRequest->id,
+        responseId: (int) $response->id,
+        status: 'awaiting_confirmation',
+    ));
+
     return response()->json([
         'success' => true,
         'message' => 'Official response forwarded successfully.',
         'response_id' => $response->id,
+    ]);
+}
+
+/**
+ * Return paginated official response history for one support request.
+ *
+ * Historical responses are read-only records. They are never returned
+ * as editable response-builder data.
+ */
+public function responseHistory(Request $request, int $id)
+{
+    $supportRequest = SupportRequest::query()
+        ->findOrFail($id);
+
+    $perPage = 5;
+
+    $responses = $supportRequest->responses()
+        ->where('status', '!=', 'draft')
+        ->with([
+            'admin:id,first_name,last_name',
+            'components' => function ($query) {
+                $query->orderBy('sort_order');
+            },
+        ])
+        ->latest('id')
+        ->paginate($perPage);
+
+    $responses->getCollection()->transform(
+        function ($response) use ($supportRequest) {
+
+            $response->components->each(
+                function ($component) use ($supportRequest, $response) {
+
+                    if (
+                        in_array(
+                            $component->type,
+                            ['image', 'file'],
+                            true
+                        )
+                    ) {
+                        $component->attachment_url = route(
+                            'admin.support.response-attachment',
+                            [
+                                'supportRequestId' => $supportRequest->id,
+                                'responseId' => $response->id,
+                                'componentId' => $component->id,
+                            ]
+                        );
+                    } else {
+                        $component->attachment_url = null;
+                    }
+                }
+            );
+
+            return [
+                'id' => $response->id,
+                'status' => $response->status,
+                'forwarded_at' => $response->forwarded_at,
+                'responded_at' => $response->responded_at,
+                'follow_up_reason' => $response->follow_up_reason,
+                'admin' => $response->admin
+                    ? [
+                        'first_name' => $response->admin->first_name,
+                        'last_name' => $response->admin->last_name,
+                    ]
+                    : null,
+                'components' => $response->components,
+            ];
+        }
+    );
+
+    return response()->json([
+        'success' => true,
+        'responses' => $responses->items(),
+        'pagination' => [
+            'current_page' => $responses->currentPage(),
+            'last_page' => $responses->lastPage(),
+            'per_page' => $responses->perPage(),
+            'total' => $responses->total(),
+        ],
     ]);
 }
 
@@ -764,6 +871,185 @@ public function viewResponseAttachment(
     );
 }
 
+/**
+ * =========================================================
+ * 👤 VIEW CITIZEN SUPPORT RESPONSE ATTACHMENT
+ * =========================================================
+ *
+ * Serves an image or document belonging to the
+ * authenticated citizen's own Support Request.
+ *
+ * Files remain on the private filesystem and are never
+ * exposed through /storage.
+ */
+public function viewCitizenResponseAttachment(
+    $supportRequestId,
+    $responseId,
+    $componentId
+) {
+    /*
+     * The route is already protected by authentication,
+     * but we still verify the authenticated user here.
+     *
+     * This is defense in depth.
+     */
+    abort_unless(
+        auth()->check(),
+        403
+    );
+
+    /*
+     * Locate the component while verifying the complete
+     * ownership chain:
+     *
+     * component
+     *     ↓
+     * response
+     *     ↓
+     * support request
+     *     ↓
+     * authenticated citizen
+     *
+     * This prevents a user from changing IDs in the URL
+     * to access another citizen's attachment.
+     */
+    $component = \App\Models\SupportResponseComponent::query()
+        ->where('id', $componentId)
+        ->where(
+            'support_request_response_id',
+            $responseId
+        )
+        ->whereHas(
+            'response.supportRequest',
+            function ($query) use ($supportRequestId) {
+                $query
+                    ->where('id', $supportRequestId)
+                    ->where(
+                        'user_id',
+                        auth()->id()
+                    );
+            }
+        )
+        ->firstOrFail();
+
+    /*
+     * Only image and file components are allowed through
+     * this endpoint.
+     *
+     * Text, links, and QR destinations are not storage files.
+     */
+    abort_unless(
+        in_array(
+            $component->type,
+            ['image', 'file'],
+            true
+        ),
+        404
+    );
+
+    /*
+     * The database contains the private storage path.
+     */
+    $path = $component->content;
+
+    /*
+     * Verify that a path exists and that the corresponding
+     * private file actually exists.
+     */
+    abort_unless(
+        $path &&
+        Storage::disk('private')->exists($path),
+        404
+    );
+
+    /*
+     * Stream the private file through Laravel.
+     *
+     * The actual storage location is never exposed
+     * to the browser.
+     */
+    return Storage::disk('private')->response(
+        $path,
+        basename($path),
+        [
+            /*
+             * Allow supported files such as images to be
+             * displayed directly in the browser.
+             */
+            'Content-Disposition' =>
+                'inline; filename="' .
+                addslashes(basename($path)) .
+                '"',
+
+            /*
+             * Prevent browsers from MIME-sniffing the file.
+             */
+            'X-Content-Type-Options' =>
+                'nosniff',
+        ]
+    );
+}
+
+
+/**
+ * Return one authenticated citizen inquiry with its
+ * latest official response.
+ *
+ * Realtime notifications use this endpoint to retrieve
+ * authoritative database state after Reverb reports
+ * that something changed.
+ */
+public function userInquiry($id)
+{
+    $supportRequest = SupportRequest::query()
+        ->where('id', $id)
+        ->where('user_id', auth()->id())
+        ->with([
+            'agency',
+            'latestResponse.components',
+        ])
+        ->firstOrFail();
+
+    /*
+     * Build secure attachment URLs.
+     *
+     * Private storage paths are never returned directly
+     * to the browser.
+     */
+    if ($supportRequest->latestResponse) {
+
+        $supportRequest->latestResponse
+            ->components
+            ->each(function ($component) use ($supportRequest) {
+
+                $component->attachment_url =
+                    in_array(
+                        $component->type,
+                        ['image', 'file'],
+                        true
+                    )
+                        ? route(
+                            'user.inquiries.response-attachment',
+                            [
+                                'supportRequestId' =>
+                                    $supportRequest->id,
+
+                                'responseId' =>
+                                    $supportRequest->latestResponse->id,
+
+                                'componentId' =>
+                                    $component->id,
+                            ]
+                        )
+                        : null;
+            });
+    }
+
+    return response()->json([
+        'success' => true,
+        'inquiry' => $supportRequest,
+    ]);
+}
 
     /**
      * =========================================================
@@ -775,23 +1061,62 @@ public function viewResponseAttachment(
     public function userIndex()
     {
         /*
-         * The user ID comes from the authenticated session,
-         * never from browser input.
-         */
-        $requests =
-            SupportRequest::where(
-                'user_id',
-                auth()->id()
-            )
+        * The user ID comes from the authenticated session,
+        * never from browser input.
+        */
+        $requests = SupportRequest::query()
+            ->where('user_id', auth()->id())
+            ->with([
+                'agency',
+                'latestResponse.components',
+            ])
             ->latest()
             ->get();
 
+        /*
+        * Build secure citizen-side attachment URLs.
+        *
+        * We never expose the private storage path itself.
+        */
+        $requests->each(function ($supportRequest) {
+
+            if (!$supportRequest->latestResponse) {
+                return;
+            }
+
+            $supportRequest->latestResponse->components->each(
+                function ($component) use ($supportRequest) {
+
+                    $component->attachment_url =
+                        in_array(
+                            $component->type,
+                            ['image', 'file'],
+                            true
+                        )
+                            ? route(
+                                'user.inquiries.response-attachment',
+                                [
+                                    'supportRequestId' =>
+                                        $supportRequest->id,
+
+                                    'responseId' =>
+                                        $supportRequest->latestResponse->id,
+
+                                    'componentId' =>
+                                        $component->id,
+                                ]
+                            )
+                            : null;
+                }
+            );
+        });
 
         return view(
-            'public_user.inquiries',
+            'public_user.my-inquiries.index',
             compact('requests')
         );
     }
+    
 
 
     /**
@@ -842,6 +1167,174 @@ public function viewResponseAttachment(
             'success' => true,
         ]);
     }
+
+
+    /**
+ * =========================================================
+ * ✅ CONFIRM OFFICIAL RESPONSE
+ * =========================================================
+ *
+ * Allows the authenticated citizen to confirm that the
+ * latest official response resolved their concern.
+ */
+public function confirmResponse($id)
+{
+    /*
+     * Retrieve only a Support Request belonging to the
+     * currently authenticated citizen.
+     *
+     * The user ID comes from the authenticated session,
+     * never from browser input.
+     */
+    $supportRequest = SupportRequest::query()
+        ->where('id', $id)
+        ->where('user_id', auth()->id())
+        ->firstOrFail();
+
+    /*
+     * A response can only be confirmed while the ticket
+     * is waiting for citizen confirmation.
+     *
+     * This prevents duplicate or out-of-order confirmations.
+     */
+    abort_unless(
+        $supportRequest->status === 'awaiting_confirmation',
+        409
+    );
+
+    /*
+     * Retrieve the latest official response.
+     *
+     * The response belongs to this ticket because it is
+     * retrieved through the Support Request relationship.
+     */
+    $response = $supportRequest
+        ->latestResponse()
+        ->firstOrFail();
+
+    /*
+     * The response itself must also be in the forwarded state.
+     *
+     * This provides a second workflow check instead of
+     * trusting only the Support Request status.
+     */
+    abort_unless(
+        $response->status === 'forwarded',
+        409
+    );
+
+    /*
+     * Mark this response as accepted by the citizen.
+     *
+     * responded_at records when the citizen completed
+     * the confirmation step.
+     */
+    $response->update([
+        'status' => 'accepted',
+        'responded_at' => now(),
+    ]);
+
+    /*
+     * "answered" now means the citizen has confirmed that
+     * the official response resolved the concern.
+     */
+    $supportRequest->update([
+        'status' => 'answered',
+        'answered_at' => now(),
+        'answer_seen_at' => now(),
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'status' => 'answered',
+        'message' => 'Your inquiry has been marked as resolved.',
+    ]);
+}
+
+/**
+ * =========================================================
+ * 🔄 REQUEST FOLLOW-UP
+ * =========================================================
+ *
+ * Allows the authenticated citizen to indicate that the
+ * latest official response did not resolve their concern.
+ */
+public function requestFollowUp(Request $request, $id)
+{
+    /*
+     * Validate the optional explanation.
+     *
+     * The explanation is useful to the administrator when
+     * preparing the next official response.
+     */
+    $validated = $request->validate([
+        'reason' => [
+            'nullable',
+            'string',
+            'max:2000',
+        ],
+    ]);
+
+    /*
+     * Retrieve only a Support Request belonging to the
+     * authenticated citizen.
+     */
+    $supportRequest = SupportRequest::query()
+        ->where('id', $id)
+        ->where('user_id', auth()->id())
+        ->firstOrFail();
+
+    /*
+     * Follow-up is only valid while the ticket is waiting
+     * for the citizen's confirmation.
+     */
+    abort_unless(
+        $supportRequest->status === 'awaiting_confirmation',
+        409
+    );
+
+    /*
+     * Retrieve the latest official response.
+     */
+    $response = $supportRequest
+        ->latestResponse()
+        ->firstOrFail();
+
+    /*
+     * The response must still be awaiting the citizen's
+     * decision.
+     */
+    abort_unless(
+        $response->status === 'forwarded',
+        409
+    );
+
+    /*
+     * Record that the citizen did not accept this response.
+     *
+     * The reason is stored on the response attempt itself,
+     * preserving the history of what happened.
+     */
+    $response->update([
+        'status' => 'needs_follow_up',
+        'responded_at' => now(),
+        'follow_up_reason' => $validated['reason'] ?? null,
+    ]);
+
+    /*
+     * Move the ticket back into the administrator's
+     * follow-up queue.
+     */
+    $supportRequest->update([
+        'status' => 'needs_follow_up',
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'status' => 'needs_follow_up',
+        'message' => 'Your inquiry has been returned for follow-up.',
+    ]);
+}
 
 
     /**

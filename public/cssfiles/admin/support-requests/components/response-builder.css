@@ -451,6 +451,108 @@
 
 }
 
+/* =========================================================
+   RESPONSE SECTION HEADERS
+   ========================================================= */
+
+.support-response-history-header,
+.support-response-new-header {
+    display: flex;
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+.support-response-history-header strong,
+.support-response-new-header strong {
+    display: block;
+
+    margin: 0;
+
+    color: #0f172a;
+
+    font-size: 14px;
+    font-weight: 700;
+
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+}
+
+.support-response-history-header span:not(.support-response-section-eyebrow),
+.support-response-new-header span:not(.support-response-section-eyebrow) {
+    display: block;
+
+    margin: 0;
+
+    color: #94a3b8;
+
+    font-size: 11px;
+    font-weight: 400;
+
+    line-height: 1.5;
+}
+
+/* =========================================================
+   RESPONSE SECTION TYPOGRAPHY
+   Keeps every response section visually consistent.
+   ========================================================= */
+
+.support-response-latest-header > div,
+.support-response-history-header > div,
+.support-response-new-header > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+}
+
+
+/* Small uppercase section label */
+
+.support-response-section-eyebrow {
+    display: block;
+    margin: 0;
+
+    font-size: 10px;
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+
+    color: #8a9bb3;
+}
+
+
+/* Main section heading */
+
+.support-response-latest-header strong,
+.support-response-history-header strong,
+.support-response-new-header strong {
+    display: block;
+    margin: 0;
+
+    font-size: 15px;
+    line-height: 1.35;
+    font-weight: 600;
+
+    color: #18243a;
+}
+
+
+/* Supporting description */
+
+.support-response-latest-header > div > span:last-child,
+.support-response-history-header > div > span:last-child,
+.support-response-new-header > div > span:last-child {
+    display: block;
+    margin: 0;
+
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 400;
+
+    color: #8a9bb3;
+}
 
 /* =========================================================
    COMPONENT HEADER
@@ -1520,4 +1622,544 @@
         gap: 3px;
     }
 
+}
+
+/* =========================================================
+   RESPONSE HISTORY
+   ========================================================= */
+
+.support-response-history {
+    margin-top: 18px;
+}
+
+.support-response-history-components {
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+
+/* =========================================================
+   HISTORY ITEM
+   ========================================================= */
+
+.support-response-history-item {
+    width: 100%;
+
+    overflow: hidden;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+
+    background: #ffffff;
+
+    transition:
+        border-color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.support-response-history-item:hover {
+    border-color: #cbd5e1;
+
+    box-shadow:
+        0 4px 14px rgba(15, 23, 42, 0.045);
+}
+
+.support-response-history-item.is-expanded {
+    border-color: #cbd5e1;
+
+    box-shadow:
+        0 5px 18px rgba(15, 23, 42, 0.06);
+}
+
+
+/* =========================================================
+   HISTORY TOGGLE
+   ========================================================= */
+
+.support-response-history-item-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    width: 100%;
+    min-height: 58px;
+
+    margin: 0;
+    padding: 10px 13px;
+
+    border: 0;
+    border-radius: 0;
+
+    background: #ffffff;
+
+    color: #334155;
+
+    font: inherit;
+    text-align: left;
+
+    cursor: pointer;
+
+    appearance: none;
+    -webkit-appearance: none;
+
+    transition:
+        background-color 140ms ease,
+        color 140ms ease;
+}
+
+.support-response-history-item-toggle:hover {
+    background: #f8fafc;
+}
+
+.support-response-history-item-toggle:focus-visible {
+    outline: none;
+
+    box-shadow:
+        inset 0 0 0 2px rgba(37, 99, 235, 0.20);
+}
+
+
+/* =========================================================
+   HISTORY MAIN INFORMATION
+   ========================================================= */
+
+.support-response-history-item-main {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 0;
+
+    flex: 1;
+}
+
+.support-response-history-item-title {
+    display: flex;
+    align-items: center;
+
+    min-width: 0;
+
+    color: #334155;
+
+    font-size: 12px;
+    font-weight: 650;
+
+    line-height: 1.35;
+}
+
+.support-response-history-item-title::before {
+    content: "";
+
+    width: 7px;
+    height: 7px;
+
+    flex: 0 0 7px;
+
+    margin-right: 8px;
+
+    border-radius: 50%;
+
+    background: #f59e0b;
+
+    box-shadow:
+        0 0 0 3px rgba(245, 158, 11, 0.10);
+}
+
+
+/* =========================================================
+   HISTORY META
+   ========================================================= */
+
+.support-response-history-item-meta {
+    display: block;
+
+    margin-top: 3px;
+
+    overflow: hidden;
+
+    color: #94a3b8;
+
+    font-size: 10px;
+
+    line-height: 1.4;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   HISTORY CARET
+   ========================================================= */
+
+.support-response-history-item-toggle > i {
+    flex: 0 0 auto;
+
+    margin-left: 12px;
+
+    color: #94a3b8;
+
+    font-size: 15px;
+
+    transition:
+        color 140ms ease,
+        transform 180ms ease;
+}
+
+.support-response-history-item.is-expanded
+.support-response-history-item-toggle > i {
+    color: #64748b;
+
+    transform: rotate(180deg);
+}
+
+
+/* =========================================================
+   HISTORY CONTENT
+   ========================================================= */
+
+.support-response-history-item-content {
+    padding: 0 13px 13px;
+
+    border-top: 1px solid #eef2f7;
+
+    background: #fbfcfd;
+}
+
+.support-response-history-item-content[hidden] {
+    display: none;
+}
+
+
+/* =========================================================
+   CITIZEN FOLLOW-UP
+   ========================================================= */
+
+.support-response-history-follow-up {
+    margin-top: 12px;
+    margin-bottom: 12px;
+
+    padding: 10px 11px;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+
+    background: #ffffff;
+}
+
+.support-response-history-follow-up strong {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: #64748b;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    letter-spacing: 0.02em;
+
+    text-transform: uppercase;
+}
+
+.support-response-history-follow-up p {
+    margin: 0;
+
+    color: #475569;
+
+    font-size: 12px;
+
+    line-height: 1.55;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   HISTORICAL COMPONENTS
+   ========================================================= */
+
+.support-response-history-item
+.support-response-history-components {
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+
+    padding-top: 12px;
+}
+
+.support-response-history-item
+.support-response-component {
+    margin: 0;
+
+    border-color: #e5e7eb;
+
+    box-shadow: none;
+
+    pointer-events: none;
+}
+
+.support-response-history-item
+.support-response-component:hover {
+    border-color: #e5e7eb;
+
+    box-shadow: none;
+}
+
+.support-response-history-item
+.support-response-component-header {
+    min-height: 46px;
+
+    padding: 8px 10px;
+
+    background: #ffffff;
+}
+
+.support-response-history-item
+.support-response-component-icon {
+    width: 29px;
+    height: 29px;
+
+    flex-basis: 29px;
+
+    border-color: #e2e8f0;
+
+    background: #f8fafc;
+
+    color: #64748b;
+}
+
+.support-response-history-item
+.support-response-component-icon i {
+    font-size: 14px;
+}
+
+.support-response-history-item
+.support-response-component-heading-text strong {
+    color: #475569;
+
+    font-size: 11px;
+}
+
+.support-response-history-item
+.support-response-component-heading-text span {
+    color: #a1aab8;
+
+    font-size: 10px;
+}
+
+.support-response-history-item
+.support-response-component-body {
+    padding: 11px;
+
+    background: #ffffff;
+}
+
+.support-response-component-body {
+    gap: 9px;
+}
+
+.support-response-component-header {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.support-follow-up {
+    margin-bottom: 18px;
+}
+
+.support-follow-up p {
+    margin-top: 12px;
+}
+
+.support-response-history + .support-response-new {
+    margin-top: 26px;
+}
+
+/* =========================================================
+   RESPONSE BUILDER — TYPOGRAPHY SYSTEM
+   ========================================================= */
+
+/*
+ * Every response-builder section header uses the same
+ * three-level hierarchy:
+ *
+ * 1. Eyebrow     → small uppercase context label
+ * 2. Title       → primary section heading
+ * 3. Description → supporting explanation
+ */
+
+
+/* ---------------------------------------------------------
+   HEADER CONTAINER
+   --------------------------------------------------------- */
+
+.support-response-latest-header > div,
+.support-response-history-header > div,
+.support-response-new-header > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    gap: 3px;
+}
+
+
+/* ---------------------------------------------------------
+   LEVEL 1 — EYEBROW
+   --------------------------------------------------------- */
+
+.support-response-latest-header .support-response-section-eyebrow,
+.support-response-history-header .support-response-section-eyebrow,
+.support-response-new-header .support-response-section-eyebrow {
+    display: block;
+
+    margin: 0;
+
+    color: #94a3b8;
+
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.4;
+
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+
+/* ---------------------------------------------------------
+   LEVEL 2 — SECTION TITLE
+   --------------------------------------------------------- */
+
+#support-response-latest-title,
+#support-response-history-title,
+#support-response-new-title {
+    display: block;
+
+    margin: 0;
+
+    color: #1e293b;
+
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+
+    letter-spacing: -0.01em;
+}
+
+
+/* ---------------------------------------------------------
+   LEVEL 3 — DESCRIPTION
+   --------------------------------------------------------- */
+
+/*
+ * The description is intentionally selected by its class
+ * rather than relying on :last-child or DOM position.
+ */
+
+.support-response-section-description {
+    display: block;
+
+    margin: 0;
+
+    color: #94a3b8;
+
+    font-size: 11px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+/* =========================================================
+   RESPONSE COMPONENT STACK SPACING
+   ========================================================= */
+
+/*
+ * Each dynamically generated response component is treated
+ * as an independent card.
+ *
+ * The gap belongs to the parent stack rather than the cards
+ * themselves, which keeps every component visually consistent.
+ */
+
+.support-response-latest-components,
+.support-response-history-components,
+.support-response-components {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* =========================================================
+   SAVED RESPONSE CONTENT TYPOGRAPHY
+   Keeps displayed response data visually consistent
+   with the editable response-builder fields.
+   ========================================================= */
+
+.support-response-component-body {
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+/*
+ * Field labels inside saved components.
+ *
+ * Examples:
+ * "Link label"
+ * "URL"
+ * "Response"
+ * "QR code label"
+ */
+.support-response-component-body > label,
+.support-response-component-body > .support-response-field-label {
+    margin: 0;
+    color: var(--text-secondary, #4b5563);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+/*
+ * Actual saved values.
+ *
+ * This catches the plain text values rendered
+ * inside the saved response component bodies.
+ */
+.support-response-component-body > p,
+.support-response-component-body > div:not(
+    .support-response-saved-attachment
+) {
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+/*
+ * Saved links should use the same compact
+ * typography as the other response values.
+ */
+.support-response-component-body a {
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/*
+ * Keep long response text readable without
+ * becoming visually oversized.
+ */
+.support-response-component-body .response-text,
+.support-response-component-body .support-response-text,
+.support-response-component-body [data-response-text] {
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* =========================================================
+   SEPARATE OFFICIAL RESPONSE FROM LATEST RESPONSE
+   ========================================================= */
+
+.support-response-latest {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
 }
