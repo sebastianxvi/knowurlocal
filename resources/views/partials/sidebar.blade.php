@@ -72,7 +72,7 @@
             <!-- LOGS GROUP -->
             <div class="nav-group">
 
-                <div class="nav-parent">
+                <div class="nav-parent" title="Logs">
                     <i class="ph-light ph-clock-counter-clockwise"></i>
                     Logs
                 </div>

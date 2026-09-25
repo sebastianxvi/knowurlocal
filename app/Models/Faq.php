@@ -21,7 +21,12 @@ class Faq extends Model
         'answer_fil',
 
         'keywords',
-        'image'
+        'image',
+        'response_components'
+    ];
+
+    protected $casts = [
+        'response_components' => 'array',
     ];
 
     public function agency()

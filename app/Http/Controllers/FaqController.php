@@ -755,6 +755,17 @@ public function store(Request $request)
             'nullable',
             'boolean',
         ],
+
+        'response_components' => ['nullable', 'array', 'max:10'],
+        'response_components.*.type' => ['required_with:response_components', 'in:text,image,file,link,qr_code'],
+        'response_components.*.content' => ['nullable', 'string', 'max:5000'],
+        'response_components.*.label' => ['nullable', 'string', 'max:255'],
+        'response_components.*.file' => [
+            'nullable',
+            'file',
+            'mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx',
+            'max:5120',
+        ],
     ]);
 
     /*
@@ -964,6 +975,13 @@ $faq = Faq::create([
     'image'        => $imagePath,
 ]);
 
+    $faq->response_components = $this->storeResponseComponents(
+        $request->input('response_components', []),
+        $request->file('response_components', [])
+    );
+
+    $faq->save();
+
         $this->logAction(
             auth()->user()->role ?? 'admin',
             auth()->id(),
@@ -978,6 +996,7 @@ $faq = Faq::create([
     'answer_fil'   => $faq->answer_fil,
     'keywords'     => $faq->keywords,
     'image'        => $faq->image,
+    'response_components' => $faq->response_components,
 ],
             'Created FAQ: ' . $faq->question,
 null,
@@ -1018,6 +1037,19 @@ $faq->id
     'mimes:jpg,jpeg,png,webp',
     'max:5120',
 ],
+
+            'remove_image' => ['nullable', 'boolean'],
+
+            'response_components' => ['nullable', 'array', 'max:10'],
+            'response_components.*.type' => ['required_with:response_components', 'in:text,image,file,link,qr_code'],
+            'response_components.*.content' => ['nullable', 'string', 'max:5000'],
+            'response_components.*.label' => ['nullable', 'string', 'max:255'],
+            'response_components.*.file' => [
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx',
+                'max:5120',
+            ],
         ]);
 
         /**
@@ -1032,6 +1064,7 @@ $faq->id
     'answer_fil'   => $faq->answer_fil,
     'keywords'     => $faq->keywords,
     'image'        => $faq->image,
+    'response_components' => $faq->response_components,
 ];
 
 
@@ -1082,6 +1115,14 @@ if ($imageChanged) {
 }
         
 
+        $oldResponseComponents = $faq->response_components ?? [];
+
+        $newResponseComponents = $this->storeResponseComponents(
+            $request->input('response_components', []),
+            $request->file('response_components', []),
+            $oldResponseComponents
+        );
+
         $faq->update([
     'agency_id'    => $request->agency_id,
 
@@ -1094,6 +1135,8 @@ if ($imageChanged) {
     'keywords'     => $request->keywords,
 
     'image'        => $imagePath,
+
+    'response_components' => $newResponseComponents,
 ]);
 
 $newData = [
@@ -1104,6 +1147,7 @@ $newData = [
     'answer_fil'   => $faq->answer_fil,
     'keywords'     => $faq->keywords,
     'image'        => $faq->image,
+    'response_components' => $faq->response_components,
 ];
 
 $changes = $this->getChangedValues(
@@ -1224,6 +1268,7 @@ public function restore($id)
             'answer_fil' => $faq->answer_fil,
             'keywords' => $faq->keywords,
             'image' => $faq->image,
+            'response_components' => $faq->response_components,
         ],
         'Restored FAQ: ' . $faq->question,
         null,
@@ -1273,6 +1318,7 @@ public function forceDestroy($id)
         'answer_fil'   => $faq->answer_fil,
         'keywords'     => $faq->keywords,
         'image'        => $faq->image,
+        'response_components' => $faq->response_components,
     ];
 
 
@@ -1296,6 +1342,10 @@ public function forceDestroy($id)
             $faq->image
         );
     }
+
+    $this->deleteResponseComponentFiles(
+        $faq->response_components ?? []
+    );
 
 
     /*
@@ -1337,6 +1387,86 @@ public function forceDestroy($id)
             'FAQ permanently deleted.'
         );
 }
+
+    /**
+     * Store FAQ response components in their submitted order.
+     * File paths are generated server-side; browser values are
+     * never trusted as storage paths.
+     */
+    private function storeResponseComponents(
+        array $components,
+        array $files = [],
+        array $existing = []
+    ): array {
+        $normalized = [];
+
+        foreach (array_values($components) as $index => $component) {
+            $type = $component['type'] ?? null;
+
+            if (!in_array($type, ['text', 'image', 'file', 'link', 'qr_code'], true)) {
+                continue;
+            }
+
+            $content = trim((string) ($component['content'] ?? ''));
+            $label = trim((string) ($component['label'] ?? ''));
+
+            if (in_array($type, ['link', 'qr_code'], true)) {
+                if (!filter_var($content, FILTER_VALIDATE_URL)) {
+                    continue;
+                }
+
+                $scheme = strtolower((string) parse_url($content, PHP_URL_SCHEME));
+                if (!in_array($scheme, ['http', 'https'], true)) {
+                    continue;
+                }
+            }
+
+            if ($type === 'text' && $content === '') {
+                continue;
+            }
+
+            if (in_array($type, ['image', 'file'], true)) {
+                $uploaded = $files[$index]['file'] ?? null;
+
+                if ($uploaded) {
+                    $content = $uploaded->store('faqs/responses', 'private');
+                } elseif (
+                    !empty($component['existing_content'])
+                    && is_string($component['existing_content'])
+                    && in_array($component['existing_content'], array_column($existing, 'content'), true)
+                ) {
+                    $content = $component['existing_content'];
+                } else {
+                    continue;
+                }
+            }
+
+            $normalized[] = [
+                'type' => $type,
+                'content' => $content,
+                'label' => $label !== '' ? $label : null,
+                'sort_order' => count($normalized),
+            ];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Remove private files belonging to FAQ response components.
+     */
+    private function deleteResponseComponentFiles(array $components): void
+    {
+        foreach ($components as $component) {
+            if (
+                in_array($component['type'] ?? null, ['image', 'file'], true)
+                && !empty($component['content'])
+                && is_string($component['content'])
+            ) {
+                Storage::disk('private')->delete($component['content']);
+            }
+        }
+    }
 
     /**
      * 🔒 CENTRALIZED LOGGING (PRODUCTION STYLE)

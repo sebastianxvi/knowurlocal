@@ -3003,6 +3003,10 @@ resetImageState();
 
 resetTextareaHeights();
 
+        if (window.FaqResponseBuilder) {
+            window.FaqResponseBuilder.reset();
+        }
+
 
         /*
          * Reset keyword state.
@@ -3346,6 +3350,20 @@ resetTextareaHeights();
         openFaqModal;
 
 
+    function parseResponseComponents(value) {
+        if (!value) {
+            return [];
+        }
+
+        try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+
+
     /*
      * =========================================================
      * FAQ ROW CLICK → VIEW
@@ -3407,7 +3425,12 @@ resetTextareaHeights();
                         row.dataset.keywords,
 
                     image:
-                        row.dataset.image
+                        row.dataset.image,
+
+                    responseComponents:
+                        parseResponseComponents(
+                            row.dataset.responseComponents
+                        )
 
                 }
             );
@@ -3463,7 +3486,12 @@ resetTextareaHeights();
                         btn.dataset.keywords,
 
                     image:
-                        btn.dataset.image
+                        btn.dataset.image,
+
+                    responseComponents:
+                        parseResponseComponents(
+                            btn.dataset.responseComponents
+                        )
 
                 }
             );
@@ -3536,6 +3564,10 @@ closeAgencyDropdown();
 resetImageState();
 
 resetTextareaHeights();
+
+            if (window.FaqResponseBuilder) {
+                window.FaqResponseBuilder.reset();
+            }
 
 
             /*

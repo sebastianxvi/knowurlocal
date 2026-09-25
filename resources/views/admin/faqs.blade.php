@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/image-upload.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/faqs.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/faq-response-builder.css') }}">
 @endpush
 
 @section('title', 'KNOWURLOCAL | ' . ucfirst(auth()->user()->role) . ' Module')
@@ -224,6 +225,7 @@
 
                     data-keywords="{{ $faq->keywords ?? '' }}"
                     data-image="{{ $faq->image ?? '' }}"
+                    data-response-components="{{ e(json_encode($faq->response_components ?? [])) }}"
                 >
 
                     <td>{{ $faq->id }}</td>
@@ -301,6 +303,7 @@
 
                 data-keywords="{{ e($faq->keywords ?? '') }}"
                 data-image="{{ $faq->image }}"
+                data-response-components="{{ e(json_encode($faq->response_components ?? [])) }}"
             >
                 <i class="ph-light ph-pencil-simple"></i>
                 Edit
@@ -717,11 +720,91 @@
                         <label>Answer</label>
                     </div>
 
+
                 </div>
 
                 {{-- =========================================================
-     FAQ IMAGE UPLOAD
-     ========================================================= --}}
+                     FAQ RESPONSE CONTENT
+                     =========================================================
+                     This is intentionally FAQ-specific. The structure
+                     complements the bilingual knowledge fields instead
+                     of looking like a copied support-ticket composer.
+                     ========================================================= --}}
+                <section class="faq-response-section" aria-labelledby="faq-response-heading">
+
+                    <div class="faq-response-intro">
+                        <div class="faq-response-heading">
+                            <div class="faq-response-heading-icon" aria-hidden="true">
+                                <i class="ph-light ph-list-plus"></i>
+                            </div>
+                            <div>
+                                <span class="faq-response-eyebrow">Optional knowledge content</span>
+                                <h3 id="faq-response-heading">Additional response</h3>
+                                <p>Add supporting content that the chatbot or citizen can open when the answer needs more context.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        id="faq-response-components"
+                        class="faq-response-components"
+                        aria-live="polite"
+                    ></div>
+
+                    <div class="faq-response-empty" id="faq-response-empty">
+                        <div class="faq-response-empty-icon" aria-hidden="true">
+                            <i class="ph-light ph-note-blank"></i>
+                        </div>
+                        <div>
+                            <strong>No additional content</strong>
+                            <span>The English and Tagalog/Taglish answers are enough for this FAQ. Add a supporting item only when it improves the answer.</span>
+                        </div>
+                    </div>
+
+                    <div class="faq-response-add-wrap">
+                        <button
+                            type="button"
+                            class="faq-response-add"
+                            id="faq-response-add"
+                            aria-expanded="false"
+                            aria-controls="faq-response-menu"
+                        >
+                            <i class="ph-light ph-plus"></i>
+                            Add supporting content
+                        </button>
+
+                        <div
+                            class="faq-response-menu"
+                            id="faq-response-menu"
+                            hidden
+                        >
+                            <button type="button" class="faq-response-option" data-response-type="text">
+                                <span class="faq-response-option-icon"><i class="ph-light ph-text-aa"></i></span>
+                                <span><strong>Text note</strong><small>Add a short clarification or instruction.</small></span>
+                            </button>
+                            <button type="button" class="faq-response-option" data-response-type="image">
+                                <span class="faq-response-option-icon"><i class="ph-light ph-image"></i></span>
+                                <span><strong>Image</strong><small>Attach an infographic, form, or visual guide.</small></span>
+                            </button>
+                            <button type="button" class="faq-response-option" data-response-type="link">
+                                <span class="faq-response-option-icon"><i class="ph-light ph-link"></i></span>
+                                <span><strong>Link</strong><small>Point citizens to an official online resource.</small></span>
+                            </button>
+                            <button type="button" class="faq-response-option" data-response-type="file">
+                                <span class="faq-response-option-icon"><i class="ph-light ph-file"></i></span>
+                                <span><strong>File</strong><small>Attach a document citizens may need.</small></span>
+                            </button>
+                            <button type="button" class="faq-response-option" data-response-type="qr_code">
+                                <span class="faq-response-option-icon"><i class="ph-light ph-qr-code"></i></span>
+                                <span><strong>QR code</strong><small>Store an official destination for QR access.</small></span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                {{-- =========================================================
+                     FAQ IMAGE UPLOAD
+                     ========================================================= --}}
 
 <div class="floating-group">
 
@@ -829,6 +912,7 @@ window.SUPPORT_FAQ_PREPARE_URL =
     );
 </script>
 
+<script src="{{ asset('jsfiles/admin/faq-response-builder.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/faqs.js') }}"></script>
 
 <!-- 🔥 SUCCESS HANDLER (same pattern as NGA) -->
