@@ -2799,47 +2799,6 @@ return;
 
 
     /*
-     * =========================================================
-     * IMAGE UPLOAD BOX
-     * =========================================================
-     */
-
-    const uploadBox =
-        document.getElementById(
-            "image-upload-box"
-        );
-
-
-    if (
-        uploadBox &&
-        imageInput
-    ) {
-
-        uploadBox.addEventListener(
-            "click",
-            () => {
-
-                /*
-                 * Viewing an FAQ must not allow
-                 * image selection.
-                 */
-                if (
-                    currentMode === "view"
-                ) {
-
-                    return;
-
-                }
-
-
-                imageInput.click();
-
-            }
-        );
-
-    }
-
-    /*
  * =========================================================
  * DUPLICATE FAQ VALIDATION
  * =========================================================

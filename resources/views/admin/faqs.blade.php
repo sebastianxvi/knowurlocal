@@ -3,7 +3,6 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('cssfiles/components/table.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
-<link rel="stylesheet" href="{{ asset('cssfiles/components/image-upload.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/faqs.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/faq-response-builder.css') }}">
 @endpush
@@ -624,13 +623,14 @@
 
                 </div>
 
-                <section class="language-section faq-question-section" aria-labelledby="faq-english-heading">
-
+                {{-- =========================================================
+                     ENGLISH QUESTION + RESPONSE
+                     ========================================================= --}}
+                <section class="faq-language-block" aria-labelledby="faq-english-heading">
                     <div class="faq-language-heading faq-question-heading">
                         <div class="faq-language-heading-copy">
-                            <span class="faq-section-eyebrow">Source question</span>
+                            <span class="faq-section-eyebrow">English</span>
                             <strong id="faq-english-heading">English question</strong>
-                            <small>Write the official question in English.</small>
                         </div>
                     </div>
 
@@ -642,19 +642,32 @@
                             rows="1"
                             required
                         ></textarea>
-                        <label>Question</label>
+                        <label>English question</label>
                     </div>
 
+                    <div class="faq-text-response-heading">
+                        <div>
+                            <span>Text response</span>
+                            <small>Add one or more text blocks for the English answer.</small>
+                        </div>
+                    </div>
 
+                    <div id="faq-response-english" class="faq-response-components" aria-live="polite"></div>
+
+                    <button type="button" class="faq-response-add faq-response-add-language" data-response-language="en">
+                        <i class="ph-light ph-plus"></i>
+                        Add text response
+                    </button>
                 </section>
 
-                <section class="language-section filipino-section" aria-labelledby="faq-filipino-heading">
-
+                {{-- =========================================================
+                     TAGALOG / TAGLISH QUESTION + RESPONSE
+                     ========================================================= --}}
+                <section class="faq-language-block faq-language-block-tagalog" aria-labelledby="faq-filipino-heading">
                     <div class="faq-language-heading">
                         <div class="faq-language-heading-copy">
-                            <span class="faq-section-eyebrow">Translated question</span>
+                            <span class="faq-section-eyebrow">Filipino / Taglish</span>
                             <strong id="faq-filipino-heading">Tagalog / Taglish question</strong>
-                            <small>Write the citizen-friendly Filipino / Taglish version.</small>
                         </div>
 
                         <button
@@ -674,67 +687,22 @@
                             placeholder=" "
                             rows="1"
                         ></textarea>
-                        <label>Question</label>
+                        <label>Tagalog / Taglish question</label>
                     </div>
 
-
-                </section>
-
-                {{-- =========================================================
-                     LANGUAGE-SPECIFIC RESPONSE COMPONENTS
-                     ========================================================= --}}
-                <section class="faq-response-section" aria-labelledby="faq-response-heading">
-
-                    <div class="faq-response-intro">
-                        <div class="faq-response-heading">
-                            <div class="faq-response-heading-icon" aria-hidden="true">
-                                <i class="ph-light ph-chat-centered-text"></i>
-                            </div>
-                            <div>
-                                <span class="faq-response-eyebrow">Response content</span>
-                                <h3 id="faq-response-heading">Response content</h3>
-                                <p>Add one or more text blocks that make up the official answer.</p>
-                            </div>
+                    <div class="faq-text-response-heading">
+                        <div>
+                            <span>Text response</span>
+                            <small>Add one or more text blocks for the Tagalog / Taglish answer.</small>
                         </div>
                     </div>
 
-                    <div class="faq-language-response">
-                        <div class="faq-language-response-heading">
-                            <div class="faq-language-response-icon" aria-hidden="true">
-                                <i class="ph-light ph-translate"></i>
-                            </div>
-                            <div>
-                                <span>English response</span>
-                                <small>Add one or more text blocks for the official English answer.</small>
-                            </div>
-                        </div>
+                    <div id="faq-response-filipino" class="faq-response-components" aria-live="polite"></div>
 
-                        <div id="faq-response-english" class="faq-response-components" aria-live="polite"></div>
-
-                        <button type="button" class="faq-response-add faq-response-add-language" data-response-language="en">
-                            <i class="ph-light ph-plus"></i>
-                            Add text
-                        </button>
-                    </div>
-
-                    <div class="faq-language-response faq-language-response-tagalog">
-                        <div class="faq-language-response-heading">
-                            <div class="faq-language-response-icon" aria-hidden="true">
-                                <i class="ph-light ph-chat-text"></i>
-                            </div>
-                            <div>
-                                <span>Tagalog / Taglish response</span>
-                                <small>Add one or more text blocks for the Filipino / Taglish answer.</small>
-                            </div>
-                        </div>
-
-                        <div id="faq-response-filipino" class="faq-response-components" aria-live="polite"></div>
-
-                        <button type="button" class="faq-response-add faq-response-add-language" data-response-language="fil">
-                            <i class="ph-light ph-plus"></i>
-                            Add text
-                        </button>
-                    </div>
+                    <button type="button" class="faq-response-add faq-response-add-language" data-response-language="fil">
+                        <i class="ph-light ph-plus"></i>
+                        Add text response
+                    </button>
                 </section>
 
                 {{-- =========================================================
@@ -787,60 +755,6 @@
                         </div>
                     </div>
                 </section>
-
-                {{-- =========================================================
-                     FAQ IMAGE UPLOAD
-                     ========================================================= --}}
-
-<div class="floating-group">
-
-    <div class="image-upload-box" id="image-upload-box">
-
-    <input
-        type="file"
-        name="image"
-        id="faq_image"
-        accept="image/png,image/jpeg,image/webp"
-        hidden
-    >
-
-    <input
-        type="hidden"
-        name="remove_image"
-        id="removeImageInput"
-        value="0"
-    >
-
-    <div class="upload-content" id="upload-placeholder">
-
-        <i class="ph-light ph-image"></i>
-
-        <p>Click to upload image</p>
-
-        <span>PNG, JPG, WebP up to 5MB</span>
-
-    </div>
-
-    <img
-        id="preview-img"
-        class="faq-preview-img"
-        alt="Image preview"
-        style="display: none;"
-    >
-
-    <button
-        type="button"
-        class="remove-faq-image-btn"
-        id="removeFaqImage"
-        aria-label="Remove image"
-        style="display: none;"
-    >
-        <i class="ph-light ph-x"></i>
-    </button>
-
-</div>
-
-            </div>
 
         </form>
 

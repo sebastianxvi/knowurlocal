@@ -1861,3 +1861,91 @@ select[readonly]:hover{
         margin-top: 1px;
     }
 }
+
+/* =========================================================
+   FAQ LANGUAGE BLOCKS
+   The modal follows one predictable reading order:
+   question -> text response -> next language -> attachments.
+   ========================================================= */
+#faqForm .faq-language-block {
+    margin-top: 22px;
+    padding-top: 22px;
+    border-top: 1px solid #edf1f5;
+}
+
+#faqForm .faq-language-block:first-of-type {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 0;
+}
+
+#faqForm .faq-text-response-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 18px 0 9px;
+}
+
+#faqForm .faq-text-response-heading > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+#faqForm .faq-text-response-heading span {
+    color: #334155;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: -.005em;
+}
+
+#faqForm .faq-text-response-heading small {
+    color: #94a3b8;
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+#faqForm .faq-language-block .faq-response-components:empty + .faq-response-add {
+    margin-top: 2px;
+}
+
+#faqForm .faq-language-block-tagalog .faq-language-heading {
+    gap: 12px;
+}
+
+#faqForm .faq-attachments-section {
+    margin-top: 24px;
+    padding-top: 22px;
+    border-top: 1px solid #edf1f5;
+}
+
+#faqForm .faq-attachments-section .faq-response-heading h3 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 13px;
+    font-weight: 650;
+    letter-spacing: -.01em;
+}
+
+#faqForm .faq-attachments-section .faq-response-heading p {
+    margin: 3px 0 0;
+    color: #94a3b8;
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+@media (max-width: 600px) {
+    #faqForm .faq-language-block {
+        margin-top: 18px;
+        padding-top: 18px;
+    }
+
+    #faqForm .faq-language-block-tagalog .faq-language-heading {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #faqForm .faq-language-block-tagalog .btn-ai-translate {
+        align-self: flex-start;
+    }
+}

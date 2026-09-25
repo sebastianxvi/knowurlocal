@@ -8,17 +8,25 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('faqs', function (Blueprint $table) {
-            $table->json('response_components')
-                ->nullable()
-                ->after('image');
-        });
+        // This migration may be applied to databases where the column was
+        // already created manually or by an earlier development revision.
+        // Checking first keeps the migration history repairable and prevents
+        // MySQL error 1060 (duplicate column).
+        if (!Schema::hasColumn('faqs', 'response_components')) {
+            Schema::table('faqs', function (Blueprint $table) {
+                $table->json('response_components')
+                    ->nullable()
+                    ->after('image');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('faqs', function (Blueprint $table) {
-            $table->dropColumn('response_components');
-        });
+        if (Schema::hasColumn('faqs', 'response_components')) {
+            Schema::table('faqs', function (Blueprint $table) {
+                $table->dropColumn('response_components');
+            });
+        }
     }
 };

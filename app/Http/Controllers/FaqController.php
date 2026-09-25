@@ -1388,10 +1388,20 @@ public function forceDestroy($id)
             }
 
             if (in_array($type, ['image', 'file'], true)) {
-                $uploaded = $files[$index]['file'] ?? null;
+                // Read the uploaded file directly from Laravel's request file bag.
+                // This is more reliable than assuming the nested UploadedFile array
+                // has exactly the same key representation as the input array.
+                $uploaded = request()->file("response_components.$index.file");
 
-                if ($uploaded) {
-                    $content = $uploaded->store('faqs/responses', 'private');
+                if ($uploaded && $uploaded->isValid()) {
+                    $storedPath = $uploaded->store('faqs/responses', 'private');
+
+                    // Never persist a component when the storage operation failed.
+                    if (!$storedPath) {
+                        continue;
+                    }
+
+                    $content = $storedPath;
                 } elseif (
                     !empty($component['existing_content'])
                     && is_string($component['existing_content'])
