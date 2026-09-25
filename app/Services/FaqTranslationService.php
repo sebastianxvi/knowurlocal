@@ -21,8 +21,7 @@ class FaqTranslationService
      */
     public function translate(
         string $question,
-        string $answer,
-        string $keywords = ''
+        string $answer
     ): array {
 
         $messages = [
@@ -30,14 +29,10 @@ class FaqTranslationService
                 'role' => 'system',
 
                 'content' => <<<'PROMPT'
-You are the translation and search-assistance tool for KNOWURLOCAL,
+You are the translation tool for KNOWURLOCAL,
 a Philippine public-information website.
 
-Your task is to:
-
-1. Translate the English FAQ into natural Filipino/Taglish.
-2. Suggest useful search keywords and short search phrases
-   that Filipino citizens may realistically use to find this FAQ.
+Your task is to translate the English FAQ into natural Filipino/Taglish.
 
 STRICT RULES:
 
@@ -53,26 +48,13 @@ STRICT RULES:
    in English.
 8. Do not make the Filipino/Taglish translation unnecessarily formal.
 9. Do not add explanations or commentary.
-10. Keyword suggestions must be based ONLY on concepts already
-    present in the question, answer, or existing keywords.
-11. Do not invent new government services, requirements,
-    documents, fees, procedures, or facts.
-12. Prefer meaningful search phrases over isolated words.
-13. Include useful English and Filipino/Taglish search phrases.
-14. Preserve official names and acronyms exactly.
-15. Do not generate more than 15 keyword suggestions.
-16. Return ONLY valid JSON.
+10. Return ONLY valid JSON.
 
 Required format:
 
 {
     "question_fil": "...",
-    "answer_fil": "...",
-    "keyword_suggestions": [
-        "...",
-        "...",
-        "..."
-    ]
+    "answer_fil": "..."
 }
 PROMPT
             ],
@@ -83,7 +65,6 @@ PROMPT
                 'content' => json_encode([
                     'question' => $question,
                     'answer' => $answer,
-                    'existing_keywords' => $keywords,
                 ], JSON_UNESCAPED_UNICODE),
             ],
         ];
@@ -122,10 +103,8 @@ if (
     !is_array($translation) ||
     !isset($translation['question_fil']) ||
     !isset($translation['answer_fil']) ||
-    !isset($translation['keyword_suggestions']) ||
     !is_string($translation['question_fil']) ||
-    !is_string($translation['answer_fil']) ||
-    !is_array($translation['keyword_suggestions'])
+    !is_string($translation['answer_fil'])
 ) {
     throw new RuntimeException(
         'AI returned an invalid translation format.'
@@ -171,266 +150,12 @@ if (mb_strlen($answerFil) > 10000) {
     );
 }
 
-/*
- * Clean and normalize keyword suggestions.
- */
-$keywords = array_values(
-    array_filter(
-        array_map(
-            fn ($keyword) => is_string($keyword)
-                ? trim($keyword)
-                : '',
-            $translation['keyword_suggestions']
-        )
-    )
-);
-
 return [
     'question_fil' => $questionFil,
 
     'answer_fil' => $answerFil,
-
-    'keyword_suggestions' => $keywords,
 ];
     }
-
-    /**
- * 🤖 GENERATE FAQ SEARCH KEYWORD SUGGESTIONS
- *
- * Generates a fresh set of search keywords for an FAQ.
- *
- * IMPORTANT:
- * - Does NOT translate the FAQ.
- * - Does NOT modify the database.
- * - Does NOT modify the question or answer.
- * - Existing keywords are provided only so the AI can avoid
- *   returning the exact same suggestions repeatedly.
- */
-public function generateKeywordSuggestions(
-    string $question,
-    string $answer,
-    string $existingKeywords = ''
-): array {
-
-    $messages = [
-        [
-            'role' => 'system',
-
-            'content' => <<<'PROMPT'
-You are the search-keyword suggestion tool for KNOWURLOCAL,
-a Philippine public-information website.
-
-Your task is to generate a fresh set of useful search keywords
-and short search phrases that Filipino citizens may realistically
-use to find the supplied FAQ.
-
-IMPORTANT RULES:
-
-1. Base ALL suggestions ONLY on information present in:
-   - the question
-   - the answer
-   - the existing keywords
-
-2. Do NOT invent facts.
-
-3. Do NOT introduce government services, requirements,
-   documents, fees, procedures, dates, office hours,
-   contact information, or other information that is not
-   present in the supplied FAQ.
-
-4. Preserve official agency names and acronyms exactly.
-
-5. Include a useful mixture of:
-   - English search phrases
-   - Filipino search phrases
-   - natural Taglish search phrases
-
-6. Prefer short, realistic search phrases over isolated words.
-
-7. Avoid unnecessary variations that have essentially
-   the same meaning.
-
-8. Existing keywords are provided to help you avoid
-   repeating the exact same suggestions.
-
-9. Generate NEW suggestions where reasonably possible.
-
-10. Do not simply copy the existing keywords.
-
-11. If an existing keyword is particularly important,
-    it may be retained, but prioritize useful alternatives.
-
-12. Generate no more than 15 suggestions.
-
-13. Each suggestion should be concise and useful for search.
-
-14. Do not include numbering.
-
-15. Do not include explanations or commentary.
-
-16. Return ONLY valid JSON.
-
-Required format:
-
-{
-    "keyword_suggestions": [
-        "...",
-        "...",
-        "..."
-    ]
-}
-PROMPT
-        ],
-
-        [
-            'role' => 'user',
-
-            'content' => json_encode([
-                'question' => $question,
-                'answer' => $answer,
-                'existing_keywords' => $existingKeywords,
-            ], JSON_UNESCAPED_UNICODE),
-        ],
-    ];
-
-    /*
-     * Use a slightly higher temperature than translation.
-     *
-     * Keyword regeneration benefits from some variation,
-     * while the prompt still restricts the AI to factual
-     * information already present in the FAQ.
-     */
-    $response = $this->ai->chat(
-        $messages,
-        0.4
-    );
-
-    /*
-     * Extract the model's actual message content.
-     */
-    $content = data_get(
-        $response,
-        'choices.0.message.content'
-    );
-
-    /*
-     * Never continue with an empty AI response.
-     */
-    if (
-        !is_string($content) ||
-        trim($content) === ''
-    ) {
-        throw new RuntimeException(
-            'AI returned empty keyword suggestions.'
-        );
-    }
-
-    /*
-     * Remove Markdown fences or accidental commentary
-     * before decoding the JSON.
-     */
-    $content = $this->cleanJsonResponse($content);
-
-    /*
-     * Decode the AI response.
-     *
-     * The second argument makes json_decode() return
-     * an associative array instead of a PHP object.
-     */
-    $result = json_decode(
-        $content,
-        true
-    );
-
-    /*
-     * Validate the overall JSON structure before using it.
-     *
-     * AI output must always be treated as untrusted data.
-     */
-    if (
-        !is_array($result) ||
-        !isset($result['keyword_suggestions']) ||
-        !is_array($result['keyword_suggestions'])
-    ) {
-        throw new RuntimeException(
-            'AI returned an invalid keyword suggestion format.'
-        );
-    }
-
-    /*
-     * Normalize every keyword:
-     *
-     * - Only accept strings.
-     * - Remove surrounding whitespace.
-     * - Remove empty values.
-     */
-    $keywords = array_values(
-        array_filter(
-            array_map(
-                fn ($keyword) => is_string($keyword)
-                    ? trim($keyword)
-                    : '',
-                $result['keyword_suggestions']
-            )
-        )
-    );
-
-    /*
-     * Remove duplicate suggestions.
-     *
-     * Comparison is case-insensitive so:
-     *
-     * "How to file a report"
-     * "how to file a report"
-     *
-     * are treated as the same suggestion.
-     */
-    $uniqueKeywords = [];
-
-    foreach ($keywords as $keyword) {
-
-        $normalized = mb_strtolower(
-            preg_replace(
-                '/\s+/',
-                ' ',
-                $keyword
-            )
-        );
-
-        if ($normalized === '') {
-            continue;
-        }
-
-        if (!isset($uniqueKeywords[$normalized])) {
-            $uniqueKeywords[$normalized] = $keyword;
-        }
-    }
-
-    /*
-     * Keep the maximum of 15 suggestions.
-     *
-     * This is enforced server-side even if the AI ignores
-     * the instruction in the prompt.
-     */
-    $keywords = array_slice(
-        array_values($uniqueKeywords),
-        0,
-        15
-    );
-
-    /*
-     * An empty result is not useful to the administrator.
-     */
-    if (empty($keywords)) {
-        throw new RuntimeException(
-            'AI returned no usable keyword suggestions.'
-        );
-    }
-
-    return $keywords;
-}
-
-
 
     /**
  * Prepare a bilingual FAQ draft from a support request.
@@ -527,12 +252,8 @@ IMPORTANT RULES:
 9. Do not add explanations or commentary.
 10. Do not rewrite the factual answer beyond what is necessary
     to translate it naturally.
-11. Generate useful search keywords based ONLY on the supplied
-    question and answer.
-12. Include both English and Filipino/Taglish search phrases.
-13. Do not generate more than 15 keyword suggestions.
-14. Return ONLY valid JSON.
-15. Do not change the intent of the user's question.
+11. Return ONLY valid JSON.
+12. Do not change the intent of the user's question.
 16. Do not make the English version more specific than the original.
 17. Do not make the Filipino/Taglish version more specific than the original.
 18. If the original question is ambiguous, preserve that ambiguity.
@@ -559,11 +280,7 @@ Required format:
     "question": "...",
     "answer": "...",
     "question_fil": "...",
-    "answer_fil": "...",
-    "keyword_suggestions": [
-        "...",
-        "..."
-    ]
+    "answer_fil": "..."
 }
 PROMPT
         ],
@@ -620,7 +337,6 @@ $requiredFields = [
     'answer',
     'question_fil',
     'answer_fil',
-    'keyword_suggestions',
 ];
 
 foreach ($requiredFields as $field) {
@@ -643,8 +359,7 @@ if (
     !is_string($result['question']) ||
     !is_string($result['answer']) ||
     !is_string($result['question_fil']) ||
-    !is_string($result['answer_fil']) ||
-    !is_array($result['keyword_suggestions'])
+    !is_string($result['answer_fil'])
 ) {
     throw new RuntimeException(
         'AI FAQ response contains invalid field types.'
@@ -689,22 +404,6 @@ if (
     }
 
     /*
-     * Clean and normalize keyword suggestions.
-     */
-    $keywords = array_values(
-
-    
-        array_filter(
-            array_map(
-                fn ($keyword) => is_string($keyword)
-                    ? trim($keyword)
-                    : '',
-                $result['keyword_suggestions']
-            )
-        )
-    );
-
-    /*
  * Detect the most obvious field-mapping failure.
  *
  * If the AI places the exact original question into both
@@ -742,9 +441,6 @@ if (
 
         'answer_fil' =>
             trim($result['answer_fil']),
-
-        'keyword_suggestions' =>
-            $keywords,
     ];
 }
 

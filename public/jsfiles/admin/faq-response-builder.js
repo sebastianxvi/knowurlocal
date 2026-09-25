@@ -1,56 +1,63 @@
 
 /*
 |--------------------------------------------------------------------------
-| KNOWURLOCAL — FAQ SUPPORTING CONTENT BUILDER
+| KNOWURLOCAL — FAQ RESPONSE CONTENT BUILDER
 |--------------------------------------------------------------------------
 |
-| This is intentionally smaller and quieter than the Support Request
-| response composer. FAQ answers already contain the primary response;
-| these components are only supporting knowledge content.
+| The FAQ composer intentionally separates:
+| 1. English response text
+| 2. Tagalog / Taglish response text
+| 3. Additional attachments
 |
-| Allowed:
-| text, image, link, file, qr_code
+| Text components only appear under a language. Attachments never become
+| part of the language response area, which keeps the modal easy to scan.
 |
-| Security:
-| - Dynamic text is inserted through textContent where possible.
-| - URLs are limited to http/https before previewing.
-| - Files are validated for size/type client-side for UX only.
-| - Laravel remains the authoritative validator.
+| Client-side checks are only UX safeguards. Laravel remains authoritative.
 |--------------------------------------------------------------------------
 */
 
 document.addEventListener('DOMContentLoaded', () => {
-    const container = document.getElementById('faq-response-components');
-    const empty = document.getElementById('faq-response-empty');
-    const addButton = document.getElementById('faq-response-add');
-    const menu = document.getElementById('faq-response-menu');
+    const englishContainer = document.getElementById('faq-response-english');
+    const filipinoContainer = document.getElementById('faq-response-filipino');
+    const attachmentContainer = document.getElementById('faq-attachment-components');
+    const attachmentEmpty = document.getElementById('faq-attachments-empty');
+    const attachmentAdd = document.getElementById('faq-attachment-add');
+    const attachmentMenu = document.getElementById('faq-attachment-menu');
 
-    if (!container || !empty || !addButton || !menu) {
+    if (!englishContainer || !filipinoContainer || !attachmentContainer) {
         return;
     }
 
-    const MAX = 10;
+    const MAX_TEXT_PER_LANGUAGE = 10;
+    const MAX_ATTACHMENTS = 10;
     const MAX_TEXT = 5000;
     const MAX_FILE = 5 * 1024 * 1024;
+
     let counter = 0;
 
-    const icons = {
-        text: 'ph-text-aa',
+    const iconFor = {
+        text: 'ph-chat-text',
         image: 'ph-image',
-        link: 'ph-link',
         file: 'ph-file',
+        link: 'ph-link',
         qr_code: 'ph-qr-code',
     };
 
-    const labels = {
-        text: ['Text note', 'A short clarification or instruction.'],
-        image: ['Image', 'A visual guide or supporting image.'],
-        link: ['Link', 'An official online resource.'],
-        file: ['File', 'A document citizens may need.'],
-        qr_code: ['QR code', 'An official destination encoded for QR access.'],
+    const labelFor = {
+        image: 'Image',
+        file: 'File',
+        link: 'Link',
+        qr_code: 'QR code',
     };
 
-    const safeUrl = (value) => {
+    const escapeHtml = value => String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+
+    const safeUrl = value => {
         try {
             const url = new URL(value);
             return ['http:', 'https:'].includes(url.protocol);
@@ -59,41 +66,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const escapeHtml = (value) => String(value ?? '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
+    const allTextItems = () => document.querySelectorAll(
+        '#faq-response-english .faq-response-item, #faq-response-filipino .faq-response-item'
+    );
 
     const refresh = () => {
-        const count = container.querySelectorAll('.faq-response-item').length;
-        empty.hidden = count > 0;
-        addButton.disabled = count >= MAX;
-        addButton.setAttribute('aria-disabled', count >= MAX ? 'true' : 'false');
+        const attachmentCount = attachmentContainer.querySelectorAll('.faq-response-item').length;
+        attachmentEmpty.hidden = attachmentCount > 0;
+
+        if (attachmentAdd) {
+            attachmentAdd.disabled = attachmentCount >= MAX_ATTACHMENTS;
+            attachmentAdd.setAttribute('aria-disabled', attachmentCount >= MAX_ATTACHMENTS ? 'true' : 'false');
+        }
+
+        document.querySelectorAll('.faq-response-add-language').forEach(button => {
+            const target = button.dataset.responseLanguage === 'fil'
+                ? filipinoContainer
+                : englishContainer;
+
+            const count = target.querySelectorAll('.faq-response-item').length;
+            button.disabled = count >= MAX_TEXT_PER_LANGUAGE;
+            button.setAttribute('aria-disabled', count >= MAX_TEXT_PER_LANGUAGE ? 'true' : 'false');
+        });
     };
 
-    const closeMenu = () => {
-        menu.hidden = true;
-        addButton.setAttribute('aria-expanded', 'false');
+    const closeAttachmentMenu = () => {
+        if (!attachmentMenu || !attachmentAdd) return;
+        attachmentMenu.hidden = true;
+        attachmentAdd.setAttribute('aria-expanded', 'false');
     };
 
-    const createHeader = (type, index) => `
+    const createHeader = (type, index, title, subtitle) => `
         <div class="faq-response-item-header">
             <div class="faq-response-item-title">
                 <span class="faq-response-item-icon" aria-hidden="true">
-                    <i class="ph-light ${icons[type]}"></i>
+                    <i class="ph-light ${iconFor[type]}"></i>
                 </span>
                 <span>
-                    <strong>${escapeHtml(labels[type][0])}</strong>
-                    <small>${escapeHtml(labels[type][1])}</small>
+                    <strong>${escapeHtml(title)}</strong>
+                    <small>${escapeHtml(subtitle)}</small>
                 </span>
             </div>
             <button
                 type="button"
                 class="faq-response-remove"
                 data-remove-response="${index}"
-                aria-label="Remove ${escapeHtml(labels[type][0])}"
+                aria-label="Remove ${escapeHtml(title)}"
                 title="Remove"
             >
                 <i class="ph-light ph-trash" aria-hidden="true"></i>
@@ -101,35 +119,57 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     `;
 
-    const createItem = (type, values = {}, readonly = false) => {
+    const createText = (language, values = {}, readonly = false) => {
         const index = counter++;
-        const disabled = readonly ? 'disabled' : '';
+        const container = language === 'fil' ? filipinoContainer : englishContainer;
         const content = values.content ?? '';
-        const label = values.label ?? '';
-        const existing = values.content ?? '';
+        const disabled = readonly ? 'disabled' : '';
 
-        let body = '';
+        const item = document.createElement('article');
+        item.className = 'faq-response-item';
+        item.dataset.responseType = 'text';
+        item.dataset.responseLanguage = language;
+        item.dataset.responseIndex = index;
 
-        if (type === 'text') {
-            body = `
-                <label for="faq-response-${index}-content">Content</label>
+        item.innerHTML = `
+            ${createHeader(
+                'text',
+                index,
+                language === 'fil' ? 'Tagalog / Taglish text' : 'English text',
+                'Supporting response block'
+            )}
+            <div class="faq-response-item-body">
+                <label for="faq-response-${index}-content">Response text</label>
                 <textarea
                     id="faq-response-${index}-content"
                     name="response_components[${index}][content]"
                     rows="4"
                     maxlength="${MAX_TEXT}"
-                    placeholder="Add a short supporting note..."
+                    placeholder="${language === 'fil' ? 'Add a Tagalog / Taglish response...' : 'Add an English response...'}"
                     ${disabled}
                 >${escapeHtml(content)}</textarea>
                 <input type="hidden" name="response_components[${index}][type]" value="text">
-            `;
-        }
+                <input type="hidden" name="response_components[${index}][language]" value="${language}">
+            </div>
+        `;
+
+        container.appendChild(item);
+    };
+
+    const createAttachment = (type, values = {}, readonly = false) => {
+        const index = counter++;
+        const content = values.content ?? '';
+        const label = values.label ?? '';
+        const disabled = readonly ? 'disabled' : '';
+
+        const item = document.createElement('article');
+        item.className = 'faq-response-item faq-attachment-item';
+        item.dataset.responseType = type;
+        item.dataset.responseIndex = index;
+
+        let body = '';
 
         if (type === 'link' || type === 'qr_code') {
-            const placeholder = type === 'qr_code'
-                ? 'https://example.gov.ph/...'
-                : 'https://official-government-website.gov.ph/...';
-
             body = `
                 <label for="faq-response-${index}-content">${type === 'qr_code' ? 'Destination URL' : 'Official URL'}</label>
                 <input
@@ -137,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     type="url"
                     name="response_components[${index}][content]"
                     value="${escapeHtml(content)}"
-                    placeholder="${placeholder}"
+                    placeholder="https://official-government-website.gov.ph/..."
                     inputmode="url"
                     autocomplete="url"
                     ${disabled}
@@ -150,11 +190,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     name="response_components[${index}][label]"
                     value="${escapeHtml(label)}"
                     maxlength="255"
-                    placeholder="${type === 'qr_code' ? 'What this QR code opens' : 'How this link should be described'}"
+                    placeholder="Short description"
                     ${disabled}
                 >
-                <input type="hidden" name="response_components[${index}][type]" value="${type}">
-                ${type === 'qr_code' ? '<p class="faq-response-hint"><i class="ph-light ph-info"></i> The citizen-facing QR destination will use this URL.</p>' : ''}
             `;
         }
 
@@ -171,15 +209,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     name="response_components[${index}][file]"
                     accept="${accept}"
                     ${disabled}
-                    ${existing ? '' : 'required'}
+                    ${content ? '' : 'required'}
                 >
-                ${existing ? `
-                    <input type="hidden"
-                        name="response_components[${index}][existing_content]"
-                        value="${escapeHtml(existing)}">
+                ${content ? `
+                    <input type="hidden" name="response_components[${index}][existing_content]" value="${escapeHtml(content)}">
                     <div class="faq-response-existing-file">
-                        <i class="ph-light ${type === 'image' ? 'ph-image' : 'ph-file'}"></i>
-                        <span>Existing ${type === 'image' ? 'image' : 'file'} will be kept unless replaced.</span>
+                        <i class="ph-light ${iconFor[type]}"></i>
+                        <span>Existing ${type} will be kept unless replaced.</span>
                     </div>
                 ` : ''}
                 <label for="faq-response-${index}-label">Label <span>(optional)</span></label>
@@ -189,38 +225,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     name="response_components[${index}][label]"
                     value="${escapeHtml(label)}"
                     maxlength="255"
-                    placeholder="A short description"
+                    placeholder="Short description"
                     ${disabled}
                 >
                 <p class="faq-response-hint">
                     <i class="ph-light ph-shield-check"></i>
                     ${type === 'image' ? 'JPG, PNG, or WEBP · Maximum 5 MB' : 'PDF, Word, or Excel · Maximum 5 MB'}
                 </p>
-                <input type="hidden" name="response_components[${index}][type]" value="${type}">
             `;
         }
 
-        const wrapper = document.createElement('article');
-        wrapper.className = 'faq-response-item';
-        wrapper.dataset.responseType = type;
-        wrapper.dataset.responseIndex = index;
-        wrapper.innerHTML = `
-            ${createHeader(type, index)}
+        item.innerHTML = `
+            ${createHeader(type, index, labelFor[type], 'Additional attachment')}
             <div class="faq-response-item-body">
                 ${body}
+                <input type="hidden" name="response_components[${index}][type]" value="${type}">
+                <input type="hidden" name="response_components[${index}][language]" value="attachment">
             </div>
         `;
 
-        container.appendChild(wrapper);
+        attachmentContainer.appendChild(item);
 
         if (!readonly) {
-            wrapper.querySelectorAll('input[type="file"]').forEach(input => {
+            item.querySelectorAll('input[type="file"]').forEach(input => {
                 input.addEventListener('change', () => {
                     const file = input.files?.[0];
                     if (!file) return;
 
                     const allowed = type === 'image'
-                        ? ['image/jpeg','image/png','image/webp']
+                        ? ['image/jpeg', 'image/png', 'image/webp']
                         : [
                             'application/pdf',
                             'application/msword',
@@ -246,89 +279,117 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            wrapper.querySelectorAll('input[type="url"]').forEach(input => {
+            item.querySelectorAll('input[type="url"]').forEach(input => {
                 input.addEventListener('blur', () => {
-                    if (input.value && !safeUrl(input.value)) {
-                        input.setCustomValidity('Only HTTP or HTTPS URLs are allowed.');
-                    } else {
-                        input.setCustomValidity('');
-                    }
+                    input.setCustomValidity(
+                        input.value && !safeUrl(input.value)
+                            ? 'Only HTTP or HTTPS URLs are allowed.'
+                            : ''
+                    );
                 });
             });
         }
-
-        refresh();
     };
 
     const reset = () => {
-        container.replaceChildren();
+        englishContainer.replaceChildren();
+        filipinoContainer.replaceChildren();
+        attachmentContainer.replaceChildren();
         counter = 0;
+        closeAttachmentMenu();
         refresh();
-        closeMenu();
     };
 
     const load = (components = [], readonly = false) => {
         reset();
 
-        if (!Array.isArray(components)) {
-            return;
-        }
+        if (!Array.isArray(components)) return;
 
-        components.slice(0, MAX).forEach(component => {
-            if (component && labels[component.type]) {
-                createItem(component.type, component, readonly);
+        components.slice(0, MAX_ATTACHMENTS + MAX_TEXT_PER_LANGUAGE * 2).forEach(component => {
+            if (!component || !component.type) return;
+
+            if (component.type === 'text') {
+                createText(component.language === 'fil' ? 'fil' : 'en', component, readonly);
+                return;
+            }
+
+            if (['image', 'file', 'link', 'qr_code'].includes(component.type)) {
+                createAttachment(component.type, component, readonly);
             }
         });
 
         refresh();
     };
 
-    addButton.addEventListener('click', () => {
-        if (addButton.disabled) return;
-        const isOpen = !menu.hidden;
-        if (isOpen) {
-            closeMenu();
-            return;
+    document.querySelectorAll('.faq-response-add-language').forEach(button => {
+        button.addEventListener('click', () => {
+            if (button.disabled) return;
+            createText(button.dataset.responseLanguage === 'fil' ? 'fil' : 'en');
+            refresh();
+
+            const target = button.dataset.responseLanguage === 'fil'
+                ? filipinoContainer
+                : englishContainer;
+
+            target.lastElementChild?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            });
+        });
+    });
+
+    if (attachmentAdd && attachmentMenu) {
+        attachmentAdd.addEventListener('click', () => {
+            if (attachmentAdd.disabled) return;
+
+            const isOpen = !attachmentMenu.hidden;
+            attachmentMenu.hidden = isOpen;
+            attachmentAdd.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        });
+
+        attachmentMenu.addEventListener('click', event => {
+            const option = event.target.closest('[data-attachment-type]');
+            if (!option) return;
+
+            const type = option.dataset.attachmentType;
+            if (!['image', 'file', 'link', 'qr_code'].includes(type)) return;
+
+            if (attachmentContainer.querySelectorAll('.faq-response-item').length >= MAX_ATTACHMENTS) {
+                return;
+            }
+
+            createAttachment(type);
+            closeAttachmentMenu();
+            refresh();
+
+            attachmentContainer.lastElementChild?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            });
+        });
+    }
+
+    document.addEventListener('click', event => {
+        if (!event.target.closest('.faq-attachments-section')) {
+            closeAttachmentMenu();
         }
-        menu.hidden = false;
-        addButton.setAttribute('aria-expanded', 'true');
     });
 
-    menu.addEventListener('click', event => {
-        const option = event.target.closest('[data-response-type]');
-        if (!option) return;
-
-        const type = option.dataset.responseType;
-        if (!labels[type] || container.querySelectorAll('.faq-response-item').length >= MAX) return;
-
-        createItem(type);
-        closeMenu();
-
-        const items = container.querySelectorAll('.faq-response-item');
-        items[items.length - 1]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
-
-    container.addEventListener('click', event => {
+    document.addEventListener('click', event => {
         const remove = event.target.closest('[data-remove-response]');
         if (!remove) return;
 
         const item = remove.closest('.faq-response-item');
         if (item) item.remove();
-
         refresh();
-    });
-
-    document.addEventListener('click', event => {
-        if (!event.target.closest('.faq-response-add-wrap')) {
-            closeMenu();
-        }
     });
 
     window.FaqResponseBuilder = {
         reset,
         load,
-        getData: () => Array.from(container.querySelectorAll('.faq-response-item')).map(item => ({
-            type: item.dataset.responseType
+        getData: () => Array.from(allTextItems()).map(item => ({
+            type: 'text',
+            language: item.dataset.responseLanguage
         })),
     };
 });

@@ -462,8 +462,16 @@
     <div class="modal">
 
         <!-- HEADER -->
-        <div class="modal-header">
-            <h2>Invite Admin</h2>
+        <div class="modal-header admin-modal-header">
+            <div class="admin-modal-heading">
+                <div class="admin-modal-icon" aria-hidden="true">
+                    <i class="ph-light ph-user-plus"></i>
+                </div>
+                <div>
+                    <span class="admin-modal-eyebrow">Administration</span>
+                    <h2>Invite Admin</h2>
+                </div>
+            </div>
 
             <div class="modal-actions">
                 <button type="submit" form="inviteForm" class="btn-save">Send</button>

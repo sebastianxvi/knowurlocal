@@ -466,14 +466,28 @@
 <div id="modal-back" class="back">
     <div class="modal">
 
-        <div class="modal-header">
-            <h2 id="faq-modal-title">FAQ</h2>
+        <header class="modal-header admin-modal-header">
+            <div class="admin-modal-heading">
+                <div class="admin-modal-icon" aria-hidden="true">
+                    <i class="ph-light ph-chat-centered-text"></i>
+                </div>
+                <div>
+                    <span class="admin-modal-eyebrow">Knowledge base</span>
+                    <h2 id="faq-modal-title">FAQ</h2>
+                </div>
+            </div>
 
             <div class="modal-actions">
-                <button type="submit" form="faqForm" class="btn-save">Save</button>
-                <button type="button" onclick="closeFaqModal()" class="btn-cancel">Cancel</button>
+                <button type="submit" form="faqForm" class="btn-save">
+                    <i class="ph-light ph-floppy-disk"></i>
+                    <span>Save FAQ</span>
+                </button>
+                <button type="button" onclick="closeFaqModal()" class="btn-cancel">
+                    <i class="ph-light ph-x"></i>
+                    <span>Cancel</span>
+                </button>
             </div>
-        </div>
+        </header>
 
         <form
     id="faqForm"
@@ -610,48 +624,6 @@
 
                 </div>
 
-                <div
-                    id="keywordSuggestions"
-                    class="keyword-suggestions"
-                    hidden
-                >
-                    <div class="keyword-suggestions-header">
-
-                        <span>
-                            AI keyword suggestions
-                        </span>
-
-                        <div class="keyword-suggestion-actions">
-
-                            <button
-                                type="button"
-                                id="regenerateKeywordSuggestions"
-                                class="btn-regenerate-keywords"
-                            >
-                                <i class="ph-light ph-arrows-clockwise"></i>
-                                Regenerate
-                            </button>
-
-                            <button
-                                type="button"
-                                id="addKeywordSuggestions"
-                                disabled
-                            >
-                                Add selected (0)
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                    <div
-                        id="keywordSuggestionList"
-                        class="keyword-suggestion-list"
-                        role="group"
-                        aria-label="AI keyword suggestions"
-                    ></div>
-                </div>
-
                 <div class="language-section">
 
                     <div class="language-heading">
@@ -724,77 +696,106 @@
                 </div>
 
                 {{-- =========================================================
-                     FAQ RESPONSE CONTENT
-                     =========================================================
-                     This is intentionally FAQ-specific. The structure
-                     complements the bilingual knowledge fields instead
-                     of looking like a copied support-ticket composer.
+                     LANGUAGE-SPECIFIC RESPONSE COMPONENTS
                      ========================================================= --}}
                 <section class="faq-response-section" aria-labelledby="faq-response-heading">
 
                     <div class="faq-response-intro">
                         <div class="faq-response-heading">
                             <div class="faq-response-heading-icon" aria-hidden="true">
-                                <i class="ph-light ph-list-plus"></i>
+                                <i class="ph-light ph-chat-centered-text"></i>
                             </div>
                             <div>
-                                <span class="faq-response-eyebrow">Optional knowledge content</span>
-                                <h3 id="faq-response-heading">Additional response</h3>
-                                <p>Add supporting content that the chatbot or citizen can open when the answer needs more context.</p>
+                                <span class="faq-response-eyebrow">Response content</span>
+                                <h3 id="faq-response-heading">Additional response text</h3>
+                                <p>Add reusable supporting text without crowding the main question and answer fields.</p>
                             </div>
                         </div>
                     </div>
 
-                    <div
-                        id="faq-response-components"
-                        class="faq-response-components"
-                        aria-live="polite"
-                    ></div>
+                    <div class="faq-language-response">
+                        <div class="faq-language-response-heading">
+                            <div class="faq-language-response-icon" aria-hidden="true">
+                                <i class="ph-light ph-translate"></i>
+                            </div>
+                            <div>
+                                <span>English response</span>
+                                <small>Add one or more text blocks for the English answer.</small>
+                            </div>
+                        </div>
 
-                    <div class="faq-response-empty" id="faq-response-empty">
-                        <div class="faq-response-empty-icon" aria-hidden="true">
-                            <i class="ph-light ph-note-blank"></i>
+                        <div id="faq-response-english" class="faq-response-components" aria-live="polite"></div>
+
+                        <button type="button" class="faq-response-add faq-response-add-language" data-response-language="en">
+                            <i class="ph-light ph-plus"></i>
+                            Add text
+                        </button>
+                    </div>
+
+                    <div class="faq-language-response faq-language-response-tagalog">
+                        <div class="faq-language-response-heading">
+                            <div class="faq-language-response-icon" aria-hidden="true">
+                                <i class="ph-light ph-chat-text"></i>
+                            </div>
+                            <div>
+                                <span>Tagalog / Taglish response</span>
+                                <small>Add one or more text blocks for Filipino-speaking citizens.</small>
+                            </div>
                         </div>
-                        <div>
-                            <strong>No additional content</strong>
-                            <span>The English and Tagalog/Taglish answers are enough for this FAQ. Add a supporting item only when it improves the answer.</span>
+
+                        <div id="faq-response-filipino" class="faq-response-components" aria-live="polite"></div>
+
+                        <button type="button" class="faq-response-add faq-response-add-language" data-response-language="fil">
+                            <i class="ph-light ph-plus"></i>
+                            Add text
+                        </button>
+                    </div>
+                </section>
+
+                {{-- =========================================================
+                     ADDITIONAL ATTACHMENTS
+                     ========================================================= --}}
+                <section class="faq-attachments-section" aria-labelledby="faq-attachments-heading">
+                    <div class="faq-response-intro">
+                        <div class="faq-response-heading">
+                            <div class="faq-response-heading-icon" aria-hidden="true">
+                                <i class="ph-light ph-paperclip"></i>
+                            </div>
+                            <div>
+                                <span class="faq-response-eyebrow">Supporting resources</span>
+                                <h3 id="faq-attachments-heading">Additional attachments</h3>
+                                <p>Attach an image, document, official link, or QR destination related to this FAQ.</p>
+                            </div>
                         </div>
+                    </div>
+
+                    <div id="faq-attachment-components" class="faq-response-components" aria-live="polite"></div>
+
+                    <div class="faq-attachments-empty" id="faq-attachments-empty">
+                        <i class="ph-light ph-paperclip" aria-hidden="true"></i>
+                        <span>No additional attachments.</span>
                     </div>
 
                     <div class="faq-response-add-wrap">
-                        <button
-                            type="button"
-                            class="faq-response-add"
-                            id="faq-response-add"
-                            aria-expanded="false"
-                            aria-controls="faq-response-menu"
-                        >
+                        <button type="button" class="faq-response-add" id="faq-attachment-add" aria-expanded="false" aria-controls="faq-attachment-menu">
                             <i class="ph-light ph-plus"></i>
-                            Add supporting content
+                            Add attachment
                         </button>
 
-                        <div
-                            class="faq-response-menu"
-                            id="faq-response-menu"
-                            hidden
-                        >
-                            <button type="button" class="faq-response-option" data-response-type="text">
-                                <span class="faq-response-option-icon"><i class="ph-light ph-text-aa"></i></span>
-                                <span><strong>Text note</strong><small>Add a short clarification or instruction.</small></span>
-                            </button>
-                            <button type="button" class="faq-response-option" data-response-type="image">
+                        <div class="faq-response-menu" id="faq-attachment-menu" hidden>
+                            <button type="button" class="faq-response-option" data-attachment-type="image">
                                 <span class="faq-response-option-icon"><i class="ph-light ph-image"></i></span>
-                                <span><strong>Image</strong><small>Attach an infographic, form, or visual guide.</small></span>
+                                <span><strong>Image</strong><small>Attach a visual guide or form.</small></span>
                             </button>
-                            <button type="button" class="faq-response-option" data-response-type="link">
-                                <span class="faq-response-option-icon"><i class="ph-light ph-link"></i></span>
-                                <span><strong>Link</strong><small>Point citizens to an official online resource.</small></span>
-                            </button>
-                            <button type="button" class="faq-response-option" data-response-type="file">
+                            <button type="button" class="faq-response-option" data-attachment-type="file">
                                 <span class="faq-response-option-icon"><i class="ph-light ph-file"></i></span>
                                 <span><strong>File</strong><small>Attach a document citizens may need.</small></span>
                             </button>
-                            <button type="button" class="faq-response-option" data-response-type="qr_code">
+                            <button type="button" class="faq-response-option" data-attachment-type="link">
+                                <span class="faq-response-option-icon"><i class="ph-light ph-link"></i></span>
+                                <span><strong>Link</strong><small>Point citizens to an official resource.</small></span>
+                            </button>
+                            <button type="button" class="faq-response-option" data-attachment-type="qr_code">
                                 <span class="faq-response-option-icon"><i class="ph-light ph-qr-code"></i></span>
                                 <span><strong>QR code</strong><small>Store an official destination for QR access.</small></span>
                             </button>
@@ -877,9 +878,6 @@
      */
     window.FAQ_TRANSLATE_URL =
         @json(route('faqs.translate'));
-
-    window.FAQ_KEYWORDS_URL =
-        @json(route('admin.faqs.generateKeywords'));
 
     /*
      * Support Request → FAQ conversion data.

@@ -399,11 +399,16 @@
 
     <div class="modal">
 
-        <div class="modal-header">
-
-            <h2 id="modal-title">
-                Add Category
-            </h2>
+        <div class="modal-header admin-modal-header">
+            <div class="admin-modal-heading">
+                <div class="admin-modal-icon" aria-hidden="true">
+                    <i class="ph-light ph-tag"></i>
+                </div>
+                <div>
+                    <span class="admin-modal-eyebrow">Category management</span>
+                    <h2 id="modal-title">Add Category</h2>
+                </div>
+            </div>
 
             <div class="modal-actions">
 

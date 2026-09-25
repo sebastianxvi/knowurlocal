@@ -580,8 +580,16 @@
     <div class="modal">
 
         <!-- HEADER -->
-        <div class="modal-header">
-            <h2 id="modal-title">Agency</h2>
+        <div class="modal-header admin-modal-header">
+            <div class="admin-modal-heading">
+                <div class="admin-modal-icon" aria-hidden="true">
+                    <i class="ph-light ph-buildings"></i>
+                </div>
+                <div>
+                    <span class="admin-modal-eyebrow">Agency management</span>
+                    <h2 id="modal-title">Agency</h2>
+                </div>
+            </div>
 
             <div class="modal-actions">
                 <button type="submit" form="agencyForm" class="btn-save">Save</button>

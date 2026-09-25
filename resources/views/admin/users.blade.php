@@ -353,11 +353,16 @@
 
         <!-- ================= HEADER ================= -->
 
-        <div class="modal-header">
-
-            <h2 id="user-modal-title">
-                User Overview
-            </h2>
+        <div class="modal-header admin-modal-header">
+            <div class="admin-modal-heading">
+                <div class="admin-modal-icon" aria-hidden="true">
+                    <i class="ph-light ph-user-circle"></i>
+                </div>
+                <div>
+                    <span class="admin-modal-eyebrow">User management</span>
+                    <h2 id="user-modal-title">User Overview</h2>
+                </div>
+            </div>
 
             <div class="modal-actions">
 

@@ -49,10 +49,9 @@ class FaqController extends Controller
              * our translation service.
              */
             $translation = $translator->translate(
-    $validated['question'],
-    $validated['answer'],
-    $request->input('keywords', '')
-);
+                $validated['question'],
+                $validated['answer']
+            );
 
             /*
              * Return only the generated translation.
@@ -65,8 +64,6 @@ class FaqController extends Controller
                 'translation' => [
                     'question_fil' => $translation['question_fil'],
                     'answer_fil' => $translation['answer_fil'],
-                    'keyword_suggestions' =>
-                        $translation['keyword_suggestions'],
                 ],
             ]);
 
@@ -95,109 +92,6 @@ class FaqController extends Controller
     }
 
     /**
- * 🤖 GENERATE FAQ KEYWORD SUGGESTIONS
- *
- * Generates a fresh set of search keywords.
- *
- * This endpoint only returns suggestions.
- * It does NOT save anything to the database.
- */
-public function generateKeywords(
-    Request $request,
-    FaqTranslationService $translator
-) {
-    /*
-     * Defense-in-depth authorization.
-     *
-     * The route should already be protected by the
-     * admin middleware, but sensitive AI functionality
-     * should not rely on middleware alone.
-     */
-    if (
-        !auth()->check() ||
-        !in_array(
-            auth()->user()->role,
-            ['admin', 'superadmin'],
-            true
-        )
-    ) {
-        abort(403, 'Unauthorized action.');
-    }
-
-    /*
-     * Validate the source FAQ content before sending
-     * anything to the external AI service.
-     */
-    $validated = $request->validate([
-        'question' => [
-            'required',
-            'string',
-            'max:255',
-        ],
-
-        'answer' => [
-            'required',
-            'string',
-            'max:10000',
-        ],
-
-        'keywords' => [
-            'nullable',
-            'string',
-            'max:1000',
-        ],
-    ]);
-
-    try {
-
-        /*
-         * Ask the service for a fresh set of keyword
-         * suggestions.
-         *
-         * Nothing is saved here.
-         */
-        $keywords = $translator->generateKeywordSuggestions(
-            $validated['question'],
-            $validated['answer'],
-            $validated['keywords'] ?? ''
-        );
-
-        /*
-         * Return only what the frontend needs.
-         */
-        return response()->json([
-            'success' => true,
-
-            'keyword_suggestions' => $keywords,
-        ]);
-
-    } catch (\Throwable $e) {
-
-        /*
-         * Keep technical AI/API details out of the browser.
-         *
-         * The administrator receives only a generic error.
-         */
-        \Log::error(
-            'FAQ keyword generation failed.',
-            [
-                'user_id' => auth()->id(),
-                'exception' => get_class($e),
-                'message' => $e->getMessage(),
-            ]
-        );
-
-        return response()->json([
-            'success' => false,
-
-            'message' =>
-                'Unable to generate keyword suggestions right now.',
-        ], 503);
-    }
-}
-
-
-/**
  * 🤖 PREPARE FAQ FROM SUPPORT REQUEST
  *
  * Retrieves an answered Support Request and generates
@@ -268,12 +162,8 @@ public function prepareFromSupport(
          * Generate the bilingual FAQ draft.
          *
          * This method determines the language of the
-         * original user's question and generates both:
-         *
-         * - English version
-         * - Filipino/Taglish version
-         *
-         * It also generates search keyword suggestions.
+         * original user's question and generates both
+         * English and Filipino/Taglish versions.
          */
         $draft = $translator->prepareSupportRequestFaq(
             $support->question,
@@ -310,9 +200,6 @@ public function prepareFromSupport(
 
         'answer_fil' =>
             $draft['answer_fil'],
-
-        'keyword_suggestions' =>
-            $draft['keyword_suggestions'],
     ],
 ]);
 
@@ -758,6 +645,7 @@ public function store(Request $request)
 
         'response_components' => ['nullable', 'array', 'max:10'],
         'response_components.*.type' => ['required_with:response_components', 'in:text,image,file,link,qr_code'],
+        'response_components.*.language' => ['nullable', 'string', 'in:en,fil,attachment'],
         'response_components.*.content' => ['nullable', 'string', 'max:5000'],
         'response_components.*.label' => ['nullable', 'string', 'max:255'],
         'response_components.*.file' => [
@@ -1410,6 +1298,23 @@ public function forceDestroy($id)
             $content = trim((string) ($component['content'] ?? ''));
             $label = trim((string) ($component['label'] ?? ''));
 
+            /*
+             * Text components belong to one language. Attachments are
+             * explicitly marked as attachment so they never get mistaken
+             * for response text by the public FAQ renderer.
+             */
+            $language = $component['language'] ?? (
+                $type === 'text' ? 'en' : 'attachment'
+            );
+
+            if ($type === 'text' && !in_array($language, ['en', 'fil'], true)) {
+                continue;
+            }
+
+            if ($type !== 'text' && $language !== 'attachment') {
+                $language = 'attachment';
+            }
+
             if (in_array($type, ['link', 'qr_code'], true)) {
                 if (!filter_var($content, FILTER_VALIDATE_URL)) {
                     continue;
@@ -1443,6 +1348,7 @@ public function forceDestroy($id)
 
             $normalized[] = [
                 'type' => $type,
+                'language' => $language,
                 'content' => $content,
                 'label' => $label !== '' ? $label : null,
                 'sort_order' => count($normalized),
