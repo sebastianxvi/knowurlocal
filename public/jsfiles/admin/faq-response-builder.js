@@ -72,11 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const refresh = () => {
         const attachmentCount = attachmentContainer.querySelectorAll('.faq-response-item').length;
+        const textCount = allTextItems().length;
+        const totalCount = attachmentCount + textCount;
+        const limitReached = totalCount >= (MAX_ATTACHMENTS);
         attachmentEmpty.hidden = attachmentCount > 0;
 
         if (attachmentAdd) {
-            attachmentAdd.disabled = attachmentCount >= MAX_ATTACHMENTS;
-            attachmentAdd.setAttribute('aria-disabled', attachmentCount >= MAX_ATTACHMENTS ? 'true' : 'false');
+            attachmentAdd.disabled = limitReached;
+            attachmentAdd.setAttribute('aria-disabled', limitReached ? 'true' : 'false');
         }
 
         document.querySelectorAll('.faq-response-add-language').forEach(button => {
@@ -85,8 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 : englishContainer;
 
             const count = target.querySelectorAll('.faq-response-item').length;
-            button.disabled = count >= MAX_TEXT_PER_LANGUAGE;
-            button.setAttribute('aria-disabled', count >= MAX_TEXT_PER_LANGUAGE ? 'true' : 'false');
+            button.disabled = count >= MAX_TEXT_PER_LANGUAGE || totalCount >= MAX_ATTACHMENTS;
+            button.setAttribute('aria-disabled', button.disabled ? 'true' : 'false');
         });
     };
 
@@ -324,6 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.faq-response-add-language').forEach(button => {
         button.addEventListener('click', () => {
             if (button.disabled) return;
+            if (allTextItems().length + attachmentContainer.querySelectorAll('.faq-response-item').length >= MAX_ATTACHMENTS) return;
             createText(button.dataset.responseLanguage === 'fil' ? 'fil' : 'en');
             refresh();
 
@@ -354,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const type = option.dataset.attachmentType;
             if (!['image', 'file', 'link', 'qr_code'].includes(type)) return;
 
-            if (attachmentContainer.querySelectorAll('.faq-response-item').length >= MAX_ATTACHMENTS) {
+            if (allTextItems().length + attachmentContainer.querySelectorAll('.faq-response-item').length >= MAX_ATTACHMENTS) {
                 return;
             }
 
@@ -384,9 +388,21 @@ document.addEventListener('DOMContentLoaded', () => {
         refresh();
     });
 
+    const replaceLanguageTexts = (language, values = []) => {
+        const container = language === 'fil' ? filipinoContainer : englishContainer;
+        container.replaceChildren();
+        values
+            .map(value => String(value ?? '').trim())
+            .filter(Boolean)
+            .slice(0, MAX_TEXT_PER_LANGUAGE)
+            .forEach(value => createText(language, { content: value }));
+        refresh();
+    };
+
     window.FaqResponseBuilder = {
         reset,
         load,
+        replaceLanguageTexts,
         getData: () => Array.from(allTextItems()).map(item => ({
             type: 'text',
             language: item.dataset.responseLanguage

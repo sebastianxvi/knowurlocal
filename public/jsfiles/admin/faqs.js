@@ -1024,18 +1024,23 @@ if (supportRequestIdInput) {
             questionInput.value =
                 draft.question || "";
 
-            answerInput.value =
-                draft.answer || "";
-
+            if (window.FaqResponseBuilder) {
+                window.FaqResponseBuilder.load([
+                    ...(draft.answer ? [{ type: 'text', language: 'en', content: draft.answer }] : []),
+                    ...(draft.answer_fil ? [{ type: 'text', language: 'fil', content: draft.answer_fil }] : [])
+                ], false);
+            }
 
             /*
-             * Fill the Filipino / Taglish fields.
+             * Fill the Filipino / Taglish question field.
              */
             questionFilInput.value =
                 draft.question_fil || "";
 
-            answerFilInput.value =
-                draft.answer_fil || "";
+            // The Filipino answer is stored in the response builder.
+            if (answerFilInput) {
+                answerFilInput.value = draft.answer_fil || "";
+            }
 
             /*
  * Display the original Support Request answer image
@@ -1080,23 +1085,21 @@ if (result.support_image) {
                 })
             );
 
-            answerInput.dispatchEvent(
-                new Event("input", {
-                    bubbles: true
-                })
-            );
+            if (answerInput) {
+                answerInput.dispatchEvent(
+                    new Event("input", { bubbles: true })
+                );
+            }
 
             questionFilInput.dispatchEvent(
-                new Event("input", {
-                    bubbles: true
-                })
+                new Event("input", { bubbles: true })
             );
 
-            answerFilInput.dispatchEvent(
-                new Event("input", {
-                    bubbles: true
-                })
-            );
+            if (answerFilInput) {
+                answerFilInput.dispatchEvent(
+                    new Event("input", { bubbles: true })
+                );
+            }
 
             keywordsInput.dispatchEvent(
                 new Event("input", {
@@ -1205,8 +1208,16 @@ if (result.support_image) {
                 const question =
                     questionInput.value.trim();
 
-                const answer =
-                    answerInput.value.trim();
+                const englishResponseTexts =
+                    Array.from(
+                        document.querySelectorAll(
+                            '#faq-response-english textarea[name*="[content]"]'
+                        )
+                    )
+                    .map(field => field.value.trim())
+                    .filter(Boolean);
+
+                const answer = englishResponseTexts.join("\n\n");
 
 
                 /*
@@ -1273,48 +1284,45 @@ if (result.support_image) {
                     /*
                      * Send the English source content to Laravel.
                      */
+                    const csrfToken =
+                        document.querySelector(
+                            'meta[name="csrf-token"]'
+                        )?.getAttribute("content");
+
+                    if (!csrfToken || !window.FAQ_TRANSLATE_URL) {
+                        throw new Error("Translation endpoint is not configured.");
+                    }
+
                     const response =
                         await fetch(
                             window.FAQ_TRANSLATE_URL,
                             {
-                                method:
-                                    "POST",
-
+                                method: "POST",
+                                credentials: "same-origin",
                                 headers: {
-
-                                    "Content-Type":
-                                        "application/json",
-
-                                    "Accept":
-                                        "application/json",
-
-                                    "X-CSRF-TOKEN":
-                                        document.querySelector(
-                                            'meta[name="csrf-token"]'
-                                        )?.getAttribute(
-                                            "content"
-                                        )
+                                    "Content-Type": "application/json",
+                                    "Accept": "application/json",
+                                    "X-Requested-With": "XMLHttpRequest",
+                                    "X-CSRF-TOKEN": csrfToken
                                 },
-
-                                body:
-                                    JSON.stringify({
-
-                                        question:
-                                            question,
-
-                                        answer:
-                                            answer
-
-                                    })
+                                body: JSON.stringify({
+                                    question,
+                                    answer
+                                })
                             }
                         );
 
-
                     /*
-                     * Parse Laravel's JSON response.
+                     * Laravel may return JSON validation/errors or HTML
+                     * when the request is rejected before the controller.
+                     * Parse defensively so the button never fails silently.
                      */
-                    const result =
-                        await response.json();
+                    const contentType =
+                        response.headers.get("content-type") || "";
+
+                    const result = contentType.includes("application/json")
+                        ? await response.json()
+                        : { success: false, message: `Server returned HTTP ${response.status}.` };
 
 
                     /*
@@ -1341,41 +1349,20 @@ if (result.support_image) {
                             .question_fil ||
                         "";
 
-                    answerFilInput.value =
-                        result.translation
-                            .answer_fil ||
-                        "";
-
-
-                    /*
-                     * Resize the Filipino fields immediately.
-                     *
-                     * JavaScript changing .value does not fire
-                     * the input event automatically.
-                     */
-                    resizeTextarea(
-                        questionFilInput
-                    );
-
-                    resizeTextarea(
-                        answerFilInput
-                    );
-
+                    if (window.FaqResponseBuilder) {
+                        window.FaqResponseBuilder.replaceLanguageTexts(
+                            'fil',
+                            [result.translation.answer_fil || '']
+                        );
+                    }
 
                     /*
-                     * Trigger input events for any other UI
-                     * functionality that listens for them.
+                     * JavaScript changing .value does not fire the input
+                     * event automatically, so refresh the question field.
                      */
+                    resizeTextarea(questionFilInput);
                     questionFilInput.dispatchEvent(
-                        new Event("input", {
-                            bubbles: true
-                        })
-                    );
-
-                    answerFilInput.dispatchEvent(
-                        new Event("input", {
-                            bubbles: true
-                        })
+                        new Event("input", { bubbles: true })
                     );
 
 
@@ -1886,15 +1873,17 @@ resetTextareaHeights();
             questionInput.value =
                 data.question || "";
 
-            answerInput.value =
-                data.answer || "";
+            if (answerInput) {
+                answerInput.value = data.answer || "";
+            }
 
 
             questionFilInput.value =
                 data.questionFil || "";
 
-            answerFilInput.value =
-                data.answerFil || "";
+            if (answerFilInput) {
+                answerFilInput.value = data.answerFil || "";
+            }
 
 
             keywordsInput.value =
@@ -1913,7 +1902,7 @@ resetTextareaHeights();
 
             if (window.FaqResponseBuilder) {
                 window.FaqResponseBuilder.load(
-                    data.responseComponents || [],
+                    buildFaqResponseComponents(data),
                     false
                 );
             }
@@ -1961,15 +1950,17 @@ resetTextareaHeights();
             questionInput.value =
                 data.question || "";
 
-            answerInput.value =
-                data.answer || "";
+            if (answerInput) {
+                answerInput.value = data.answer || "";
+            }
 
 
             questionFilInput.value =
                 data.questionFil || "";
 
-            answerFilInput.value =
-                data.answerFil || "";
+            if (answerFilInput) {
+                answerFilInput.value = data.answerFil || "";
+            }
 
 
             keywordsInput.value =
@@ -2130,6 +2121,37 @@ resetTextareaHeights();
     }
 
 
+    function buildFaqResponseComponents(data) {
+        const components = Array.isArray(data?.responseComponents)
+            ? data.responseComponents
+            : [];
+
+        if (components.length > 0) {
+            return components;
+        }
+
+        const legacy = [];
+
+        if (data?.answer) {
+            legacy.push({
+                type: 'text',
+                language: 'en',
+                content: data.answer
+            });
+        }
+
+        if (data?.answerFil) {
+            legacy.push({
+                type: 'text',
+                language: 'fil',
+                content: data.answerFil
+            });
+        }
+
+        return legacy;
+    }
+
+
     /*
      * =========================================================
      * FAQ ROW CLICK → VIEW
@@ -2194,9 +2216,11 @@ resetTextareaHeights();
                         row.dataset.image,
 
                     responseComponents:
-                        parseResponseComponents(
-                            row.dataset.responseComponents
-                        )
+                        buildFaqResponseComponents({
+                            responseComponents: parseResponseComponents(row.dataset.responseComponents),
+                            answer: row.dataset.answer,
+                            answerFil: row.dataset.answerFil
+                        })
 
                 }
             );
@@ -2255,9 +2279,11 @@ resetTextareaHeights();
                         btn.dataset.image,
 
                     responseComponents:
-                        parseResponseComponents(
-                            btn.dataset.responseComponents
-                        )
+                        buildFaqResponseComponents({
+                            responseComponents: parseResponseComponents(btn.dataset.responseComponents),
+                            answer: btn.dataset.answer,
+                            answerFil: btn.dataset.answerFil
+                        })
 
                 }
             );
@@ -2889,7 +2915,12 @@ function findDuplicateFaq() {
 
     const answer =
         normalizeFaqValue(
-            answerInput.value
+            Array.from(
+                document.querySelectorAll('#faq-response-english textarea[name*="[content]"]')
+            )
+            .map(field => field.value)
+            .filter(Boolean)
+            .join("\n\n")
         );
 
     const keywords =

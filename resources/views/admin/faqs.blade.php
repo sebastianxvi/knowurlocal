@@ -624,11 +624,14 @@
 
                 </div>
 
-                <div class="language-section">
+                <section class="language-section faq-question-section" aria-labelledby="faq-english-heading">
 
-                    <div class="language-heading">
-                        <span>English</span>
-                        <small>Official</small>
+                    <div class="faq-language-heading faq-question-heading">
+                        <div class="faq-language-heading-copy">
+                            <span class="faq-section-eyebrow">Source question</span>
+                            <strong id="faq-english-heading">English question</strong>
+                            <small>Write the official question in English.</small>
+                        </div>
                     </div>
 
                     <div class="floating-group">
@@ -642,36 +645,27 @@
                         <label>Question</label>
                     </div>
 
-                    <div class="floating-group">
-                        <textarea
-                            name="answer"
-                            id="faq_answer"
-                            placeholder=" "
-                            required
-                        ></textarea>
-                        <label>Answer</label>
+
+                </section>
+
+                <section class="language-section filipino-section" aria-labelledby="faq-filipino-heading">
+
+                    <div class="faq-language-heading">
+                        <div class="faq-language-heading-copy">
+                            <span class="faq-section-eyebrow">Translated question</span>
+                            <strong id="faq-filipino-heading">Tagalog / Taglish question</strong>
+                            <small>Write the citizen-friendly Filipino / Taglish version.</small>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="btn-ai-translate"
+                            id="translateFaqBtn"
+                        >
+                            <i class="ph-light ph-sparkle"></i>
+                            <span>Translate with AI</span>
+                        </button>
                     </div>
-
-                </div>
-
-                <div class="language-section filipino-section">
-
-                    <div class="language-heading">
-<div class="faq-language-heading">
-    <div class="faq-language-title optional">
-        Filipino / Taglish
-        {{-- <span class="faq-optional-badge">Optional</span> --}}
-    </div>
-
-    <button
-        type="button"
-        class="btn-ai-translate"
-        id="translateFaqBtn"
-    >
-        <i class="ph-light ph-sparkle"></i>
-        Translate with AI
-    </button>
-</div>
 
                     <div class="floating-group">
                         <textarea
@@ -683,17 +677,8 @@
                         <label>Question</label>
                     </div>
 
-                    <div class="floating-group">
-                        <textarea
-                            name="answer_fil"
-                            id="faq_answer_fil"
-                            placeholder=" "
-                        ></textarea>
-                        <label>Answer</label>
-                    </div>
 
-
-                </div>
+                </section>
 
                 {{-- =========================================================
                      LANGUAGE-SPECIFIC RESPONSE COMPONENTS
@@ -707,8 +692,8 @@
                             </div>
                             <div>
                                 <span class="faq-response-eyebrow">Response content</span>
-                                <h3 id="faq-response-heading">Additional response text</h3>
-                                <p>Add reusable supporting text without crowding the main question and answer fields.</p>
+                                <h3 id="faq-response-heading">Response content</h3>
+                                <p>Add one or more text blocks that make up the official answer.</p>
                             </div>
                         </div>
                     </div>
@@ -720,7 +705,7 @@
                             </div>
                             <div>
                                 <span>English response</span>
-                                <small>Add one or more text blocks for the English answer.</small>
+                                <small>Add one or more text blocks for the official English answer.</small>
                             </div>
                         </div>
 
@@ -739,7 +724,7 @@
                             </div>
                             <div>
                                 <span>Tagalog / Taglish response</span>
-                                <small>Add one or more text blocks for Filipino-speaking citizens.</small>
+                                <small>Add one or more text blocks for the Filipino / Taglish answer.</small>
                             </div>
                         </div>
 
@@ -877,7 +862,7 @@
      * Existing manual FAQ translation endpoint.
      */
     window.FAQ_TRANSLATE_URL =
-        @json(route('faqs.translate'));
+        @json(route('admin.faqs.translate'));
 
     /*
      * Support Request → FAQ conversion data.

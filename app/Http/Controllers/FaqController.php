@@ -587,6 +587,8 @@ public function store(Request $request)
     |
     */
 
+    $this->mergeResponseAnswersIntoRequest($request);
+
     $validated = $request->validate([
         'agency_id' => [
             'required',
@@ -648,6 +650,7 @@ public function store(Request $request)
         'response_components.*.language' => ['nullable', 'string', 'in:en,fil,attachment'],
         'response_components.*.content' => ['nullable', 'string', 'max:5000'],
         'response_components.*.label' => ['nullable', 'string', 'max:255'],
+        'response_components.*.existing_content' => ['nullable', 'string', 'max:5000'],
         'response_components.*.file' => [
             'nullable',
             'file',
@@ -906,6 +909,8 @@ $faq->id
     {
         $faq = Faq::findOrFail($id);
 
+        $this->mergeResponseAnswersIntoRequest($request);
+
         $request->validate([
             'agency_id'    => 'required|exists:agencies,id',
 
@@ -930,8 +935,10 @@ $faq->id
 
             'response_components' => ['nullable', 'array', 'max:10'],
             'response_components.*.type' => ['required_with:response_components', 'in:text,image,file,link,qr_code'],
+            'response_components.*.language' => ['nullable', 'string', 'in:en,fil,attachment'],
             'response_components.*.content' => ['nullable', 'string', 'max:5000'],
             'response_components.*.label' => ['nullable', 'string', 'max:255'],
+            'response_components.*.existing_content' => ['nullable', 'string', 'max:5000'],
             'response_components.*.file' => [
                 'nullable',
                 'file',
@@ -1277,7 +1284,57 @@ public function forceDestroy($id)
 }
 
     /**
-     * Store FAQ response components in their submitted order.
+     * Keep the legacy FAQ answer columns synchronized with the new
+     * language-specific response text components.
+     *
+     * The response builder is now the source of truth for answers.
+     * The existing answer / answer_fil columns remain populated so
+     * duplicate detection, search, logs, and older public code continue
+     * to work without a breaking database migration.
+     */
+    private function mergeResponseAnswersIntoRequest(Request $request): void
+    {
+        $components = $request->input('response_components', []);
+
+        if (!is_array($components)) {
+            return;
+        }
+
+        $english = [];
+        $filipino = [];
+
+        foreach ($components as $component) {
+            if (!is_array($component) || ($component['type'] ?? null) !== 'text') {
+                continue;
+            }
+
+            $content = trim((string) ($component['content'] ?? ''));
+
+            if ($content === '') {
+                continue;
+            }
+
+            if (($component['language'] ?? 'en') === 'fil') {
+                $filipino[] = $content;
+            } else {
+                $english[] = $content;
+            }
+        }
+
+        if ($english !== []) {
+            $request->merge([
+                'answer' => implode("\n\n", $english),
+            ]);
+        }
+
+        if ($filipino !== []) {
+            $request->merge([
+                'answer_fil' => implode("\n\n", $filipino),
+            ]);
+        }
+    }
+
+    /**
      * File paths are generated server-side; browser values are
      * never trusted as storage paths.
      */
@@ -1288,7 +1345,7 @@ public function forceDestroy($id)
     ): array {
         $normalized = [];
 
-        foreach (array_values($components) as $index => $component) {
+        foreach ($components as $index => $component) {
             $type = $component['type'] ?? null;
 
             if (!in_array($type, ['text', 'image', 'file', 'link', 'qr_code'], true)) {
