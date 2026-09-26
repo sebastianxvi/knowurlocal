@@ -101,6 +101,14 @@
                 'aria-label',
                 open ? 'Close navigation' : 'Open navigation'
             );
+
+            // GitHub-style: the menu affordance becomes a close affordance
+            // while the drawer is open. No hover state is needed to reveal it.
+            const icon = toggle.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('ph-list', !open);
+                icon.classList.toggle('ph-x', open);
+            }
         }
     };
 

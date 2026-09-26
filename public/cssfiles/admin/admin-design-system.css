@@ -3148,3 +3148,141 @@ body.admin-drawer-open{overflow:hidden;}
 @media (prefers-reduced-motion:reduce){
     .sidebar,.admin-drawer-backdrop,.admin-mobile-menu{transition:none !important;}
 }
+
+/* =========================================================
+   FINAL ADMIN DRAWER OVERRIDE
+   Explicit hamburger drawer only — no hover expansion.
+   When opened, the drawer always renders the complete navigation.
+   ========================================================= */
+.sidebar,
+.sidebar:hover,
+.sidebar:focus-within,
+body.admin-drawer-open .sidebar,
+body.admin-drawer-open .sidebar:hover,
+body.admin-drawer-open .sidebar:focus-within {
+    width: var(--admin-drawer-width) !important;
+    min-width: var(--admin-drawer-width) !important;
+    transform: translateX(-105%) !important;
+    transition: transform var(--admin-drawer-ease) !important;
+}
+
+body.admin-drawer-open .sidebar,
+body.admin-drawer-open .sidebar:hover,
+body.admin-drawer-open .sidebar:focus-within {
+    transform: translateX(0) !important;
+}
+
+/* Never hide drawer content based on pointer/focus state. */
+.sidebar .sidebar-brand-copy,
+.sidebar .admin-nav > a > span:not(.sidebar-notification),
+.sidebar .nav-section-label,
+.sidebar .sidebar-user-copy,
+.sidebar .sidebar-footer .logout-btn span,
+.sidebar:hover .sidebar-brand-copy,
+.sidebar:hover .admin-nav > a > span:not(.sidebar-notification),
+.sidebar:hover .nav-section-label,
+.sidebar:hover .sidebar-user-copy,
+.sidebar:hover .sidebar-footer .logout-btn span,
+.sidebar:focus-within .sidebar-brand-copy,
+.sidebar:focus-within .admin-nav > a > span:not(.sidebar-notification),
+.sidebar:focus-within .nav-section-label,
+.sidebar:focus-within .sidebar-user-copy,
+.sidebar:focus-within .sidebar-footer .logout-btn span {
+    display: inline !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    pointer-events: auto !important;
+}
+
+.sidebar .nav-section-label,
+.sidebar:hover .nav-section-label,
+.sidebar:focus-within .nav-section-label {
+    padding: 10px 9px 5px !important;
+    margin: 0 !important;
+}
+
+/* Keep navigation readable, but never turn hover into a layout change. */
+.sidebar .admin-nav > a,
+.sidebar:hover .admin-nav > a,
+.sidebar:focus-within .admin-nav > a {
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: flex-start !important;
+    padding: 7px 9px !important;
+    transform: none !important;
+}
+
+.sidebar .sidebar-notification,
+.sidebar:hover .sidebar-notification,
+.sidebar:focus-within .sidebar-notification {
+    position: static !important;
+    margin-left: auto !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    border: 0 !important;
+}
+
+/* The drawer itself does not change appearance because the pointer enters it. */
+.sidebar:hover,
+.sidebar:focus-within {
+    box-shadow: 18px 0 55px rgba(16,24,40,.13) !important;
+}
+
+/* Only the active route gets a state change; ordinary hover stays quiet. */
+.sidebar .admin-nav > a:hover,
+.sidebar .admin-nav > a:focus-visible {
+    color: #667085 !important;
+    background: transparent !important;
+    border-color: transparent !important;
+    transform: none !important;
+}
+
+.sidebar .admin-nav > a.active,
+.sidebar .admin-nav > a.active:hover,
+.sidebar .admin-nav > a.active:focus-visible {
+    color: #175cd3 !important;
+    background: #eff6ff !important;
+}
+
+.sidebar .sidebar-brand:hover,
+.sidebar .sidebar-brand:focus-visible,
+.sidebar .sidebar-footer .logout-btn:hover,
+.sidebar .sidebar-footer .logout-btn:focus-visible {
+    background: transparent !important;
+    border-color: transparent !important;
+}
+
+/* Drawer close control remains the deliberate close affordance. */
+.sidebar-mobile-close:hover,
+.sidebar-mobile-close:focus-visible {
+    background: #f8fafc !important;
+    color: #182230 !important;
+}
+
+@media (min-width: 901px) {
+    .sidebar {
+        width: var(--admin-drawer-width) !important;
+        min-width: var(--admin-drawer-width) !important;
+    }
+}
+
+/* Preserve the intended layout modes after disabling hover-reveal. */
+.sidebar .sidebar-brand-copy,
+.sidebar .sidebar-user-copy {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1px !important;
+}
+.sidebar .nav-section-label {
+    display: block !important;
+}
+.sidebar .admin-nav > a > span:not(.sidebar-notification),
+.sidebar .sidebar-footer .logout-btn span {
+    display: inline !important;
+}
