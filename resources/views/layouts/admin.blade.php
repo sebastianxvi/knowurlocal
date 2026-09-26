@@ -82,8 +82,11 @@
 </head>
 
 
-<body>
-
+<body
+    data-admin-page="@yield('admin-page')"
+    data-admin-user-id="{{ auth()->id() }}"
+>
+<div class="admin-drawer-backdrop" data-admin-shell-close aria-hidden="true"></div>
 
 <div class="layout">
 
@@ -136,57 +139,9 @@
 
 <script src="{{ asset('jsfiles/components/modal-system.js') }}"></script>
 
+<script src="{{ asset('jsfiles/admin/admin-shell.js') }}"></script>
 
 
-<!-- ================= GLOBAL REALTIME NOTIFICATIONS ================= -->
-
-
-<script>
-(function () {
-    const badge = document.getElementById('support-request-badge');
-    if (!badge) return;
-
-    const renderBadge = (count) => {
-        const safeCount = Math.max(0, Number(count) || 0);
-        badge.dataset.count = String(safeCount);
-        badge.textContent = safeCount > 99 ? '99+' : String(safeCount);
-        badge.classList.toggle('is-hidden', safeCount === 0);
-        badge.setAttribute('aria-label', `${safeCount} new support requests`);
-    };
-
-    const addOne = () => renderBadge((Number(badge.dataset.count) || 0) + 1);
-
-    let attempts = 0;
-    const subscribe = () => {
-        if (!window.Echo) {
-            if (attempts++ < 30) setTimeout(subscribe, 250);
-            return;
-        }
-
-        try {
-            window.Echo.private('admin.support-requests')
-                .listen('.support.request.created', (event) => {
-                    // The Support Requests page acknowledges the queue server-side.
-                    // Other admin pages increment their local notification count.
-                    if (!window.location.pathname.startsWith('/admin/support-requests')) {
-                        addOne();
-                    }
-                })
-                .listen('.support.request.assigned', (event) => {
-                    const row = document.querySelector(`[data-ticket-id=\"${event.id}\"]`);
-                    const select = row?.querySelector('.collaboration-assign-select');
-                    if (select) {
-                        select.value = event.admin_id ? String(event.admin_id) : '';
-                    }
-                });
-        } catch (error) {
-            console.warn('Admin support notification subscription failed.', error);
-        }
-    };
-
-    subscribe();
-})();
-</script>
 
 <!-- ================= PAGE SCRIPTS ================= -->
 

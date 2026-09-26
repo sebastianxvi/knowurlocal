@@ -279,6 +279,9 @@
                 'semantic' =>
                     'ph-brain',
 
+                'ai' =>
+                    'ph-sparkle',
+
                 default =>
                     'ph-chat-centered-text',
 
@@ -919,7 +922,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const matchIcon = {
         rule: 'ph-faders',
-        semantic: 'ph-brain'
+        semantic: 'ph-brain',
+        ai: 'ph-sparkle'
     };
 
     const icon = matchIcon[log.match_method]

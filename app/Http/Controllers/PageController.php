@@ -32,7 +32,17 @@ class PageController extends Controller
         }
 
         // 📦 Fetch agencies from DB
-        $agencies = Agency::all();
+        $agencies = Agency::query()
+            ->select([
+                'id',
+                'agency_name',
+                'agency_location',
+                'agency_image',
+                'agency_hotline',
+                'agency_email',
+            ])
+            ->orderBy('agency_name')
+            ->get();
 
         return view(
             'public_user.agencies',

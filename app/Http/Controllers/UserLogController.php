@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\UserLog;
+use Carbon\Carbon;
 
 class UserLogController extends Controller
 {
@@ -26,6 +27,18 @@ class UserLogController extends Controller
      */
     public function index(Request $request)
     {
+        /*
+         * Validate and bound all filter input before building SQL.
+         * Query-builder bindings already prevent SQL injection; these
+         * limits additionally prevent oversized search requests.
+         */
+        $request->validate([
+            'sort' => ['nullable', 'in:asc,desc'],
+            'role' => ['nullable', 'in:admin,user'],
+            'action' => ['nullable', 'string', 'max:80'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'search' => ['nullable', 'string', 'max:100'],
+        ]);
         /**
          * =====================================================
          * 🔒 SORT
@@ -104,6 +117,8 @@ class UserLogController extends Controller
             'delete_support_request',
             'restore_support_request',
             'force_delete_support_request',
+            'answer_support_request',
+            'forward_support_response',
 
             /*
             * Administrator management
@@ -282,10 +297,17 @@ class UserLogController extends Controller
          * =====================================================
          */
         if ($request->filled('date')) {
-
-            $query->whereDate(
-                'created_at',
+            $date = Carbon::createFromFormat(
+                'Y-m-d',
                 $request->date
+            );
+
+            $query->whereBetween(
+                'created_at',
+                [
+                    $date->copy()->startOfDay(),
+                    $date->copy()->endOfDay(),
+                ]
             );
         }
 

@@ -12,8 +12,6 @@ class SupportRequest extends Model
     protected $fillable = [
         'user_id',
         'agency_id',
-        'assigned_admin_id',
-        'assigned_at',
         'question',
         'answer',
         'answer_image',
@@ -26,7 +24,6 @@ class SupportRequest extends Model
     protected $casts = [
         'answered_at' => 'datetime',
         'answer_seen_at' => 'datetime',
-        'assigned_at' => 'datetime',
     ];
 
     /*
@@ -49,13 +46,6 @@ class SupportRequest extends Model
     public function agency()
     {
         return $this->belongsTo(Agency::class);
-    }
-
-
-    /** The administrator currently collaborating on this ticket. */
-    public function assignedAdmin()
-    {
-        return $this->belongsTo(User::class, 'assigned_admin_id');
     }
 
     /**

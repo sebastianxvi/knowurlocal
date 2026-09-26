@@ -10,8 +10,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Services\SupportRequestResponseService;
 use App\Events\SupportRequestResponseCreated;
-use App\Events\SupportRequestAssigned;
-use App\Models\User;
 
 class SupportRequestController extends Controller
 {
@@ -30,12 +28,14 @@ class SupportRequestController extends Controller
      *
      * Only Superadmins may access the recovery view.
      */
-    public function index(Request $request)
+    /**
+ * Return the current pending support-request count for the admin shell.
+ *
+ * The count is queried server-side so browser state can never grant
+ * access or fabricate notification data.
+ */
+public function index(Request $request)
     {
-        // Opening the support queue acknowledges the notifications
-        // for this administrator's current browser session.
-        session(['admin_support_seen_at' => now()]);
-
         /*
          * Determine which dataset should be displayed.
          *
@@ -59,7 +59,6 @@ class SupportRequestController extends Controller
         $query = SupportRequest::with([
             'user',
             'agency',
-            'assignedAdmin',
         ]);
 
 
@@ -274,67 +273,6 @@ $agencies = Agency::select(
      *
      * Answers an active Support Request.
      */
-    /** Return active administrators for collaboration controls. */
-    public function collaborators()
-    {
-        return response()->json([
-            'admins' => User::query()
-                ->whereIn('role', ['admin', 'superadmin'])
-                ->where(function ($query) {
-                    $query->whereNull('status')
-                        ->orWhere('status', 'active');
-                })
-                ->orderBy('first_name')
-                ->orderBy('last_name')
-                ->get(['id', 'first_name', 'last_name', 'role'])
-                ->map(fn ($admin) => [
-                    'id' => $admin->id,
-                    'name' => trim($admin->first_name . ' ' . $admin->last_name),
-                    'role' => $admin->role,
-                ])
-                ->values(),
-        ]);
-    }
-
-    /** Assign or unassign a support request to an administrator. */
-    public function assign(Request $request, int $id)
-    {
-        $validated = $request->validate([
-            'admin_id' => ['nullable', 'integer', 'exists:users,id'],
-        ]);
-
-        $admin = null;
-        if (!empty($validated['admin_id'])) {
-            $admin = User::query()
-                ->whereKey($validated['admin_id'])
-                ->whereIn('role', ['admin', 'superadmin'])
-                ->first();
-
-            abort_unless($admin, 422, 'Selected collaborator is not an administrator.');
-        }
-
-        $supportRequest = SupportRequest::query()->findOrFail($id);
-        $supportRequest->update([
-            'assigned_admin_id' => $admin?->id,
-            'assigned_at' => $admin ? now() : null,
-        ]);
-
-        broadcast(new SupportRequestAssigned(
-            id: $supportRequest->id,
-            adminId: $admin?->id,
-            adminName: $admin ? trim($admin->first_name . ' ' . $admin->last_name) : null,
-            assignedAt: $supportRequest->assigned_at?->toIso8601String() ?? now()->toIso8601String(),
-        ));
-
-        return response()->json([
-            'success' => true,
-            'assigned_admin' => $admin ? [
-                'id' => $admin->id,
-                'name' => trim($admin->first_name . ' ' . $admin->last_name),
-            ] : null,
-        ]);
-    }
-
     public function reply(Request $request)
     {
         /*
@@ -402,6 +340,17 @@ if ($request->hasFile('answer_image')) {
     'answer_seen_at' =>
         null,
 ]);
+
+        $newData = $this->buildAuditSnapshot($support->fresh());
+
+        $this->logAction(
+            'answer_support_request',
+            (int) $support->id,
+            (int) $support->agency_id,
+            null,
+            $newData,
+            'Answered Support Request #' . $support->id
+        );
 
 
         return back()->with(
@@ -599,6 +548,15 @@ if (
         responseId: (int) $response->id,
         status: 'awaiting_confirmation',
     ));
+
+    $this->logAction(
+        'forward_support_response',
+        (int) $supportRequest->id,
+        (int) $validated['agency_id'],
+        null,
+        $this->buildAuditSnapshot($supportRequest->fresh()),
+        'Forwarded official response for Support Request #' . $supportRequest->id
+    );
 
     return response()->json([
         'success' => true,
@@ -2052,9 +2010,9 @@ if (
                 /*
                  * Preserve the related agency when available.
                  *
-                 * UserLog does not currently have a dedicated
-                 * Support Request foreign key, so the Support
-                 * Request ID is stored inside old_values.
+                 * The dedicated Support Request foreign key is stored alongside
+                 * the historical snapshot so the log can be resolved even
+                 * after the ticket is moved to trash.
                  */
                 'agency_id' =>
                     $agencyId,
@@ -2070,6 +2028,9 @@ if (
                  */
                 'category_id' =>
                     null,
+
+                'support_request_id' =>
+                    $supportRequestId,
 
                 /*
                  * Stable machine-readable action.
