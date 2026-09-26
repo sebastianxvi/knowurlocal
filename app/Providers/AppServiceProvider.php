@@ -97,7 +97,7 @@ class AppServiceProvider extends ServiceProvider
          * administrator shell. The badge is rendered only when the
          * administrator is outside the Support Requests page.
          */
-        View::composer('partials.sidebar', function ($view) {
+        View::composer(['partials.sidebar', 'partials.header'], function ($view) {
             $pendingCount = 0;
 
             if (auth()->check() && in_array(auth()->user()->role, ['admin', 'superadmin'], true)) {

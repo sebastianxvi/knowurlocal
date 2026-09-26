@@ -9,9 +9,6 @@ use App\Events\SupportRequestCreated;
 use App\Models\SupportRequest;
 use Illuminate\Http\Request;
 use App\Services\OpenRouterService;
-use App\Services\FaqMatcherService;
-use App\Services\FaqSemanticMatcherService;
-use App\Services\FaqIntentService;
 use App\Services\FaqAiMatcherService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -19,246 +16,26 @@ use Illuminate\Support\Facades\Storage;
 class ChatbotController extends Controller
 {
     /*
-     * Service responsible for optional AI-powered operations.
-     *
-     * AI is intentionally treated as an enhancement rather than
-     * the primary source of FAQ answers.
+     * OpenRouter is used only for bounded classification tasks.
+     * It never generates the official FAQ answer.
      */
     private OpenRouterService $ai;
 
     /*
-     * Rule-based FAQ matcher.
-     *
-     * This is the primary FAQ retrieval mechanism.
+     * The single FAQ matching service owns candidate retrieval and
+     * AI selection. This avoids multiple overlapping matcher pipelines.
      */
-    private FaqMatcherService $faqMatcher;
-
-    /*
-     * Optional semantic FAQ matcher.
-     *
-     * This is only used when the rule-based matcher cannot
-     * confidently answer the question.
-     */
-    private FaqSemanticMatcherService $faqSemanticMatcher;
-
-    /*
-     * Rule-based intent detector.
-     *
-     * This determines whether the user is asking about
-     * requirements, procedure, eligibility, fees, etc.
-     */
-    private FaqIntentService $faqIntent;
-
     private FaqAiMatcherService $faqAiMatcher;
 
 
-    /**
-     * Determine whether the user's wording is generic enough
-     * that two strong FAQ candidates should be presented
-     * for clarification instead of guessing.
-     *
-     * Example:
-     *
-     * "What do I need for a Private Land Timber Permit?"
-     *
-     * This is generic because the user did not specify
-     * whether they mean documents, land title, or another
-     * particular requirement.
-     */
-    private function isGenericFaqQuestion(string $question): bool
-    {
-        /*
-         * Normalize the question before performing comparisons.
-         *
-         * Lowercase text makes matching case-insensitive.
-         *
-         * Collapsing whitespace prevents formatting differences
-         * from affecting the pattern checks.
-         */
-        $text = mb_strtolower(
-            trim(
-                preg_replace('/\s+/', ' ', $question)
-            ),
-            'UTF-8'
-        );
-
-        /*
-         * These indicators identify a specific requirement.
-         *
-         * If the user explicitly mentions one of these,
-         * we should not force a clarification between
-         * otherwise similar FAQs.
-         *
-         * Example:
-         *
-         * "What documents do I need?"
-         *
-         * contains "documents", so it is specific enough
-         * to answer directly.
-         */
-        $specificIndicators = [
-            'document',
-            'documents',
-            'paper',
-            'papers',
-            'land title',
-            'title',
-            'bring',
-            'dalhin',
-            'dokumento',
-            'papeles',
-        ];
-
-        /*
-         * Check specific indicators FIRST.
-         *
-         * This ordering is important.
-         *
-         * "What documents do I need?"
-         * contains "what do I need", but "documents" makes
-         * the question specific.
-         */
-        foreach ($specificIndicators as $indicator) {
-
-            if (str_contains($text, $indicator)) {
-                return false;
-            }
-        }
-
-        /*
-         * These patterns represent broad requirements questions
-         * where the user has not specified the exact information
-         * they need.
-         */
-        $genericPatterns = [
-            'what do i need',
-            'what are the requirements',
-            'what requirements do i need',
-            'what requirements should i prepare',
-
-            'anong kailangan',
-            'anong mga kailangan',
-            'ano ang kailangan',
-            'ano kailangan',
-            'ano mga kailangan',
-            'ano ang mga kailangan',
-
-            'anong requirements',
-            'anong mga requirements',
-            'ano ang requirements',
-            'ano mga requirements',
-            'ano ang mga requirements',
-        ];
-
-        /*
-         * Return true when the user's question matches one
-         * of the broad requirement patterns.
-         */
-        foreach ($genericPatterns as $pattern) {
-
-            if (str_contains($text, $pattern)) {
-                return true;
-            }
-        }
-
-        /*
-         * The question is not generic.
-         */
-        return false;
-    }
-
-
-    /**
-     * Detect whether the user is asking in Filipino/Taglish.
-     *
-     * This method only selects which already-approved FAQ
-     * answer should be returned.
-     *
-     * It does not determine whether the question matches.
-     */
-    private function detectResponseLanguage(string $question): string
-    {
-        /*
-         * Normalize the question for language detection.
-         */
-        $text = mb_strtolower(
-            trim(
-                preg_replace('/\s+/', ' ', $question)
-            ),
-            'UTF-8'
-        );
-
-        /*
-         * Conservative Filipino/Taglish indicators.
-         */
-        $filipinoIndicators = [
-            'ano',
-            'anong',
-            'paano',
-            'saan',
-            'sino',
-            'kailan',
-            'magkano',
-            'kailangan',
-            'kailangan ko',
-            'kailangan kong',
-            'papeles',
-            'dokumento',
-            'mga dokumento',
-            'mga kailangan',
-            'dalhin',
-            'kumuha',
-            'makakuha',
-            'mag-apply',
-            'mag apply',
-            'para sa',
-            'pagkuha',
-            'pwede',
-            'puwede',
-            'maaari',
-            'saan ang',
-            'ano ang',
-            'ano mga',
-            'anong mga',
-        ];
-
-        /*
-         * If any strong Filipino indicator is found,
-         * use the Filipino approved answer.
-         */
-        foreach ($filipinoIndicators as $indicator) {
-
-            if (str_contains($text, $indicator)) {
-                return 'fil';
-            }
-        }
-
-        /*
-         * English is the safe default.
-         */
-        return 'en';
-    }
-
-
-    /**
-     * Create the controller and inject its dependencies.
-     *
-     * Laravel's service container resolves these services
-     * automatically.
-     */
     public function __construct(
         OpenRouterService $ai,
-        FaqMatcherService $faqMatcher,
-        FaqSemanticMatcherService $faqSemanticMatcher,
-        FaqIntentService $faqIntent,
         FaqAiMatcherService $faqAiMatcher
     ) {
         $this->ai = $ai;
-        $this->faqMatcher = $faqMatcher;
-        $this->faqSemanticMatcher = $faqSemanticMatcher;
-        $this->faqIntent = $faqIntent;
         $this->faqAiMatcher = $faqAiMatcher;
     }
+
 
 
     /**
@@ -316,6 +93,9 @@ class ChatbotController extends Controller
         return [
             'content' => implode("\n\n", $texts),
             'attachments' => $attachments,
+            'image' => filled($faq->image)
+                ? asset('storage/' . ltrim((string) $faq->image, '/'))
+                : null,
         ];
     }
 
@@ -409,7 +189,7 @@ class ChatbotController extends Controller
     /**
      * Send a request to the optional AI service.
      *
-     * AI is only used for classification or semantic matching.
+     * AI is only used for bounded FAQ selection and scope classification.
      */
     private function askAI(array $messages): array
     {
@@ -519,7 +299,7 @@ class ChatbotController extends Controller
                     fn ($query) =>
                         $query->whereNotIn('id', $excludedIds)
                 )
-                ->inRandomOrder()
+                ->latest('created_at')
                 ->limit($remainingCount)
                 ->get();
 
@@ -662,8 +442,67 @@ Log::info('SupportRequestCreated broadcast finished', [
      * KNOWURLOCAL public-information helpdesk scope.
      *
      * This is intentionally used only AFTER rule-based
-     * and semantic FAQ matching.
+     * and AI-assisted FAQ matching.
      */
+    /**
+     * Cheap local scope pre-check.
+     *
+     * This prevents an external AI call for obviously unrelated
+     * messages such as weather, jokes, or casual conversation.
+     */
+    private function looksLikeHelpdeskQuestion(
+        string $question,
+        bool $hasMentionedAgency
+    ): bool {
+        if ($hasMentionedAgency) {
+            return true;
+        }
+
+        $normalized = mb_strtolower(
+            $question,
+            'UTF-8'
+        );
+
+        $signals = [
+            'agency',
+            'office',
+            'service',
+            'services',
+            'requirement',
+            'requirements',
+            'document',
+            'documents',
+            'permit',
+            'application',
+            'apply',
+            'processing',
+            'fee',
+            'fees',
+            'schedule',
+            'office hours',
+            'contact',
+            'government',
+            'ngo',
+            'nga',
+            'serbisyo',
+            'opisina',
+            'kailangan',
+            'dokumento',
+            'permit',
+            'mag-apply',
+            'magkano',
+            'saan ang opisina',
+        ];
+
+        foreach ($signals as $signal) {
+            if (str_contains($normalized, $signal)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function isRelevant(string $question): ?bool
     {
         try {
@@ -1090,44 +929,27 @@ if (!empty($validated['faq_id'])) {
         ], 403);
     }
 
-    /*
-     * Determine which approved answer language should be
-     * displayed based on the original selected question.
-     */
-    $responseLanguage =
-        $this->detectResponseLanguage(
-            $question
-        );
+    $payload = $this->faqResponsePayload(
+        $selectedFaq,
+        $question
+    );
 
-    /*
-     * Prefer the approved Filipino answer when the user's
-     * question is Filipino/Taglish and that translation exists.
-     *
-     * Otherwise use the approved English answer.
-     */
     if (
-        $responseLanguage === 'fil' &&
-        filled($selectedFaq->answer_fil)
+        trim($payload['content']) === '' &&
+        empty($payload['attachments'])
     ) {
-
-        $reply =
-            $selectedFaq->answer_fil;
-
-    } else {
-
-        $reply =
-            $selectedFaq->answer;
+        return response()->json([
+            'choices' => [[
+                'message' => [
+                    'content' => 'That FAQ does not have a published response yet.'
+                ]
+            ]]
+        ], 422);
     }
 
-    /*
-     * Log the exact FAQ selected by the user.
-     *
-     * This is recorded as a rule-based answer because
-     * no AI was required to select it.
-     */
     $this->logChat(
         $question,
-        $reply,
+        $payload['content'],
         'answered',
         'rule',
         $selectedFaq->agency_id,
@@ -1135,30 +957,18 @@ if (!empty($validated['faq_id'])) {
         100
     );
 
-    /*
-     * Return only the approved database answer.
-     *
-     * The frontend is responsible for displaying it.
-     */
     return response()->json([
         'choices' => [[
             'message' => [
-                'content' => $reply,
-
-                /*
-                 * Preserve the existing FAQ image behavior.
-                 */
-                'image' =>
-                    $selectedFaq->image
-                        ? asset(
-                            'storage/' .
-                            $selectedFaq->image
-                        )
-                        : null,
+                'content' => $payload['content'],
+                'attachments' => $payload['attachments'],
+                'image' => $payload['image'],
             ],
         ]],
     ]);
 }
+
+
 
 
         // ============================================================
@@ -1285,62 +1095,53 @@ if (!empty($validated['faq_id'])) {
         // ============================================================
 
         /*
-         * Attempt to determine whether the user explicitly
-         * mentioned another registered agency.
+         * Do not load the entire agency table for every chatbot request.
+         * Instead, use meaningful words from the user's message to
+         * retrieve a small candidate set from the database.
          */
         $mentionedAgency = null;
 
-        /*
-         * Normalize the raw question for agency comparison.
-         */
-        $rawQuestion =
-            mb_strtolower(
-                $question,
-                'UTF-8'
-            );
-
-        /*
-         * Retrieve registered agencies.
-         */
-        foreach (Agency::all() as $agency) {
-
-            /*
-             * Normalize the agency name.
-             */
-            $name =
+        $agencyTerms = collect(
+            preg_split(
+                '/\s+/u',
                 mb_strtolower(
-                    $agency->agency_name,
+                    preg_replace('/[^\p{L}\p{N}\s-]+/u', ' ', $question) ?? '',
                     'UTF-8'
-                );
+                ),
+                -1,
+                PREG_SPLIT_NO_EMPTY
+            ) ?: []
+        )
+            ->filter(
+                fn ($term) =>
+                    mb_strlen($term, 'UTF-8') >= 4
+            )
+            ->unique()
+            ->take(10)
+            ->values()
+            ->all();
 
-            /*
-             * First attempt an exact agency-name substring match.
-             */
-            if (str_contains($rawQuestion, $name)) {
+        if ($agencyTerms !== []) {
+            $mentionedAgency = Agency::query()
+                ->select([
+                    'id',
+                    'agency_name',
+                    'agency_abbreviation',
+                ])
+                ->where(function ($query) use ($agencyTerms) {
+                    foreach ($agencyTerms as $term) {
+                        $like = '%' . addcslashes($term, '%_\\') . '%';
 
-                $mentionedAgency = $agency;
-
-                break;
-            }
-
-            /*
-             * If the full name was not found, inspect individual
-             * words from the agency name.
-             *
-             * Four-character minimum reduces accidental matches
-             * from extremely short words.
-             */
-            foreach (explode(' ', $name) as $word) {
-
-                if (
-                    mb_strlen($word, 'UTF-8') >= 4 &&
-                    str_contains($rawQuestion, $word)
-                ) {
-                    $mentionedAgency = $agency;
-
-                    break 2;
-                }
-            }
+                        $query
+                            ->orWhere('agency_name', 'LIKE', $like)
+                            ->orWhere('agency_abbreviation', 'LIKE', $like);
+                    }
+                })
+                ->orderByRaw(
+                    'CASE WHEN LOWER(agency_name) LIKE ? THEN 0 ELSE 1 END',
+                    ['%' . mb_strtolower($question, 'UTF-8') . '%']
+                )
+                ->first();
         }
 
 
@@ -1384,52 +1185,48 @@ if (!empty($validated['faq_id'])) {
 
 
         // ============================================================
-        // 🧠 INTENT DETECTION
+        // 🤖 AI FAQ MATCHING
         // ============================================================
 
         /*
-         * Determine what kind of information the user is requesting.
+         * One bounded AI call is used to select an existing FAQ.
          *
-         * This operation is entirely rule-based.
+         * The matcher compares:
+         * - the agency context / mentioned agency,
+         * - administrator-provided keywords,
+         * - English and Filipino FAQ questions.
          *
-         * Examples:
-         *
-         * "What documents do I need?"
-         *      → requirements
-         *
-         * "How do I apply?"
-         *      → procedure
+         * The selected FAQ is then reloaded from the database and its
+         * stored response is returned without rewriting or summarizing it.
          */
-        $userIntent =
-            $this->faqIntent->detect(
-                $question
-            );
-
-
-        // ============================================================
-        // 🤖 AI FAQ MATCHING
-        // ============================================================
-        // AI is used only to choose an existing FAQ. Once selected,
-        // the stored response is returned verbatim.
         try {
+            $matchAgencyId = $agencyId
+                ? (int) $agencyId
+                : ($mentionedAgency?->id ? (int) $mentionedAgency->id : null);
+
             $aiMatch = $this->faqAiMatcher->match(
                 $question,
-                $agencyId ? (int) $agencyId : ($mentionedAgency?->id ? (int) $mentionedAgency->id : null)
+                $matchAgencyId
             );
 
             if ($aiMatch) {
                 $faq = $aiMatch['faq'];
                 $payload = $this->faqResponsePayload($faq, $question);
 
-                if (trim($payload['content']) === '' && empty($payload['attachments'])) {
-                    throw new RuntimeException('Matched FAQ has no publishable response content.');
+                if (
+                    trim($payload['content']) === '' &&
+                    empty($payload['attachments'])
+                ) {
+                    throw new \RuntimeException(
+                        'Matched FAQ has no publishable response content.'
+                    );
                 }
 
                 $this->logChat(
                     $question,
                     $payload['content'],
                     'answered',
-                    'ai',
+                    $aiMatch['method'] ?? 'ai',
                     $faq->agency_id,
                     $faq->id,
                     (int) round($aiMatch['confidence'] * 100)
@@ -1440,430 +1237,22 @@ if (!empty($validated['faq_id'])) {
                         'message' => [
                             'content' => $payload['content'],
                             'attachments' => $payload['attachments'],
+                            'image' => $payload['image'],
                         ],
                     ]],
                 ]);
             }
         } catch (\Throwable $e) {
-            Log::warning('AI FAQ matching failed; continuing with local matching.', [
-                'error' => $e->getMessage(),
-            ]);
-        }
-
-
-        // ============================================================
-        // 🔍 RULE-BASED FAQ MATCHING
-        // ============================================================
-
-        /*
-         * Search the approved FAQ database BEFORE calling AI.
-         *
-         * This is the most important architectural change.
-         *
-         * A valid rule-based FAQ must be allowed to answer
-         * without an OpenRouter scope-classification request.
-         */
-        $faqs =
-            $this->faqMatcher->match(
-                $question,
-                $agencyId ? (int) $agencyId : null,
-                5
+            /*
+             * AI failure must degrade to the safe scope/fallback path.
+             * The user never receives provider diagnostics.
+             */
+            Log::warning(
+                'KNOWURLOCAL FAQ AI matching failed.',
+                [
+                    'error' => $e->getMessage(),
+                ]
             );
-
-        /*
-         * The matcher returns candidates ordered from highest
-         * score to lowest score.
-         */
-        $bestFaq =
-            $faqs->first();
-
-        /*
-         * Read the best candidate's score.
-         */
-        $bestScore =
-            $bestFaq
-                ? (int) ($bestFaq->match_score ?? 0)
-                : 0;
-
-
-        // ============================================================
-        // 🔐 MATCH CONFIDENCE THRESHOLD
-        // ============================================================
-
-        /*
-         * A rule-based FAQ needs at least this score before
-         * it can be used as a direct answer.
-         */
-        $minScore = 35;
-
-
-        // ============================================================
-        // ❓ AMBIGUOUS FAQ MATCH
-        // ============================================================
-
-        /*
-         * Retrieve the second-best candidate.
-         *
-         * If there is no second candidate, get(1) returns null.
-         */
-        $secondFaq =
-            $faqs->get(1);
-
-        /*
-         * Safely read the second candidate's score.
-         */
-        $secondScore =
-            $secondFaq
-                ? (int) ($secondFaq->match_score ?? 0)
-                : 0;
-
-        /*
-         * Calculate the difference between the two candidates.
-         *
-         * A smaller difference means the matcher is less certain
-         * which FAQ the user actually means.
-         */
-        $scoreDifference =
-            abs(
-                $bestScore - $secondScore
-            );
-
-        /*
-         * Two candidates within eight points are considered
-         * close enough to potentially require clarification.
-         */
-        $ambiguityThreshold = 8;
-
-        /*
-         * Ask for clarification only when ALL conditions are met:
-         *
-         * 1. Two candidates exist.
-         * 2. Both are strong enough.
-         * 3. Their scores are close.
-         * 4. The user's wording is genuinely generic.
-         *
-         * This prevents:
-         *
-         * "What documents do I need?"
-         *
-         * from unnecessarily asking "So you mean?"
-         */
-        if (
-            $bestFaq &&
-            $secondFaq &&
-            $bestScore >= $minScore &&
-            $secondScore >= $minScore &&
-            $scoreDifference <= $ambiguityThreshold &&
-            $this->isGenericFaqQuestion($question)
-        ) {
-
-            /*
-             * Determine whether the user expects Filipino
-             * or English wording.
-             */
-            $responseLanguage =
-                $this->detectResponseLanguage(
-                    $question
-                );
-
-            /*
-             * Use a short clarification prompt.
-             */
-            if ($responseLanguage === 'fil') {
-
-                $reply =
-                    'Alin dito ang tinutukoy mo?';
-
-            } else {
-
-                $reply =
-                    'So you mean?';
-            }
-
-            /*
-             * Log this as clarification rather than answered.
-             *
-             * No FAQ is selected yet because the user still
-             * needs to choose between the candidates.
-             */
-            $this->logChat(
-                $question,
-                $reply,
-                'clarification',
-                'none',
-                $agencyId
-            );
-
-            /*
-             * Return the two candidate FAQs to the frontend.
-             *
-             * The frontend can use these IDs when the user
-             * selects one of the clarification options.
-             */
-            return response()->json([
-                "choices" => [[
-                    "message" => [
-                        "content" => $reply,
-
-                        /*
-                         * Flag this response as a clarification.
-                         */
-                        "clarification" => true,
-
-                        /*
-                         * Send only the information needed
-                         * to render the choices.
-                         */
-                        "faqs" => [
-                            [
-                                "id" =>
-                                    $bestFaq->id,
-
-                                "question" =>
-                                    $responseLanguage === 'fil'
-                                        ? $bestFaq->question_fil
-                                        : $bestFaq->question,
-                            ],
-
-                            [
-                                "id" =>
-                                    $secondFaq->id,
-
-                                "question" =>
-                                    $responseLanguage === 'fil'
-                                        ? $secondFaq->question_fil
-                                        : $secondFaq->question,
-                            ],
-                        ],
-                    ],
-                ]],
-            ]);
-        }
-
-
-        // ============================================================
-        // 🎯 STRONG RULE-BASED FAQ MATCH
-        // ============================================================
-
-        /*
-         * If the best FAQ is sufficiently confident and the
-         * question was not ambiguous, answer immediately.
-         *
-         * No OpenRouter request is made here.
-         */
-        if (
-            $bestFaq &&
-            $bestScore >= $minScore
-        ) {
-
-            /*
-             * Determine response language from the actual
-             * user message.
-             */
-            $responseLanguage =
-                $this->detectResponseLanguage(
-                    $question
-                );
-
-            /*
-             * Use the approved Filipino answer when the user
-             * appears to be speaking Filipino/Taglish and
-             * an approved Filipino answer exists.
-             */
-            if (
-                $responseLanguage === 'fil' &&
-                filled($bestFaq->answer_fil)
-            ) {
-
-                $reply =
-                    $bestFaq->answer_fil;
-
-            } else {
-
-                /*
-                 * Fall back to the approved English answer.
-                 */
-                $reply =
-                    $bestFaq->answer;
-            }
-
-            /*
-             * Record the successful rule-based FAQ answer.
-             */
-            $this->logChat(
-                $question,
-                $reply,
-                'answered',
-                'rule',
-                $bestFaq->agency_id,
-                $bestFaq->id,
-                $bestScore
-            );
-
-            /*
-             * Return the approved answer to the frontend.
-             */
-            $payload = $this->faqResponsePayload($bestFaq, $question);
-
-            return response()->json([
-                'choices' => [[
-                    'message' => [
-                        'content' => $payload['content'],
-                        'attachments' => $payload['attachments'],
-                    ],
-                ]],
-            ]);
-        }
-
-
-        // ============================================================
-        // 🧠 SEMANTIC FAQ MATCHING
-        // ============================================================
-
-        /*
-         * The rule-based matcher did not find a strong enough
-         * direct match.
-         *
-         * Only now do we allow the optional semantic matcher
-         * to inspect the candidates.
-         */
-        if ($faqs->isNotEmpty()) {
-
-            try {
-
-                /*
-                 * The matcher attaches the detected intent
-                 * to candidate FAQ models.
-                 */
-                $userIntent =
-                    $faqs->first()->match_user_intent
-                    ?? 'other';
-
-                /*
-                 * Ask the semantic matcher whether one of
-                 * the existing candidates has the same meaning.
-                 *
-                 * The candidate collection limits the semantic
-                 * system to FAQs already retrieved by the
-                 * rule-based system.
-                 */
-                $semanticMatch =
-                    $this->faqSemanticMatcher->match(
-                        $question,
-                        $faqs,
-                        $userIntent
-                    );
-
-                /*
-                 * Only accept a semantic answer when:
-                 *
-                 * 1. A FAQ ID was returned.
-                 * 2. Confidence is at least 85%.
-                 */
-                if (
-                    $semanticMatch &&
-                    $semanticMatch['faq_id'] !== null &&
-                    $semanticMatch['confidence'] >= 0.85
-                ) {
-
-                    /*
-                     * Search only inside the already-approved
-                     * candidate collection.
-                     *
-                     * This prevents the semantic matcher from
-                     * selecting an arbitrary FAQ outside the
-                     * retrieved candidates.
-                     */
-                    $semanticFaq =
-                        $faqs->first(
-                            fn ($faq) =>
-                                (int) $faq->id ===
-                                (int) $semanticMatch['faq_id']
-                        );
-
-                    /*
-                     * Continue only when the selected FAQ
-                     * actually exists in our candidate collection.
-                     */
-                    if ($semanticFaq) {
-
-                        /*
-                         * Determine the response language locally.
-                         */
-                        $responseLanguage =
-                            $this->detectResponseLanguage(
-                                $question
-                            );
-
-                        /*
-                         * Use the approved Filipino answer when
-                         * appropriate and available.
-                         */
-                        if (
-                            $responseLanguage === 'fil' &&
-                            filled($semanticFaq->answer_fil)
-                        ) {
-
-                            $reply =
-                                $semanticFaq->answer_fil;
-
-                        } else {
-
-                            /*
-                             * Otherwise use the approved English
-                             * answer.
-                             */
-                            $reply =
-                                $semanticFaq->answer;
-                        }
-
-                        /*
-                         * Record the semantic answer separately
-                         * from rule-based answers.
-                         */
-                        $this->logChat(
-                            $question,
-                            $reply,
-                            'answered',
-                            'semantic',
-                            $semanticFaq->agency_id,
-                            $semanticFaq->id,
-                            (int) round(
-                                $semanticMatch['confidence'] * 100
-                            )
-                        );
-
-                        /*
-                         * Return the approved FAQ answer.
-                         */
-                        $payload = $this->faqResponsePayload($semanticFaq, $question);
-
-                        return response()->json([
-                            'choices' => [[
-                                'message' => [
-                                    'content' => $payload['content'],
-                                    'attachments' => $payload['attachments'],
-                                ],
-                            ]],
-                        ]);
-                    }
-                }
-
-            } catch (\Throwable $e) {
-
-                /*
-                 * Semantic matching is optional.
-                 *
-                 * If the external AI provider fails, the chatbot
-                 * continues normally instead of returning an error.
-                 */
-                \Log::warning(
-                    'FAQ semantic matching failed.',
-                    [
-                        'error' => $e->getMessage(),
-                    ]
-                );
-            }
         }
 
 
@@ -1876,17 +1265,19 @@ if (!empty($validated['faq_id'])) {
          *
          * 1. No strong rule-based FAQ answered.
          * 2. No clarification was necessary.
-         * 3. Semantic matching did not produce an accepted answer.
+         * 3. AI-assisted FAQ selection did not produce an accepted answer.
          *
          * Only now do we ask the AI scope classifier whether
          * this is actually a KNOWURLOCAL helpdesk question.
          *
          * This prevents OpenRouter from blocking valid FAQ answers.
          */
-        $scopeResult =
-            $this->isRelevant(
-                $question
-            );
+        $scopeResult = $this->looksLikeHelpdeskQuestion(
+            $question,
+            $mentionedAgency !== null
+        )
+            ? $this->isRelevant($question)
+            : false;
 
         /*
          * Reject only when the classifier explicitly says NO.

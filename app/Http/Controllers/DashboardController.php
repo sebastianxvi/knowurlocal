@@ -3,217 +3,108 @@
 namespace App\Http\Controllers;
 
 use App\Models\Agency;
+use App\Models\ChatbotLog;
 use App\Models\Faq;
 use App\Models\SupportRequest;
 use App\Models\User;
 use App\Models\UserLog;
-use App\Models\ChatbotLog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     /**
-     * Display the administrator dashboard.
+     * Render the operational dashboard.
      *
-     * The dashboard and PDF report intentionally use the
-     * same data source so their numbers cannot drift apart.
+     * The dashboard intentionally receives only summary/workflow data.
+     * Heavy analytics are loaded only on the dedicated Analytics page.
      */
     public function index()
     {
-        return view(
-            'admin.dashboard',
-            $this->dashboardData()
-        );
+        return view('admin.dashboard', $this->dashboardData());
     }
 
-
     /**
-     * Export the current dashboard information as a PDF.
-     *
-     * The report uses the exact same dataset as the dashboard.
+     * Render the dedicated analytics workspace.
      */
     public function analytics()
     {
-        return view('admin.analytics', $this->dashboardData());
+        return view('admin.analytics', $this->analyticsData());
     }
-
-
-    public function exportPdf()
-    {
-        /*
-         * Build the dashboard dataset once.
-         *
-         * This prevents the PDF from having its own separate
-         * analytics calculations.
-         */
-        $data = $this->dashboardData();
-
-
-        /*
-         * Render the dedicated PDF Blade view.
-         *
-         * The dashboard and PDF have different presentation
-         * requirements, so the report gets its own Blade view.
-         */
-        $pdf = Pdf::loadView(
-            'admin.report',
-            $data
-        );
-
-
-        /*
-         * Use a predictable filename containing the report date.
-         *
-         * The date comes from the server rather than user input,
-         * so there is no filename injection risk.
-         */
-        $filename =
-            'KNOWURLOCAL_Admin_Report_' .
-            now()->format('Y-m-d') .
-            '.pdf';
-
-
-        /*
-         * Return the generated PDF as a download response.
-         */
-        return $pdf->download($filename);
-    }
-
 
     /**
-     * Build the complete dataset used by the dashboard
-     * and administrative PDF report.
+     * Export a combined operational/analytics report.
+     */
+    public function exportPdf()
+    {
+        $data = array_merge(
+            $this->dashboardData(),
+            $this->analyticsData()
+        );
+
+        $pdf = Pdf::loadView('admin.report', $data);
+
+        return $pdf->download(
+            'KNOWURLOCAL_Admin_Report_' . now()->format('Y-m-d') . '.pdf'
+        );
+    }
+
+    /**
+     * Build lightweight dashboard data.
      *
-     * Keeping these calculations in one method gives us
-     * a single source of truth for reporting.
+     * Important performance rule:
+     * dashboard summary cards use COUNT/EXISTS queries instead of
+     * loading full tables into PHP.
      */
     private function dashboardData(): array
     {
-        
+        $totalAgencies = Agency::count();
 
-    /*
- * =====================================================
- * OVERVIEW
- * =====================================================
- */
+        $agencyTypeCounts = Agency::query()
+            ->join('agency_types', 'agency_types.id', '=', 'agencies.agency_type_id')
+            ->select('agency_types.name')
+            ->selectRaw('COUNT(*) AS total')
+            ->groupBy('agency_types.name')
+            ->pluck('total', 'name');
 
-$totalAgencies = Agency::count();
+        $totalNGA = (int) ($agencyTypeCounts['NGA'] ?? 0);
+        $totalNGO = (int) ($agencyTypeCounts['NGO'] ?? 0);
 
+        $totalFaqs = Faq::count();
 
-/*
- * Count active agencies by their related agency type.
- *
- * The agency_types table currently contains:
- *
- * - NGA
- * - NGO
- */
-$totalNGA = Agency::whereHas(
-    'type',
-    function ($query) {
+        $faqCountsByAgency = Faq::query()
+            ->whereNotNull('agency_id')
+            ->whereHas('agency')
+            ->select('agency_id')
+            ->selectRaw('COUNT(*) AS faq_count')
+            ->groupBy('agency_id')
+            ->orderByDesc('faq_count')
+            ->get();
 
-        $query->where(
-            'name',
-            'NGA'
-        );
-    }
-)->count();
+        $topFaqCount = (int) ($faqCountsByAgency->first()->faq_count ?? 0);
 
+        $topFaqAgencyIds = $topFaqCount > 0
+            ? $faqCountsByAgency
+                ->where('faq_count', $topFaqCount)
+                ->pluck('agency_id')
+            : collect();
 
-$totalNGO = Agency::whereHas(
-    'type',
-    function ($query) {
+        $topFaqContributorTieCount = $topFaqAgencyIds->count();
 
-        $query->where(
-            'name',
-            'NGO'
-        );
-    }
-)->count();
+        $topFaqContributors = $topFaqContributorTieCount > 0
+            ? Agency::query()
+                ->whereIn('id', $topFaqAgencyIds)
+                ->orderBy('agency_abbreviation')
+                ->pluck('agency_abbreviation')
+            : collect();
 
+        $totalUsers = User::where('role', 'user')->count();
 
-$totalFaqs = Faq::count();
-
-
-/*
- * =====================================================
- * TOP FAQ CONTRIBUTOR
- * =====================================================
- *
- * Count FAQs per active agency.
- *
- * whereHas('agency') prevents FAQs belonging to
- * soft-deleted agencies from being included.
- */
-$faqCountsByAgency = Faq::query()
-    ->whereHas('agency')
-    ->select('agency_id')
-    ->selectRaw('COUNT(*) as faq_count')
-    ->groupBy('agency_id')
-    ->orderByDesc('faq_count')
-    ->get();
-
-
-/*
- * Get the highest FAQ count.
- *
- * Cast the result to integer so the dashboard receives
- * a numeric value rather than a database string.
- */
-$topFaqCount = (int) (
-    $faqCountsByAgency
-        ->first()
-        ?->faq_count ?? 0
-);
-
-
-/*
- * Find every agency sharing the highest FAQ count.
- */
-$topFaqAgencyIds = $topFaqCount > 0
-    ? $faqCountsByAgency
-        ->where('faq_count', $topFaqCount)
-        ->pluck('agency_id')
-    : collect();
-
-
-/*
- * Count the agencies sharing the highest FAQ count.
- */
-$topFaqContributorTieCount = $topFaqAgencyIds->count();
-
-
-/*
- * Load only the abbreviations of the top contributors.
- */
-$topFaqContributors = $topFaqContributorTieCount > 0
-    ? Agency::whereIn(
-        'id',
-        $topFaqAgencyIds
-    )
-    ->orderBy('agency_abbreviation')
-    ->pluck('agency_abbreviation')
-    : collect();
-
-
-$totalUsers = User::where(
-    'role',
-    'user'
-)->count();
-
-
-$totalAdmins = User::whereIn(
-    'role',
-    ['admin', 'superadmin']
-)->count();
-
-
-        /*
-         * =====================================================
-         * USER INQUIRIES
-         * =====================================================
-         */
+        $totalAdmins = User::whereIn(
+            'role',
+            ['admin', 'superadmin']
+        )->count();
 
         $totalInquiries = SupportRequest::count();
 
@@ -227,413 +118,60 @@ $totalAdmins = User::whereIn(
             'answered'
         )->count();
 
-
-        /*
-         * Calculate the percentage of inquiries currently
-         * waiting for an administrator's response.
-         */
         $pendingInquiryPercentage = $totalInquiries > 0
-            ? round(
-                ($pendingInquiries / $totalInquiries) * 100
-            )
+            ? round(($pendingInquiries / $totalInquiries) * 100)
             : 0;
 
-
-        /*
-         * =====================================================
-         * INQUIRY ANALYTICS
-         * =====================================================
-         */
-
-        /*
-         * RESPONSE RATE
-         */
-        $responseRate = $totalInquiries > 0
-            ? round(
-                ($answeredInquiries / $totalInquiries) * 100
-            )
-            : 0;
-
-
-        /*
-         * ANSWER VISIBILITY
-         */
-        $seenAnswers = SupportRequest::where(
-            'status',
-            'answered'
-        )
-        ->whereNotNull(
-            'answer_seen_at'
-        )
-        ->count();
-
-
-        $unseenAnswers = SupportRequest::where(
-            'status',
-            'answered'
-        )
-        ->whereNull(
-            'answer_seen_at'
-        )
-        ->count();
-
-
-        /*
-         * AVERAGE RESPONSE TIME
-         */
-        $answeredRequests = SupportRequest::where(
-            'status',
-            'answered'
-        )
-        ->whereNotNull(
-            'answered_at'
-        )
-        ->whereNotNull(
-            'created_at'
-        )
-        ->get([
-            'created_at',
-            'answered_at',
-        ]);
-
-
-        $averageResponseMinutes = null;
-
-        if ($answeredRequests->isNotEmpty()) {
-
-            $totalResponseMinutes = $answeredRequests->sum(
-                function ($request) {
-
-                    return Carbon::parse(
-                        $request->created_at
-                    )->diffInMinutes(
-                        Carbon::parse(
-                            $request->answered_at
-                        )
-                    );
-                }
-            );
-
-
-            $averageResponseMinutes = round(
-                $totalResponseMinutes /
-                $answeredRequests->count()
-            );
-        }
-
-
-        /*
-         * Convert the average response time into a
-         * human-readable value.
-         */
-        $averageResponseTime = null;
-
-        if ($averageResponseMinutes !== null) {
-
-            if ($averageResponseMinutes < 60) {
-
-                $averageResponseTime =
-                    $averageResponseMinutes . ' min';
-
-            } else {
-
-                $hours = intdiv(
-                    $averageResponseMinutes,
-                    60
-                );
-
-                $minutes = $averageResponseMinutes % 60;
-
-
-                if ($minutes === 0) {
-
-                    $averageResponseTime =
-                        $hours . ' hr';
-
-                } else {
-
-                    $averageResponseTime =
-                        $hours . ' hr ' .
-                        $minutes . ' min';
-                }
-            }
-        }
-
-
-        /*
-         * =====================================================
-         * INQUIRY TREND — LAST 7 DAYS
-         * =====================================================
-         */
-
-        $analyticsStartDate = now()
-            ->startOfDay()
-            ->subDays(6);
-
-        $analyticsEndDate = now()
-            ->endOfDay();
-
-
-        $recentInquiries = SupportRequest::whereBetween(
-            'created_at',
-            [
-                $analyticsStartDate,
-                $analyticsEndDate,
-            ]
-        )
-        ->get([
-            'created_at',
-        ]);
-
-
-        $recentAnswers = SupportRequest::where(
-            'status',
-            'answered'
-        )
-        ->whereNotNull(
-            'answered_at'
-        )
-        ->whereBetween(
-            'answered_at',
-            [
-                $analyticsStartDate,
-                $analyticsEndDate,
-            ]
-        )
-        ->get([
-            'answered_at',
-        ]);
-
-
-        $inquiryTrend = [];
-
-
-        for ($day = 0; $day < 7; $day++) {
-
-            $date = $analyticsStartDate
-                ->copy()
-                ->addDays($day);
-
-
-            $submitted = $recentInquiries
-                ->filter(function ($request) use ($date) {
-
-                    return Carbon::parse(
-                        $request->created_at
-                    )->isSameDay($date);
-
-                })
-                ->count();
-
-
-            $answered = $recentAnswers
-                ->filter(function ($request) use ($date) {
-
-                    return Carbon::parse(
-                        $request->answered_at
-                    )->isSameDay($date);
-
-                })
-                ->count();
-
-
-            $inquiryTrend[] = [
-                'date' => $date->format('Y-m-d'),
-                'label' => $date->format('D'),
-                'submitted' => $submitted,
-                'answered' => $answered,
-            ];
-        }
-
-
-        /*
-         * =====================================================
-         * CHATBOT / KNOWLEDGE BASE ANALYTICS
-         * =====================================================
-         */
-
-        $totalChatbotInteractions = ChatbotLog::count();
-
-
-        $knowledgeQuestions = ChatbotLog::whereIn(
-            'outcome',
-            [
-                'answered',
-                'fallback',
-                'clarification',
-                'wrong_agency',
-            ]
-        )->count();
-
-
-        $faqAnswered = ChatbotLog::where(
-            'outcome',
-            'answered'
-        )
-        ->whereNotNull(
-            'faq_id'
-        )
-        ->count();
-
-
-        $faqAnswerRate = $knowledgeQuestions > 0
-            ? round(
-                ($faqAnswered / $knowledgeQuestions) * 100
-            )
-            : 0;
-
-
-        $fallbackQuestions = ChatbotLog::where(
-            'outcome',
-            'fallback'
-        )->count();
-
-
-        $fallbackRate = $knowledgeQuestions > 0
-            ? round(
-                ($fallbackQuestions / $knowledgeQuestions) * 100
-            )
-            : 0;
-
-
-        $clarificationQuestions = ChatbotLog::where(
-            'outcome',
-            'clarification'
-        )->count();
-
-
-        $ruleMatches = ChatbotLog::where(
-            'match_method',
-            'rule'
-        )->count();
-
-
-        $semanticMatches = ChatbotLog::where(
-            'match_method',
-            'semantic'
-        )->count();
-
-
-        /*
-         * MOST USED FAQs
-         */
-        $popularFaqs = ChatbotLog::query()
-            ->where(
-                'outcome',
-                'answered'
-            )
-            ->whereNotNull(
-                'faq_id'
-            )
-            ->select('faq_id')
-            ->selectRaw(
-                'COUNT(*) as usage_count'
-            )
-            ->groupBy('faq_id')
-            ->orderByDesc('usage_count')
-            ->with('faq')
-            ->limit(5)
-            ->get();
-
-
-        /*
-         * MOST REQUESTED AGENCIES
-         */
-        $popularAgencies = ChatbotLog::query()
-            ->whereNotNull(
-                'agency_id'
-            )
-            ->select('agency_id')
-            ->selectRaw(
-                'COUNT(*) as interaction_count'
-            )
-            ->groupBy('agency_id')
-            ->orderByDesc('interaction_count')
-            ->with('agency')
-            ->limit(5)
-            ->get();
-
-
-        /*
-         * =====================================================
-         * AGENCY DATA HEALTH
-         * =====================================================
-         */
-
-        $incompleteAgencies = Agency::where(function ($query) {
-
-            $query
-                ->whereNull('agency_location')
-                ->orWhere('agency_location', '')
-                ->orWhereNull('agency_description')
-                ->orWhere('agency_description', '')
-                ->orWhereNull('services_offered')
-                ->orWhere('services_offered', '')
-                ->orWhereNull('office_hours')
-                ->orWhere('office_hours', '')
-                ->orWhereNull('lat')
-                ->orWhereNull('lng')
-                ->orWhereNull('agency_type_id')
-                ->orWhereNull('category_id');
-
-        })->count();
-
-
-        $completeAgencies =
-            $totalAgencies - $incompleteAgencies;
-
-
-        /*
-         * =====================================================
-         * FAQ DATA HEALTH
-         * =====================================================
-         */
-
-        $incompleteFaqs = Faq::where(function ($query) {
-
-            $query
-                ->whereNull('agency_id')
-                ->orWhereNull('question')
-                ->orWhere('question', '')
-                ->orWhereNull('answer')
-                ->orWhere('answer', '')
-                ->orWhereNull('question_fil')
-                ->orWhere('question_fil', '')
-                ->orWhereNull('answer_fil')
-                ->orWhere('answer_fil', '');
-
-        })->count();
-
-
-        $completeFaqs =
-            $totalFaqs - $incompleteFaqs;
-
-        /*
- * =====================================================
- * NEEDS ATTENTION SUMMARY
- * =====================================================
- *
- * These are the same attention categories displayed
- * on the administrator dashboard.
- *
- * Keeping the total in the controller ensures that
- * the dashboard and PDF use the same calculation.
- */
-$totalNeedsAttention =
-    $pendingInquiries +
-    $incompleteAgencies +
-    $incompleteFaqs;
-
-
-        /*
-         * =====================================================
-         * TEAM COLLABORATION
-         * =====================================================
-         * Keep the dashboard useful to multiple administrators without
-         * adding a new assignment schema. Support-response audit events
-         * provide a lightweight shared activity signal.
-         */
-        $answeredToday = SupportRequest::where('status', 'answered')
+        $incompleteAgencies = Agency::query()
+            ->where(function ($query) {
+                $query
+                    ->whereNull('agency_location')
+                    ->orWhere('agency_location', '')
+                    ->orWhereNull('agency_description')
+                    ->orWhere('agency_description', '')
+                    ->orWhereNull('services_offered')
+                    ->orWhere('services_offered', '')
+                    ->orWhereNull('office_hours')
+                    ->orWhere('office_hours', '')
+                    ->orWhereNull('lat')
+                    ->orWhereNull('lng')
+                    ->orWhereNull('agency_type_id')
+                    ->orWhereNull('category_id');
+            })
+            ->count();
+
+        $completeAgencies = max(
+            0,
+            $totalAgencies - $incompleteAgencies
+        );
+
+        $incompleteFaqs = Faq::query()
+            ->where(function ($query) {
+                $query
+                    ->whereNull('agency_id')
+                    ->orWhereNull('question')
+                    ->orWhere('question', '')
+                    ->orWhereNull('answer')
+                    ->orWhere('answer', '')
+                    ->orWhereNull('question_fil')
+                    ->orWhere('question_fil', '')
+                    ->orWhereNull('answer_fil')
+                    ->orWhere('answer_fil', '');
+            })
+            ->count();
+
+        $completeFaqs = max(
+            0,
+            $totalFaqs - $incompleteFaqs
+        );
+
+        $totalNeedsAttention =
+            $pendingInquiries +
+            $incompleteAgencies +
+            $incompleteFaqs;
+
+        $answeredToday = SupportRequest::query()
+            ->where('status', 'answered')
             ->whereDate('answered_at', today())
             ->count();
 
@@ -661,78 +199,296 @@ $totalNeedsAttention =
                 'delete_support_request',
                 'restore_support_request',
             ])
-            ->whereHas('user', function ($query) {
-                $query->whereIn('role', ['admin', 'superadmin']);
-            })
             ->latest()
             ->limit(5)
             ->get();
 
+        $recentActivity = $this->authorizedActivityQuery()
+            ->latest()
+            ->limit(8)
+            ->get();
 
-        /*
-        * =====================================================
-        * RECENT SYSTEM ACTIVITY
-        * =====================================================
-        *
-        * The dashboard follows the same visibility rule as the
-        * dedicated Activity Logs page.
-        *
-        * Regular administrators:
-        *
-        * - Can see their own administrative activity.
-        * - Can see normal public-user activity.
-        * - Cannot see another administrator's activity.
-        *
-        * Superadmins:
-        *
-        * - Can see all activity.
-        */
+        return compact(
+            'totalAgencies',
+            'totalNGA',
+            'totalNGO',
+            'totalFaqs',
+            'topFaqCount',
+            'topFaqContributorTieCount',
+            'topFaqContributors',
+            'totalUsers',
+            'totalAdmins',
+            'totalInquiries',
+            'pendingInquiries',
+            'answeredInquiries',
+            'pendingInquiryPercentage',
+            'incompleteAgencies',
+            'completeAgencies',
+            'incompleteFaqs',
+            'completeFaqs',
+            'totalNeedsAttention',
+            'answeredToday',
+            'teamRespondersToday',
+            'recentTeamActivity',
+            'recentActivity'
+        );
+    }
+
+    /**
+     * Build only the data required by the analytics page/report.
+     *
+     * Trend counts are aggregated by the database rather than loading
+     * every request/log row into application memory.
+     */
+    private function analyticsData(): array
+    {
+        $totalInquiries = SupportRequest::count();
+
+        $answeredInquiries = SupportRequest::where(
+            'status',
+            'answered'
+        )->count();
+
+        $responseRate = $totalInquiries > 0
+            ? round(($answeredInquiries / $totalInquiries) * 100)
+            : 0;
+
+        $seenAnswers = SupportRequest::query()
+            ->where('status', 'answered')
+            ->whereNotNull('answer_seen_at')
+            ->count();
+
+        $unseenAnswers = SupportRequest::query()
+            ->where('status', 'answered')
+            ->whereNull('answer_seen_at')
+            ->count();
+
+        $averageResponseMinutes = $this->averageResponseMinutes();
+
+        $averageResponseTime = $this->formatMinutes(
+            $averageResponseMinutes
+        );
+
+        $start = now()->startOfDay()->subDays(6);
+        $end = now()->endOfDay();
+
+        $submittedByDay = SupportRequest::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw('DATE(created_at) AS date')
+            ->selectRaw('COUNT(*) AS total')
+            ->groupBy('date')
+            ->pluck('total', 'date');
+
+        $answeredByDay = SupportRequest::query()
+            ->where('status', 'answered')
+            ->whereNotNull('answered_at')
+            ->whereBetween('answered_at', [$start, $end])
+            ->selectRaw('DATE(answered_at) AS date')
+            ->selectRaw('COUNT(*) AS total')
+            ->groupBy('date')
+            ->pluck('total', 'date');
+
+        $inquiryTrend = collect(range(0, 6))
+            ->map(function (int $day) use (
+                $start,
+                $submittedByDay,
+                $answeredByDay
+            ) {
+                $date = $start->copy()->addDays($day);
+                $key = $date->format('Y-m-d');
+
+                return [
+                    'date' => $key,
+                    'label' => $date->format('D'),
+                    'submitted' => (int) ($submittedByDay[$key] ?? 0),
+                    'answered' => (int) ($answeredByDay[$key] ?? 0),
+                ];
+            })
+            ->all();
+
+        $totalChatbotInteractions = ChatbotLog::count();
+
+        $knowledgeQuestions = ChatbotLog::whereIn(
+            'outcome',
+            [
+                'answered',
+                'fallback',
+                'clarification',
+                'wrong_agency',
+            ]
+        )->count();
+
+        $faqAnswered = ChatbotLog::query()
+            ->where('outcome', 'answered')
+            ->whereNotNull('faq_id')
+            ->count();
+
+        $faqAnswerRate = $knowledgeQuestions > 0
+            ? round(($faqAnswered / $knowledgeQuestions) * 100)
+            : 0;
+
+        $fallbackQuestions = ChatbotLog::where(
+            'outcome',
+            'fallback'
+        )->count();
+
+        $fallbackRate = $knowledgeQuestions > 0
+            ? round(($fallbackQuestions / $knowledgeQuestions) * 100)
+            : 0;
+
+        $clarificationQuestions = ChatbotLog::where(
+            'outcome',
+            'clarification'
+        )->count();
+
+        $ruleMatches = ChatbotLog::where(
+            'match_method',
+            'rule'
+        )->count();
+
+        $semanticMatches = ChatbotLog::where(
+            'match_method',
+            'ai'
+        )->count();
+
+        $popularFaqs = ChatbotLog::query()
+            ->where('outcome', 'answered')
+            ->whereNotNull('faq_id')
+            ->select('faq_id')
+            ->selectRaw('COUNT(*) AS usage_count')
+            ->groupBy('faq_id')
+            ->orderByDesc('usage_count')
+            ->with('faq')
+            ->limit(5)
+            ->get();
+
+        $popularAgencies = ChatbotLog::query()
+            ->whereNotNull('agency_id')
+            ->select('agency_id')
+            ->selectRaw('COUNT(*) AS interaction_count')
+            ->groupBy('agency_id')
+            ->orderByDesc('interaction_count')
+            ->with('agency')
+            ->limit(5)
+            ->get();
+
+        return compact(
+            'totalInquiries',
+            'answeredInquiries',
+            'responseRate',
+            'seenAnswers',
+            'unseenAnswers',
+            'averageResponseTime',
+            'inquiryTrend',
+            'totalChatbotInteractions',
+            'knowledgeQuestions',
+            'faqAnswered',
+            'faqAnswerRate',
+            'fallbackQuestions',
+            'fallbackRate',
+            'clarificationQuestions',
+            'ruleMatches',
+            'semanticMatches',
+            'popularFaqs',
+            'popularAgencies'
+        );
+    }
+
+    /**
+     * Use a database aggregate for average response time.
+     *
+     * MySQL/MariaDB are the production targets for KNOWURLOCAL.
+     * The fallback keeps local SQLite-based tests functional.
+     */
+    private function averageResponseMinutes(): ?int
+    {
+        $query = SupportRequest::query()
+            ->where('status', 'answered')
+            ->whereNotNull('created_at')
+            ->whereNotNull('answered_at');
+
+        $driver = DB::connection()->getDriverName();
+
+        if (in_array($driver, ['mysql', 'mariadb'], true)) {
+            $average = $query->selectRaw(
+                'AVG(TIMESTAMPDIFF(MINUTE, created_at, answered_at)) AS average_minutes'
+            )->value('average_minutes');
+
+            return $average === null ? null : (int) round($average);
+        }
+
+        $rows = $query->select([
+            'created_at',
+            'answered_at',
+        ])->limit(5000)->get();
+
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        return (int) round(
+            $rows->avg(
+                fn ($row) =>
+                    Carbon::parse($row->created_at)
+                        ->diffInMinutes(Carbon::parse($row->answered_at))
+            )
+        );
+    }
+
+    /**
+     * Format a nullable minute count for a compact admin metric.
+     */
+    private function formatMinutes(?int $minutes): ?string
+    {
+        if ($minutes === null) {
+            return null;
+        }
+
+        if ($minutes < 60) {
+            return $minutes . ' min';
+        }
+
+        $hours = intdiv($minutes, 60);
+        $remaining = $minutes % 60;
+
+        return $remaining === 0
+            ? $hours . ' hr'
+            : $hours . ' hr ' . $remaining . ' min';
+    }
+
+    /**
+     * Apply the same activity visibility policy used by Activity Logs.
+     *
+     * Regular admins see:
+     * - their own administrative activity;
+     * - public-user activity.
+     *
+     * Superadmins see all activity.
+     */
+    private function authorizedActivityQuery()
+    {
         $adminActions = [
-
-            /*
-            * Authentication
-            */
             'admin_login',
             'admin_logout',
-
-            /*
-            * Agency management
-            */
             'create_agency',
             'update_agency',
             'trash_agency',
             'restore_agency',
             'force_delete_agency',
             'delete_agency',
-
-            /*
-            * FAQ management
-            */
             'create_faq',
             'update_faq',
             'delete_faq',
             'restore_faq',
             'force_delete_faq',
-
-            /*
-            * Category management
-            */
             'create_category',
             'update_category',
             'delete_category',
             'restore_category',
             'force_delete_category',
-
-            /*
-            * Support Request management
-            */
             'delete_support_request',
             'restore_support_request',
             'force_delete_support_request',
-
-            /*
-            * Administrator management
-            */
             'approve_admin',
             'invite_admin',
             'promote_admin',
@@ -740,192 +496,37 @@ $totalNeedsAttention =
             'deactivate_admin',
             'reactivate_admin',
             'delete_admin',
-
-            /*
-            * Public User Management
-            */
             'deactivate_user',
             'reactivate_user',
             'delete_user',
         ];
 
-
-        /*
-        * Start with the complete audit-log query.
-        *
-        * Eager loading prevents additional queries when the Blade
-        * accesses related users, agencies, categories, or targets.
-        */
-        $recentActivityQuery = UserLog::with([
+        $query = UserLog::with([
             'user',
             'agency',
             'category',
             'targetUser',
         ]);
 
-
-        /*
-        * Apply the same visibility boundary used by the
-        * dedicated Activity Logs page.
-        */
         if (auth()->user()->role === 'admin') {
-
             $currentAdminId = auth()->id();
 
-            $recentActivityQuery->where(function ($query) use (
+            $query->where(function ($query) use (
                 $currentAdminId,
                 $adminActions
             ) {
-
-                /*
-                * The administrator can always see their own logs.
-                */
-                $query->where(
-                    'user_id',
-                    $currentAdminId
-                )
-
-                /*
-                * Normal public-user activity remains visible.
-                *
-                * Administrative actions are excluded from this
-                * branch so a normal admin cannot see another
-                * administrator's logs.
-                */
-                ->orWhere(function ($subQuery) use (
-                    $adminActions
-                ) {
-
-                    $subQuery->whereHas(
-                        'user',
-                        function ($userQuery) {
-
-                            $userQuery->where(
-                                'role',
-                                'user'
-                            );
-                        }
-                    )
-
-                    ->whereNotIn(
-                        'action',
-                        $adminActions
-                    );
-                });
+                $query
+                    ->where('user_id', $currentAdminId)
+                    ->orWhere(function ($subQuery) use ($adminActions) {
+                        $subQuery
+                            ->whereHas('user', function ($userQuery) {
+                                $userQuery->where('role', 'user');
+                            })
+                            ->whereNotIn('action', $adminActions);
+                    });
             });
         }
 
-
-        /*
-        * Get only the latest eight records AFTER applying the
-        * authorization filter.
-        *
-        * This is important.
-        *
-        * We must filter first and limit second.
-        *
-        * Otherwise a Superadmin's recent activity could occupy
-        * the eight newest records and cause the dashboard to
-        * appear empty for a regular administrator.
-        */
-        $recentActivity = $recentActivityQuery
-            ->latest()
-            ->limit(8)
-            ->get();
-
-
-        /*
-         * =====================================================
-         * RETURN SHARED REPORT DATA
-         * =====================================================
-         *
-         * Every value returned here can be consumed by both:
-         *
-         * - admin.dashboard
-         * - admin.report
-         */
-
-        return [
-
-            /*
-             * Overview
-             */
-            'totalAgencies' => $totalAgencies,
-
-'totalNGA' => $totalNGA,
-
-'totalNGO' => $totalNGO,
-
-'totalFaqs' => $totalFaqs,
-
-'topFaqCount' => $topFaqCount,
-
-'topFaqContributorTieCount' => $topFaqContributorTieCount,
-
-'topFaqContributors' => $topFaqContributors,
-
-'totalUsers' => $totalUsers,
-
-'totalAdmins' => $totalAdmins,
-
-
-            /*
-             * Inquiry workload
-             */
-            'totalInquiries' => $totalInquiries,
-            'pendingInquiries' => $pendingInquiries,
-            'answeredInquiries' => $answeredInquiries,
-            'pendingInquiryPercentage' => $pendingInquiryPercentage,
-
-
-            /*
-             * Inquiry analytics
-             */
-            'responseRate' => $responseRate,
-            'seenAnswers' => $seenAnswers,
-            'unseenAnswers' => $unseenAnswers,
-            'averageResponseTime' => $averageResponseTime,
-            'inquiryTrend' => $inquiryTrend,
-
-
-            /*
-             * Chatbot / knowledge base analytics
-             */
-            'totalChatbotInteractions' => $totalChatbotInteractions,
-            'knowledgeQuestions' => $knowledgeQuestions,
-            'faqAnswered' => $faqAnswered,
-            'faqAnswerRate' => $faqAnswerRate,
-            'fallbackQuestions' => $fallbackQuestions,
-            'fallbackRate' => $fallbackRate,
-            'clarificationQuestions' => $clarificationQuestions,
-            'ruleMatches' => $ruleMatches,
-            'semanticMatches' => $semanticMatches,
-            'popularFaqs' => $popularFaqs,
-            'popularAgencies' => $popularAgencies,
-
-
-            /*
-             * Data health
-             */
-            'incompleteAgencies' => $incompleteAgencies,
-            'completeAgencies' => $completeAgencies,
-            'incompleteFaqs' => $incompleteFaqs,
-            'completeFaqs' => $completeFaqs,
-
-            /*
-            * Needs attention
-            */
-            'totalNeedsAttention' => $totalNeedsAttention,
-
-            'answeredToday' => $answeredToday,
-            'teamRespondersToday' => $teamRespondersToday,
-            'recentTeamActivity' => $recentTeamActivity,
-
-
-            /*
-             * Activity
-             */
-            'recentActivity' => $recentActivity,
-        ];
+        return $query;
     }
 }

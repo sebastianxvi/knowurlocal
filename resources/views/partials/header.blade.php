@@ -1,5 +1,14 @@
 <header class="topbar">
     <div class="header-left">
+        <button
+            type="button"
+            class="admin-shell-toggle"
+            data-admin-shell-toggle
+            aria-label="Toggle navigation"
+            aria-expanded="true"
+        >
+            <i class="ph-light ph-sidebar-simple" aria-hidden="true"></i>
+        </button>
         <span class="header-context">KNOWURLOCAL · Admin</span>
         <div class="header-title-row">
             <h1 class="page-title">@yield('page-title')</h1>

@@ -673,6 +673,27 @@ async function selectClarificationFaq(
 
         }
 
+        html += renderFaqAttachments(messageData.attachments);
+
+        if (
+            messageData.image &&
+            isSafeUrl(messageData.image)
+        ) {
+            const safeImageUrl = escapeHTML(messageData.image);
+
+            html += `
+                <div class="chat-image">
+                    <img
+                        src="${safeImageUrl}"
+                        alt="FAQ Image"
+                        class="clickable-image"
+                        loading="lazy"
+                        referrerpolicy="no-referrer"
+                    >
+                </div>
+            `;
+        }
+
         /*
          * Replace the typing indicator with
          * the actual approved FAQ answer.

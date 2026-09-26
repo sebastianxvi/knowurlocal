@@ -21,30 +21,90 @@ class FaqAiMatcherService
 
     public function match(string $question, ?int $agencyId = null, int $limit = 40): ?array
     {
+        $question = trim($question);
+
+        if ($question === '') {
+            return null;
+        }
+
         $terms = $this->terms($question);
+
+        /*
+         * A short message without meaningful terms cannot be matched
+         * safely. Greetings/thanks are handled before this service.
+         */
         if ($terms === []) {
             return null;
         }
 
-        $query = Faq::query()->with('agency')->whereNotNull('question');
+        $query = Faq::query()
+            ->with('agency')
+            ->whereNotNull('question')
+            ->whereNotNull('agency_id');
 
         if ($agencyId !== null) {
             $query->where('agency_id', $agencyId);
         } else {
-            // Build a useful local candidate pool before spending an AI call.
+            /*
+             * Candidate retrieval is intentionally broad enough for
+             * AI matching, but bounded so a large FAQ table never gets
+             * serialized into an expensive provider request.
+             */
             $query->where(function ($q) use ($terms) {
                 foreach ($terms as $term) {
                     $like = '%' . addcslashes($term, '%_\\') . '%';
-                    $q->orWhere('question', 'like', $like)
-                      ->orWhere('question_fil', 'like', $like)
-                      ->orWhere('keywords', 'like', $like);
+
+                    $q->orWhere('question', 'LIKE', $like)
+                        ->orWhere('question_fil', 'LIKE', $like)
+                        ->orWhere('keywords', 'LIKE', $like)
+                        ->orWhereHas('agency', function ($agencyQuery) use ($like) {
+                            $agencyQuery
+                                ->where('agency_name', 'LIKE', $like)
+                                ->orWhere('agency_abbreviation', 'LIKE', $like);
+                        });
                 }
             });
         }
 
-        $faqs = $query->limit($limit)->get();
+        $faqs = $query
+            ->select([
+                'id',
+                'agency_id',
+                'question',
+                'question_fil',
+                'keywords',
+            ])
+            ->limit(min(max($limit, 5), 40))
+            ->get();
+
         if ($faqs->isEmpty()) {
             return null;
+        }
+
+        /*
+         * Exact matches do not need an external AI call.
+         * This is both faster and deterministic.
+         */
+        $normalizedQuestion = $this->normalize($question);
+
+        $exact = $faqs->first(function (Faq $faq) use ($normalizedQuestion) {
+            return $normalizedQuestion !== ''
+                && in_array(
+                    $normalizedQuestion,
+                    array_filter([
+                        $this->normalize($faq->question),
+                        $this->normalize($faq->question_fil),
+                    ]),
+                    true
+                );
+        });
+
+        if ($exact) {
+            return [
+                'faq' => $exact,
+                'confidence' => 1.0,
+                'method' => 'rule',
+            ];
         }
 
         $candidates = $faqs->map(fn (Faq $faq) => [
@@ -134,7 +194,17 @@ PROMPT,
         return [
             'faq' => $selected,
             'confidence' => $confidence,
+            'method' => 'ai',
         ];
+    }
+
+    private function normalize(?string $text): string
+    {
+        $text = mb_strtolower(trim((string) $text), 'UTF-8');
+        $text = preg_replace('/[^\p{L}\p{N}\s-]+/u', ' ', $text) ?? '';
+        $text = preg_replace('/\s+/u', ' ', $text) ?? '';
+
+        return trim($text);
     }
 
     private function terms(string $text): array

@@ -1001,7 +1001,7 @@
             <tr>
 
                 <td>
-                    Semantic Matches
+                    AI-assisted Matches
                 </td>
 
                 <td class="purple">

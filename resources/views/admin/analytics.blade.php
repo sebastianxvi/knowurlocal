@@ -654,7 +654,7 @@
                         </strong>
 
                         <span>
-                            Rule-based and semantic FAQ matches recorded.
+                            Rule-based and AI-assisted FAQ matches recorded.
                         </span>
 
                     </div>

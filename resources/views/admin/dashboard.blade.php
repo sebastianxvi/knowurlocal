@@ -605,6 +605,68 @@
 
     </div>
 
+
+    {{-- =================================================
+         TEAM COLLABORATION
+         ================================================= --}}
+
+    <div class="team-collaboration-card">
+
+        <div class="team-collaboration-header">
+            <div>
+                <span class="eyebrow">Team activity</span>
+                <h3>Who is handling the queue?</h3>
+            </div>
+
+            <span class="team-collaboration-count">
+                {{ number_format($answeredToday) }} answered today
+            </span>
+        </div>
+
+        @if($teamRespondersToday->isNotEmpty())
+
+            <div class="team-responder-list">
+                @foreach($teamRespondersToday as $responder)
+                    <div class="team-responder">
+                        <span class="team-responder-avatar">
+                            {{ strtoupper(substr($responder->user?->first_name ?? 'A', 0, 1)) }}
+                        </span>
+
+                        <span class="team-responder-copy">
+                            <strong>
+                                {{ trim(($responder->user?->first_name ?? 'Admin') . ' ' . ($responder->user?->last_name ?? '')) }}
+                            </strong>
+                            <small>
+                                {{ $responder->user?->role === 'superadmin' ? 'Superadmin' : 'Administrator' }}
+                            </small>
+                        </span>
+                    </div>
+                @endforeach
+            </div>
+
+        @else
+
+            <p class="team-collaboration-empty">
+                No support responses have been recorded today.
+            </p>
+
+        @endif
+
+        @if($recentTeamActivity->isNotEmpty())
+            <div class="team-activity-strip">
+                <i class="ph-light ph-activity" aria-hidden="true"></i>
+                <span>
+                    Latest:
+                    {{ $recentTeamActivity->first()->description ?: $recentTeamActivity->first()->action_label }}
+                </span>
+                <time>
+                    {{ $recentTeamActivity->first()->created_at?->diffForHumans() }}
+                </time>
+            </div>
+        @endif
+
+    </div>
+
 </section>
 
 

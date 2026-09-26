@@ -122,8 +122,6 @@ Route::post('/resend-otp', [AuthController::class, 'resendOtp'])
 | STATIC + PUBLIC PAGES
 |--------------------------------------------------------------------------
 */
-Route::get('/admin/dashboard/export', [DashboardController::class, 'exportPdf']);
-
 Route::view('/privacy', 'privacy');
 Route::view('/terms', 'terms');
 
@@ -224,13 +222,6 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     [ChatbotController::class, 'submitSupportRequest']
 )->middleware('throttle:support-request');
 
-    // ================= FAQ =================
-
-Route::resource('faqs', FaqController::class);
-
-    // AI FAQ translation
-    Route::post('/faqs/translate', [FaqController::class, 'translate'])
-        ->name('faqs.translate');
 
     // 🔥 YOUR NEW FEATURE
     Route::get('/my-inquiries', [SupportRequestController::class, 'userIndex'])
@@ -333,9 +324,19 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
 
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
         ->name('admin.categories.destroy');
+
+    // ================= FAQ MANAGEMENT =================
+    Route::resource('faqs', FaqController::class)
+        ->only(['index', 'store', 'update', 'destroy']);
+
+    Route::post('/faqs/translate', [FaqController::class, 'translate'])
+        ->name('faqs.translate');
+
+    Route::get('/support-requests/pending-count', [SupportRequestController::class, 'pendingCount'])
+        ->name('admin.support.pending-count');
         
 
-    Route::get('/admin/users', [UserController::class, 'index'])
+    Route::get('/users', [UserController::class, 'index'])
         ->name('admin.users');
 
     // ================= SUPPORT REQUESTS =================
@@ -378,10 +379,6 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     // CHATBOT LOGS
     Route::get('/chatbot-logs', [ChatbotLogController::class, 'index'])
         ->name('admin.chatbot.logs');
-
-    Route::post('/faqs/translate', [FaqController::class, 'translate'])
-        ->name('admin.faqs.translate');
-
 
 
 

@@ -1,4 +1,7 @@
 <aside class="sidebar" aria-label="Administrator navigation">
+    <button type="button" class="sidebar-mobile-close" data-admin-shell-close aria-label="Close navigation">
+        <i class="ph-light ph-x" aria-hidden="true"></i>
+    </button>
     <div class="sidebar-main">
         <a href="{{ route('admin.dashboard') }}" class="sidebar-brand" aria-label="KNOWURLOCAL Dashboard">
             <span class="sidebar-brand-mark">K</span>

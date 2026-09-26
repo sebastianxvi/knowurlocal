@@ -707,7 +707,7 @@
      * Existing manual FAQ translation endpoint.
      */
     window.FAQ_TRANSLATE_URL =
-        @json(route('admin.faqs.translate'));
+        @json(route('faqs.translate'));
 
     /*
      * Support Request → FAQ conversion data.

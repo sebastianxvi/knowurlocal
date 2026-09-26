@@ -28,7 +28,30 @@ class SupportRequestController extends Controller
      *
      * Only Superadmins may access the recovery view.
      */
-    public function index(Request $request)
+    /**
+ * Return the current pending support-request count for the admin shell.
+ *
+ * The count is queried server-side so browser state can never grant
+ * access or fabricate notification data.
+ */
+public function pendingCount()
+{
+    abort_unless(
+        auth()->check() &&
+        in_array(auth()->user()->role, ['admin', 'superadmin'], true),
+        403
+    );
+
+    return response()->json([
+        'success' => true,
+        'count' => SupportRequest::query()
+            ->where('status', 'pending')
+            ->count(),
+    ]);
+}
+
+
+public function index(Request $request)
     {
         /*
          * Determine which dataset should be displayed.

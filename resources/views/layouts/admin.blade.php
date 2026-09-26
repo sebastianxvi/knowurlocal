@@ -82,8 +82,11 @@
 </head>
 
 
-<body>
-
+<body
+    data-admin-page="@yield('admin-page')"
+    data-pending-support-endpoint="{{ route('admin.support.pending-count') }}"
+>
+<div class="admin-drawer-backdrop" data-admin-shell-close aria-hidden="true"></div>
 
 <div class="layout">
 
