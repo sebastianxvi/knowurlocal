@@ -1304,6 +1304,8 @@ function createRealtimeSupportRequestRow(
         |--------------------------------------------------------------------------
         */
 
+        if (status === "answered") {
+
         const faqBase =
             supportRequestsTableBody?.dataset
                 .faqUrl || "";
@@ -1371,6 +1373,8 @@ function createRealtimeSupportRequestRow(
             faqLink
         );
 
+
+        }
 
         menu.appendChild(
             trigger

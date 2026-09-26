@@ -643,28 +643,12 @@ buildSearchableAgencyOptions();
     const keywordsInput =
         document.getElementById("faq_keywords");
 
-    const uploadPlaceholder =
-        document.getElementById("upload-placeholder");
-
-    const previewImg =
-        document.getElementById("preview-img");
-
-    const imageInput =
-        document.getElementById("faq_image");
-
-    const removeFaqImageBtn =
-    document.getElementById("removeFaqImage");
-
-    const removeImageInput =
-    document.getElementById("removeImageInput");
-
-
     /*
- * Stores the Support Request ID when an answered
+ * Stores the Support Request ID when a completed
  * Support Request is being converted into an FAQ.
  *
- * Laravel uses this value to copy the original
- * Support Request answer image into the FAQ.
+ * Laravel uses this value to validate and import any
+ * selected response attachments server-side.
  */
 const supportRequestIdInput =
     document.getElementById("support_request_id");
@@ -697,6 +681,103 @@ const supportRequestIdInput =
      */
 
     let currentMode = "add";
+
+    /*
+     * Keyword generation is intentionally local and deterministic.
+     * It is not an AI suggestion service. The administrator can still
+     * edit the generated comma-separated keywords at any time.
+     */
+    let keywordsManuallyEdited = false;
+    let lastAutoKeywords = "";
+    let keywordGenerationTimer = null;
+
+    const KEYWORD_STOP_WORDS = new Set([
+        'a', 'an', 'and', 'are', 'as', 'at', 'be', 'can', 'could', 'do',
+        'does', 'for', 'from', 'get', 'how', 'i', 'in', 'is', 'it', 'may',
+        'me', 'my', 'of', 'on', 'or', 'please', 'the', 'there', 'this',
+        'to', 'what', 'when', 'where', 'which', 'who', 'why', 'with',
+        'you', 'your', 'pwede', 'po', 'ba', 'ang', 'ng', 'mga', 'sa',
+        'para', 'ako', 'ko', 'ano', 'saan', 'paano', 'kailan', 'mayroon',
+        'meron', 'mag', 'na', 'at', 'ito', 'iyon', 'yung', 'naman', 'lang'
+    ]);
+
+    function generateKeywordsFromQuestion(question) {
+        const cleaned = String(question || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (!cleaned) {
+            return '';
+        }
+
+        const words = cleaned
+            .split(' ')
+            .map(word => word.replace(/^-+|-+$/g, ''))
+            .filter(word => word.length >= 3 && !KEYWORD_STOP_WORDS.has(word));
+
+        const uniqueWords = [];
+        const seen = new Set();
+
+        words.forEach(word => {
+            if (!seen.has(word)) {
+                seen.add(word);
+                uniqueWords.push(word);
+            }
+        });
+
+        const phrases = [];
+        for (let index = 0; index < words.length - 1; index += 1) {
+            const first = words[index];
+            const second = words[index + 1];
+            if (
+                first &&
+                second &&
+                !KEYWORD_STOP_WORDS.has(first) &&
+                !KEYWORD_STOP_WORDS.has(second)
+            ) {
+                const phrase = `${first} ${second}`;
+                if (!phrases.includes(phrase)) {
+                    phrases.push(phrase);
+                }
+            }
+        }
+
+        /* Prefer meaningful multi-word concepts, then individual terms. */
+        return [...phrases.slice(0, 3), ...uniqueWords]
+            .slice(0, 8)
+            .join(', ');
+    }
+
+    function autoFillKeywordsFromQuestion() {
+        if (!keywordsInput || !questionInput) {
+            return;
+        }
+
+        const currentKeywords = keywordsInput.value.trim();
+
+        /* Never overwrite an administrator's manual keyword edits. */
+        if (
+            keywordsManuallyEdited &&
+            currentKeywords !== lastAutoKeywords
+        ) {
+            return;
+        }
+
+        const generated = generateKeywordsFromQuestion(questionInput.value);
+        lastAutoKeywords = generated;
+        keywordsInput.value = generated;
+        keywordsInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function scheduleKeywordGeneration() {
+        window.clearTimeout(keywordGenerationTimer);
+        keywordGenerationTimer = window.setTimeout(
+            autoFillKeywordsFromQuestion,
+            180
+        );
+    }
 
 
     /*
@@ -868,6 +949,21 @@ const supportRequestIdInput =
     });
 
 
+    if (keywordsInput) {
+        keywordsInput.addEventListener('input', () => {
+            const current = keywordsInput.value.trim();
+
+            if (current !== lastAutoKeywords) {
+                keywordsManuallyEdited = true;
+            }
+        });
+    }
+
+    if (questionInput) {
+        questionInput.addEventListener('input', scheduleKeywordGeneration);
+    }
+
+
     /*
      * =========================================================
      * RESET FAQ TEXTAREA HEIGHTS
@@ -997,9 +1093,8 @@ const supportRequestIdInput =
             /*
  * Preserve the original Support Request ID.
  *
- * This hidden field will be submitted together with
- * the new FAQ form so Laravel knows where to retrieve
- * the original answer image.
+ * This hidden field is submitted with the FAQ form so
+ * Laravel can securely validate source response attachments.
  */
 if (supportRequestIdInput) {
 
@@ -1025,10 +1120,10 @@ if (supportRequestIdInput) {
                 draft.question || "";
 
             if (window.FaqResponseBuilder) {
-                window.FaqResponseBuilder.load([
-                    ...(draft.answer ? [{ type: 'text', language: 'en', content: draft.answer }] : []),
-                    ...(draft.answer_fil ? [{ type: 'text', language: 'fil', content: draft.answer_fil }] : [])
-                ], false);
+                window.FaqResponseBuilder.load(
+                    draft.response_components || [],
+                    false
+                );
             }
 
             /*
@@ -1037,29 +1132,13 @@ if (supportRequestIdInput) {
             questionFilInput.value =
                 draft.question_fil || "";
 
-            // The Filipino answer is stored in the response builder.
-            if (answerFilInput) {
-                answerFilInput.value = draft.answer_fil || "";
-            }
-
             /*
- * Display the original Support Request answer image
- * as a preview when one exists.
- *
- * This only displays the image. The actual image copy
- * will be handled securely by Laravel during saving.
- */
-if (result.support_image) {
-
-    showFaqImagePreview(
-        `/storage/${result.support_image}`
-    );
-
-} else {
-
-    resetImageState();
-
-}
+             * Let the normal question-input flow generate the
+             * manual keyword field from the English question.
+             */
+            keywordsManuallyEdited = false;
+            lastAutoKeywords = "";
+            autoFillKeywordsFromQuestion();
 
 
             /*
@@ -1418,145 +1497,6 @@ if (result.support_image) {
 
     /*
      * =========================================================
-     * IMAGE RESET
-     * =========================================================
-     */
-
-    function resetImageState(
-    markForRemoval = false
-) {
-
-    /*
-     * Clear the image preview.
-     */
-    if (previewImg) {
-        previewImg.src = "";
-        previewImg.style.display = "none";
-    }
-
-
-    /*
-     * Show the upload placeholder.
-     */
-    if (uploadPlaceholder) {
-        uploadPlaceholder.style.display = "flex";
-    }
-
-
-    /*
-     * Hide the X button.
-     */
-    if (removeFaqImageBtn) {
-        removeFaqImageBtn.style.display = "none";
-    }
-
-
-    /*
-     * Clear the selected file.
-     */
-    if (imageInput) {
-        imageInput.value = "";
-    }
-
-
-    /*
-     * Tell Laravel whether the saved image
-     * should be removed.
-     */
-    if (removeImageInput) {
-        removeImageInput.value =
-            markForRemoval ? "1" : "0";
-    }
-
-}
-
-function showFaqImagePreview(imageSource) {
-
-    /*
-     * Display the selected or existing image.
-     */
-    if (previewImg) {
-        previewImg.src = imageSource;
-        previewImg.style.display = "block";
-    }
-
-
-    /*
-     * Hide the upload instructions
-     * while an image is displayed.
-     */
-    if (uploadPlaceholder) {
-        uploadPlaceholder.style.display = "none";
-    }
-
-
-    /*
-     * Show the remove button only in Add/Edit mode.
-     *
-     * View mode must remain read-only.
-     */
-    if (removeFaqImageBtn) {
-
-        removeFaqImageBtn.style.display =
-            currentMode === "view"
-                ? "none"
-                : "inline-flex";
-
-    }
-
-}
-
-if (removeFaqImageBtn) {
-
-    removeFaqImageBtn.addEventListener(
-        "click",
-        function (event) {
-
-            /*
-             * Prevent the upload box from opening.
-             */
-            event.stopPropagation();
-
-
-            /*
-             * Do not allow removal in View mode.
-             */
-            if (currentMode === "view") {
-                return;
-            }
-
-
-            /*
- * Clear the preview and mark the
- * database image for deletion.
- */
-resetImageState(true);
-
-
-/*
- * If this is a Support Request conversion,
- * clearing the Support Request reference prevents
- * Laravel from copying the original Support Request
- * image after the administrator removed it.
- */
-if (
-    currentMode === "convert" &&
-    supportRequestIdInput
-) {
-
-    supportRequestIdInput.value =
-        "";
-
-}
-
-        }
-    );
-
-}
-
-
-    /*
-     * =========================================================
      * SUCCESS ALERT
      * =========================================================
      */
@@ -1778,6 +1718,10 @@ if (!enable) {
          */
         form.reset();
 
+        keywordsManuallyEdited = false;
+        lastAutoKeywords = "";
+        window.clearTimeout(keywordGenerationTimer);
+
 /*
  * The native select resets automatically,
  * but the custom visible input does not.
@@ -1787,8 +1731,6 @@ if (!enable) {
 syncAgencySearchInput();
 
 closeAgencyDropdown();
-
-resetImageState();
 
 resetTextareaHeights();
 
@@ -1817,9 +1759,8 @@ resetTextareaHeights();
     /*
      * Clear any previous Support Request reference.
      *
-     * Without this reset, opening Add FAQ after a
-     * conversion could accidentally copy an old
-     * Support Request image.
+     * conversion could accidentally reuse an old
+     * Support Request reference.
      */
     if (supportRequestIdInput) {
 
@@ -1838,11 +1779,6 @@ resetTextareaHeights();
             saveBtn.disabled =
                 false;
 
-
-            previewImg.style.display =
-                "none";
-
-            uploadPlaceholder.style.display = "flex";
 
         }
 
@@ -1889,6 +1825,9 @@ resetTextareaHeights();
             keywordsInput.value =
                 data.keywords || "";
 
+            keywordsManuallyEdited = false;
+            lastAutoKeywords = keywordsInput.value.trim();
+
 
             /*
              * Resize all fields after loading the
@@ -1913,21 +1852,6 @@ resetTextareaHeights();
             saveBtn.disabled =
                 false;
 
-
-            /*
-             * Load existing image.
-             */
-            if (data.image) {
-
-    showFaqImagePreview(
-        `/storage/${data.image}`
-    );
-
-} else {
-
-    resetImageState();
-
-}
 
         }
 
@@ -2016,21 +1940,6 @@ resetTextareaHeights();
             saveBtn.disabled =
                 true;
 
-
-            /*
-             * Show existing image.
-             */
-            if (data.image) {
-
-    showFaqImagePreview(
-        `/storage/${data.image}`
-    );
-
-} else {
-
-    resetImageState();
-
-}
 
         }
 
@@ -2360,32 +2269,12 @@ syncAgencySearchInput();
 
 closeAgencyDropdown();
 
-resetImageState();
-
 resetTextareaHeights();
 
             if (window.FaqResponseBuilder) {
                 window.FaqResponseBuilder.reset();
             }
 
-
-            /*
-             * Reset image state.
-             */
-            previewImg.src =
-                "";
-
-            previewImg.style.display =
-                "none";
-
-            uploadPlaceholder.style.display = "flex";
-
-
-            /*
-             * Clear the file input.
-             */
-            imageInput.value =
-                "";
 
         }, 200);
 
@@ -2648,480 +2537,6 @@ resetTextareaHeights();
 
         }
     );
-
-
-    /*
-     * =========================================================
-     * IMAGE UPLOAD
-     * =========================================================
-     */
-
-    imageInput.addEventListener(
-        "change",
-        function () {
-
-            const file =
-                this.files[0];
-
-
-            /*
-             * No file selected.
-             */
-            if (!file) {
-
-    resetImageState();
-
-    return;
-
-}
-
-
-            /*
-             * Client-side type validation.
-             *
-             * This improves UX only.
-             *
-             * Laravel MUST still validate the uploaded
-             * file server-side.
-             */
-            const allowedTypes = [
-                "image/jpeg",
-                "image/png",
-                "image/webp"
-            ];
-
-
-            if (
-                !allowedTypes.includes(
-                    file.type
-                )
-            ) {
-
-                showAlertModal({
-
-                    title:
-                        "Invalid file type",
-
-                    text:
-                        "Only JPG, PNG, and WebP images are allowed.",
-
-                    icon:
-                        "!",
-
-                    variant:
-                        "danger",
-
-                    confirmText:
-                        "OK",
-
-                    showCancel:
-                        false
-
-                });
-
-
-                resetImageState();
-
-return;
-
-            }
-
-
-            /*
- * Limit the client-side preview to 5MB.
- *
- * Laravel must enforce the same limit
- * server-side.
- */
-            if (
-                file.size >
-                5 * 1024 * 1024
-            ) {
-
-                showAlertModal({
-
-                    title:
-                        "File too large",
-
-                    text:
-                        "Maximum file size is 5MB.",
-
-                    icon:
-                        "!",
-
-                    variant:
-                        "danger",
-
-                    confirmText:
-                        "OK",
-
-                    showCancel:
-                        false
-
-                });
-
-
-                resetImageState();
-
-return;
-
-            }
-
-
-            /*
-             * Generate a local preview.
-             */
-            const reader =
-                new FileReader();
-
-
-            reader.onload =
-    function (e) {
-
-        /*
-         * A newly selected image should not be marked
-         * for deletion.
-         */
-        if (removeImageInput) {
-            removeImageInput.value = "0";
-        }
-
-
-        /*
-         * Display the newly selected image.
-         */
-        showFaqImagePreview(
-            e.target.result
-        );
-
-    };
-
-
-            reader.readAsDataURL(
-                file
-            );
-
-        }
-    );
-
-
-    /*
- * =========================================================
- * DUPLICATE FAQ VALIDATION
- * =========================================================
- *
- * Performs a frontend duplicate check before the form
- * confirmation modal is displayed.
- *
- * The backend check remains authoritative because:
- *
- * 1. The browser only sees FAQs on the current page.
- * 2. Another administrator may create the same FAQ.
- * 3. Frontend validation can be bypassed.
- */
-
-function normalizeFaqValue(value) {
-
-    /*
-     * Convert null/undefined values into an empty string.
-     *
-     * trim() removes unnecessary spaces.
-     *
-     * toLocaleLowerCase() makes comparison
-     * case-insensitive for the current locale.
-     */
-    return String(value ?? "")
-        .trim()
-        .toLocaleLowerCase();
-
-}
-
-
-function getCurrentFaqId() {
-
-    /*
-     * During edit mode, the current FAQ must be excluded
-     * from the duplicate comparison.
-     */
-    if (
-        currentMode === "edit" &&
-        methodInput.value === "PUT"
-    ) {
-
-        const action =
-            form.getAttribute("action") || "";
-
-        const match =
-            action.match(/\/faqs\/(\d+)$/);
-
-        return match
-            ? match[1]
-            : null;
-
-    }
-
-    return null;
-
-}
-
-
-function findDuplicateFaq() {
-
-    /*
-     * Read and normalize the values currently entered
-     * into the form.
-     */
-    const agencyId =
-        String(agencySelect.value || "");
-
-    const question =
-        normalizeFaqValue(
-            questionInput.value
-        );
-
-    const answer =
-        normalizeFaqValue(
-            Array.from(
-                document.querySelectorAll('#faq-response-english textarea[name*="[content]"]')
-            )
-            .map(field => field.value)
-            .filter(Boolean)
-            .join("\n\n")
-        );
-
-    const keywords =
-        normalizeFaqValue(
-            keywordsInput.value
-        );
-
-
-    /*
-     * Do not run duplicate comparison against
-     * incomplete FAQ data.
-     *
-     * Laravel will perform the required-field validation.
-     */
-    if (
-        !agencyId ||
-        !question ||
-        !answer
-    ) {
-
-        return null;
-
-    }
-
-
-    /*
-     * Read the FAQ rows currently rendered on the page.
-     *
-     * This is only an early UX check.
-     * Laravel still performs the real database check.
-     */
-    const faqRows =
-        document.querySelectorAll(
-            ".faq-row"
-        );
-
-
-    const currentFaqId =
-        getCurrentFaqId();
-
-
-    for (
-        const row of faqRows
-    ) {
-
-        const rowId =
-            String(
-                row.dataset.id || ""
-            );
-
-
-        /*
-         * Do not compare an FAQ against itself
-         * while editing that FAQ.
-         */
-        if (
-            currentFaqId &&
-            rowId === currentFaqId
-        ) {
-
-            continue;
-
-        }
-
-
-        const rowAgency =
-            String(
-                row.dataset.agency || ""
-            );
-
-
-        const rowQuestion =
-            normalizeFaqValue(
-                row.dataset.question
-            );
-
-        const rowAnswer =
-            normalizeFaqValue(
-                row.dataset.answer
-            );
-
-        const rowKeywords =
-            normalizeFaqValue(
-                row.dataset.keywords
-            );
-
-
-        /*
-         * A duplicate requires all four values
-         * to match exactly after normalization:
-         *
-         * 1. Agency
-         * 2. English question
-         * 3. English answer
-         * 4. Keywords
-         */
-        const isDuplicate =
-            rowAgency === agencyId &&
-            rowQuestion === question &&
-            rowAnswer === answer &&
-            rowKeywords === keywords;
-
-
-        if (isDuplicate) {
-
-            return {
-
-                id:
-                    rowId,
-
-                question:
-                    row.dataset.question ||
-                    "This FAQ"
-
-            };
-
-        }
-
-    }
-
-
-    /*
-     * No duplicate was found among the
-     * currently visible FAQ rows.
-     */
-    return null;
-
-}
-
-
-    /*
- * =========================================================
- * CONFIRM SAVE
- * =========================================================
- */
-
-form.addEventListener(
-    "submit",
-    function (e) {
-
-        /*
-         * Stop the browser's normal submission first.
-         *
-         * This allows validation and confirmation to run
-         * before Laravel receives the request.
-         */
-        e.preventDefault();
-
-
-        /*
-         * Run the frontend duplicate check.
-         */
-        const duplicateFaq =
-            findDuplicateFaq();
-
-
-        /*
-         * Stop immediately when a duplicate is detected.
-         *
-         * The existing shared alert modal is reused.
-         */
-        if (duplicateFaq) {
-
-            showAlertModal({
-
-                title:
-                    "Duplicate FAQ detected",
-
-                text:
-                    "An FAQ with the same agency, question, answer, and keywords already exists. Please review the existing FAQ instead of creating another copy.",
-
-                icon:
-                    "!",
-
-                variant:
-                    "danger",
-
-                confirmText:
-                    "OK",
-
-                showCancel:
-                    false
-
-            });
-
-
-            /*
-             * Do not display the Save confirmation modal.
-             */
-            return;
-
-        }
-
-
-        /*
-         * No duplicate was found among the currently
-         * visible FAQ rows, so request confirmation.
-         *
-         * Laravel will still perform the authoritative
-         * database duplicate check.
-         */
-        showAlertModal({
-
-            title:
-                "Save changes?",
-
-            text:
-                "Make sure all information is correct.",
-
-            icon:
-                "✓",
-
-            variant:
-                "success",
-
-            confirmText:
-                "Save",
-
-            showCancel:
-                true,
-
-            onConfirm: () => {
-
-                /*
-                 * Native form.submit() bypasses this submit
-                 * event listener and submits the form normally.
-                 */
-                form.submit();
-
-            }
-
-        });
-
-    }
-);
 
 
     /*

@@ -66,6 +66,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const safeAttachmentUrl = value => {
+        if (!value) return false;
+
+        try {
+            const url = new URL(value, window.location.origin);
+
+            if (url.origin !== window.location.origin) {
+                return false;
+            }
+
+            return (
+                url.pathname.startsWith('/admin/support-requests/')
+                || url.pathname.startsWith('/faqs/')
+                || url.pathname.startsWith('/storage/')
+            );
+        } catch {
+            return false;
+        }
+    };
+
     const allTextItems = () => document.querySelectorAll(
         '#faq-response-english .faq-response-item, #faq-response-filipino .faq-response-item'
     );
@@ -167,12 +187,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const componentIndex = Number.isInteger(values.componentIndex)
             ? values.componentIndex
             : index;
+
         const content = values.content ?? '';
         const label = values.label ?? '';
+        const attachmentUrl = values.attachment_url
+            || (faqId && ['image', 'file'].includes(type)
+                ? `/faqs/${encodeURIComponent(faqId)}/response-attachments/${componentIndex}`
+                : '');
+        const hasExistingAttachment = Boolean(
+            content
+            || attachmentUrl
+            || values.source_support_request_id
+            || values.source_legacy_support_request_id
+        );
         const disabled = readonly ? 'disabled' : '';
-        const attachmentUrl = faqId && ['image', 'file'].includes(type)
-            ? `/faqs/${encodeURIComponent(faqId)}/response-attachments/${componentIndex}`
-            : '';
+        const canPreviewAttachment = safeAttachmentUrl(attachmentUrl);
 
         const item = document.createElement('article');
         item.className = 'faq-response-item faq-attachment-item';
@@ -182,30 +211,86 @@ document.addEventListener('DOMContentLoaded', () => {
         let body = '';
 
         if (type === 'link' || type === 'qr_code') {
-            body = `
-                <label for="faq-response-${index}-content">${type === 'qr_code' ? 'Destination URL' : 'Official URL'}</label>
-                <input
-                    id="faq-response-${index}-content"
-                    type="url"
-                    name="response_components[${index}][content]"
-                    value="${escapeHtml(content)}"
-                    placeholder="https://official-government-website.gov.ph/..."
-                    inputmode="url"
-                    autocomplete="url"
-                    ${disabled}
-                    required
-                >
-                <label for="faq-response-${index}-label">Label <span>(optional)</span></label>
-                <input
-                    id="faq-response-${index}-label"
-                    type="text"
-                    name="response_components[${index}][label]"
-                    value="${escapeHtml(label)}"
-                    maxlength="255"
-                    placeholder="Short description"
-                    ${disabled}
-                >
-            `;
+            const safeDestination = safeUrl(content);
+
+            if (readonly) {
+                body = `
+                    <div class="faq-response-item-body-inner">
+                        ${label ? `
+                            <div class="support-response-readonly-label">
+                                ${type === 'qr_code' ? 'QR code label' : 'Link label'}
+                            </div>
+                            <div class="support-response-readonly-content">
+                                ${escapeHtml(label)}
+                            </div>
+                        ` : ''}
+
+                        ${type === 'qr_code' && safeDestination ? `
+                            <div class="support-response-qr-preview">
+                                <div class="support-response-qr-placeholder" data-qr-value="${escapeHtml(content)}">
+                                    <i class="ph-light ph-qr-code" aria-hidden="true"></i>
+                                    <span>QR destination</span>
+                                </div>
+                                <div class="support-response-qr-details">
+                                    <div class="support-response-readonly-label">Destination URL</div>
+                                    <a class="support-response-readonly-link" href="${escapeHtml(content)}" target="_blank" rel="noopener noreferrer">
+                                        ${escapeHtml(content)}
+                                        <i class="ph-light ph-arrow-square-out" aria-hidden="true"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="support-response-readonly-label">URL</div>
+                            ${safeDestination
+                                ? `<a class="support-response-readonly-link" href="${escapeHtml(content)}" target="_blank" rel="noopener noreferrer">${escapeHtml(content)}<i class="ph-light ph-arrow-square-out" aria-hidden="true"></i></a>`
+                                : `<div class="support-response-readonly-content">${escapeHtml(content)}</div>`}
+                        `}
+                    </div>
+                `;
+            } else {
+                body = `
+                    <div class="faq-response-item-body-inner">
+                        <label for="faq-response-${index}-content">
+                            ${type === 'qr_code' ? 'Destination URL' : 'Official URL'}
+                        </label>
+                        <input
+                            id="faq-response-${index}-content"
+                            type="url"
+                            name="response_components[${index}][content]"
+                            value="${escapeHtml(content)}"
+                            placeholder="https://official-government-website.gov.ph/..."
+                            inputmode="url"
+                            autocomplete="url"
+                            required
+                        >
+
+                        <label for="faq-response-${index}-label">
+                            Label <span>(optional)</span>
+                        </label>
+                        <input
+                            id="faq-response-${index}-label"
+                            type="text"
+                            name="response_components[${index}][label]"
+                            value="${escapeHtml(label)}"
+                            maxlength="255"
+                            placeholder="Short description"
+                        >
+
+                        ${type === 'qr_code' && safeDestination ? `
+                            <div class="support-response-qr-preview">
+                                <div class="support-response-qr-placeholder" data-qr-value="${escapeHtml(content)}">
+                                    <i class="ph-light ph-qr-code" aria-hidden="true"></i>
+                                    <span>QR destination</span>
+                                </div>
+                                <div class="support-response-qr-details">
+                                    <div class="support-response-readonly-label">Destination URL</div>
+                                    <a class="support-response-readonly-link" href="${escapeHtml(content)}" target="_blank" rel="noopener noreferrer">${escapeHtml(content)}<i class="ph-light ph-arrow-square-out" aria-hidden="true"></i></a>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
         }
 
         if (type === 'image' || type === 'file') {
@@ -213,71 +298,126 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? '.jpg,.jpeg,.png,.webp'
                 : '.pdf,.doc,.docx,.xls,.xlsx';
 
-            body = `
-                <label for="faq-response-${index}-file">${type === 'image' ? 'Image file' : 'Document file'}</label>
-                <input
-                    id="faq-response-${index}-file"
-                    type="file"
-                    name="response_components[${index}][file]"
-                    accept="${accept}"
-                    ${disabled}
-                    ${content ? '' : 'required'}
-                >
-                ${content ? `
-                    <input type="hidden" name="response_components[${index}][existing_content]" value="${escapeHtml(content)}">
-                    <div class="faq-response-existing-file">
-                        <i class="ph-light ${iconFor[type]}"></i>
-                        <div class="faq-response-existing-file-copy">
-                            <strong>Current ${escapeHtml(type === 'image' ? 'image' : 'file')}</strong>
-                            <span>${escapeHtml(label || 'Saved attachment')}</span>
-                        </div>
-                        ${attachmentUrl ? `
+            const preview = canPreviewAttachment
+                ? type === 'image'
+                    ? `
+                        <div class="support-response-saved-attachment support-response-saved-image">
                             <a
-                                class="faq-response-existing-file-link"
+                                class="support-response-saved-image-preview"
+                                href="${escapeHtml(attachmentUrl)}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label="Open saved FAQ image"
+                            >
+                                <img
+                                    src="${escapeHtml(attachmentUrl)}"
+                                    alt="Saved FAQ attachment preview"
+                                    loading="lazy"
+                                >
+                            </a>
+                            <div class="support-response-saved-attachment-footer">
+                                <div class="support-response-saved-attachment-info">
+                                    <i class="ph-light ph-image" aria-hidden="true"></i>
+                                    <span>${escapeHtml(label || 'Saved image')}</span>
+                                </div>
+                                <a
+                                    class="support-response-saved-attachment-action"
+                                    href="${escapeHtml(attachmentUrl)}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <i class="ph-light ph-arrow-square-out" aria-hidden="true"></i>
+                                    <span>View image</span>
+                                </a>
+                            </div>
+                        </div>
+                    `
+                    : `
+                        <div class="support-response-saved-attachment support-response-saved-document">
+                            <div class="support-response-saved-document-icon">
+                                <i class="ph-light ph-file-text" aria-hidden="true"></i>
+                            </div>
+                            <div class="support-response-saved-document-content">
+                                <strong>${escapeHtml(label || 'Saved document')}</strong>
+                                <span>The original file is securely stored.</span>
+                            </div>
+                            <a
+                                class="support-response-saved-attachment-action"
                                 href="${escapeHtml(attachmentUrl)}"
                                 target="_blank"
                                 rel="noopener noreferrer"
                             >
-                                <i class="ph-light ph-arrow-square-out"></i>
-                                Open
+                                <i class="ph-light ph-arrow-square-out" aria-hidden="true"></i>
+                                <span>Open file</span>
                             </a>
-                        ` : ''}
-                    </div>
-                    ${type === 'image' && attachmentUrl ? `
-                        <a
-                            class="faq-response-existing-image"
-                            href="${escapeHtml(attachmentUrl)}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            <img src="${escapeHtml(attachmentUrl)}" alt="Saved FAQ attachment preview">
-                        </a>
+                        </div>
+                    `
+                : hasExistingAttachment
+                    ? `
+                        <div class="support-response-saved-file support-response-saved-file-missing">
+                            <i class="ph-light ${iconFor[type]}" aria-hidden="true"></i>
+                            <span>Attachment preview is unavailable.</span>
+                        </div>
+                    `
+                    : '';
+
+            body = `
+                <div class="faq-response-item-body-inner">
+                    <label for="faq-response-${index}-file">
+                        ${type === 'image' ? 'Image' : 'Document'}
+                    </label>
+
+                    <input
+                        id="faq-response-${index}-file"
+                        type="file"
+                        name="response_components[${index}][file]"
+                        accept="${accept}"
+                        ${disabled}
+                        ${hasExistingAttachment ? '' : 'required'}
+                    >
+
+                    ${preview}
+
+                    ${values.source_support_request_id ? `
+                        <input type="hidden" name="response_components[${index}][source_support_request_id]" value="${escapeHtml(values.source_support_request_id)}">
+                        <input type="hidden" name="response_components[${index}][source_response_id]" value="${escapeHtml(values.source_response_id)}">
+                        <input type="hidden" name="response_components[${index}][source_component_id]" value="${escapeHtml(values.source_component_id)}">
                     ` : ''}
-                ` : ''}
-                <label for="faq-response-${index}-label">Label <span>(optional)</span></label>
-                <input
-                    id="faq-response-${index}-label"
-                    type="text"
-                    name="response_components[${index}][label]"
-                    value="${escapeHtml(label)}"
-                    maxlength="255"
-                    placeholder="Short description"
-                    ${disabled}
-                >
-                <p class="faq-response-hint">
-                    <i class="ph-light ph-shield-check"></i>
-                    ${type === 'image' ? 'JPG, PNG, or WEBP · Maximum 5 MB' : 'PDF, Word, or Excel · Maximum 5 MB'}
-                </p>
+
+                    ${values.source_legacy_support_request_id ? `
+                        <input type="hidden" name="response_components[${index}][source_legacy_support_request_id]" value="${escapeHtml(values.source_legacy_support_request_id)}">
+                    ` : ''}
+
+                    ${content ? `
+                        <input type="hidden" name="response_components[${index}][existing_content]" value="${escapeHtml(content)}">
+                    ` : ''}
+
+                    <label for="faq-response-${index}-label">
+                        Label <span>(optional)</span>
+                    </label>
+                    <input
+                        id="faq-response-${index}-label"
+                        type="text"
+                        name="response_components[${index}][label]"
+                        value="${escapeHtml(label)}"
+                        maxlength="255"
+                        placeholder="Short description"
+                        ${disabled}
+                    >
+
+                    <p class="faq-response-hint">
+                        <i class="ph-light ph-shield-check"></i>
+                        ${type === 'image' ? 'JPG, PNG, or WEBP · Maximum 5 MB' : 'PDF, Word, or Excel · Maximum 5 MB'}
+                    </p>
+                </div>
             `;
         }
 
         item.innerHTML = `
             ${createHeader(type, index, labelFor[type], 'Additional attachment', readonly)}
-            <div class="faq-response-item-body">
-                ${body}
-                <input type="hidden" name="response_components[${index}][type]" value="${type}">
-                <input type="hidden" name="response_components[${index}][language]" value="attachment">
-            </div>
+            ${body}
+            <input type="hidden" name="response_components[${index}][type]" value="${type}">
+            <input type="hidden" name="response_components[${index}][language]" value="attachment">
         `;
 
         attachmentContainer.appendChild(item);

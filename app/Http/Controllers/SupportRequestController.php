@@ -1777,16 +1777,13 @@ if (
         /*
          * Similarity checking requires an answer.
          */
-        if (
-            !$support->answer ||
-            trim($support->answer) === ''
-        ) {
+        if ($support->status !== 'answered') {
 
             return response()->json([
                 'success' => false,
 
                 'message' =>
-                    'Cannot check FAQ similarity for an unanswered request.',
+                    'Only completed/answered support requests can be used for FAQ conversion.',
             ], 422);
         }
 
@@ -1860,14 +1857,11 @@ if (
         /*
          * An unanswered request cannot become an FAQ.
          */
-        if (
-            !$support->answer ||
-            trim($support->answer) === ''
-        ) {
+        if ($support->status !== 'answered') {
 
             return back()->with(
                 'error',
-                'Cannot create an FAQ from an unanswered request.'
+                'Only completed/answered support requests can be added to FAQs.'
             );
         }
 

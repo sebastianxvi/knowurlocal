@@ -509,11 +509,11 @@
     >
 
     {{--
-        Contains the original Support Request ID when an answered
-        Support Request is converted into an FAQ.
+        Contains the original Support Request ID when a completed
+        Support Request is prepared as an FAQ.
 
-        Laravel will use this ID to locate and copy the original
-        answer image into the FAQ image directory.
+        Laravel uses this trusted server-side reference to validate
+        and copy selected response attachments into FAQ storage.
     --}}
     <input
         type="hidden"

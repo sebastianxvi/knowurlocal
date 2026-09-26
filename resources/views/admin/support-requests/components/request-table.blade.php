@@ -305,7 +305,8 @@
                                                 </form>
 
 
-                                                {{-- ADD TO FAQ --}}
+                                                {{-- ADD TO FAQ — only resolved/answered requests --}}
+                                                @if($request->status === 'answered')
                                                 <a
                                                     href="{{ route(
                                                         'admin.support.toFaq',
@@ -333,6 +334,7 @@
                                                     </span>
 
                                                 </a>
+                                                @endif
 
                                             </div>
 

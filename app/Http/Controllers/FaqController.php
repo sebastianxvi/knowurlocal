@@ -7,6 +7,7 @@ use App\Models\Faq;
 use App\Models\Agency;
 use App\Models\UserLog;
 use App\Models\SupportRequest;
+use App\Models\SupportResponseComponent;
 use App\Services\FaqTranslationService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -107,47 +108,33 @@ public function prepareFromSupport(
     FaqTranslationService $translator
 ) {
     /*
-     * 🔒 Defense-in-depth authorization.
-     *
-     * The route should also be protected by the
-     * superadmin middleware, but sensitive operations
-     * should not rely on middleware alone.
+     * Defense-in-depth authorization.
      */
-    if (
-        !auth()->check() ||
-        auth()->user()->role !== 'superadmin'
-    ) {
-        abort(403, 'Unauthorized action.');
-    }
+    abort_unless(
+        auth()->check() &&
+        auth()->user()->role === 'superadmin',
+        403,
+        'Unauthorized action.'
+    );
 
     /*
-     * 🔍 Retrieve the actual Support Request.
-     *
-     * We intentionally retrieve the question and answer
-     * from the database instead of trusting browser data.
+     * Only a resolved Support Request may be converted.
+     * "answered" is deliberately stricter than merely having
+     * an answer string because awaiting_confirmation is not a
+     * completed ticket yet.
      */
-    $support = SupportRequest::findOrFail($id);
+    $support = SupportRequest::query()
+        ->with('latestResponse.components')
+        ->findOrFail($id);
 
-    /*
-     * Only answered requests can become FAQs.
-     *
-     * An unanswered request does not contain enough
-     * information to create a useful FAQ.
-     */
-    if (
-        !$support->answer ||
-        trim($support->answer) === ''
-    ) {
+    if ($support->status !== 'answered') {
         return response()->json([
             'success' => false,
             'message' =>
-                'Cannot create an FAQ from an unanswered request.',
+                'Only completed/answered support requests can be added to FAQs.',
         ], 422);
     }
 
-    /*
-     * Every FAQ must belong to an agency.
-     */
     if (!$support->agency_id) {
         return response()->json([
             'success' => false,
@@ -157,80 +144,157 @@ public function prepareFromSupport(
     }
 
     try {
+        /*
+         * Keep the existing bilingual question preparation so the
+         * FAQ modal receives both language fields, but do NOT use
+         * the AI-generated answer fields as the FAQ response source.
+         * The authoritative response components come from the
+         * completed Support Request itself.
+         */
+        $latestResponse = $support->latestResponse;
+        $responseComponents = [];
+
+        $responseAnswer = trim((string) ($support->answer ?? ''));
+
+        if ($responseAnswer === '' && $latestResponse) {
+            $responseAnswer = $latestResponse->components
+                ->where('type', 'text')
+                ->pluck('content')
+                ->filter(fn ($content) => trim((string) $content) !== '')
+                ->implode("\n\n");
+        }
 
         /*
-         * Generate the bilingual FAQ draft.
-         *
-         * This method determines the language of the
-         * original user's question and generates both
-         * English and Filipino/Taglish versions.
+         * The structured Support Request response is the authoritative
+         * answer for the new ticket workflow. The legacy answer column is
+         * used only when an older ticket still stores its response there.
          */
+        if (trim($responseAnswer) === '') {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'The completed support request does not contain a response that can be added to an FAQ.',
+            ], 422);
+        }
+
         $draft = $translator->prepareSupportRequestFaq(
             $support->question,
-            $support->answer
+            $responseAnswer
         );
 
+        if ($latestResponse) {
+            foreach ($latestResponse->components as $component) {
+                $type = $component->type;
+
+                if ($type === 'text') {
+                    $responseComponents[] = [
+                        'type' => 'text',
+                        'language' => 'en',
+                        'content' => (string) $component->content,
+                        'label' => $component->label,
+                    ];
+                    continue;
+                }
+
+                if (in_array($type, ['link', 'qr_code'], true)) {
+                    $responseComponents[] = [
+                        'type' => $type,
+                        'language' => 'attachment',
+                        'content' => (string) $component->content,
+                        'label' => $component->label,
+                    ];
+                    continue;
+                }
+
+                if (in_array($type, ['image', 'file'], true)) {
+                    $responseComponents[] = [
+                        'type' => $type,
+                        'language' => 'attachment',
+                        'content' => '',
+                        'label' => $component->label,
+                        'attachment_url' => route(
+                            'admin.support.response-attachment',
+                            [
+                                'supportRequestId' => $support->id,
+                                'responseId' => $latestResponse->id,
+                                'componentId' => $component->id,
+                            ]
+                        ),
+                        'source_support_request_id' => $support->id,
+                        'source_response_id' => $latestResponse->id,
+                        'source_component_id' => $component->id,
+                    ];
+                }
+            }
+        }
+
         /*
-         * Return ONLY the information needed by the
-         * FAQ creation interface.
-         *
-         * Nothing is written to the FAQ database here.
+         * Legacy tickets may not have a structured response row.
+         * In that case, seed the response builder from the legacy
+         * answer fields so the FAQ modal is still ready to review.
          */
+        if (!collect($responseComponents)->contains(fn ($component) => ($component['type'] ?? null) === 'text')) {
+            $responseComponents[] = [
+                'type' => 'text',
+                'language' => 'en',
+                'content' => $draft['answer'],
+                'label' => null,
+            ];
+
+            if (!empty($draft['answer_fil'])) {
+                $responseComponents[] = [
+                    'type' => 'text',
+                    'language' => 'fil',
+                    'content' => $draft['answer_fil'],
+                    'label' => null,
+                ];
+            }
+        }
+
+        /*
+         * Legacy support-request answers used a separate public
+         * answer_image column. Keep that image available in the
+         * same FAQ attachment section when there is no equivalent
+         * structured image component.
+         */
+        $hasStructuredImage = collect($responseComponents)
+            ->contains(fn ($component) => ($component['type'] ?? null) === 'image');
+
+        if (!$hasStructuredImage && $support->answer_image) {
+            $responseComponents[] = [
+                'type' => 'image',
+                'language' => 'attachment',
+                'content' => '',
+                'label' => 'Support Request image',
+                'source_legacy_support_request_id' => $support->id,
+                'attachment_url' => Storage::disk('public')->exists($support->answer_image)
+                    ? asset('storage/' . ltrim($support->answer_image, '/'))
+                    : null,
+            ];
+        }
+
         return response()->json([
-    'success' => true,
-
-    'support_request_id' => $support->id,
-
-    'agency_id' => $support->agency_id,
-
-    'support_image' => $support->answer_image,
-
-    'draft' => [
-        'detected_language' =>
-            $draft['detected_language'],
-
-        'question' =>
-            $draft['question'],
-
-        'answer' =>
-            $draft['answer'],
-
-        'question_fil' =>
-            $draft['question_fil'],
-
-        'answer_fil' =>
-            $draft['answer_fil'],
-    ],
-]);
-
+            'success' => true,
+            'support_request_id' => $support->id,
+            'agency_id' => $support->agency_id,
+            'draft' => [
+                'detected_language' => $draft['detected_language'],
+                'question' => $draft['question'],
+                'question_fil' => $draft['question_fil'],
+                'response_components' => $responseComponents,
+            ],
+        ]);
     } catch (\Throwable $e) {
-
-        /*
-         * 🔒 Never expose the actual AI/API exception
-         * to the browser.
-         *
-         * Technical details remain in the Laravel log.
-         */
         \Log::error(
             'Support Request FAQ preparation failed.',
             [
-                'support_request_id' =>
-                    $support->id,
-
-                'user_id' =>
-                    auth()->id(),
-
-                'exception' =>
-                    get_class($e),
-
-                'message' =>
-                    $e->getMessage(),
+                'support_request_id' => $support->id,
+                'user_id' => auth()->id(),
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
             ]
         );
 
-        /*
-         * Give the frontend a generic failure response.
-         */
         return response()->json([
             'success' => false,
             'message' =>
@@ -238,7 +302,6 @@ public function prepareFromSupport(
         ], 503);
     }
 }
-
 
 
     /**
@@ -651,6 +714,11 @@ public function store(Request $request)
         'response_components.*.content' => ['nullable', 'string', 'max:5000'],
         'response_components.*.label' => ['nullable', 'string', 'max:255'],
         'response_components.*.existing_content' => ['nullable', 'string', 'max:5000'],
+        'response_components.*.attachment_url' => ['nullable', 'url', 'max:2048'],
+        'response_components.*.source_support_request_id' => ['nullable', 'integer', 'exists:support_requests,id'],
+        'response_components.*.source_response_id' => ['nullable', 'integer', 'exists:support_request_responses,id'],
+        'response_components.*.source_component_id' => ['nullable', 'integer', 'exists:support_response_components,id'],
+        'response_components.*.source_legacy_support_request_id' => ['nullable', 'integer', 'exists:support_requests,id'],
         'response_components.*.file' => [
             'nullable',
             'file',
@@ -785,9 +853,9 @@ elseif ($request->filled('support_request_id')) {
      * Only answered Support Requests may become FAQs.
      */
     abort_unless(
-        filled($support->answer),
+        $support->status === 'answered',
         422,
-        'Only answered support requests can become FAQs.'
+        'Only completed/answered support requests can become FAQs.'
     );
 
     /*
@@ -939,6 +1007,11 @@ $faq->id
             'response_components.*.content' => ['nullable', 'string', 'max:5000'],
             'response_components.*.label' => ['nullable', 'string', 'max:255'],
             'response_components.*.existing_content' => ['nullable', 'string', 'max:5000'],
+            'response_components.*.attachment_url' => ['nullable', 'url', 'max:2048'],
+            'response_components.*.source_support_request_id' => ['nullable', 'integer', 'exists:support_requests,id'],
+            'response_components.*.source_response_id' => ['nullable', 'integer', 'exists:support_request_responses,id'],
+            'response_components.*.source_component_id' => ['nullable', 'integer', 'exists:support_response_components,id'],
+            'response_components.*.source_legacy_support_request_id' => ['nullable', 'integer', 'exists:support_requests,id'],
             'response_components.*.file' => [
                 'nullable',
                 'file',
@@ -1016,6 +1089,16 @@ if ($imageChanged) {
             $request->input('response_components', []),
             $request->file('response_components', []),
             $oldResponseComponents
+        );
+
+        /*
+         * Remove private files that the administrator deleted or
+         * replaced. Files still referenced by the new component
+         * array are preserved.
+         */
+        $this->deleteRemovedResponseComponentFiles(
+            $oldResponseComponents,
+            $newResponseComponents
         );
 
         $faq->update([
@@ -1388,26 +1471,89 @@ public function forceDestroy($id)
             }
 
             if (in_array($type, ['image', 'file'], true)) {
-                // Read the uploaded file directly from Laravel's request file bag.
-                // This is more reliable than assuming the nested UploadedFile array
-                // has exactly the same key representation as the input array.
+                // New browser upload takes priority.
                 $uploaded = request()->file("response_components.$index.file");
 
                 if ($uploaded && $uploaded->isValid()) {
                     $storedPath = $uploaded->store('faqs/responses', 'private');
 
-                    // Never persist a component when the storage operation failed.
                     if (!$storedPath) {
                         continue;
                     }
 
                     $content = $storedPath;
-                } elseif (
+                }
+                // Existing FAQ attachment during edit.
+                elseif (
                     !empty($component['existing_content'])
                     && is_string($component['existing_content'])
                     && in_array($component['existing_content'], array_column($existing, 'content'), true)
                 ) {
                     $content = $component['existing_content'];
+                }
+                // Attachment forwarded from a completed Support Request.
+                elseif (!empty($component['source_support_request_id'])
+                    && !empty($component['source_response_id'])
+                    && !empty($component['source_component_id'])
+                ) {
+                    $source = SupportResponseComponent::query()
+                        ->where('id', (int) $component['source_component_id'])
+                        ->where('support_request_response_id', (int) $component['source_response_id'])
+                        ->where('type', $type)
+                        ->whereHas('response.supportRequest', function ($query) use ($component) {
+                            $query->where('id', (int) $component['source_support_request_id'])
+                                ->where('status', 'answered')
+                                ->where('agency_id', (int) request()->input('agency_id'));
+                        })
+                        ->first();
+
+                    abort_unless(
+                        $source && $source->content
+                        && Storage::disk('private')->exists($source->content),
+                        422,
+                        'The selected Support Request attachment is no longer available.'
+                    );
+
+                    $extension = pathinfo($source->content, PATHINFO_EXTENSION);
+                    $destination = 'faqs/responses/faq-response-' . Str::uuid()
+                        . ($extension ? '.' . strtolower($extension) : '');
+
+                    abort_unless(
+                        Storage::disk('private')->copy($source->content, $destination),
+                        422,
+                        'The Support Request attachment could not be copied into the FAQ.'
+                    );
+
+                    $content = $destination;
+                }
+                // Legacy Support Request answer image.
+                elseif (!empty($component['source_legacy_support_request_id']) && $type === 'image') {
+                    $support = SupportRequest::findOrFail(
+                        (int) $component['source_legacy_support_request_id']
+                    );
+
+                    abort_unless(
+                        $support->status === 'answered'
+                        && (int) $support->agency_id === (int) request()->input('agency_id')
+                        && $support->answer_image
+                        && Storage::disk('public')->exists($support->answer_image),
+                        422,
+                        'The Support Request image is no longer available.'
+                    );
+
+                    $extension = pathinfo($support->answer_image, PATHINFO_EXTENSION);
+                    $destination = 'faqs/responses/faq-response-' . Str::uuid()
+                        . ($extension ? '.' . strtolower($extension) : '');
+
+                    $contents = Storage::disk('public')->get($support->answer_image);
+
+                    abort_unless(
+                        Storage::disk('private')->put($destination, $contents),
+                        422,
+                        'The Support Request image could not be copied into the FAQ.'
+                    );
+
+                    $content = $destination;
                 } else {
                     continue;
                 }
@@ -1434,6 +1580,11 @@ public function forceDestroy($id)
      */
     public function viewResponseAttachment($faqId, $componentIndex)
     {
+        abort_unless(
+            auth()->check() && auth()->user()->role === 'superadmin',
+            403
+        );
+
         $faq = Faq::withTrashed()->findOrFail($faqId);
         $components = $faq->response_components ?? [];
 
@@ -1466,6 +1617,41 @@ public function forceDestroy($id)
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, no-store',
         ]);
+    }
+
+    /**
+     * Remove only private files that are no longer referenced by the FAQ.
+     */
+    private function deleteRemovedResponseComponentFiles(
+        array $oldComponents,
+        array $newComponents
+    ): void {
+        $retainedPaths = [];
+
+        foreach ($newComponents as $component) {
+            if (
+                in_array($component['type'] ?? null, ['image', 'file'], true)
+                && !empty($component['content'])
+                && is_string($component['content'])
+            ) {
+                $retainedPaths[$component['content']] = true;
+            }
+        }
+
+        foreach ($oldComponents as $component) {
+            $path = $component['content'] ?? null;
+
+            if (
+                !in_array($component['type'] ?? null, ['image', 'file'], true)
+                || !is_string($path)
+                || !str_starts_with($path, 'faqs/responses/')
+                || isset($retainedPaths[$path])
+            ) {
+                continue;
+            }
+
+            Storage::disk('private')->delete($path);
+        }
     }
 
     /**
