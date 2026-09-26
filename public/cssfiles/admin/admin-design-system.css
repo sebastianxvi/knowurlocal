@@ -2919,3 +2919,232 @@ body{
     }
     .sidebar-mobile-close{display:none !important;}
 }
+
+
+/* =========================================================
+   KNOWURLOCAL — GITHUB-STYLE BURGER NAVIGATION
+   ---------------------------------------------------------
+   The admin shell uses a true off-canvas navigation drawer.
+   The application stays full-width until the administrator
+   explicitly opens the menu with the hamburger button.
+   ========================================================= */
+:root{
+    --admin-drawer-width: 304px;
+    --admin-drawer-ease: 180ms cubic-bezier(.2,.8,.2,1);
+}
+
+/* Full-width application by default. */
+.layout{display:block !important;min-height:100dvh;}
+.main{
+    margin-left:0 !important;
+    width:100%;
+    min-width:0;
+}
+
+/* Header burger is the permanent navigation affordance. */
+.admin-mobile-menu{
+    display:grid !important;
+    place-items:center;
+    flex:0 0 auto;
+    width:36px !important;
+    height:36px !important;
+    margin:0 2px 0 0 !important;
+    padding:0 !important;
+    border:1px solid #dfe4ec !important;
+    border-radius:9px !important;
+    background:#fff !important;
+    color:#344054 !important;
+    cursor:pointer;
+    box-shadow:0 1px 2px rgba(16,24,40,.04);
+    transition:background-color var(--admin-drawer-ease),
+               border-color var(--admin-drawer-ease),
+               color var(--admin-drawer-ease),
+               box-shadow var(--admin-drawer-ease);
+}
+.admin-mobile-menu:hover,
+.admin-mobile-menu:focus-visible{
+    color:#111827 !important;
+    background:#f8fafc !important;
+    border-color:#cfd6e2 !important;
+    box-shadow:0 2px 7px rgba(16,24,40,.08);
+    outline:none;
+}
+.admin-mobile-menu i{font-size:20px !important;}
+
+/* Off-canvas drawer. It is not a permanent sidebar anymore. */
+.sidebar{
+    position:fixed !important;
+    inset:0 auto 0 0 !important;
+    z-index:1200 !important;
+    width:var(--admin-drawer-width) !important;
+    min-width:var(--admin-drawer-width) !important;
+    height:100dvh !important;
+    padding:14px 10px !important;
+    background:#fff !important;
+    border-right:1px solid #e4e7ec !important;
+    box-shadow:18px 0 55px rgba(16,24,40,.13) !important;
+    transform:translateX(-105%) !important;
+    transition:transform var(--admin-drawer-ease) !important;
+    overflow:hidden auto !important;
+    overscroll-behavior:contain;
+}
+
+body.admin-drawer-open .sidebar{
+    transform:translateX(0) !important;
+}
+
+/* Keep the drawer visually calm and compact. */
+.sidebar-main{min-width:0 !important;}
+.sidebar-brand{
+    min-height:48px !important;
+    margin:0 2px 14px !important;
+    padding:6px 9px !important;
+    border-radius:10px !important;
+}
+.sidebar-brand:hover{background:#f8fafc !important;}
+.sidebar-brand-mark{
+    width:32px !important;
+    height:32px !important;
+    border-radius:9px !important;
+}
+.sidebar-brand-copy strong{font-size:12px !important;}
+.sidebar-brand-copy small{font-size:9px !important;}
+
+.admin-nav{gap:2px !important;padding:0 1px;}
+.nav-section-label{
+    margin:0 !important;
+    padding:10px 9px 5px !important;
+    font-size:8px !important;
+    letter-spacing:.08em !important;
+    color:#98a2b3 !important;
+}
+.nav-section-label-spaced{margin-top:6px !important;}
+.admin-nav > a{
+    min-height:36px !important;
+    padding:7px 9px !important;
+    gap:9px !important;
+    border-radius:8px !important;
+    font-size:12px !important;
+    color:#667085 !important;
+    transform:none !important;
+}
+.admin-nav > a i{
+    width:19px !important;
+    flex:0 0 19px !important;
+    font-size:17px !important;
+    color:#8490a3 !important;
+}
+.admin-nav > a:hover{
+    color:#182230 !important;
+    background:#f7f8fa !important;
+}
+.admin-nav > a.active{
+    color:#175cd3 !important;
+    background:#eff6ff !important;
+    font-weight:600 !important;
+}
+.admin-nav > a.active i{color:#2563eb !important;}
+.admin-nav > a::before{display:none !important;}
+
+.sidebar-notification{
+    margin-left:auto !important;
+    min-width:18px !important;
+    height:18px !important;
+    padding:0 5px !important;
+    border-radius:999px !important;
+    background:#ef4444 !important;
+    color:#fff !important;
+    font-size:8px !important;
+    font-weight:700 !important;
+}
+
+.sidebar-footer{
+    margin-top:auto !important;
+    padding:9px 3px 3px !important;
+    border-top:1px solid #eef1f5 !important;
+}
+.sidebar-footer .logout-btn{
+    min-height:35px !important;
+    padding:7px 9px !important;
+    border-radius:8px !important;
+    font-size:12px !important;
+}
+
+/* Close control lives inside the drawer, not in the normal shell. */
+.sidebar-mobile-close{
+    position:absolute !important;
+    top:14px !important;
+    right:11px !important;
+    z-index:5 !important;
+    display:grid !important;
+    place-items:center !important;
+    width:32px !important;
+    height:32px !important;
+    padding:0 !important;
+    border:1px solid #e4e7ec !important;
+    border-radius:8px !important;
+    background:#fff !important;
+    color:#667085 !important;
+    cursor:pointer;
+}
+.sidebar-mobile-close:hover{background:#f8fafc !important;color:#111827 !important;}
+
+/* Scrim: GitHub-like focus mode without making the drawer feel heavy. */
+.admin-drawer-backdrop{
+    position:fixed !important;
+    inset:0 !important;
+    z-index:1190 !important;
+    display:block !important;
+    background:rgba(15,23,42,.24) !important;
+    backdrop-filter:blur(1.5px);
+    opacity:0 !important;
+    visibility:hidden;
+    pointer-events:none !important;
+    transition:opacity var(--admin-drawer-ease),visibility 0s linear var(--admin-drawer-ease) !important;
+}
+body.admin-drawer-open .admin-drawer-backdrop{
+    opacity:1 !important;
+    visibility:visible;
+    pointer-events:auto !important;
+    transition:opacity var(--admin-drawer-ease) !important;
+}
+
+/* Make the header feel like a GitHub-style app chrome. */
+.topbar{
+    min-height:64px !important;
+    padding:10px 20px !important;
+}
+.header-left{gap:11px !important;}
+.header-heading{min-width:0;}
+
+/* Remove all remnants of the old hover/collapsed-sidebar behavior. */
+.admin-sidebar-collapsed .sidebar,
+.admin-sidebar-collapsed .sidebar:hover,
+.admin-sidebar-collapsed .sidebar:focus-within{
+    width:var(--admin-drawer-width) !important;
+    min-width:var(--admin-drawer-width) !important;
+    transform:translateX(-105%) !important;
+}
+.admin-sidebar-collapsed .main{margin-left:0 !important;}
+.admin-sidebar-collapsed .sidebar-brand-copy,
+.admin-sidebar-collapsed .admin-nav span:not(.sidebar-notification),
+.admin-sidebar-collapsed .nav-section-label,
+.admin-sidebar-collapsed .sidebar-footer .logout-btn span{
+    display:inline !important;
+    opacity:1 !important;
+    visibility:visible !important;
+    width:auto !important;
+}
+
+body.admin-drawer-open{overflow:hidden;}
+
+@media (max-width:680px){
+    :root{--admin-drawer-width:min(304px,88vw);}
+    .topbar{min-height:60px !important;padding:9px 12px !important;}
+    .admin-mobile-menu{width:34px !important;height:34px !important;}
+    .content{padding-inline:12px !important;}
+}
+
+@media (prefers-reduced-motion:reduce){
+    .sidebar,.admin-drawer-backdrop,.admin-mobile-menu{transition:none !important;}
+}
