@@ -1903,7 +1903,8 @@ resetTextareaHeights();
             if (window.FaqResponseBuilder) {
                 window.FaqResponseBuilder.load(
                     buildFaqResponseComponents(data),
-                    false
+                    false,
+                    data.id
                 );
             }
 
@@ -1999,8 +2000,9 @@ resetTextareaHeights();
 
             if (window.FaqResponseBuilder) {
                 window.FaqResponseBuilder.load(
-                    data.responseComponents || [],
-                    true
+                    buildFaqResponseComponents(data),
+                    true,
+                    data.id
                 );
             }
 
@@ -2108,14 +2110,19 @@ resetTextareaHeights();
 
 
     function parseResponseComponents(value) {
-        if (!value) {
+        if (Array.isArray(value)) {
+            return value;
+        }
+
+        if (typeof value !== 'string' || value.trim() === '') {
             return [];
         }
 
         try {
             const parsed = JSON.parse(value);
             return Array.isArray(parsed) ? parsed : [];
-        } catch {
+        } catch (error) {
+            console.warn('Unable to parse FAQ response components.', error);
             return [];
         }
     }

@@ -1426,6 +1426,49 @@ public function forceDestroy($id)
     }
 
     /**
+     * Serve a private FAQ response attachment only to authenticated admins.
+     *
+     * The database stores the private storage path, not a public URL.
+     * This endpoint validates the FAQ/component relationship before
+     * exposing the file, preventing arbitrary file-path access.
+     */
+    public function viewResponseAttachment($faqId, $componentIndex)
+    {
+        $faq = Faq::withTrashed()->findOrFail($faqId);
+        $components = $faq->response_components ?? [];
+
+        if (!is_array($components) || !array_key_exists((int) $componentIndex, $components)) {
+            abort(404);
+        }
+
+        $component = $components[(int) $componentIndex];
+        $type = $component['type'] ?? null;
+        $path = $component['content'] ?? null;
+
+        abort_unless(
+            in_array($type, ['image', 'file'], true)
+            && is_string($path)
+            && str_starts_with($path, 'faqs/responses/'),
+            404
+        );
+
+        $disk = Storage::disk('private');
+        abort_unless($disk->exists($path), 404);
+
+        $mime = $disk->mimeType($path) ?: 'application/octet-stream';
+        $filename = basename($path);
+
+        return $disk->response($path, $filename, [
+            'Content-Type' => $mime,
+            'Content-Disposition' => str_starts_with($mime, 'image/')
+                ? 'inline; filename="' . addslashes($filename) . '"'
+                : 'attachment; filename="' . addslashes($filename) . '"',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    /**
      * Remove private files belonging to FAQ response components.
      */
     private function deleteResponseComponentFiles(array $components): void

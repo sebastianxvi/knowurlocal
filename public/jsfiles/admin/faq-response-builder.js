@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         attachmentAdd.setAttribute('aria-expanded', 'false');
     };
 
-    const createHeader = (type, index, title, subtitle) => `
+    const createHeader = (type, index, title, subtitle, readonly = false) => `
         <div class="faq-response-item-header">
             <div class="faq-response-item-title">
                 <span class="faq-response-item-icon" aria-hidden="true">
@@ -110,15 +110,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     <small>${escapeHtml(subtitle)}</small>
                 </span>
             </div>
-            <button
-                type="button"
-                class="faq-response-remove"
-                data-remove-response="${index}"
-                aria-label="Remove ${escapeHtml(title)}"
-                title="Remove"
-            >
-                <i class="ph-light ph-trash" aria-hidden="true"></i>
-            </button>
+            ${readonly ? '' : `
+                <button
+                    type="button"
+                    class="faq-response-remove"
+                    data-remove-response="${index}"
+                    aria-label="Remove ${escapeHtml(title)}"
+                    title="Remove"
+                >
+                    <i class="ph-light ph-trash" aria-hidden="true"></i>
+                </button>
+            `}
         </div>
     `;
 
@@ -139,7 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 'text',
                 index,
                 language === 'fil' ? 'Tagalog / Taglish text' : 'English text',
-                'Supporting response block'
+                'Supporting response block',
+                readonly
             )}
             <div class="faq-response-item-body">
                 <label for="faq-response-${index}-content">Response text</label>
@@ -159,11 +162,17 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(item);
     };
 
-    const createAttachment = (type, values = {}, readonly = false) => {
+    const createAttachment = (type, values = {}, readonly = false, faqId = null) => {
         const index = counter++;
+        const componentIndex = Number.isInteger(values.componentIndex)
+            ? values.componentIndex
+            : index;
         const content = values.content ?? '';
         const label = values.label ?? '';
         const disabled = readonly ? 'disabled' : '';
+        const attachmentUrl = faqId && ['image', 'file'].includes(type)
+            ? `/faqs/${encodeURIComponent(faqId)}/response-attachments/${componentIndex}`
+            : '';
 
         const item = document.createElement('article');
         item.className = 'faq-response-item faq-attachment-item';
@@ -218,8 +227,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="hidden" name="response_components[${index}][existing_content]" value="${escapeHtml(content)}">
                     <div class="faq-response-existing-file">
                         <i class="ph-light ${iconFor[type]}"></i>
-                        <span>Existing ${type} will be kept unless replaced.</span>
+                        <div class="faq-response-existing-file-copy">
+                            <strong>Current ${escapeHtml(type === 'image' ? 'image' : 'file')}</strong>
+                            <span>${escapeHtml(label || 'Saved attachment')}</span>
+                        </div>
+                        ${attachmentUrl ? `
+                            <a
+                                class="faq-response-existing-file-link"
+                                href="${escapeHtml(attachmentUrl)}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <i class="ph-light ph-arrow-square-out"></i>
+                                Open
+                            </a>
+                        ` : ''}
                     </div>
+                    ${type === 'image' && attachmentUrl ? `
+                        <a
+                            class="faq-response-existing-image"
+                            href="${escapeHtml(attachmentUrl)}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <img src="${escapeHtml(attachmentUrl)}" alt="Saved FAQ attachment preview">
+                        </a>
+                    ` : ''}
                 ` : ''}
                 <label for="faq-response-${index}-label">Label <span>(optional)</span></label>
                 <input
@@ -239,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         item.innerHTML = `
-            ${createHeader(type, index, labelFor[type], 'Additional attachment')}
+            ${createHeader(type, index, labelFor[type], 'Additional attachment', readonly)}
             <div class="faq-response-item-body">
                 ${body}
                 <input type="hidden" name="response_components[${index}][type]" value="${type}">
@@ -303,21 +336,26 @@ document.addEventListener('DOMContentLoaded', () => {
         refresh();
     };
 
-    const load = (components = [], readonly = false) => {
+    const load = (components = [], readonly = false, faqId = null) => {
         reset();
 
         if (!Array.isArray(components)) return;
 
-        components.slice(0, MAX_ATTACHMENTS + MAX_TEXT_PER_LANGUAGE * 2).forEach(component => {
+        components.slice(0, MAX_ATTACHMENTS + MAX_TEXT_PER_LANGUAGE * 2).forEach((component, componentIndex) => {
             if (!component || !component.type) return;
 
-            if (component.type === 'text') {
-                createText(component.language === 'fil' ? 'fil' : 'en', component, readonly);
+            const normalized = {
+                ...component,
+                componentIndex,
+            };
+
+            if (normalized.type === 'text') {
+                createText(normalized.language === 'fil' ? 'fil' : 'en', normalized, readonly);
                 return;
             }
 
-            if (['image', 'file', 'link', 'qr_code'].includes(component.type)) {
-                createAttachment(component.type, component, readonly);
+            if (['image', 'file', 'link', 'qr_code'].includes(normalized.type)) {
+                createAttachment(normalized.type, normalized, readonly, faqId);
             }
         });
 

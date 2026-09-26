@@ -224,7 +224,7 @@
 
                     data-keywords="{{ $faq->keywords ?? '' }}"
                     data-image="{{ $faq->image ?? '' }}"
-                    data-response-components="{{ e(json_encode($faq->response_components ?? [])) }}"
+                    data-response-components='{{ json_encode($faq->response_components ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}'
                 >
 
                     <td>{{ $faq->id }}</td>
@@ -302,7 +302,7 @@
 
                 data-keywords="{{ e($faq->keywords ?? '') }}"
                 data-image="{{ $faq->image }}"
-                data-response-components="{{ e(json_encode($faq->response_components ?? [])) }}"
+                data-response-components='{{ json_encode($faq->response_components ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}'
             >
                 <i class="ph-light ph-pencil-simple"></i>
                 Edit
