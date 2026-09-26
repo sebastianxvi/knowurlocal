@@ -315,6 +315,72 @@ public function prepareFromSupport(
  *
  * Only Superadmins are allowed to view trashed FAQs.
  */
+/**
+ * Serve a private FAQ response attachment to an authenticated administrator.
+ *
+ * The stored path is never accepted directly from the browser. The FAQ
+ * and component index are verified before the private file is streamed.
+ */
+public function responseAttachment(int $faqId, int $componentIndex)
+{
+    $faq = Faq::findOrFail($faqId);
+    $components = $faq->response_components ?? [];
+
+    if (
+        !is_array($components) ||
+        !array_key_exists($componentIndex, $components)
+    ) {
+        abort(404);
+    }
+
+    $component = $components[$componentIndex];
+
+    if (
+        !is_array($component) ||
+        !in_array($component['type'] ?? null, ['image', 'file'], true)
+    ) {
+        abort(404);
+    }
+
+    $path = $component['content'] ?? null;
+
+    if (
+        !is_string($path) ||
+        !str_starts_with($path, 'faqs/responses/')
+    ) {
+        abort(404);
+    }
+
+    $disk = Storage::disk('private');
+
+    if (!$disk->exists($path)) {
+        abort(404);
+    }
+
+    $mime = $disk->mimeType($path) ?: 'application/octet-stream';
+    $filename = basename($path);
+
+    return response()->stream(
+        static function () use ($disk, $path): void {
+            $stream = $disk->readStream($path);
+
+            if ($stream === false) {
+                return;
+            }
+
+            fpassthru($stream);
+            fclose($stream);
+        },
+        200,
+        [
+            'Content-Type' => $mime,
+            'Content-Disposition' => 'inline; filename="' . addslashes($filename) . '"',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=300',
+        ]
+    );
+}
+
 public function index(Request $request)
 {
     /*
