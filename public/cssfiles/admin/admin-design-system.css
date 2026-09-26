@@ -1512,3 +1512,457 @@ input,select,textarea{accent-color:#2563eb;}
     .header-avatar{width:32px;height:32px;}
     .content{padding-inline:8px;}
 }
+
+
+/* =========================================================
+   ADMIN SHELL — HOVER RAIL
+   =========================================================
+   Desktop navigation no longer uses a collapse button.
+   The sidebar is a compact rail by default and expands over the
+   content when the pointer or keyboard focus enters it.
+   ========================================================= */
+
+:root{
+    --admin-sidebar-rail:72px;
+    --admin-sidebar-expanded:252px;
+    --admin-shell-transition:.22s cubic-bezier(.2,.7,.2,1);
+}
+
+.sidebar{
+    position:fixed !important;
+    inset:0 auto 0 0 !important;
+    z-index:1100 !important;
+    width:var(--admin-sidebar-rail) !important;
+    min-width:var(--admin-sidebar-rail) !important;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+    background:#fff !important;
+    border-right:1px solid var(--admin-border) !important;
+    box-shadow:2px 0 18px rgba(15,23,42,.035) !important;
+    transition:width var(--admin-shell-transition),box-shadow var(--admin-shell-transition) !important;
+}
+
+.sidebar:hover,
+.sidebar:focus-within{
+    width:var(--admin-sidebar-expanded) !important;
+    box-shadow:12px 0 32px rgba(15,23,42,.09) !important;
+}
+
+.sidebar-main{
+    min-width:var(--admin-sidebar-expanded);
+}
+
+.sidebar-brand{
+    min-height:64px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    padding:0 20px !important;
+    border-bottom:1px solid #f0f2f5 !important;
+}
+
+.sidebar-brand-copy{
+    opacity:0;
+    transform:translateX(-5px);
+    pointer-events:none;
+    transition:opacity var(--admin-shell-transition),transform var(--admin-shell-transition);
+}
+
+.sidebar:hover .sidebar-brand-copy,
+.sidebar:focus-within .sidebar-brand-copy{
+    opacity:1;
+    transform:none;
+    pointer-events:auto;
+}
+
+.sidebar-brand-copy strong{
+    font-size:13px !important;
+    letter-spacing:-.025em !important;
+    white-space:nowrap;
+}
+
+.sidebar-brand-copy small{
+    font-size:10px !important;
+    white-space:nowrap;
+}
+
+.admin-nav{
+    padding:8px 10px 0 !important;
+}
+
+.nav-section-label{
+    max-height:0;
+    padding:0 !important;
+    margin:0 !important;
+    overflow:hidden;
+    opacity:0;
+    transition:max-height var(--admin-shell-transition),opacity var(--admin-shell-transition),padding var(--admin-shell-transition);
+}
+
+.sidebar:hover .nav-section-label,
+.sidebar:focus-within .nav-section-label{
+    max-height:30px;
+    padding:10px 11px 5px !important;
+    opacity:1;
+}
+
+.admin-nav > a{
+    min-width:232px !important;
+    min-height:42px !important;
+    padding:8px 11px !important;
+}
+
+.admin-nav > a i{
+    flex:0 0 20px !important;
+}
+
+.admin-nav > a > span:not(.sidebar-notification){
+    opacity:0;
+    transform:translateX(-4px);
+    pointer-events:none;
+    transition:opacity var(--admin-shell-transition),transform var(--admin-shell-transition);
+}
+
+.sidebar:hover .admin-nav > a > span:not(.sidebar-notification),
+.sidebar:focus-within .admin-nav > a > span:not(.sidebar-notification){
+    opacity:1;
+    transform:none;
+    pointer-events:auto;
+}
+
+.sidebar-notification{
+    position:absolute;
+    left:43px;
+    top:5px;
+    margin:0 !important;
+    min-width:17px !important;
+    height:17px !important;
+    padding:0 4px !important;
+    font-size:8px !important;
+    border:2px solid #fff;
+    z-index:2;
+}
+
+.sidebar:hover .sidebar-notification,
+.sidebar:focus-within .sidebar-notification{
+    position:static;
+    margin-left:auto !important;
+    border:0;
+}
+
+.sidebar-footer{
+    min-width:var(--admin-sidebar-expanded);
+    padding:10px 10px 14px !important;
+    border-top:1px solid #eef1f5;
+}
+
+.sidebar-footer form{
+    margin:0 !important;
+}
+
+.sidebar-footer .logout-btn{
+    width:232px !important;
+    min-height:40px !important;
+    justify-content:flex-start !important;
+    gap:11px !important;
+    padding:8px 11px !important;
+}
+
+.sidebar-footer .logout-btn span{
+    opacity:0;
+    transform:translateX(-4px);
+    pointer-events:none;
+    transition:opacity var(--admin-shell-transition),transform var(--admin-shell-transition);
+}
+
+.sidebar:hover .sidebar-footer .logout-btn span,
+.sidebar:focus-within .sidebar-footer .logout-btn span{
+    opacity:1;
+    transform:none;
+    pointer-events:auto;
+}
+
+.sidebar-footer .logout-btn i{
+    flex:0 0 20px;
+    text-align:center;
+    font-size:18px;
+}
+
+.main,
+.admin-sidebar-collapsed .main{
+    margin-left:var(--admin-sidebar-rail) !important;
+    transition:none !important;
+}
+
+/* The old collapse state is intentionally neutralized. */
+.admin-sidebar-collapsed .sidebar{
+    width:var(--admin-sidebar-rail) !important;
+}
+
+.admin-sidebar-collapsed .sidebar:hover,
+.admin-sidebar-collapsed .sidebar:focus-within{
+    width:var(--admin-sidebar-expanded) !important;
+}
+
+.admin-shell-toggle{
+    display:none !important;
+}
+
+/* The header now contains only context + support notification. */
+.topbar{
+    min-height:68px !important;
+    padding:12px 22px !important;
+}
+
+.header-left{
+    gap:0 !important;
+}
+
+.header-heading{
+    min-width:0;
+}
+
+.header-context{
+    font-size:9px !important;
+    letter-spacing:.08em !important;
+}
+
+.header-title-row{
+    gap:0 !important;
+}
+
+.page-title{
+    font-size:17px !important;
+    line-height:1.25 !important;
+}
+
+.page-subtitle{
+    font-size:11px !important;
+    color:#8b95a5 !important;
+}
+
+.header-right{
+    display:flex !important;
+    align-items:center;
+}
+
+.header-quick-action{
+    width:36px !important;
+    height:36px !important;
+    border-radius:10px !important;
+}
+
+.header-quick-badge{
+    min-width:17px !important;
+    height:17px !important;
+    padding:0 4px !important;
+    font-size:8px !important;
+}
+
+/* No profile/avatar UI exists in KNOWURLOCAL. */
+.header-profile,
+.profile-text,
+.header-avatar,
+.sidebar-user,
+.sidebar-user-avatar,
+.sidebar-user-copy{
+    display:none !important;
+}
+
+/* Notification pill is intentionally removed; the red badge is the only
+   support-request notification indicator. */
+.header-alert-pill{
+    display:none !important;
+}
+
+/* =========================================================
+   MOBILE — REAL DRAWER
+   ========================================================= */
+
+.admin-mobile-menu{
+    display:none;
+}
+
+@media (max-width:900px){
+    .sidebar{
+        width:min(286px,86vw) !important;
+        min-width:min(286px,86vw) !important;
+        transform:translateX(-102%);
+        box-shadow:18px 0 50px rgba(15,23,42,.16) !important;
+        transition:transform var(--admin-shell-transition) !important;
+    }
+
+    .sidebar:hover,
+    .sidebar:focus-within{
+        width:min(286px,86vw) !important;
+    }
+
+    body.admin-drawer-open .sidebar{
+        transform:translateX(0);
+    }
+
+    .sidebar-main,
+    .sidebar-footer{
+        min-width:0 !important;
+    }
+
+    .sidebar-brand{
+        padding:0 18px !important;
+    }
+
+    .sidebar-brand-copy{
+        opacity:1;
+        transform:none;
+        pointer-events:auto;
+    }
+
+    .admin-nav{
+        padding:8px 10px 0 !important;
+    }
+
+    .nav-section-label,
+    .sidebar:hover .nav-section-label,
+    .sidebar:focus-within .nav-section-label{
+        max-height:30px;
+        padding:10px 11px 5px !important;
+        opacity:1;
+    }
+
+    .admin-nav > a{
+        width:100% !important;
+        min-width:0 !important;
+    }
+
+    .admin-nav > a > span:not(.sidebar-notification),
+    .sidebar:hover .admin-nav > a > span:not(.sidebar-notification),
+    .sidebar:focus-within .admin-nav > a > span:not(.sidebar-notification){
+        opacity:1;
+        transform:none;
+        pointer-events:auto;
+    }
+
+    .sidebar-notification,
+    .sidebar:hover .sidebar-notification,
+    .sidebar:focus-within .sidebar-notification{
+        position:static;
+        margin-left:auto !important;
+        border:0;
+    }
+
+    .sidebar-footer{
+        padding:10px 10px 14px !important;
+    }
+
+    .sidebar-footer .logout-btn{
+        width:100% !important;
+    }
+
+    .sidebar-footer .logout-btn span,
+    .sidebar:hover .sidebar-footer .logout-btn span,
+    .sidebar:focus-within .sidebar-footer .logout-btn span{
+        opacity:1;
+        transform:none;
+        pointer-events:auto;
+    }
+
+    .sidebar-mobile-close{
+        position:absolute;
+        top:16px;
+        right:12px;
+        z-index:3;
+        display:grid !important;
+        place-items:center;
+        width:32px;
+        height:32px;
+        border:1px solid var(--admin-border);
+        border-radius:8px;
+        background:#fff;
+        color:#667085;
+        cursor:pointer;
+    }
+
+    .main,
+    .admin-sidebar-collapsed .main{
+        margin-left:0 !important;
+    }
+
+    .admin-mobile-menu{
+        display:grid !important;
+        place-items:center;
+        width:34px;
+        height:34px;
+        margin-right:10px;
+        padding:0;
+        border:1px solid var(--admin-border);
+        border-radius:9px;
+        background:#fff;
+        color:#667085;
+        cursor:pointer;
+    }
+
+    .admin-mobile-menu:hover{
+        color:var(--admin-text);
+        background:#f8fafc;
+    }
+
+    .topbar{
+        min-height:60px !important;
+        padding:10px 12px !important;
+    }
+
+    .header-context{
+        display:none !important;
+    }
+
+    .page-title{
+        font-size:15px !important;
+    }
+
+    .page-subtitle{
+        font-size:10px !important;
+    }
+
+    .content{
+        padding-inline:12px !important;
+    }
+
+    .admin-drawer-backdrop{
+        position:fixed;
+        inset:0;
+        z-index:1090;
+        display:block;
+        background:rgba(15,23,42,.38);
+        backdrop-filter:blur(2px);
+        opacity:0;
+        pointer-events:none;
+        transition:opacity var(--admin-shell-transition);
+    }
+
+    body.admin-drawer-open .admin-drawer-backdrop{
+        opacity:1;
+        pointer-events:auto;
+    }
+}
+
+@media (max-width:560px){
+    .topbar{
+        padding-inline:10px !important;
+    }
+
+    .header-quick-action{
+        width:34px !important;
+        height:34px !important;
+    }
+
+    .content{
+        padding-inline:10px !important;
+    }
+}
+
+@media (prefers-reduced-motion:reduce){
+    .sidebar,
+    .sidebar *,
+    .admin-mobile-menu{
+        transition:none !important;
+    }
+}

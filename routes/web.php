@@ -331,11 +331,6 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
 
     Route::post('/faqs/translate', [FaqController::class, 'translate'])
         ->name('faqs.translate');
-
-    Route::get('/support-requests/pending-count', [SupportRequestController::class, 'pendingCount'])
-        ->name('admin.support.pending-count');
-        
-
     Route::get('/users', [UserController::class, 'index'])
         ->name('admin.users');
 

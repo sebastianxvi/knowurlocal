@@ -1,24 +1,26 @@
 /*
  * KNOWURLOCAL admin shell controller.
  *
- * Responsibilities:
- * 1. Persist desktop sidebar collapse state.
- * 2. Turn the sidebar into a drawer on small screens.
- * 3. Keep the pending-support badge synchronized without trusting
- *    browser-supplied counts.
+ * Desktop navigation is intentionally CSS-driven:
+ * the sidebar stays as a compact rail and expands when hovered/focused.
  *
- * Security note:
- * The notification count is always obtained from the server.
- * Client-side state only controls presentation.
+ * JavaScript is reserved for interactions that cannot be expressed safely
+ * with CSS alone:
+ * 1. mobile navigation drawer
+ * 2. real-time "new support request" notifications
+ *
+ * The notification badge is NOT initialized from the existing pending count.
+ * It only appears after Reverb delivers a new support-request event while this
+ * browser is on another admin page.
  */
 (function () {
     'use strict';
 
-    const STORAGE_KEY = 'knowurlocal.admin.sidebar.collapsed';
     const MOBILE_BREAKPOINT = 900;
-    const POLL_INTERVAL = 20000;
+    const ADMIN_ID = document.body.dataset.adminUserId || 'anonymous';
+    const STORAGE_KEY = `knowurlocal.admin.new-support-requests.${ADMIN_ID}`;
+    const MAX_EVENT_IDS = 100;
 
-    const root = document.documentElement;
     const body = document.body;
     const toggle = document.querySelector('[data-admin-shell-toggle]');
     const closeButton = document.querySelector('[data-admin-shell-close]');
@@ -32,7 +34,55 @@
         document.body.dataset.adminPage === 'support-requests' ||
         window.location.pathname.endsWith('/support-requests');
 
-    const setPendingCount = (count) => {
+    const readNotificationState = () => {
+        try {
+            const raw = window.localStorage.getItem(STORAGE_KEY);
+
+            if (!raw) {
+                return { count: 0, ids: [] };
+            }
+
+            const parsed = JSON.parse(raw);
+
+            return {
+                count: Math.max(
+                    0,
+                    Number.parseInt(parsed?.count, 10) || 0
+                ),
+                ids: Array.isArray(parsed?.ids)
+                    ? parsed.ids.map(String).slice(-MAX_EVENT_IDS)
+                    : []
+            };
+        } catch (_) {
+            return { count: 0, ids: [] };
+        }
+    };
+
+    const writeNotificationState = (state) => {
+        try {
+            window.localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify({
+                    count: Math.max(0, state.count),
+                    ids: state.ids.slice(-MAX_EVENT_IDS)
+                })
+            );
+        } catch (_) {
+            // Private browsing/storage restrictions must not break navigation.
+        }
+    };
+
+    const clearNotificationState = () => {
+        try {
+            window.localStorage.removeItem(STORAGE_KEY);
+        } catch (_) {
+            // Ignore unavailable storage.
+        }
+
+        renderNotificationCount(0);
+    };
+
+    const renderNotificationCount = (count) => {
         const safeCount = Math.max(
             0,
             Number.parseInt(count, 10) || 0
@@ -48,142 +98,113 @@
 
             badge.setAttribute(
                 'aria-label',
-                `${safeCount} pending support requests`
+                `${safeCount} new support requests`
             );
-        });
-
-        document.querySelectorAll('[data-pending-count]').forEach((node) => {
-            node.textContent = safeCount > 99
-                ? '99+'
-                : String(safeCount);
         });
     };
 
-    const setCollapsed = (collapsed, persist = true) => {
-        root.classList.toggle('admin-sidebar-collapsed', collapsed);
+    const syncNotificationFromStorage = () => {
+        const state = readNotificationState();
+        renderNotificationCount(state.count);
+    };
+
+    const registerNewSupportRequest = (eventId) => {
+        if (isSupportPage()) {
+            clearNotificationState();
+            return;
+        }
+
+        const state = readNotificationState();
+        const normalizedId = String(eventId ?? '');
+
+        /*
+         * Reconnects can occasionally replay an event. Remember recent IDs
+         * so one request cannot inflate the badge more than once.
+         */
+        if (normalizedId && state.ids.includes(normalizedId)) {
+            return;
+        }
+
+        if (normalizedId) {
+            state.ids.push(normalizedId);
+        }
+
+        state.count += 1;
+
+        writeNotificationState(state);
+        renderNotificationCount(state.count);
+    };
+
+    const setDrawerOpen = (open) => {
+        if (!sidebar || window.innerWidth > MOBILE_BREAKPOINT) {
+            return;
+        }
+
+        body.classList.toggle('admin-drawer-open', open);
+
+        sidebar.setAttribute(
+            'aria-hidden',
+            String(!open)
+        );
 
         if (toggle) {
             toggle.setAttribute(
                 'aria-expanded',
-                String(!collapsed)
+                String(open)
             );
-
             toggle.setAttribute(
                 'aria-label',
-                collapsed
-                    ? 'Expand navigation'
-                    : 'Collapse navigation'
-            );
-        }
-
-        if (persist) {
-            try {
-                window.localStorage.setItem(
-                    STORAGE_KEY,
-                    collapsed ? '1' : '0'
-                );
-            } catch (_) {
-                // Storage may be unavailable in privacy-restricted browsers.
-            }
-        }
-    };
-
-    const setDrawerOpen = (open) => {
-        body.classList.toggle('admin-drawer-open', open);
-
-        if (sidebar) {
-            sidebar.setAttribute(
-                'aria-hidden',
-                String(!open && window.innerWidth <= MOBILE_BREAKPOINT)
+                open ? 'Close navigation' : 'Open navigation'
             );
         }
     };
 
-    const restoreShellState = () => {
-        if (window.innerWidth <= MOBILE_BREAKPOINT) {
-            setDrawerOpen(false);
-            return;
-        }
+    const restoreMobileState = () => {
+        if (window.innerWidth > MOBILE_BREAKPOINT) {
+            body.classList.remove('admin-drawer-open');
 
-        let collapsed = false;
-
-        try {
-            collapsed =
-                window.localStorage.getItem(STORAGE_KEY) === '1';
-        } catch (_) {
-            collapsed = false;
-        }
-
-        setCollapsed(collapsed, false);
-    };
-
-    const fetchPendingCount = async () => {
-        if (!window.fetch || document.visibilityState === 'hidden') {
-            return;
-        }
-
-        const endpoint = document.body.dataset.pendingSupportEndpoint;
-
-        if (!endpoint) {
-            return;
-        }
-
-        try {
-            const response = await fetch(endpoint, {
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                credentials: 'same-origin',
-                cache: 'no-store'
-            });
-
-            if (!response.ok) {
-                return;
+            if (sidebar) {
+                sidebar.removeAttribute('aria-hidden');
             }
 
-            const payload = await response.json();
-
-            if (payload && payload.success === true) {
-                setPendingCount(payload.count);
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', 'false');
+                toggle.setAttribute('aria-label', 'Open navigation');
             }
-        } catch (_) {
-            // Realtime/polling failures must never break the admin UI.
+
+            return;
         }
+
+        setDrawerOpen(false);
     };
 
     const subscribeRealtime = () => {
-        if (!window.Echo || typeof window.Echo.private !== 'function') {
-            return false;
+        if (
+            !window.Echo ||
+            typeof window.Echo.private !== 'function'
+        ) {
+            return;
         }
 
         try {
-            window.Echo.private('admin.support-requests')
-                .listen('.support.request.created', () => {
-                    fetchPendingCount();
+            window.Echo
+                .private('admin.support-requests')
+                .listen('.support.request.created', (event) => {
+                    registerNewSupportRequest(event?.id);
                 });
-
-            return true;
         } catch (error) {
             console.warn(
-                'Admin support notification channel unavailable.',
+                'Admin support-request realtime notifications are unavailable.',
                 error
             );
-            return false;
         }
     };
 
     if (toggle) {
         toggle.addEventListener('click', () => {
-            if (window.innerWidth <= MOBILE_BREAKPOINT) {
-                setDrawerOpen(true);
-                return;
-            }
-
-            const collapsed =
-                root.classList.contains('admin-sidebar-collapsed');
-
-            setCollapsed(!collapsed);
+            setDrawerOpen(
+                !body.classList.contains('admin-drawer-open')
+            );
         });
     }
 
@@ -196,19 +217,40 @@
     document.addEventListener('click', (event) => {
         const link = event.target.closest('.sidebar a');
 
-        if (link && window.innerWidth <= MOBILE_BREAKPOINT) {
+        if (
+            link &&
+            window.innerWidth <= MOBILE_BREAKPOINT
+        ) {
             setDrawerOpen(false);
         }
     });
 
-    window.addEventListener('resize', restoreShellState);
+    window.addEventListener('resize', restoreMobileState);
 
-    restoreShellState();
+    /*
+     * When another tab opens Support Requests, it clears the shared
+     * notification state. The storage event keeps this tab synchronized.
+     */
+    window.addEventListener('storage', (event) => {
+        if (event.key !== STORAGE_KEY) {
+            return;
+        }
+
+        if (isSupportPage()) {
+            clearNotificationState();
+            return;
+        }
+
+        syncNotificationFromStorage();
+    });
+
+    restoreMobileState();
+
+    if (isSupportPage()) {
+        clearNotificationState();
+    } else {
+        syncNotificationFromStorage();
+    }
+
     subscribeRealtime();
-    fetchPendingCount();
-
-    window.setInterval(
-        fetchPendingCount,
-        POLL_INTERVAL
-    );
 })();

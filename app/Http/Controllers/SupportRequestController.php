@@ -34,23 +34,6 @@ class SupportRequestController extends Controller
  * The count is queried server-side so browser state can never grant
  * access or fabricate notification data.
  */
-public function pendingCount()
-{
-    abort_unless(
-        auth()->check() &&
-        in_array(auth()->user()->role, ['admin', 'superadmin'], true),
-        403
-    );
-
-    return response()->json([
-        'success' => true,
-        'count' => SupportRequest::query()
-            ->where('status', 'pending')
-            ->count(),
-    ]);
-}
-
-
 public function index(Request $request)
     {
         /*

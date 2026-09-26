@@ -84,7 +84,7 @@
 
 <body
     data-admin-page="@yield('admin-page')"
-    data-pending-support-endpoint="{{ route('admin.support.pending-count') }}"
+    data-admin-user-id="{{ auth()->id() }}"
 >
 <div class="admin-drawer-backdrop" data-admin-shell-close aria-hidden="true"></div>
 

@@ -2,12 +2,12 @@
     <div class="header-left">
         <button
             type="button"
-            class="admin-shell-toggle"
+            class="admin-mobile-menu"
             data-admin-shell-toggle
-            aria-label="Toggle navigation"
-            aria-expanded="true"
+            aria-label="Open navigation"
+            aria-expanded="false"
         >
-            <i class="ph-light ph-sidebar-simple" aria-hidden="true"></i>
+            <i class="ph-light ph-list" aria-hidden="true"></i>
         </button>
 
         <div class="header-heading">
@@ -15,15 +15,7 @@
                 KNOWURLOCAL <span aria-hidden="true">/</span> Admin Workspace
             </div>
 
-            <div class="header-title-row">
-                <h1 class="page-title">@yield('page-title')</h1>
-                @if(($adminPendingSupportCount ?? 0) > 0 && !request()->routeIs('admin.support.requests'))
-                    <span class="header-alert-pill">
-                        <i class="ph-light ph-bell" aria-hidden="true"></i>
-                        {{ $adminPendingSupportCount }} pending
-                    </span>
-                @endif
-            </div>
+            <h1 class="page-title">@yield('page-title')</h1>
 
             @hasSection('page-subtitle')
                 <p class="page-subtitle">@yield('page-subtitle')</p>
@@ -41,22 +33,9 @@
             <i class="ph-light ph-chat-circle-dots" aria-hidden="true"></i>
             <span
                 class="header-quick-badge js-support-pending-badge"
-                {{ ($adminPendingSupportCount ?? 0) < 1 ? 'hidden' : '' }}
-            >{{ ($adminPendingSupportCount ?? 0) > 99 ? '99+' : ($adminPendingSupportCount ?? 0) }}</span>
+                hidden
+                aria-live="polite"
+            >0</span>
         </a>
-
-        @php
-            $user = auth()->user();
-            $roleLabel = $user->role === 'superadmin' ? 'Superadmin' : 'Administrator';
-            $initial = strtoupper(substr($user->first_name ?? 'A', 0, 1));
-        @endphp
-
-        <div class="header-profile">
-            <div class="profile-text">
-                <span class="greeting">{{ $roleLabel }}</span>
-                <span class="username">{{ $user->first_name }}</span>
-            </div>
-            <span class="header-avatar" aria-hidden="true">{{ $initial }}</span>
-        </div>
     </div>
 </header>
