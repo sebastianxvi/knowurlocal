@@ -5,6 +5,7 @@
 
     <div class="sidebar-main">
         <a href="{{ route('admin.dashboard') }}" class="sidebar-brand" aria-label="KNOWURLOCAL Dashboard">
+            <span class="sidebar-brand-mark" aria-hidden="true">K</span>
             <span class="sidebar-brand-copy">
                 <strong>KNOWURLOCAL</strong>
                 <small>Admin workspace</small>
