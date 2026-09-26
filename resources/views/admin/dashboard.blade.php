@@ -605,70 +605,78 @@
 
     </div>
 
-
-    {{-- =================================================
-         TEAM COLLABORATION
-         ================================================= --}}
-
-    <div class="team-collaboration-card">
-
-        <div class="team-collaboration-header">
-            <div>
-                <span class="eyebrow">Team activity</span>
-                <h3>Who is handling the queue?</h3>
-            </div>
-
-            <span class="team-collaboration-count">
-                {{ number_format($answeredToday) }} answered today
-            </span>
-        </div>
-
-        @if($teamRespondersToday->isNotEmpty())
-
-            <div class="team-responder-list">
-                @foreach($teamRespondersToday as $responder)
-                    <div class="team-responder">
-                        <span class="team-responder-avatar">
-                            {{ strtoupper(substr($responder->user?->first_name ?? 'A', 0, 1)) }}
-                        </span>
-
-                        <span class="team-responder-copy">
-                            <strong>
-                                {{ trim(($responder->user?->first_name ?? 'Admin') . ' ' . ($responder->user?->last_name ?? '')) }}
-                            </strong>
-                            <small>
-                                {{ $responder->user?->role === 'superadmin' ? 'Superadmin' : 'Administrator' }}
-                            </small>
-                        </span>
-                    </div>
-                @endforeach
-            </div>
-
-        @else
-
-            <p class="team-collaboration-empty">
-                No support responses have been recorded today.
-            </p>
-
-        @endif
-
-        @if($recentTeamActivity->isNotEmpty())
-            <div class="team-activity-strip">
-                <i class="ph-light ph-activity" aria-hidden="true"></i>
-                <span>
-                    Latest:
-                    {{ $recentTeamActivity->first()->description ?: $recentTeamActivity->first()->action_label }}
-                </span>
-                <time>
-                    {{ $recentTeamActivity->first()->created_at?->diffForHumans() }}
-                </time>
-            </div>
-        @endif
-
-    </div>
-
 </section>
 
+
+    {{-- =====================================================
+         ADMIN COLLABORATION
+         ===================================================== --}}
+    <section class="dashboard-section">
+        <div class="section-heading">
+            <div class="section-heading-main">
+                <div class="section-heading-icon"><i class="ph-light ph-users-three"></i></div>
+                <div class="section-heading-copy">
+                    <span class="eyebrow">Team workspace</span>
+                    <h2>Collaborate on needs attention</h2>
+                    <p>Claim or hand off pending citizen requests so the queue has clear ownership.</p>
+                </div>
+            </div>
+            <a class="section-action" href="{{ route('admin.support.requests') }}">Open support queue <i class="ph-light ph-arrow-right"></i></a>
+        </div>
+
+        <div class="collaboration-layout">
+            <article class="collaboration-card collaboration-summary">
+                <div class="collaboration-summary-top">
+                    <div class="collaboration-avatar-stack">
+                        @foreach($activeAdmins->take(5) as $admin)
+                            <span class="collaboration-avatar" title="{{ trim($admin->first_name . ' ' . $admin->last_name) }}">{{ strtoupper(substr($admin->first_name,0,1) . substr($admin->last_name,0,1)) }}</span>
+                        @endforeach
+                    </div>
+                    <span class="collaboration-member-count">{{ $activeAdmins->count() }} active admins</span>
+                </div>
+                <div class="collaboration-kpis">
+                    <div><strong>{{ number_format($unassignedPending) }}</strong><span>Unassigned</span></div>
+                    <div><strong>{{ number_format($assignedPending) }}</strong><span>Assigned</span></div>
+                    <div><strong>{{ number_format($myAssignedPending) }}</strong><span>My queue</span></div>
+                </div>
+                <div class="collaboration-load-list">
+                    @forelse($collaborationLoad as $admin)
+                        <div class="collaboration-load-row">
+                            <span>{{ trim($admin->first_name . ' ' . $admin->last_name) }}</span>
+                            <strong>{{ $admin->pending_support_count }}</strong>
+                        </div>
+                    @empty
+                        <div class="collaboration-empty">No active administrators found.</div>
+                    @endforelse
+                </div>
+            </article>
+
+            <article class="collaboration-card collaboration-queue">
+                <div class="collaboration-card-header"><div><span class="eyebrow">Live queue</span><h3>Recent needs attention</h3></div><span class="collaboration-live"><i class="ph-fill ph-circle"></i> Live</span></div>
+                <div class="collaboration-ticket-list">
+                    @forelse($collaborationQueue as $ticket)
+                        <div class="collaboration-ticket" data-ticket-id="{{ $ticket->id }}">
+                            <div class="collaboration-ticket-copy">
+                                <strong>{{ \Illuminate\Support\Str::limit($ticket->question, 82) }}</strong>
+                                <span>{{ $ticket->user?->first_name ?? 'Citizen' }} · {{ $ticket->agency?->agency_abbreviation ?? 'Unassigned agency' }}</span>
+                            </div>
+                            <div class="collaboration-ticket-action">
+                                <select class="collaboration-assign-select" aria-label="Assign support request {{ $ticket->id }}">
+                                    <option value="">Unassigned</option>
+                                    @foreach($activeAdmins as $admin)
+                                        <option value="{{ $admin->id }}" {{ (int)$ticket->assigned_admin_id === (int)$admin->id ? 'selected' : '' }}>{{ trim($admin->first_name . ' ' . $admin->last_name) }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" class="collaboration-assign-btn" data-ticket-id="{{ $ticket->id }}" title="Save assignment"><i class="ph-light ph-check"></i></button>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="collaboration-empty large"><i class="ph-light ph-check-circle"></i><span>No pending requests need collaboration right now.</span></div>
+                    @endforelse
+                </div>
+            </article>
+        </div>
+    </section>
 
     {{-- =====================================================
          DIRECTORY + KNOWLEDGE BASE
@@ -1016,17 +1024,746 @@
 
 
 
-    <section class="dashboard-section analytics-cta-section">
-        <div class="dashboard-analytics-cta">
-            <div class="dashboard-analytics-cta-icon"><i class="ph-light ph-chart-line-up"></i></div>
-            <div>
-                <span class="eyebrow">Analytics</span>
-                <h2>See the full operational picture</h2>
-                <p>Review inquiry activity, response performance, chatbot matching, and knowledge gaps in one focused workspace.</p>
+    {{-- =====================================================
+     ANALYTICS
+     ===================================================== --}}
+
+<section class="dashboard-section">
+
+    <div class="section-heading">
+
+        <div class="section-heading-main">
+
+            <div class="section-heading-icon analytics-heading-icon">
+                <i class="ph-light ph-chart-line-up"></i>
             </div>
-            <a href="{{ route('admin.analytics') }}" class="section-action">Open analytics <i class="ph-light ph-arrow-right"></i></a>
+
+            <div class="section-heading-copy">
+
+                <span class="eyebrow">
+                    Analytics
+                </span>
+
+                <h2>
+                    Inquiry performance
+                </h2>
+
+                <p>
+                    Monitor citizen inquiries and administrator response activity.
+                </p>
+
+            </div>
+
         </div>
-    </section>
+
+    </div>
+
+
+    {{-- =================================================
+         ANALYTICS METRICS
+         ================================================= --}}
+
+    <div class="analytics-metrics">
+
+
+        {{-- RESPONSE RATE --}}
+
+        <div class="analytics-metric analytics-response">
+
+            <div class="analytics-metric-icon">
+                <i class="ph-light ph-chart-donut"></i>
+            </div>
+
+            <div class="analytics-metric-content">
+
+                <span>
+                    Response rate
+                </span>
+
+                <strong>
+                    {{ $responseRate }}%
+                </strong>
+
+                <small>
+                    {{ $answeredInquiries }}
+                    of
+                    {{ $totalInquiries }}
+                    inquiries answered
+                </small>
+
+            </div>
+
+        </div>
+
+
+        {{-- AVERAGE RESPONSE TIME --}}
+
+        <div class="analytics-metric analytics-time">
+
+            <div class="analytics-metric-icon">
+                <i class="ph-light ph-timer"></i>
+            </div>
+
+            <div class="analytics-metric-content">
+
+                <span>
+                    Average response
+                </span>
+
+                <strong>
+                    {{ $averageResponseTime ?? '—' }}
+                </strong>
+
+                <small>
+                    Time from submission to answer
+                </small>
+
+            </div>
+
+        </div>
+
+
+        {{-- ANSWERS SEEN --}}
+
+        <div class="analytics-metric analytics-seen">
+
+            <div class="analytics-metric-icon">
+                <i class="ph-light ph-eye"></i>
+            </div>
+
+            <div class="analytics-metric-content">
+
+                <span>
+                    Answers seen
+                </span>
+
+                <strong>
+                    {{ $seenAnswers }}
+                </strong>
+
+                <small>
+                    Citizens who viewed their answers
+                </small>
+
+            </div>
+
+        </div>
+
+
+        {{-- UNSEEN ANSWERS --}}
+
+        <div class="analytics-metric analytics-unseen">
+
+            <div class="analytics-metric-icon">
+                <i class="ph-light ph-envelope"></i>
+            </div>
+
+            <div class="analytics-metric-content">
+
+                <span>
+                    Awaiting view
+                </span>
+
+                <strong>
+                    {{ $unseenAnswers }}
+                </strong>
+
+                <small>
+                    Answered but not yet viewed
+                </small>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    {{-- =================================================
+         INQUIRY TREND
+         ================================================= --}}
+
+    <div class="analytics-chart-card">
+
+        <div class="analytics-chart-header">
+
+            <div>
+
+                <span class="eyebrow">
+                    Activity trend
+                </span>
+
+                <h3>
+                    Inquiry activity
+                </h3>
+
+            </div>
+
+            <span class="analytics-period">
+                Last 7 days
+            </span>
+
+        </div>
+
+
+        <div class="analytics-chart">
+
+            @php
+
+                /*
+                 * Find the highest value across both
+                 * submitted and answered inquiries.
+                 *
+                 * This value is used to scale the
+                 * chart bars consistently.
+                 */
+                $chartMaximum = collect($inquiryTrend)
+                    ->flatMap(function ($day) {
+                        return [
+                            $day['submitted'],
+                            $day['answered'],
+                        ];
+                    })
+                    ->max();
+
+                /*
+                 * Prevent division by zero when there
+                 * has been no activity during the period.
+                 */
+                $chartMaximum = max(
+                    $chartMaximum ?? 0,
+                    1
+                );
+
+            @endphp
+
+
+            <div class="analytics-chart-grid">
+
+                @foreach($inquiryTrend as $day)
+
+                    @php
+
+                        /*
+                         * Convert the raw inquiry counts
+                         * into percentages for the chart.
+                         */
+                        $submittedHeight =
+                            ($day['submitted'] / $chartMaximum) * 100;
+
+                        $answeredHeight =
+                            ($day['answered'] / $chartMaximum) * 100;
+
+                    @endphp
+
+
+                    <div class="analytics-chart-day">
+
+                        <div class="analytics-bars">
+
+                            {{-- SUBMITTED --}}
+
+                            <div
+                                class="analytics-bar analytics-bar-submitted"
+                                style="height: {{ max($submittedHeight, 3) }}%;"
+                                title="{{ $day['submitted'] }} submitted"
+                            ></div>
+
+
+                            {{-- ANSWERED --}}
+
+                            <div
+                                class="analytics-bar analytics-bar-answered"
+                                style="height: {{ max($answeredHeight, 3) }}%;"
+                                title="{{ $day['answered'] }} answered"
+                            ></div>
+
+                        </div>
+
+
+                        <span class="analytics-day-label">
+                            {{ $day['label'] }}
+                        </span>
+
+                    </div>
+
+                @endforeach
+
+            </div>
+
+
+            {{-- =================================================
+                 CHART LEGEND
+                 ================================================= --}}
+
+            <div class="analytics-legend">
+
+                <span>
+                    <i class="analytics-legend-dot submitted"></i>
+                    Submitted
+                </span>
+
+                <span>
+                    <i class="analytics-legend-dot answered"></i>
+                    Answered
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+
+
+{{-- =====================================================
+     KNOWLEDGE BASE & CHATBOT ANALYTICS
+     ===================================================== --}}
+
+<section class="dashboard-section">
+
+    <div class="section-heading">
+
+        <div class="section-heading-main">
+
+            <div class="section-heading-icon chatbot-heading-icon">
+                <i class="ph-light ph-chat-circle-dots"></i>
+            </div>
+
+            <div class="section-heading-copy">
+
+                <span class="eyebrow">
+                    Knowledge Base
+                </span>
+
+                <h2>
+                    Chatbot performance
+                </h2>
+
+                <p>
+                    Monitor how effectively KNOWURLOCAL answers citizen questions automatically.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    {{-- =================================================
+         CHATBOT METRICS
+         ================================================= --}}
+
+    <div class="analytics-metrics chatbot-metrics">
+
+
+        {{-- FAQ ANSWER RATE --}}
+
+        <div class="analytics-metric chatbot-answer-rate">
+
+            <div class="analytics-metric-icon">
+                <i class="ph-light ph-book-open-text"></i>
+            </div>
+
+            <div class="analytics-metric-content">
+
+                <span>
+                    FAQ answer rate
+                </span>
+
+                <strong>
+                    {{ $faqAnswerRate }}%
+                </strong>
+
+                <small>
+                    {{ number_format($faqAnswered) }}
+                    of
+                    {{ number_format($knowledgeQuestions) }}
+                    knowledge questions answered
+                </small>
+
+            </div>
+
+        </div>
+
+
+        {{-- FALLBACK RATE --}}
+
+        <div class="analytics-metric chatbot-fallback-rate">
+
+            <div class="analytics-metric-icon">
+                <i class="ph-light ph-arrow-u-down-left"></i>
+            </div>
+
+            <div class="analytics-metric-content">
+
+                <span>
+                    Fallback rate
+                </span>
+
+                <strong>
+                    {{ $fallbackRate }}%
+                </strong>
+
+                <small>
+                    {{ number_format($fallbackQuestions) }}
+                    questions could not use an FAQ
+                </small>
+
+            </div>
+
+        </div>
+
+
+        {{-- FAQ ANSWERS --}}
+
+        <div class="analytics-metric chatbot-faq-answers">
+
+            <div class="analytics-metric-icon">
+                <i class="ph-light ph-check-circle"></i>
+            </div>
+
+            <div class="analytics-metric-content">
+
+                <span>
+                    FAQ answers
+                </span>
+
+                <strong>
+                    {{ number_format($faqAnswered) }}
+                </strong>
+
+                <small>
+                    Answers provided from the knowledge base
+                </small>
+
+            </div>
+
+        </div>
+
+
+        {{-- TOTAL CHATBOT QUESTIONS --}}
+
+        <div class="analytics-metric chatbot-total">
+
+            <div class="analytics-metric-icon">
+                <i class="ph-light ph-chats-circle"></i>
+            </div>
+
+            <div class="analytics-metric-content">
+
+                <span>
+                    Chatbot questions
+                </span>
+
+                <strong>
+                    {{ number_format($knowledgeQuestions) }}
+                </strong>
+
+                <small>
+                    Information-seeking interactions
+                </small>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    {{-- =================================================
+         KNOWLEDGE BASE BREAKDOWN
+         ================================================= --}}
+
+    <div class="chatbot-analytics-grid">
+
+
+        {{-- =================================================
+             MOST USED FAQs
+             ================================================= --}}
+
+        <article class="chatbot-analytics-card">
+
+            <div class="chatbot-card-header">
+
+                <div>
+
+                    <span class="eyebrow">
+                        Knowledge Base
+                    </span>
+
+                    <h3>
+                        Most used FAQs
+                    </h3>
+
+                </div>
+
+                <div class="chatbot-card-icon">
+                    <i class="ph-light ph-book-open-text"></i>
+                </div>
+
+            </div>
+
+
+            <div class="chatbot-ranking-list">
+
+                @forelse($popularFaqs as $item)
+
+                    <div class="chatbot-ranking-item">
+
+                        <div class="chatbot-ranking-main">
+
+                            <strong>
+                                {{ $item->faq?->question ?? 'FAQ no longer available' }}
+                            </strong>
+
+                            @if($item->faq?->agency)
+
+                                <span>
+                                    {{ $item->faq->agency->agency_name }}
+                                </span>
+
+                            @endif
+
+                        </div>
+
+                        <span class="chatbot-ranking-count">
+                            {{ number_format($item->usage_count) }}
+                        </span>
+
+                    </div>
+
+                @empty
+
+                    <div class="chatbot-analytics-empty">
+
+                        <i class="ph-light ph-book-open"></i>
+
+                        <span>
+                            No FAQ usage has been recorded yet.
+                        </span>
+
+                    </div>
+
+                @endforelse
+
+            </div>
+
+        </article>
+
+
+        {{-- =================================================
+             KNOWLEDGE GAPS
+             ================================================= --}}
+
+        <article class="chatbot-analytics-card">
+
+            <div class="chatbot-card-header">
+
+                <div>
+
+                    <span class="eyebrow">
+                        Attention
+                    </span>
+
+                    <h3>
+                        Knowledge gaps
+                    </h3>
+
+                </div>
+
+                <div class="chatbot-card-icon chatbot-warning-icon">
+                    <i class="ph-light ph-warning-circle"></i>
+                </div>
+
+            </div>
+
+
+            <div class="chatbot-gap-list">
+
+
+                {{-- FALLBACK QUESTIONS --}}
+
+                <div class="chatbot-gap-item">
+
+                    <div class="chatbot-gap-icon chatbot-gap-warning">
+                        <i class="ph-light ph-arrow-u-down-left"></i>
+                    </div>
+
+                    <div class="chatbot-gap-content">
+
+                        <strong>
+                            Fallback questions
+                        </strong>
+
+                        <span>
+                            Questions that could not be answered using an FAQ.
+                        </span>
+
+                    </div>
+
+                    <strong class="chatbot-gap-count">
+                        {{ number_format($fallbackQuestions) }}
+                    </strong>
+
+                </div>
+
+
+                {{-- CLARIFICATION QUESTIONS --}}
+
+                <div class="chatbot-gap-item">
+
+                    <div class="chatbot-gap-icon chatbot-gap-info">
+                        <i class="ph-light ph-chat-circle-dots"></i>
+                    </div>
+
+                    <div class="chatbot-gap-content">
+
+                        <strong>
+                            Clarifications
+                        </strong>
+
+                        <span>
+                            Questions that required additional information.
+                        </span>
+
+                    </div>
+
+                    <strong class="chatbot-gap-count">
+                        {{ number_format($clarificationQuestions) }}
+                    </strong>
+
+                </div>
+
+
+                {{-- MATCHING METHODS --}}
+
+                <div class="chatbot-gap-item">
+
+                    <div class="chatbot-gap-icon chatbot-gap-success">
+                        <i class="ph-light ph-git-branch"></i>
+                    </div>
+
+                    <div class="chatbot-gap-content">
+
+                        <strong>
+                            Matching methods
+                        </strong>
+
+                        <span>
+                            Rule-based and semantic FAQ matches recorded.
+                        </span>
+
+                    </div>
+
+                    <div class="chatbot-match-counts">
+
+                        <span>
+                            {{ number_format($ruleMatches) }}
+                            rule
+                        </span>
+
+                        <span>
+                            {{ number_format($semanticMatches) }}
+                            semantic
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </article>
+
+    </div>
+
+
+    {{-- =================================================
+         MOST REQUESTED AGENCIES
+         ================================================= --}}
+
+    <article class="chatbot-analytics-card chatbot-agency-card">
+
+        <div class="chatbot-card-header">
+
+            <div>
+
+                <span class="eyebrow">
+                    Citizen Interest
+                </span>
+
+                <h3>
+                    Most requested agencies
+                </h3>
+
+            </div>
+
+            <div class="chatbot-card-icon">
+                <i class="ph-light ph-buildings"></i>
+            </div>
+
+        </div>
+
+
+        <div class="chatbot-agency-list">
+
+            @forelse($popularAgencies as $item)
+
+                <div class="chatbot-agency-item">
+
+                    <div class="chatbot-agency-rank">
+                        {{ $loop->iteration }}
+                    </div>
+
+                    <div class="chatbot-agency-info">
+
+                        <strong>
+                            {{ $item->agency?->agency_name ?? 'Agency no longer available' }}
+                        </strong>
+
+                        <span>
+                            Chatbot interactions
+                        </span>
+
+                    </div>
+
+                    <strong class="chatbot-agency-count">
+                        {{ number_format($item->interaction_count) }}
+                    </strong>
+
+                </div>
+
+            @empty
+
+                <div class="chatbot-analytics-empty">
+
+                    <i class="ph-light ph-buildings"></i>
+
+                    <span>
+                        No agency-related chatbot interactions have been recorded yet.
+                    </span>
+
+                </div>
+
+            @endforelse
+
+        </div>
+
+    </article>
+
+</section>
+
+
+
+
+
+
 
     {{-- =====================================================
      RECENT ACTIVITY
@@ -1227,3 +1964,38 @@
 </div>
 
 @endsection
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.collaboration-assign-btn').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const ticketId = button.dataset.ticketId;
+            const row = button.closest('.collaboration-ticket');
+            const select = row?.querySelector('.collaboration-assign-select');
+            if (!ticketId || !select) return;
+
+            button.disabled = true;
+            try {
+                const response = await fetch(`/admin/support-requests/${encodeURIComponent(ticketId)}/assign`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify({ admin_id: select.value || null })
+                });
+                if (!response.ok) throw new Error('Assignment failed');
+                button.classList.add('is-saved');
+                setTimeout(() => button.classList.remove('is-saved'), 1000);
+            } catch (error) {
+                console.error(error);
+                window.alert('The assignment could not be saved. Please try again.');
+            } finally {
+                button.disabled = false;
+            }
+        });
+    });
+});
+</script>
+@endpush

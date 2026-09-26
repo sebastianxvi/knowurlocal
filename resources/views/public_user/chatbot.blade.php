@@ -6,7 +6,6 @@
     <title>Chatbot</title>
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}">
-    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>

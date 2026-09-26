@@ -28,103 +28,172 @@
 
     <div class="faq-controls">
 
-    @if(auth()->user()->role === 'superadmin')
-        <nav class="support-dataset-tabs" aria-label="FAQ collections">
-            <a
-                href="{{ route('faqs.index', array_merge(request()->except('page'), ['status' => 'active'])) }}"
-                class="support-dataset-tab {{ $status === 'active' ? 'is-active' : '' }}"
-                aria-current="{{ $status === 'active' ? 'page' : 'false' }}"
-            >
-                <i class="ph-light ph-book-open" aria-hidden="true"></i>
-                <span>Active</span>
-                <span class="support-dataset-count">{{ $activeCount }}</span>
-            </a>
+        @if(auth()->user()->role === 'superadmin')
 
-            <a
-                href="{{ route('faqs.index', array_merge(request()->except('page'), ['status' => 'trashed'])) }}"
-                class="support-dataset-tab {{ $status === 'trashed' ? 'is-active' : '' }}"
-                aria-current="{{ $status === 'trashed' ? 'page' : 'false' }}"
-            >
-                <i class="ph-light ph-trash" aria-hidden="true"></i>
-                <span>Trashed</span>
-                <span class="support-dataset-count">{{ $trashedCount }}</span>
-            </a>
-        </nav>
-    @endif
+            <div class="faq-status-tabs">
 
-    <section class="support-filter-toolbar" aria-label="FAQ filters">
-        <form method="GET" action="{{ route('faqs.index') }}" class="support-filter-form">
-            <input type="hidden" name="status" value="{{ $status }}">
-
-            <div class="support-filter-field support-search-field">
-                <label for="faq-search" class="sr-only">Search FAQs</label>
-                <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
-                <input
-                    type="search"
-                    id="faq-search"
-                    name="search"
-                    value="{{ request('search') }}"
-                    placeholder="Search question..."
-                    autocomplete="off"
+                {{-- ACTIVE --}}
+                <a
+                    href="{{ route('faqs.index', array_merge(
+                        request()->except('page', 'status'),
+                        ['status' => 'active']
+                    )) }}"
+                    class="faq-status-tab {{ $status === 'active' ? 'active' : '' }}"
                 >
-            </div>
+                    <i class="ph-light ph-chat-circle-text"></i>
 
-            <div class="support-filter-field">
-                <label for="faq-agency-filter" class="sr-only">Filter by agency</label>
-                <i class="ph-light ph-buildings" aria-hidden="true"></i>
-                <select name="agency" id="faq-agency-filter">
-                    <option value="">All Agencies</option>
-                    @foreach($agencies as $agency)
-                        <option value="{{ $agency->id }}" {{ request('agency') == $agency->id ? 'selected' : '' }}>
-                            {{ $agency->agency_name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+                    <span>Active</span>
 
-            <div class="support-filter-field">
-                <label for="faq-date-filter" class="sr-only">Filter by date</label>
-                <i class="ph-light ph-calendar-blank" aria-hidden="true"></i>
-                <select name="date" id="faq-date-filter">
-                    <option value="">All Dates</option>
-                    @foreach($availableDates as $date)
-                        <option value="{{ $date }}" {{ request('date') === $date ? 'selected' : '' }}>
-                            {{ \Carbon\Carbon::parse($date)->format('M d, Y') }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="support-filter-field">
-                <label for="faq-sort" class="sr-only">Sort FAQs</label>
-                <i class="ph-light ph-arrows-down-up" aria-hidden="true"></i>
-                <select name="sort" id="faq-sort">
-                    <option value="latest" {{ request('sort') === 'latest' ? 'selected' : '' }}>Newest first</option>
-                    <option value="oldest" {{ request('sort') === 'oldest' ? 'selected' : '' }}>Oldest first</option>
-                </select>
-            </div>
-
-            <button type="submit" class="support-filter-submit">
-                <i class="ph-light ph-sliders-horizontal" aria-hidden="true"></i>
-                <span>Filter</span>
-            </button>
-
-            @if(request()->has('search') || request()->has('agency') || request()->has('date') || request('sort', 'latest') !== 'latest')
-                <a href="{{ route('faqs.index', ['status' => $status]) }}" class="support-filter-clear">
-                    <i class="ph-light ph-x" aria-hidden="true"></i>
-                    <span>Clear</span>
+                    <span class="status-count">
+                        {{ $activeCount }}
+                    </span>
                 </a>
-            @endif
 
-            @if($status === 'active')
-                <button type="button" class="add-agencybtn" onclick="openFaqModal('add')">
-                    <i class="ph-light ph-plus" aria-hidden="true"></i>
-                    <span>Add FAQ</span>
-                </button>
-            @endif
+
+                {{-- TRASHED --}}
+                <a
+                    href="{{ route('faqs.index', array_merge(
+                        request()->except('page', 'status'),
+                        ['status' => 'trashed']
+                    )) }}"
+                    class="faq-status-tab trashed-tab {{ $status === 'trashed' ? 'active' : '' }}"
+                >
+                    <i class="ph-light ph-trash"></i>
+
+                    <span>Trashed</span>
+
+                    <span class="status-count">
+                        {{ $trashedCount }}
+                    </span>
+                </a>
+
+            </div>
+
+        @endif
+
+
+        {{-- =====================================================
+             FILTER BAR
+             ===================================================== --}}
+
+        <form
+            method="GET"
+            action="{{ route('faqs.index') }}"
+        >
+
+            {{-- Preserve the current Active / Trashed state. --}}
+            <input
+                type="hidden"
+                name="status"
+                value="{{ $status }}"
+            >
+
+            <div class="filter-card">
+
+                <div class="filter-bar">
+
+                    {{-- SEARCH --}}
+                    <input
+                        type="text"
+                        name="search"
+                        placeholder="Search FAQ..."
+                        value="{{ request('search') }}"
+                    >
+
+
+                    {{-- AGENCY --}}
+                    <select name="agency">
+
+                        <option value="">
+                            All Agencies
+                        </option>
+
+                        @foreach($agencies as $agency)
+
+                            <option
+                                value="{{ $agency->id }}"
+                                {{ request('agency') == $agency->id ? 'selected' : '' }}
+                            >
+                                {{ $agency->agency_name }}
+                            </option>
+
+                        @endforeach
+
+                    </select>
+
+
+                    {{-- DATE --}}
+                    <select name="date">
+
+                        <option value="">
+                            All Dates
+                        </option>
+
+                        @foreach($availableDates as $date)
+
+                            <option
+                                value="{{ $date }}"
+                                {{ request('date') == $date ? 'selected' : '' }}
+                            >
+                                {{ \Carbon\Carbon::parse($date)->format('M d, Y') }}
+                            </option>
+
+                        @endforeach
+
+                    </select>
+
+
+                    {{-- SORT --}}
+                    <select name="sort">
+
+                        <option
+                            value="latest"
+                            {{ request('sort') === 'latest' ? 'selected' : '' }}
+                        >
+                            Newest First
+                        </option>
+
+                        <option
+                            value="oldest"
+                            {{ request('sort') === 'oldest' ? 'selected' : '' }}
+                        >
+                            Oldest First
+                        </option>
+
+                    </select>
+
+
+                    {{-- FILTER --}}
+                    <button type="submit">
+                        Filter
+                    </button>
+
+                </div>
+
+
+                {{-- ADD FAQ ONLY EXISTS IN ACTIVE MODE --}}
+                <div>
+
+                    @if($status === 'active')
+
+    <button
+        type="button"
+        class="add-agencybtn"
+        onclick="openFaqModal('add')"
+    >
+        <i class="ph-light ph-plus"></i>
+        Add FAQ
+    </button>
+
+@endif
+
+                </div>
+
+            </div>
+
         </form>
-    </section>
-</div>
+
+    </div>
 
     <!-- ================= TABLE ================= -->
     <div class="table-wrapper">
@@ -707,7 +776,7 @@
      * Existing manual FAQ translation endpoint.
      */
     window.FAQ_TRANSLATE_URL =
-        @json(route('faqs.translate'));
+        @json(route('admin.faqs.translate'));
 
     /*
      * Support Request → FAQ conversion data.

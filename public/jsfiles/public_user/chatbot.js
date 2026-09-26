@@ -204,25 +204,6 @@ async function loadSuggestions(){
 }
 
 
-
-function renderFaqAttachments(attachments) {
-    if (!Array.isArray(attachments) || attachments.length === 0) return '';
-
-    return `
-        <div class="chat-faq-attachments">
-            ${attachments.map((attachment) => {
-                const label = escapeHTML(attachment?.label || 'Attachment');
-                const url = attachment?.url;
-                if (!url || !isSafeUrl(url)) return '';
-                const safeUrl = escapeHTML(url);
-                const type = attachment?.type || 'file';
-                const icon = type === 'image' ? 'ph-image' : type === 'qr_code' ? 'ph-qr-code' : type === 'link' ? 'ph-link' : 'ph-file';
-                return `<a class="chat-faq-attachment" href="${safeUrl}" target="_blank" rel="noopener noreferrer"><i class="ph-light ${icon}"></i><span>${label}</span><i class="ph-light ph-arrow-up-right"></i></a>`;
-            }).join('')}
-        </div>
-    `;
-}
-
 function renderSuggestions(questions){
 
     const container =
@@ -673,27 +654,6 @@ async function selectClarificationFaq(
 
         }
 
-        html += renderFaqAttachments(messageData.attachments);
-
-        if (
-            messageData.image &&
-            isSafeUrl(messageData.image)
-        ) {
-            const safeImageUrl = escapeHTML(messageData.image);
-
-            html += `
-                <div class="chat-image">
-                    <img
-                        src="${safeImageUrl}"
-                        alt="FAQ Image"
-                        class="clickable-image"
-                        loading="lazy"
-                        referrerpolicy="no-referrer"
-                    >
-                </div>
-            `;
-        }
-
         /*
          * Replace the typing indicator with
          * the actual approved FAQ answer.
@@ -1073,8 +1033,6 @@ function sendMessage(){
             typingMessage.querySelector(
                 ".bubble"
             );
-
-        html += renderFaqAttachments(messageData.attachments);
 
         bubble.innerHTML =
             html;

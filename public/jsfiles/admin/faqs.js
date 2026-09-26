@@ -704,68 +704,50 @@ const supportRequestIdInput =
     function generateKeywordsFromQuestion(question) {
         const cleaned = String(question || '')
             .toLowerCase()
-            .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+            .replace(/[^a-z0-9\s-]/gi, ' ')
             .replace(/\s+/g, ' ')
             .trim();
 
-        if (!cleaned) return '';
+        if (!cleaned) {
+            return '';
+        }
 
         const words = cleaned
             .split(' ')
             .map(word => word.replace(/^-+|-+$/g, ''))
             .filter(word => word.length >= 3 && !KEYWORD_STOP_WORDS.has(word));
 
-        const used = new Set();
-        const keywords = [];
+        const uniqueWords = [];
+        const seen = new Set();
 
-        // Prefer meaningful two-word concepts. Every word consumed by a
-        // phrase is then unavailable to later keywords.
-        for (let index = 0; index < words.length - 1 && keywords.length < 4; index += 1) {
+        words.forEach(word => {
+            if (!seen.has(word)) {
+                seen.add(word);
+                uniqueWords.push(word);
+            }
+        });
+
+        const phrases = [];
+        for (let index = 0; index < words.length - 1; index += 1) {
             const first = words[index];
             const second = words[index + 1];
-            if (!first || !second || used.has(first) || used.has(second)) continue;
-
-            keywords.push(`${first} ${second}`);
-            used.add(first);
-            used.add(second);
+            if (
+                first &&
+                second &&
+                !KEYWORD_STOP_WORDS.has(first) &&
+                !KEYWORD_STOP_WORDS.has(second)
+            ) {
+                const phrase = `${first} ${second}`;
+                if (!phrases.includes(phrase)) {
+                    phrases.push(phrase);
+                }
+            }
         }
 
-        // Add remaining meaningful words without ever repeating a word.
-        for (const word of words) {
-            if (keywords.length >= 8) break;
-            if (used.has(word)) continue;
-            keywords.push(word);
-            used.add(word);
-        }
-
-        return keywords.join(', ');
-    }
-
-    function normalizeKeywordField(value) {
-        const seen = new Set();
-        const output = [];
-
-        String(value || '')
-            .split(/[,\n]+/)
-            .forEach(entry => {
-                const words = entry
-                    .trim()
-                    .split(/\s+/)
-                    .map(word => word.replace(/^[.,;:!?()[\]{}"']+|[.,;:!?()[\]{}"']+$/g, ''))
-                    .filter(Boolean);
-
-                const uniqueWords = [];
-                words.forEach(word => {
-                    const key = word.toLocaleLowerCase();
-                    if (seen.has(key)) return;
-                    seen.add(key);
-                    uniqueWords.push(word);
-                });
-
-                if (uniqueWords.length) output.push(uniqueWords.join(' '));
-            });
-
-        return output.join(', ');
+        /* Prefer meaningful multi-word concepts, then individual terms. */
+        return [...phrases.slice(0, 3), ...uniqueWords]
+            .slice(0, 8)
+            .join(', ');
     }
 
     function autoFillKeywordsFromQuestion() {
@@ -974,12 +956,6 @@ const supportRequestIdInput =
             if (current !== lastAutoKeywords) {
                 keywordsManuallyEdited = true;
             }
-        });
-
-        keywordsInput.addEventListener('blur', () => {
-            const normalized = normalizeKeywordField(keywordsInput.value);
-            keywordsInput.value = normalized;
-            lastAutoKeywords = normalized;
         });
     }
 

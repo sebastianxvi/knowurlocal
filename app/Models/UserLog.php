@@ -216,12 +216,6 @@ public function supportRequest()
             'force_delete_support_request' =>
                 'Delete Permanently',
 
-            'answer_support_request' =>
-                'Answer Support Request',
-
-            'forward_support_response' =>
-                'Forward Support Response',
-
 
             /*
              * =====================================================

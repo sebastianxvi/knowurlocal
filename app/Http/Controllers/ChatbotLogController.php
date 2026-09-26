@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\ChatbotLog;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 
 class ChatbotLogController extends Controller
 {
@@ -13,17 +12,6 @@ class ChatbotLogController extends Controller
      */
     public function index(Request $request)
     {
-        /*
-         * Bound all filters before they reach the query builder.
-         * This prevents oversized search payloads and invalid date input.
-         */
-        $request->validate([
-            'sort' => ['nullable', 'in:asc,desc'],
-            'outcome' => ['nullable', 'string', 'max:40'],
-            'match_method' => ['nullable', 'string', 'max:20'],
-            'date' => ['nullable', 'date_format:Y-m-d'],
-            'search' => ['nullable', 'string', 'max:100'],
-        ]);
         /*
          * 🔒 SORT SECURITY
          *
@@ -90,7 +78,6 @@ class ChatbotLogController extends Controller
          */
         $allowedMatchMethods = [
             'rule',
-            'ai',
             'semantic',
             'none',
         ];
@@ -113,17 +100,9 @@ class ChatbotLogController extends Controller
          * the calendar date and ignores the time portion.
          */
         if ($request->filled('date')) {
-            $date = Carbon::createFromFormat(
-                'Y-m-d',
-                $request->date
-            );
-
-            $query->whereBetween(
+            $query->whereDate(
                 'created_at',
-                [
-                    $date->copy()->startOfDay(),
-                    $date->copy()->endOfDay(),
-                ]
+                $request->date
             );
         }
 
@@ -252,27 +231,47 @@ class ChatbotLogController extends Controller
         /*
          * 📊 OVERALL STATISTICS
          *
-         * Compute the dashboard counters in one aggregate query
-         * instead of issuing a separate COUNT query for every card.
+         * These statistics are based on the actual
+         * chatbot interaction records.
          */
-        $stats = ChatbotLog::query()
-            ->selectRaw('COUNT(*) AS total_chats')
-            ->selectRaw("SUM(CASE WHEN outcome = 'answered' THEN 1 ELSE 0 END) AS total_answered")
-            ->selectRaw("SUM(CASE WHEN outcome = 'fallback' THEN 1 ELSE 0 END) AS total_fallback")
-            ->selectRaw("SUM(CASE WHEN match_method IN ('ai', 'semantic') THEN 1 ELSE 0 END) AS total_ai")
-            ->selectRaw("SUM(CASE WHEN match_method = 'rule' THEN 1 ELSE 0 END) AS total_rule")
-            ->selectRaw("SUM(CASE WHEN outcome = 'irrelevant' THEN 1 ELSE 0 END) AS total_irrelevant")
-            ->first();
+        $totalChats = ChatbotLog::count();
 
-        $totalChats = (int) ($stats->total_chats ?? 0);
-        $totalAnswered = (int) ($stats->total_answered ?? 0);
-        $totalFallback = (int) ($stats->total_fallback ?? 0);
-        $totalSemantic = (int) ($stats->total_ai ?? 0);
-        $totalRule = (int) ($stats->total_rule ?? 0);
-        $totalIrrelevant = (int) ($stats->total_irrelevant ?? 0);
+        $totalAnswered = ChatbotLog::where(
+            'outcome',
+            'answered'
+        )->count();
 
+        $totalFallback = ChatbotLog::where(
+            'outcome',
+            'fallback'
+        )->count();
+
+        $totalSemantic = ChatbotLog::where(
+            'match_method',
+            'semantic'
+        )->count();
+
+        $totalRule = ChatbotLog::where(
+            'match_method',
+            'rule'
+        )->count();
+
+        $totalIrrelevant = ChatbotLog::where(
+            'outcome',
+            'irrelevant'
+        )->count();
+
+
+        /*
+         * 📈 ANSWER RATE
+         *
+         * Avoid division by zero when there are no logs.
+         */
         $answerRate = $totalChats > 0
-            ? round(($totalAnswered / $totalChats) * 100, 2)
+            ? round(
+                ($totalAnswered / $totalChats) * 100,
+                2
+            )
             : 0;
 
 

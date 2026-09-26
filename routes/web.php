@@ -122,6 +122,8 @@ Route::post('/resend-otp', [AuthController::class, 'resendOtp'])
 | STATIC + PUBLIC PAGES
 |--------------------------------------------------------------------------
 */
+Route::get('/admin/dashboard/export', [DashboardController::class, 'exportPdf']);
+
 Route::view('/privacy', 'privacy');
 Route::view('/terms', 'terms');
 
@@ -213,15 +215,19 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     // Chatbot
     Route::post('/chat', [ChatbotController::class, 'ask'])
         ->middleware('throttle:chatbot');
-
-    Route::get('/chat/faqs/{faqId}/attachments/{componentIndex}', [ChatbotController::class, 'faqAttachment'])
-        ->name('chatbot.faq-attachment');
         
     Route::post(
     '/chat/support',
     [ChatbotController::class, 'submitSupportRequest']
 )->middleware('throttle:support-request');
 
+    // ================= FAQ =================
+
+Route::resource('faqs', FaqController::class);
+
+    // AI FAQ translation
+    Route::post('/faqs/translate', [FaqController::class, 'translate'])
+        ->name('faqs.translate');
 
     // 🔥 YOUR NEW FEATURE
     Route::get('/my-inquiries', [SupportRequestController::class, 'userIndex'])
@@ -324,20 +330,21 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
 
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
         ->name('admin.categories.destroy');
+        
 
-    // ================= FAQ MANAGEMENT =================
-    Route::resource('faqs', FaqController::class)
-        ->only(['index', 'store', 'update', 'destroy']);
-
-    Route::post('/faqs/translate', [FaqController::class, 'translate'])
-        ->name('faqs.translate');
-    Route::get('/users', [UserController::class, 'index'])
+    Route::get('/admin/users', [UserController::class, 'index'])
         ->name('admin.users');
 
     // ================= SUPPORT REQUESTS =================
 
     Route::get('/support-requests', [SupportRequestController::class, 'index'])
         ->name('admin.support.requests');
+
+    Route::get('/support-requests/collaborators', [SupportRequestController::class, 'collaborators'])
+        ->name('admin.support.collaborators');
+
+    Route::patch('/support-requests/{id}/assign', [SupportRequestController::class, 'assign'])
+        ->name('admin.support.assign');
 
     Route::post('/support-requests/reply', [SupportRequestController::class, 'reply'])
         ->name('admin.support.reply');
@@ -374,6 +381,14 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     // CHATBOT LOGS
     Route::get('/chatbot-logs', [ChatbotLogController::class, 'index'])
         ->name('admin.chatbot.logs');
+
+    Route::post('/faqs/translate', [FaqController::class, 'translate'])
+        ->name('admin.faqs.translate');
+
+        Route::post(
+    '/faqs/generate-keywords',
+    [FaqController::class, 'generateKeywords']
+)->name('admin.faqs.generateKeywords');
 
 
 

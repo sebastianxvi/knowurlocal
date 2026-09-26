@@ -93,6 +93,57 @@ class AppServiceProvider extends ServiceProvider
         });
 
         /*
+         * Share the current administrator's unread support-request
+         * count with the entire admin shell. The timestamp is kept
+         * in the browser session, so opening the Support Requests
+         * page marks the current queue as seen without changing
+         * another administrator's session.
+         */
+        View::composer(
+            'layouts.admin',
+            function ($view) {
+                $unreadSupportRequests = 0;
+
+                if (auth()->check() && in_array(auth()->user()->role, ['admin', 'superadmin'], true)) {
+                    $seenAt = session('admin_support_seen_at');
+
+                    if (!$seenAt) {
+                        session(['admin_support_seen_at' => now()]);
+                    } else {
+                        $unreadSupportRequests = SupportRequest::query()
+                            ->where('created_at', '>', $seenAt)
+                            ->count();
+                    }
+                }
+
+                $view->with('unreadSupportRequests', $unreadSupportRequests);
+            }
+        );
+
+        /*
+         * Share the same count with the sidebar partial.
+         */
+        View::composer(
+            'partials.sidebar',
+            function ($view) {
+                $unreadSupportRequests = 0;
+
+                if (auth()->check() && in_array(auth()->user()->role, ['admin', 'superadmin'], true)) {
+                    $seenAt = session('admin_support_seen_at');
+                    if (!$seenAt) {
+                        session(['admin_support_seen_at' => now()]);
+                    } else {
+                        $unreadSupportRequests = SupportRequest::query()
+                            ->where('created_at', '>', $seenAt)
+                            ->count();
+                    }
+                }
+
+                $view->with('unreadSupportRequests', $unreadSupportRequests);
+            }
+        );
+
+        /*
          * Share unread inquiry information with public-user
          * Blade views.
          */

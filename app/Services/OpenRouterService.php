@@ -35,8 +35,7 @@ class OpenRouterService
 
             // Prevent an external provider from keeping
             // the Laravel request open indefinitely.
-            ->connectTimeout(3)
-            ->timeout(12)
+            ->timeout(30)
 
             ->post(
                 'https://openrouter.ai/api/v1/chat/completions',
@@ -58,13 +57,14 @@ class OpenRouterService
         if ($response->failed()) {
 
     /*
-     * Record only the HTTP status on the server; provider response bodies may contain sensitive request context.
+     * Record the HTTP status and provider response on the server.
      *
      * This is useful for diagnosing API failures without exposing
      * provider details to the browser.
      */
     \Log::error('OPENROUTER REQUEST FAILED', [
         'status' => $response->status(),
+        'body' => $response->body(),
     ]);
 
     /*

@@ -2188,9 +2188,3 @@ body {
     }
 
 }
-
-.chat-faq-attachments{display:grid;gap:7px;margin-top:9px;}
-.chat-faq-attachment{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid rgba(148,163,184,.24);border-radius:9px;text-decoration:none;color:inherit;background:rgba(248,250,252,.8);font-size:12px;}
-.chat-faq-attachment span{flex:1;min-width:0;overflow-wrap:anywhere;}
-.chat-faq-attachment > i:first-child{font-size:16px;opacity:.8;}
-.chat-faq-attachment > i:last-child{font-size:14px;opacity:.65;}
