@@ -104,6 +104,8 @@ class UserLogController extends Controller
             'delete_support_request',
             'restore_support_request',
             'force_delete_support_request',
+            'answer_support_request',
+            'forward_support_response',
 
             /*
             * Administrator management

@@ -93,6 +93,21 @@ class AppServiceProvider extends ServiceProvider
         });
 
         /*
+         * Share the live pending Support Request count with the
+         * administrator shell. The badge is rendered only when the
+         * administrator is outside the Support Requests page.
+         */
+        View::composer('partials.sidebar', function ($view) {
+            $pendingCount = 0;
+
+            if (auth()->check() && in_array(auth()->user()->role, ['admin', 'superadmin'], true)) {
+                $pendingCount = SupportRequest::where('status', 'pending')->count();
+            }
+
+            $view->with('adminPendingSupportCount', $pendingCount);
+        });
+
+        /*
          * Share unread inquiry information with public-user
          * Blade views.
          */

@@ -1,113 +1,70 @@
-<aside class="sidebar">
+<aside class="sidebar" aria-label="Administrator navigation">
+    <div class="sidebar-main">
+        <a href="{{ route('admin.dashboard') }}" class="sidebar-brand" aria-label="KNOWURLOCAL Dashboard">
+            <span class="sidebar-brand-mark">K</span>
+            <span class="sidebar-brand-copy"><strong>KNOWURLOCAL</strong><small>Admin workspace</small></span>
+        </a>
 
-    <div>
-        <div class="logo">KNOWURLOCAL</div>
-
-        <nav>
-
-            <!-- Dashboard -->
-            <a href="{{ route('admin.dashboard') }}"
-               class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                <i class="ph-light ph-house"></i>
-                Dashboard
+        <nav class="admin-nav">
+            <span class="nav-section-label">Workspace</span>
+            <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                <i class="ph-light ph-house"></i><span>Dashboard</span>
+            </a>
+            <a href="{{ route('admin.analytics') }}" class="{{ request()->routeIs('admin.analytics') ? 'active' : '' }}">
+                <i class="ph-light ph-chart-line-up"></i><span>Analytics</span>
+            </a>
+            <a href="{{ route('admin.nga') }}" class="{{ request()->routeIs('admin.nga') ? 'active' : '' }}">
+                <i class="ph-light ph-buildings"></i><span>NGA &amp; NGO</span>
+            </a>
+            <a href="{{ route('admin.categories') }}" class="{{ request()->routeIs('admin.categories') ? 'active' : '' }}">
+                <i class="ph-light ph-tag"></i><span>Categories</span>
+            </a>
+            <a href="{{ route('faqs.index') }}" class="{{ request()->routeIs('faqs.index') ? 'active' : '' }}">
+                <i class="ph-light ph-chat-centered-text"></i><span>FAQ</span>
             </a>
 
-           <!-- Agencies -->
-            <a href="{{ route('admin.nga') }}"
-            class="{{ request()->routeIs('admin.nga') ? 'active' : '' }}">
-                <i class="ph-light ph-buildings"></i>
-                NGA & NGO
-            </a>
-
-            <!-- Categories -->
-            <a href="{{ route('admin.categories') }}"
-            class="{{ request()->routeIs('admin.categories') ? 'active' : '' }}">
-                <i class="ph-light ph-tag"></i>
-                Categories
-            </a>
-
-            <!-- FAQ -->
-            <a href="{{ route('faqs.index') }}"
-               class="{{ request()->routeIs('faqs.index') ? 'active' : '' }}">
-                <i class="ph-light ph-chat-centered-text"></i>
-                FAQ
-            </a>
-
-            @auth
-            @if(in_array(auth()->user()->role, ['admin', 'superadmin']))
-
-            <a href="{{ route('admin.support.requests') }}"
-            class="{{ request()->routeIs('admin.support.requests') ? 'active' : '' }}">
-                <i class="ph-light ph-chat-circle"></i>
-                Support Requests
-            </a>
-
+            <span class="nav-section-label nav-section-label-spaced">Operations</span>
+            @if(auth()->check() && in_array(auth()->user()->role, ['admin','superadmin']))
+                <a href="{{ route('admin.support.requests') }}" class="{{ request()->routeIs('admin.support.requests') ? 'active' : '' }}">
+                    <i class="ph-light ph-chat-circle"></i><span>Support Requests</span>
+                    <span
+                        class="sidebar-notification js-support-pending-badge"
+                        aria-label="{{ $adminPendingSupportCount ?? 0 }} pending support requests"
+                        {{ request()->routeIs('admin.support.requests') || ($adminPendingSupportCount ?? 0) < 1 ? 'hidden' : '' }}
+                    >{{ ($adminPendingSupportCount ?? 0) > 99 ? '99+' : ($adminPendingSupportCount ?? 0) }}</span>
+                </a>
             @endif
-            @endauth
 
-            @auth
-            @if(auth()->user()->role === 'superadmin')
-
-            <a href="{{ route('admin.admins') }}"
-            class="{{ request()->routeIs('admin.admins') ? 'active' : '' }}">
-                <i class="ph-light ph-users"></i>
-                Admins
-            </a>
-
+            @if(auth()->check() && auth()->user()->role === 'superadmin')
+                <a href="{{ route('admin.admins') }}" class="{{ request()->routeIs('admin.admins') ? 'active' : '' }}">
+                    <i class="ph-light ph-users-three"></i><span>Admins</span>
+                </a>
             @endif
-            @endauth
 
-            @auth
-            @if(in_array(auth()->user()->role, ['admin', 'superadmin']))
-
-            <a href="{{ route('admin.users') }}"
-            class="{{ request()->routeIs('admin.users') ? 'active' : '' }}">
-                <i class="ph-light ph-user"></i>
-                Users
-            </a>
-
+            @if(auth()->check() && in_array(auth()->user()->role, ['admin','superadmin']))
+                <a href="{{ route('admin.users') }}" class="{{ request()->routeIs('admin.users') ? 'active' : '' }}">
+                    <i class="ph-light ph-user"></i><span>Users</span>
+                </a>
             @endif
-            @endauth
 
-            <!-- LOGS GROUP -->
-            <div class="nav-group">
-
-                <div class="nav-parent" title="Logs">
-                    <i class="ph-light ph-clock-counter-clockwise"></i>
-                    Logs
-                </div>
-
-                <div class="nav-children">
-
-                    <!-- Activity Logs -->
-                    <a href="{{ route('admin.logs') }}"
-                       class="{{ request()->routeIs('admin.logs') ? 'active' : '' }}">
-                        Activity Logs
-                    </a>
-
-                    <!-- Chatbot Logs -->
-                    <a href="{{ route('admin.chatbot.logs') }}"
-                       class="{{ request()->routeIs('admin.chatbot.logs') ? 'active' : '' }}">
-                        Chatbot Logs
-                    </a>
-
-                </div>
-
-            </div>
-
+            <span class="nav-section-label nav-section-label-spaced">Audit</span>
+            <a href="{{ route('admin.logs') }}" class="{{ request()->routeIs('admin.logs') ? 'active' : '' }}">
+                <i class="ph-light ph-clock-counter-clockwise"></i><span>Activity Logs</span>
+            </a>
+            <a href="{{ route('admin.chatbot.logs') }}" class="{{ request()->routeIs('admin.chatbot.logs') ? 'active' : '' }}">
+                <i class="ph-light ph-chats-circle"></i><span>Chatbot Logs</span>
+            </a>
         </nav>
     </div>
 
-    <!-- LOGOUT -->
-<div class="logout">
-    <form action="{{ route('logout') }}" method="POST">
-        @csrf
-
-        <button type="submit" class="logout-btn">
-            <i class="ph-light ph-sign-out"></i>
-            Logout
-        </button>
-    </form>
-</div>
-
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <span class="sidebar-user-avatar">{{ strtoupper(substr(auth()->user()->first_name ?? 'A', 0, 1)) }}</span>
+            <span class="sidebar-user-copy"><strong>{{ auth()->user()->first_name ?? 'Admin' }}</strong><small>{{ auth()->user()->role === 'superadmin' ? 'Superadmin' : 'Administrator' }}</small></span>
+        </div>
+        <form action="{{ route('logout') }}" method="POST">
+            @csrf
+            <button type="submit" class="logout-btn"><i class="ph-light ph-sign-out"></i><span>Sign out</span></button>
+        </form>
+    </div>
 </aside>

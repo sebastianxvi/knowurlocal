@@ -33,6 +33,12 @@ class DashboardController extends Controller
      *
      * The report uses the exact same dataset as the dashboard.
      */
+    public function analytics()
+    {
+        return view('admin.analytics', $this->dashboardData());
+    }
+
+
     public function exportPdf()
     {
         /*
@@ -620,6 +626,50 @@ $totalNeedsAttention =
 
 
         /*
+         * =====================================================
+         * TEAM COLLABORATION
+         * =====================================================
+         * Keep the dashboard useful to multiple administrators without
+         * adding a new assignment schema. Support-response audit events
+         * provide a lightweight shared activity signal.
+         */
+        $answeredToday = SupportRequest::where('status', 'answered')
+            ->whereDate('answered_at', today())
+            ->count();
+
+        $teamRespondersToday = UserLog::query()
+            ->with('user:id,first_name,last_name,role')
+            ->whereDate('created_at', today())
+            ->whereIn('action', [
+                'answer_support_request',
+                'forward_support_response',
+            ])
+            ->whereHas('user', function ($query) {
+                $query->whereIn('role', ['admin', 'superadmin']);
+            })
+            ->latest()
+            ->get()
+            ->unique('user_id')
+            ->take(5)
+            ->values();
+
+        $recentTeamActivity = UserLog::query()
+            ->with('user:id,first_name,last_name,role')
+            ->whereIn('action', [
+                'answer_support_request',
+                'forward_support_response',
+                'delete_support_request',
+                'restore_support_request',
+            ])
+            ->whereHas('user', function ($query) {
+                $query->whereIn('role', ['admin', 'superadmin']);
+            })
+            ->latest()
+            ->limit(5)
+            ->get();
+
+
+        /*
         * =====================================================
         * RECENT SYSTEM ACTIVITY
         * =====================================================
@@ -866,6 +916,10 @@ $totalNeedsAttention =
             * Needs attention
             */
             'totalNeedsAttention' => $totalNeedsAttention,
+
+            'answeredToday' => $answeredToday,
+            'teamRespondersToday' => $teamRespondersToday,
+            'recentTeamActivity' => $recentTeamActivity,
 
 
             /*

@@ -177,22 +177,60 @@ public function prepareFromSupport(
             ], 422);
         }
 
-        $draft = $translator->prepareSupportRequestFaq(
-            $support->question,
-            $responseAnswer
-        );
+        /*
+         * Prepare the question independently. Structured response blocks are
+         * translated one-by-one below, so the answer language can never
+         * overwrite the question language.
+         */
+        $questionPair = $translator->prepareTextPair($support->question);
+        $questionDraft = [
+            'detected_language' => $questionPair['language'],
+            'question' => $questionPair['en'],
+            'question_fil' => $questionPair['fil'],
+        ];
 
+        if (!$latestResponse) {
+            $legacyDraft = $translator->prepareSupportRequestFaq(
+                $support->question,
+                $responseAnswer
+            );
+            $questionDraft['answer'] = $legacyDraft['answer'];
+            $questionDraft['answer_fil'] = $legacyDraft['answer_fil'];
+        }
+
+        /*
+         * Build bilingual response blocks independently.
+         * Each source block keeps its original wording in its own
+         * language and receives one translated counterpart. This avoids
+         * letting the language of the question incorrectly determine the
+         * language of the administrator's answer.
+         */
         if ($latestResponse) {
             foreach ($latestResponse->components as $component) {
                 $type = $component->type;
 
                 if ($type === 'text') {
+                    $text = trim((string) $component->content);
+                    if ($text === '') {
+                        continue;
+                    }
+
+                    $pair = $translator->prepareTextPair($text);
+
                     $responseComponents[] = [
                         'type' => 'text',
                         'language' => 'en',
-                        'content' => (string) $component->content,
+                        'content' => $pair['en'],
                         'label' => $component->label,
                     ];
+
+                    $responseComponents[] = [
+                        'type' => 'text',
+                        'language' => 'fil',
+                        'content' => $pair['fil'],
+                        'label' => $component->label,
+                    ];
+
                     continue;
                 }
 
@@ -229,26 +267,23 @@ public function prepareFromSupport(
         }
 
         /*
-         * Legacy tickets may not have a structured response row.
-         * In that case, seed the response builder from the legacy
-         * answer fields so the FAQ modal is still ready to review.
+         * Legacy tickets may not have structured response components.
+         * Seed both language response blocks from the legacy answer pair.
          */
         if (!collect($responseComponents)->contains(fn ($component) => ($component['type'] ?? null) === 'text')) {
             $responseComponents[] = [
                 'type' => 'text',
                 'language' => 'en',
-                'content' => $draft['answer'],
+                'content' => $questionDraft['answer'],
                 'label' => null,
             ];
 
-            if (!empty($draft['answer_fil'])) {
-                $responseComponents[] = [
-                    'type' => 'text',
-                    'language' => 'fil',
-                    'content' => $draft['answer_fil'],
-                    'label' => null,
-                ];
-            }
+            $responseComponents[] = [
+                'type' => 'text',
+                'language' => 'fil',
+                'content' => $questionDraft['answer_fil'],
+                'label' => null,
+            ];
         }
 
         /*
@@ -278,9 +313,9 @@ public function prepareFromSupport(
             'support_request_id' => $support->id,
             'agency_id' => $support->agency_id,
             'draft' => [
-                'detected_language' => $draft['detected_language'],
-                'question' => $draft['question'],
-                'question_fil' => $draft['question_fil'],
+                'detected_language' => $questionDraft['detected_language'],
+                'question' => $questionDraft['question'],
+                'question_fil' => $questionDraft['question_fil'],
                 'response_components' => $responseComponents,
             ],
         ]);
@@ -995,7 +1030,7 @@ $faq = Faq::create([
     'question_fil' => $request->question_fil,
     'answer_fil'   => $request->answer_fil,
 
-    'keywords'     => $request->keywords,
+    'keywords'     => $this->normalizeKeywords($request->keywords),
 
     'image'        => $imagePath,
 ]);
@@ -1176,7 +1211,7 @@ if ($imageChanged) {
     'question_fil' => $request->question_fil,
     'answer_fil'   => $request->answer_fil,
 
-    'keywords'     => $request->keywords,
+    'keywords'     => $this->normalizeKeywords($request->keywords),
 
     'image'        => $imagePath,
 
@@ -1688,6 +1723,45 @@ public function forceDestroy($id)
     /**
      * Remove only private files that are no longer referenced by the FAQ.
      */
+    /**
+     * Normalize comma/newline-separated FAQ keywords.
+     *
+     * A word may only appear once across the entire keyword field,
+     * case-insensitively. This prevents entries such as
+     * "police clearance, police, clearance" from being stored.
+     */
+    private function normalizeKeywords(?string $keywords): string
+    {
+        $seen = [];
+        $normalized = [];
+
+        foreach (preg_split('/[,\n]+/', (string) $keywords, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $keyword) {
+            $words = preg_split('/\s+/u', trim($keyword), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $uniqueWords = [];
+
+            foreach ($words as $word) {
+                $word = trim($word, " \t\r\n.,;:!?()[]{}\"'");
+                if ($word === '') {
+                    continue;
+                }
+
+                $key = mb_strtolower($word, 'UTF-8');
+                if (isset($seen[$key])) {
+                    continue;
+                }
+
+                $seen[$key] = true;
+                $uniqueWords[] = $word;
+            }
+
+            if ($uniqueWords !== []) {
+                $normalized[] = implode(' ', $uniqueWords);
+            }
+        }
+
+        return implode(', ', $normalized);
+    }
+
     private function deleteRemovedResponseComponentFiles(
         array $oldComponents,
         array $newComponents

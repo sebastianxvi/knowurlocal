@@ -215,6 +215,9 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     // Chatbot
     Route::post('/chat', [ChatbotController::class, 'ask'])
         ->middleware('throttle:chatbot');
+
+    Route::get('/chat/faqs/{faqId}/attachments/{componentIndex}', [ChatbotController::class, 'faqAttachment'])
+        ->name('chatbot.faq-attachment');
         
     Route::post(
     '/chat/support',
@@ -291,6 +294,9 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     // DASHBOARD
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('admin.dashboard');
+
+    Route::get('/analytics', [DashboardController::class, 'analytics'])
+        ->name('admin.analytics');
 
     Route::get(
         '/admin/dashboard/export',
@@ -376,10 +382,6 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::post('/faqs/translate', [FaqController::class, 'translate'])
         ->name('admin.faqs.translate');
 
-        Route::post(
-    '/faqs/generate-keywords',
-    [FaqController::class, 'generateKeywords']
-)->name('admin.faqs.generateKeywords');
 
 
 

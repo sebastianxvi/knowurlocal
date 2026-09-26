@@ -12,7 +12,9 @@ use App\Services\OpenRouterService;
 use App\Services\FaqMatcherService;
 use App\Services\FaqSemanticMatcherService;
 use App\Services\FaqIntentService;
+use App\Services\FaqAiMatcherService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class ChatbotController extends Controller
 {
@@ -46,6 +48,8 @@ class ChatbotController extends Controller
      * requirements, procedure, eligibility, fees, etc.
      */
     private FaqIntentService $faqIntent;
+
+    private FaqAiMatcherService $faqAiMatcher;
 
 
     /**
@@ -246,14 +250,74 @@ class ChatbotController extends Controller
         OpenRouterService $ai,
         FaqMatcherService $faqMatcher,
         FaqSemanticMatcherService $faqSemanticMatcher,
-        FaqIntentService $faqIntent
+        FaqIntentService $faqIntent,
+        FaqAiMatcherService $faqAiMatcher
     ) {
         $this->ai = $ai;
         $this->faqMatcher = $faqMatcher;
         $this->faqSemanticMatcher = $faqSemanticMatcher;
         $this->faqIntent = $faqIntent;
+        $this->faqAiMatcher = $faqAiMatcher;
     }
 
+
+    /**
+     * Build the exact public response from a stored FAQ.
+     *
+     * Nothing is translated, summarized, or rewritten here. Text blocks
+     * are returned exactly as authored in the selected language. Attachments
+     * are returned as their stored URLs/content so the client can render them.
+     */
+    private function faqResponsePayload(Faq $faq, string $question): array
+    {
+        $language = $this->detectResponseLanguage($question);
+        $components = is_array($faq->response_components) ? $faq->response_components : [];
+        $selectedLanguage = $language === 'fil' ? 'fil' : 'en';
+
+        $texts = collect($components)
+            ->filter(function ($component) use ($selectedLanguage) {
+                return ($component['type'] ?? null) === 'text'
+                    && (($component['language'] ?? 'en') === $selectedLanguage)
+                    && trim((string) ($component['content'] ?? '')) !== '';
+            })
+            ->pluck('content')
+            ->values()
+            ->all();
+
+        if ($texts === []) {
+            $fallback = $selectedLanguage === 'fil' ? $faq->answer_fil : $faq->answer;
+            if (filled($fallback)) {
+                $texts = [(string) $fallback];
+            }
+        }
+
+        $attachments = collect($components)
+            ->filter(fn ($component) => in_array(($component['type'] ?? null), ['image','file','link','qr_code'], true))
+            ->map(function ($component, $index) use ($faq) {
+                $type = $component['type'];
+                $url = null;
+                if (in_array($type, ['image','file'], true)) {
+                    $url = route('chatbot.faq-attachment', [
+                        'faqId' => $faq->id,
+                        'componentIndex' => $index,
+                    ]);
+                } else {
+                    $url = $component['content'] ?? null;
+                }
+                return [
+                    'type' => $type,
+                    'label' => $component['label'] ?? null,
+                    'url' => $url,
+                ];
+            })
+            ->values()
+            ->all();
+
+        return [
+            'content' => implode("\n\n", $texts),
+            'attachments' => $attachments,
+        ];
+    }
 
     /**
      * Record a chatbot interaction.
@@ -352,6 +416,39 @@ class ChatbotController extends Controller
         return $this->ai->chat($messages, 0.3);
     }
 
+
+    /**
+     * Serve an attachment that belongs to an active FAQ.
+     * The stored private path is never exposed to the client.
+     */
+    public function faqAttachment(int $faqId, int $componentIndex)
+    {
+        $faq = Faq::findOrFail($faqId);
+        $components = is_array($faq->response_components) ? $faq->response_components : [];
+        $component = $components[$componentIndex] ?? null;
+
+        abort_unless(
+            is_array($component) && in_array($component['type'] ?? null, ['image', 'file'], true),
+            404
+        );
+
+        $path = $component['content'] ?? null;
+        abort_unless(
+            is_string($path) && str_starts_with($path, 'faqs/responses/'),
+            404
+        );
+
+        abort_unless(Storage::disk('private')->exists($path), 404);
+
+        return Storage::disk('private')->response(
+            $path,
+            basename($path),
+            [
+                'Content-Disposition' => 'inline; filename="' . addslashes(basename($path)) . '"',
+                'X-Content-Type-Options' => 'nosniff',
+            ]
+        );
+    }
 
     /**
      * Return FAQ suggestions for the chatbot.
@@ -1310,6 +1407,51 @@ if (!empty($validated['faq_id'])) {
 
 
         // ============================================================
+        // 🤖 AI FAQ MATCHING
+        // ============================================================
+        // AI is used only to choose an existing FAQ. Once selected,
+        // the stored response is returned verbatim.
+        try {
+            $aiMatch = $this->faqAiMatcher->match(
+                $question,
+                $agencyId ? (int) $agencyId : ($mentionedAgency?->id ? (int) $mentionedAgency->id : null)
+            );
+
+            if ($aiMatch) {
+                $faq = $aiMatch['faq'];
+                $payload = $this->faqResponsePayload($faq, $question);
+
+                if (trim($payload['content']) === '' && empty($payload['attachments'])) {
+                    throw new RuntimeException('Matched FAQ has no publishable response content.');
+                }
+
+                $this->logChat(
+                    $question,
+                    $payload['content'],
+                    'answered',
+                    'ai',
+                    $faq->agency_id,
+                    $faq->id,
+                    (int) round($aiMatch['confidence'] * 100)
+                );
+
+                return response()->json([
+                    'choices' => [[
+                        'message' => [
+                            'content' => $payload['content'],
+                            'attachments' => $payload['attachments'],
+                        ],
+                    ]],
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('AI FAQ matching failed; continuing with local matching.', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+
+        // ============================================================
         // 🔍 RULE-BASED FAQ MATCHING
         // ============================================================
 
@@ -1561,23 +1703,15 @@ if (!empty($validated['faq_id'])) {
             /*
              * Return the approved answer to the frontend.
              */
-            return response()->json([
-                "choices" => [[
-                    "message" => [
-                        "content" => $reply,
+            $payload = $this->faqResponsePayload($bestFaq, $question);
 
-                        /*
-                         * Include the optional FAQ image.
-                         */
-                        "image" =>
-                            $bestFaq->image
-                                ? asset(
-                                    'storage/' .
-                                    $bestFaq->image
-                                )
-                                : null
-                    ]
-                ]]
+            return response()->json([
+                'choices' => [[
+                    'message' => [
+                        'content' => $payload['content'],
+                        'attachments' => $payload['attachments'],
+                    ],
+                ]],
             ]);
         }
 
@@ -1702,23 +1836,15 @@ if (!empty($validated['faq_id'])) {
                         /*
                          * Return the approved FAQ answer.
                          */
-                        return response()->json([
-                            "choices" => [[
-                                "message" => [
-                                    "content" => $reply,
+                        $payload = $this->faqResponsePayload($semanticFaq, $question);
 
-                                    /*
-                                     * Include the FAQ image when available.
-                                     */
-                                    "image" =>
-                                        $semanticFaq->image
-                                            ? asset(
-                                                'storage/' .
-                                                $semanticFaq->image
-                                            )
-                                            : null
-                                ]
-                            ]]
+                        return response()->json([
+                            'choices' => [[
+                                'message' => [
+                                    'content' => $payload['content'],
+                                    'attachments' => $payload['attachments'],
+                                ],
+                            ]],
                         ]);
                     }
                 }

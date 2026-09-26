@@ -335,6 +335,17 @@ if ($request->hasFile('answer_image')) {
         null,
 ]);
 
+        $newData = $this->buildAuditSnapshot($support->fresh());
+
+        $this->logAction(
+            'answer_support_request',
+            (int) $support->id,
+            (int) $support->agency_id,
+            null,
+            $newData,
+            'Answered Support Request #' . $support->id
+        );
+
 
         return back()->with(
             'success',
@@ -531,6 +542,15 @@ if (
         responseId: (int) $response->id,
         status: 'awaiting_confirmation',
     ));
+
+    $this->logAction(
+        'forward_support_response',
+        (int) $supportRequest->id,
+        (int) $validated['agency_id'],
+        null,
+        $this->buildAuditSnapshot($supportRequest->fresh()),
+        'Forwarded official response for Support Request #' . $supportRequest->id
+    );
 
     return response()->json([
         'success' => true,
@@ -1984,9 +2004,9 @@ if (
                 /*
                  * Preserve the related agency when available.
                  *
-                 * UserLog does not currently have a dedicated
-                 * Support Request foreign key, so the Support
-                 * Request ID is stored inside old_values.
+                 * The dedicated Support Request foreign key is stored alongside
+                 * the historical snapshot so the log can be resolved even
+                 * after the ticket is moved to trash.
                  */
                 'agency_id' =>
                     $agencyId,
@@ -2002,6 +2022,9 @@ if (
                  */
                 'category_id' =>
                     null,
+
+                'support_request_id' =>
+                    $supportRequestId,
 
                 /*
                  * Stable machine-readable action.
