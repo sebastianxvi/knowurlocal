@@ -2,767 +2,346 @@
 
 @section('title', 'KNOWURLOCAL | Analytics')
 @section('page-title', 'Analytics')
-@section('page-subtitle', 'Understand service demand, response activity, and knowledge-base performance')
+@section('page-subtitle', 'Operational trends, service demand, response performance, and knowledge-base health')
+@section('admin-page', 'analytics')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('cssfiles/admin/dashboard.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/analytics.css') }}">
 @endpush
 
 @section('content')
-<div class="analytics-page">
-    <section class="analytics-hero">
-        <div>
-            <span class="eyebrow">Decision support</span>
-            <h2>What the system is telling your team</h2>
-            <p>Use these signals to see where citizens need help, how quickly requests are handled, and where the knowledge base needs improvement.</p>
+<div
+    class="analytics-page"
+    data-analytics-root
+    data-analytics-url="{{ route('admin.analytics.data') }}"
+    data-analytics-current-period="{{ $period }}"
+    data-analytics-current-month="{{ $selectedMonth }}"
+>
+    <section class="analytics-report-header">
+        <div class="analytics-report-heading">
+            <span class="eyebrow">Operational report</span>
+            <h2>Analytics at a glance</h2>
+            <p>
+                A focused view of support demand, response performance, service demand,
+                and knowledge-base health.
+            </p>
         </div>
-        <a class="analytics-back" href="{{ route('admin.dashboard') }}">
-            <i class="ph-light ph-arrow-left"></i> Dashboard
-        </a>
+
+        <details class="analytics-export-menu">
+            <summary class="analytics-export-button" aria-label="Export report">
+                <i class="ph-light ph-export" aria-hidden="true"></i>
+                <span>Export</span>
+                <i class="ph-light ph-caret-down export-caret" aria-hidden="true"></i>
+            </summary>
+            <div class="analytics-export-dropdown">
+                <a href="{{ route('admin.analytics.export', ['period' => $period, 'month' => $selectedMonth]) }}" target="_blank" rel="noopener">
+                    <i class="ph-light ph-file-pdf"></i>
+                    <span><strong>Analytics report</strong><small>{{ $periodLabel }} selected period</small></span>
+                </a>
+                <a href="{{ route('admin.report.full', ['period' => $period, 'month' => $selectedMonth]) }}" target="_blank" rel="noopener">
+                    <i class="ph-light ph-files"></i>
+                    <span><strong>Full administrative report</strong><small>Dashboard + {{ $periodLabel }} analytics</small></span>
+                </a>
+            </div>
+        </details>
     </section>
 
-    {{-- =====================================================
-     ANALYTICS
-     ===================================================== --}}
+    {{-- ==================== OVERVIEW ==================== --}}
 
-<section class="dashboard-section">
-
-    <div class="section-heading">
-
-        <div class="section-heading-main">
-
-            <div class="section-heading-icon analytics-heading-icon">
-                <i class="ph-light ph-chart-line-up"></i>
-            </div>
-
-            <div class="section-heading-copy">
-
-                <span class="eyebrow">
-                    Analytics
-                </span>
-
-                <h2>
-                    Inquiry performance
-                </h2>
-
-                <p>
-                    Monitor citizen inquiries and administrator response activity.
-                </p>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    {{-- =================================================
-         ANALYTICS METRICS
-         ================================================= --}}
-
-    <div class="analytics-metrics">
-
-
-        {{-- RESPONSE RATE --}}
-
-        <div class="analytics-metric analytics-response">
-
-            <div class="analytics-metric-icon">
-                <i class="ph-light ph-chart-donut"></i>
-            </div>
-
-            <div class="analytics-metric-content">
-
-                <span>
-                    Response rate
-                </span>
-
-                <strong>
-                    {{ $responseRate }}%
-                </strong>
-
-                <small>
-                    {{ $answeredInquiries }}
-                    of
-                    {{ $totalInquiries }}
-                    inquiries answered
-                </small>
-
-            </div>
-
-        </div>
-
-
-        {{-- AVERAGE RESPONSE TIME --}}
-
-        <div class="analytics-metric analytics-time">
-
-            <div class="analytics-metric-icon">
-                <i class="ph-light ph-timer"></i>
-            </div>
-
-            <div class="analytics-metric-content">
-
-                <span>
-                    Average response
-                </span>
-
-                <strong>
-                    {{ $averageResponseTime ?? '—' }}
-                </strong>
-
-                <small>
-                    Time from submission to answer
-                </small>
-
-            </div>
-
-        </div>
-
-
-        {{-- ANSWERS SEEN --}}
-
-        <div class="analytics-metric analytics-seen">
-
-            <div class="analytics-metric-icon">
-                <i class="ph-light ph-eye"></i>
-            </div>
-
-            <div class="analytics-metric-content">
-
-                <span>
-                    Answers seen
-                </span>
-
-                <strong>
-                    {{ $seenAnswers }}
-                </strong>
-
-                <small>
-                    Citizens who viewed their answers
-                </small>
-
-            </div>
-
-        </div>
-
-
-        {{-- UNSEEN ANSWERS --}}
-
-        <div class="analytics-metric analytics-unseen">
-
-            <div class="analytics-metric-icon">
-                <i class="ph-light ph-envelope"></i>
-            </div>
-
-            <div class="analytics-metric-content">
-
-                <span>
-                    Awaiting view
-                </span>
-
-                <strong>
-                    {{ $unseenAnswers }}
-                </strong>
-
-                <small>
-                    Answered but not yet viewed
-                </small>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    {{-- =================================================
-         INQUIRY TREND
-         ================================================= --}}
-
-    <div class="analytics-chart-card">
-
-        <div class="analytics-chart-header">
-
+    <section class="analytics-section">
+        <div class="analytics-section-heading">
             <div>
-
-                <span class="eyebrow">
-                    Activity trend
-                </span>
-
-                <h3>
-                    Inquiry activity
-                </h3>
-
+                <span class="eyebrow">Current snapshot</span>
+                <h2>Support request overview</h2>
+                <p>Plain-language view of today’s workload, response performance, and what still needs attention.</p>
             </div>
-
-            <span class="analytics-period">
-                Last 7 days
-            </span>
-
         </div>
 
+        <div class="analytics-metrics analytics-metrics-six">
+            <article class="analytics-metric">
+                <div class="analytics-metric-icon"><i class="ph-light ph-chat-circle-text"></i></div>
+                <div class="analytics-metric-content">
+                    <span>Support requests received</span>
+                    <strong data-metric="total_inquiries">{{ number_format($totalInquiries) }}</strong>
+                    <small>All active requests currently recorded</small>
+                </div>
+            </article>
 
-        <div class="analytics-chart">
+            <article class="analytics-metric metric-attention">
+                <div class="analytics-metric-icon"><i class="ph-light ph-stack"></i></div>
+                <div class="analytics-metric-content">
+                    <span>Requests needing action</span>
+                    <strong data-metric="open_inquiries">{{ number_format($openInquiries) }}</strong>
+                    <small>Still waiting for a response or next step</small>
+                </div>
+            </article>
 
-            @php
+            <article class="analytics-metric metric-success">
+                <div class="analytics-metric-icon"><i class="ph-light ph-check-circle"></i></div>
+                <div class="analytics-metric-content">
+                    <span>Requests answered</span>
+                    <strong data-metric="response_rate">{{ $responseRate }}%</strong>
+                    <small data-metric-note="response_rate">{{ number_format($answeredInquiries) }} of {{ number_format($totalInquiries) }} active requests</small>
+                </div>
+            </article>
 
-                /*
-                 * Find the highest value across both
-                 * submitted and answered inquiries.
-                 *
-                 * This value is used to scale the
-                 * chart bars consistently.
-                 */
-                $chartMaximum = collect($inquiryTrend)
-                    ->flatMap(function ($day) {
-                        return [
-                            $day['submitted'],
-                            $day['answered'],
-                        ];
-                    })
-                    ->max();
+            <article class="analytics-metric">
+                <div class="analytics-metric-icon"><i class="ph-light ph-timer"></i></div>
+                <div class="analytics-metric-content">
+                    <span>Average response time</span>
+                    <strong data-metric="average_response_time">{{ $averageResponseTime ?? '—' }}</strong>
+                    <small>Average time from submission to official answer</small>
+                </div>
+            </article>
 
-                /*
-                 * Prevent division by zero when there
-                 * has been no activity during the period.
-                 */
-                $chartMaximum = max(
-                    $chartMaximum ?? 0,
-                    1
-                );
+            <article class="analytics-metric metric-success">
+                <div class="analytics-metric-icon"><i class="ph-light ph-eye"></i></div>
+                <div class="analytics-metric-content">
+                    <span>Answers opened</span>
+                    <strong data-metric="seen_answers">{{ number_format($seenAnswers) }}</strong>
+                    <small>Citizens who have opened an official answer</small>
+                </div>
+            </article>
 
-            @endphp
+            <article class="analytics-metric metric-attention">
+                <div class="analytics-metric-icon"><i class="ph-light ph-eye-slash"></i></div>
+                <div class="analytics-metric-content">
+                    <span>Answers not yet opened</span>
+                    <strong data-metric="unseen_answers">{{ number_format($unseenAnswers) }}</strong>
+                    <small>Official answers still waiting for citizen review</small>
+                </div>
+            </article>
+        </div>
 
+        <div class="analytics-grid-two">
+            {{-- Trend --}}
+            <article class="analytics-card analytics-trend-card">
+                <div class="analytics-card-header analytics-trend-header">
+                    <div>
+                        <span class="eyebrow">Selected period</span>
+                        <h3>Requests submitted vs. answered</h3>
+                        <p data-trend-description>Daily activity for the selected period.</p>
+                    </div>
+                    <div class="analytics-trend-controls" aria-label="Trend range">
+                        <div class="analytics-range-tabs" role="tablist" aria-label="Trend period">
+                            <button type="button" class="analytics-range-tab {{ $period === '7d' ? 'is-active' : '' }}" data-analytics-period="7d" role="tab" aria-selected="{{ $period === '7d' ? 'true' : 'false' }}">7d</button>
+                            <button type="button" class="analytics-range-tab {{ $period === '30d' ? 'is-active' : '' }}" data-analytics-period="30d" role="tab" aria-selected="{{ $period === '30d' ? 'true' : 'false' }}">1mo</button>
+                            <button type="button" class="analytics-range-tab {{ $period === 'month' ? 'is-active' : '' }}" data-analytics-period="month" role="tab" aria-selected="{{ $period === 'month' ? 'true' : 'false' }}">Month</button>
+                        </div>
+                        <label class="analytics-month-picker {{ $period === 'month' ? 'is-visible' : '' }}">
+                            <span class="sr-only">Select month</span>
+                            <i class="ph-light ph-calendar-blank"></i>
+                            <select data-analytics-month aria-label="Select calendar month">
+                                @for($i = 0; $i < 25; $i++)
+                                    @php $monthOption = now()->startOfMonth()->subMonths($i); @endphp
+                                    <option value="{{ $monthOption->format('Y-m') }}" @selected($selectedMonth === $monthOption->format('Y-m'))>{{ $monthOption->format('M Y') }}</option>
+                                @endfor
+                            </select>
+                        </label>
+                    </div>
+                    <div class="analytics-header-stat">
+                        <strong data-metric="trend_answered">{{ number_format($trendAnswered) }}</strong>
+                        <span data-trend-rate-label>{{ $periodLabel }} answered</span>
+                    </div>
+                </div>
 
-            <div class="analytics-chart-grid">
-
-                @foreach($inquiryTrend as $day)
-
+                <div class="analytics-chart" data-trend-chart aria-label="Support request trend chart">
                     @php
-
-                        /*
-                         * Convert the raw inquiry counts
-                         * into percentages for the chart.
-                         */
-                        $submittedHeight =
-                            ($day['submitted'] / $chartMaximum) * 100;
-
-                        $answeredHeight =
-                            ($day['answered'] / $chartMaximum) * 100;
-
+                        $chartMaximum = max(collect($inquiryTrend)->flatMap(fn ($day) => [$day['submitted'], $day['answered']])->max() ?? 0, 1);
                     @endphp
-
-
-                    <div class="analytics-chart-day">
-
-                        <div class="analytics-bars">
-
-                            {{-- SUBMITTED --}}
-
-                            <div
-                                class="analytics-bar analytics-bar-submitted"
-                                style="height: {{ max($submittedHeight, 3) }}%;"
-                                title="{{ $day['submitted'] }} submitted"
-                            ></div>
-
-
-                            {{-- ANSWERED --}}
-
-                            <div
-                                class="analytics-bar analytics-bar-answered"
-                                style="height: {{ max($answeredHeight, 3) }}%;"
-                                title="{{ $day['answered'] }} answered"
-                            ></div>
-
-                        </div>
-
-
-                        <span class="analytics-day-label">
-                            {{ $day['label'] }}
-                        </span>
-
+                    <div class="analytics-chart-grid">
+                        @foreach($inquiryTrend as $day)
+                            @php
+                                $submittedHeight = ($day['submitted'] / $chartMaximum) * 100;
+                                $answeredHeight = ($day['answered'] / $chartMaximum) * 100;
+                            @endphp
+                            <div class="analytics-chart-day" data-chart-day="{{ $day['date'] }}">
+                                <div class="analytics-chart-values">
+                                    <span class="analytics-chart-value submitted-value">{{ $day['submitted'] }}</span>
+                                    <span class="analytics-chart-value answered-value">{{ $day['answered'] }}</span>
+                                </div>
+                                <div class="analytics-bars">
+                                    <div class="analytics-bar analytics-bar-submitted" data-series="submitted" style="height: {{ max($submittedHeight, 2) }}%"></div>
+                                    <div class="analytics-bar analytics-bar-answered" data-series="answered" style="height: {{ max($answeredHeight, 2) }}%"></div>
+                                </div>
+                                <span class="analytics-day-label">{{ $day['label'] }}</span>
+                            </div>
+                        @endforeach
                     </div>
+                    <div class="analytics-legend">
+                        <span><i class="legend-dot submitted"></i>Submitted</span>
+                        <span><i class="legend-dot answered"></i>Answered</span>
+                    </div>
+                </div>
+            </article>
 
-                @endforeach
+            {{-- Status --}}
+            <article class="analytics-card">
+                <div class="analytics-card-header">
+                    <div>
+                        <span class="eyebrow">Current queue</span>
+                        <h3>Request status</h3>
+                        <p>Where active requests are in the response workflow.</p>
+                    </div>
+                    <i class="ph-light ph-funnel analytics-card-header-icon"></i>
+                </div>
 
-            </div>
-
-
-            {{-- =================================================
-                 CHART LEGEND
-                 ================================================= --}}
-
-            <div class="analytics-legend">
-
-                <span>
-                    <i class="analytics-legend-dot submitted"></i>
-                    Submitted
-                </span>
-
-                <span>
-                    <i class="analytics-legend-dot answered"></i>
-                    Answered
-                </span>
-
-            </div>
-
+                <div class="status-breakdown">
+                    <div class="status-row">
+                        <div><span class="status-dot pending"></span><strong>Pending</strong><small>Needs an administrator response</small></div>
+                        <b data-status="pending">{{ number_format($pendingInquiries) }}</b>
+                    </div>
+                    <div class="status-row">
+                        <div><span class="status-dot awaiting"></span><strong>Awaiting confirmation</strong><small>Answer sent; citizen has not confirmed</small></div>
+                        <b data-status="awaiting_confirmation">{{ number_format($awaitingConfirmation) }}</b>
+                    </div>
+                    <div class="status-row">
+                        <div><span class="status-dot followup"></span><strong>Needs follow-up</strong><small>Citizen requested more help</small></div>
+                        <b data-status="needs_follow_up">{{ number_format($needsFollowUp) }}</b>
+                    </div>
+                    <div class="status-row">
+                        <div><span class="status-dot answered"></span><strong>Answered</strong><small>Request has reached a completed state</small></div>
+                        <b data-status="answered">{{ number_format($answeredInquiries) }}</b>
+                    </div>
+                </div>
+            </article>
         </div>
 
-    </div>
-
-</section>
-
-
-
-
-
-{{-- =====================================================
-     KNOWLEDGE BASE & CHATBOT ANALYTICS
-     ===================================================== --}}
-
-<section class="dashboard-section">
-
-    <div class="section-heading">
-
-        <div class="section-heading-main">
-
-            <div class="section-heading-icon chatbot-heading-icon">
-                <i class="ph-light ph-chat-circle-dots"></i>
-            </div>
-
-            <div class="section-heading-copy">
-
-                <span class="eyebrow">
-                    Knowledge Base
-                </span>
-
-                <h2>
-                    Chatbot performance
-                </h2>
-
-                <p>
-                    Monitor how effectively KNOWURLOCAL answers citizen questions automatically.
-                </p>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    {{-- =================================================
-         CHATBOT METRICS
-         ================================================= --}}
-
-    <div class="analytics-metrics chatbot-metrics">
-
-
-        {{-- FAQ ANSWER RATE --}}
-
-        <div class="analytics-metric chatbot-answer-rate">
-
-            <div class="analytics-metric-icon">
-                <i class="ph-light ph-book-open-text"></i>
-            </div>
-
-            <div class="analytics-metric-content">
-
-                <span>
-                    FAQ answer rate
-                </span>
-
-                <strong>
-                    {{ $faqAnswerRate }}%
-                </strong>
-
-                <small>
-                    {{ number_format($faqAnswered) }}
-                    of
-                    {{ number_format($knowledgeQuestions) }}
-                    knowledge questions answered
-                </small>
-
-            </div>
-
-        </div>
-
-
-        {{-- FALLBACK RATE --}}
-
-        <div class="analytics-metric chatbot-fallback-rate">
-
-            <div class="analytics-metric-icon">
-                <i class="ph-light ph-arrow-u-down-left"></i>
-            </div>
-
-            <div class="analytics-metric-content">
-
-                <span>
-                    Fallback rate
-                </span>
-
-                <strong>
-                    {{ $fallbackRate }}%
-                </strong>
-
-                <small>
-                    {{ number_format($fallbackQuestions) }}
-                    questions could not use an FAQ
-                </small>
-
-            </div>
-
-        </div>
-
-
-        {{-- FAQ ANSWERS --}}
-
-        <div class="analytics-metric chatbot-faq-answers">
-
-            <div class="analytics-metric-icon">
-                <i class="ph-light ph-check-circle"></i>
-            </div>
-
-            <div class="analytics-metric-content">
-
-                <span>
-                    FAQ answers
-                </span>
-
-                <strong>
-                    {{ number_format($faqAnswered) }}
-                </strong>
-
-                <small>
-                    Answers provided from the knowledge base
-                </small>
-
-            </div>
-
-        </div>
-
-
-        {{-- TOTAL CHATBOT QUESTIONS --}}
-
-        <div class="analytics-metric chatbot-total">
-
-            <div class="analytics-metric-icon">
-                <i class="ph-light ph-chats-circle"></i>
-            </div>
-
-            <div class="analytics-metric-content">
-
-                <span>
-                    Chatbot questions
-                </span>
-
-                <strong>
-                    {{ number_format($knowledgeQuestions) }}
-                </strong>
-
-                <small>
-                    Information-seeking interactions
-                </small>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    {{-- =================================================
-         KNOWLEDGE BASE BREAKDOWN
-         ================================================= --}}
-
-    <div class="chatbot-analytics-grid">
-
-
-        {{-- =================================================
-             MOST USED FAQs
-             ================================================= --}}
-
-        <article class="chatbot-analytics-card">
-
-            <div class="chatbot-card-header">
-
+        <article class="analytics-card analytics-agency-card">
+            <div class="analytics-card-header">
                 <div>
-
-                    <span class="eyebrow">
-                        Knowledge Base
-                    </span>
-
-                    <h3>
-                        Most used FAQs
-                    </h3>
-
+                    <span class="eyebrow">Service demand</span>
+                    <h3>Agencies receiving the most support requests</h3>
+                    <p>Shows which agencies are handling the most citizen support requests. Higher volume means more incoming demand, not better or worse performance.</p>
                 </div>
-
-                <div class="chatbot-card-icon">
-                    <i class="ph-light ph-book-open-text"></i>
-                </div>
-
+                <i class="ph-light ph-buildings analytics-card-header-icon"></i>
             </div>
-
-
-            <div class="chatbot-ranking-list">
-
-                @forelse($popularFaqs as $item)
-
-                    <div class="chatbot-ranking-item">
-
-                        <div class="chatbot-ranking-main">
-
-                            <strong>
-                                {{ $item->faq?->question ?? 'FAQ no longer available' }}
-                            </strong>
-
-                            @if($item->faq?->agency)
-
-                                <span>
-                                    {{ $item->faq->agency->agency_name }}
-                                </span>
-
-                            @endif
-
-                        </div>
-
-                        <span class="chatbot-ranking-count">
-                            {{ number_format($item->usage_count) }}
-                        </span>
-
+            <div class="analytics-ranking-list" data-support-agencies>
+                @forelse($topSupportAgencies as $item)
+                    <div class="analytics-ranking-item">
+                        <span class="ranking-index">{{ $loop->iteration }}</span>
+                        <div><strong>{{ $item->agency?->agency_name ?? 'Unassigned agency' }}</strong><small>Support requests</small></div>
+                        <b>{{ number_format($item->request_count) }}</b>
                     </div>
-
                 @empty
-
-                    <div class="chatbot-analytics-empty">
-
-                        <i class="ph-light ph-book-open"></i>
-
-                        <span>
-                            No FAQ usage has been recorded yet.
-                        </span>
-
-                    </div>
-
+                    <div class="analytics-empty">No agency-linked support requests have been recorded yet.</div>
                 @endforelse
-
             </div>
-
         </article>
+    </section>
 
-
-        {{-- =================================================
-             KNOWLEDGE GAPS
-             ================================================= --}}
-
-        <article class="chatbot-analytics-card">
-
-            <div class="chatbot-card-header">
-
-                <div>
-
-                    <span class="eyebrow">
-                        Attention
-                    </span>
-
-                    <h3>
-                        Knowledge gaps
-                    </h3>
-
-                </div>
-
-                <div class="chatbot-card-icon chatbot-warning-icon">
-                    <i class="ph-light ph-warning-circle"></i>
-                </div>
-
-            </div>
-
-
-            <div class="chatbot-gap-list">
-
-
-                {{-- FALLBACK QUESTIONS --}}
-
-                <div class="chatbot-gap-item">
-
-                    <div class="chatbot-gap-icon chatbot-gap-warning">
-                        <i class="ph-light ph-arrow-u-down-left"></i>
-                    </div>
-
-                    <div class="chatbot-gap-content">
-
-                        <strong>
-                            Fallback questions
-                        </strong>
-
-                        <span>
-                            Questions that could not be answered using an FAQ.
-                        </span>
-
-                    </div>
-
-                    <strong class="chatbot-gap-count">
-                        {{ number_format($fallbackQuestions) }}
-                    </strong>
-
-                </div>
-
-
-                {{-- CLARIFICATION QUESTIONS --}}
-
-                <div class="chatbot-gap-item">
-
-                    <div class="chatbot-gap-icon chatbot-gap-info">
-                        <i class="ph-light ph-chat-circle-dots"></i>
-                    </div>
-
-                    <div class="chatbot-gap-content">
-
-                        <strong>
-                            Clarifications
-                        </strong>
-
-                        <span>
-                            Questions that required additional information.
-                        </span>
-
-                    </div>
-
-                    <strong class="chatbot-gap-count">
-                        {{ number_format($clarificationQuestions) }}
-                    </strong>
-
-                </div>
-
-
-                {{-- MATCHING METHODS --}}
-
-                <div class="chatbot-gap-item">
-
-                    <div class="chatbot-gap-icon chatbot-gap-success">
-                        <i class="ph-light ph-git-branch"></i>
-                    </div>
-
-                    <div class="chatbot-gap-content">
-
-                        <strong>
-                            Matching methods
-                        </strong>
-
-                        <span>
-                            Rule-based and AI-assisted FAQ matches recorded.
-                        </span>
-
-                    </div>
-
-                    <div class="chatbot-match-counts">
-
-                        <span>
-                            {{ number_format($ruleMatches) }}
-                            rule
-                        </span>
-
-                        <span>
-                            {{ number_format($semanticMatches) }}
-                            semantic
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </article>
-
-    </div>
-
-
-    {{-- =================================================
-         MOST REQUESTED AGENCIES
-         ================================================= --}}
-
-    <article class="chatbot-analytics-card chatbot-agency-card">
-
-        <div class="chatbot-card-header">
-
+    {{-- ==================== KNOWLEDGE BASE ==================== --}}
+    <section class="analytics-section">
+        <div class="analytics-section-heading">
             <div>
-
-                <span class="eyebrow">
-                    Citizen Interest
-                </span>
-
-                <h3>
-                    Most requested agencies
-                </h3>
-
+                <span class="eyebrow">Citizen information</span>
+                <h2>Chatbot and FAQ performance</h2>
+                <p>Understand how often citizens get answers from the knowledge base and where the content needs improvement.</p>
             </div>
-
-            <div class="chatbot-card-icon">
-                <i class="ph-light ph-buildings"></i>
-            </div>
-
         </div>
 
-
-        <div class="chatbot-agency-list">
-
-            @forelse($popularAgencies as $item)
-
-                <div class="chatbot-agency-item">
-
-                    <div class="chatbot-agency-rank">
-                        {{ $loop->iteration }}
-                    </div>
-
-                    <div class="chatbot-agency-info">
-
-                        <strong>
-                            {{ $item->agency?->agency_name ?? 'Agency no longer available' }}
-                        </strong>
-
-                        <span>
-                            Chatbot interactions
-                        </span>
-
-                    </div>
-
-                    <strong class="chatbot-agency-count">
-                        {{ number_format($item->interaction_count) }}
-                    </strong>
-
-                </div>
-
-            @empty
-
-                <div class="chatbot-analytics-empty">
-
-                    <i class="ph-light ph-buildings"></i>
-
-                    <span>
-                        No agency-related chatbot interactions have been recorded yet.
-                    </span>
-
-                </div>
-
-            @endforelse
-
+        <div class="analytics-metrics analytics-metrics-six">
+            <article class="analytics-metric">
+                <div class="analytics-metric-icon"><i class="ph-light ph-chats-circle"></i></div>
+                <div class="analytics-metric-content"><span>Chatbot questions</span><strong data-metric="chatbot_interactions">{{ number_format($totalChatbotInteractions) }}</strong><small>Total citizen questions logged by the chatbot</small></div>
+            </article>
+            <article class="analytics-metric metric-success">
+                <div class="analytics-metric-icon"><i class="ph-light ph-book-open-text"></i></div>
+                <div class="analytics-metric-content"><span>Answered from FAQs</span><strong data-metric="faq_answer_rate">{{ $faqAnswerRate }}%</strong><small data-metric-note="faq_answer_rate">{{ number_format($faqAnswered) }} questions answered using an FAQ</small></div>
+            </article>
+            <article class="analytics-metric metric-attention">
+                <div class="analytics-metric-icon"><i class="ph-light ph-warning-circle"></i></div>
+                <div class="analytics-metric-content"><span>Questions without an FAQ match</span><strong data-metric="fallback_rate">{{ $fallbackRate }}%</strong><small data-metric-note="fallback_rate">{{ number_format($fallbackQuestions) }} questions needed another answer path</small></div>
+            </article>
+            <article class="analytics-metric">
+                <div class="analytics-metric-icon"><i class="ph-light ph-chat-centered-dots"></i></div>
+                <div class="analytics-metric-content"><span>Questions needing clarification</span><strong data-metric="clarification_questions">{{ number_format($clarificationQuestions) }}</strong><small>Citizen questions that needed more context before answering</small></div>
+            </article>
+            <article class="analytics-metric">
+                <div class="analytics-metric-icon"><i class="ph-light ph-buildings"></i></div>
+                <div class="analytics-metric-content"><span>Complete agency profiles</span><strong data-metric="complete_agencies">{{ number_format($completeAgencies) }}</strong><small data-metric-note="complete_agencies">of {{ number_format($totalAgencies) }} active agency records</small></div>
+            </article>
+            <article class="analytics-metric metric-attention">
+                <div class="analytics-metric-icon"><i class="ph-light ph-file-text"></i></div>
+                <div class="analytics-metric-content"><span>FAQs needing completion</span><strong data-metric="incomplete_faqs">{{ number_format($incompleteFaqs) }}</strong><small data-metric-note="incomplete_faqs">{{ number_format($completeFaqs) }} complete of {{ number_format($totalFaqs) }} bilingual FAQs</small></div>
+            </article>
         </div>
 
-    </article>
+        <div class="analytics-grid-two">
+            <article class="analytics-card">
+                <div class="analytics-card-header">
+                    <div><span class="eyebrow">Knowledge usage</span><h3>FAQs used most often</h3><p>Shows which published FAQ answers are actually being used to answer citizen questions.</p></div>
+                    <i class="ph-light ph-book-open analytics-card-header-icon"></i>
+                </div>
+                <div class="analytics-ranking-list" data-popular-faqs>
+                    @forelse($popularFaqs as $item)
+                        <div class="analytics-ranking-item">
+                            <span class="ranking-index">{{ $loop->iteration }}</span>
+                            <div><strong>{{ $item->faq?->question ?? 'FAQ no longer available' }}</strong><small>{{ $item->faq?->agency?->agency_name ?? 'No agency' }}</small></div>
+                            <b>{{ number_format($item->usage_count) }}</b>
+                        </div>
+                    @empty
+                        <div class="analytics-empty">No FAQ usage has been recorded yet.</div>
+                    @endforelse
+                </div>
+            </article>
 
-</section>
+            <article class="analytics-card">
+                <div class="analytics-card-header">
+                    <div><span class="eyebrow">Citizen interest</span><h3>Agency topics asked about most</h3><p>Shows which agency topics citizens search for most through the chatbot.</p></div>
+                    <i class="ph-light ph-magnifying-glass analytics-card-header-icon"></i>
+                </div>
+                <div class="analytics-ranking-list" data-popular-agencies>
+                    @forelse($popularAgencies as $item)
+                        <div class="analytics-ranking-item">
+                            <span class="ranking-index">{{ $loop->iteration }}</span>
+                            <div><strong>{{ $item->agency?->agency_name ?? 'Agency no longer available' }}</strong><small>Chatbot questions</small></div>
+                            <b>{{ number_format($item->interaction_count) }}</b>
+                        </div>
+                    @empty
+                        <div class="analytics-empty">No agency-related chatbot questions have been recorded yet.</div>
+                    @endforelse
+                </div>
+            </article>
+        </div>
+    </section>
 
+    {{-- ==================== TEAM + DATA HEALTH ==================== --}}
+    <section class="analytics-section analytics-section-last">
+        <div class="analytics-section-heading">
+            <div>
+                <span class="eyebrow">Data & team health</span>
+                <h2>Information quality and team workload</h2>
+                <p>Quick checks for incomplete public information and administrator-to-administrator work that still needs attention.</p>
+            </div>
+        </div>
 
-
-
-
-
-
-
+        <div class="analytics-health-grid">
+            <article class="analytics-health-card">
+                <div class="health-icon"><i class="ph-light ph-buildings"></i></div>
+                <div><span>Agency profiles</span><strong><span data-metric="complete_agencies">{{ number_format($completeAgencies) }}</span> / {{ number_format($totalAgencies) }}</strong><small>profiles with all required public information</small></div>
+                <b class="health-badge" data-health="agencies">{{ $totalAgencies > 0 ? round(($completeAgencies / $totalAgencies) * 100) : 0 }}%</b>
+            </article>
+            <article class="analytics-health-card">
+                <div class="health-icon"><i class="ph-light ph-files"></i></div>
+                <div><span>FAQ content</span><strong><span data-metric="complete_faqs">{{ number_format($completeFaqs) }}</span> / {{ number_format($totalFaqs) }}</strong><small>FAQs complete in English and Filipino</small></div>
+                <b class="health-badge" data-health="faqs">{{ $totalFaqs > 0 ? round(($completeFaqs / $totalFaqs) * 100) : 0 }}%</b>
+            </article>
+            <article class="analytics-health-card">
+                <div class="health-icon"><i class="ph-light ph-users-three"></i></div>
+                <div><span>Team tasks still open</span><strong data-metric="collaboration_open">{{ number_format($collaborationOpen) }}</strong><small>handoffs or review work not finished yet</small></div>
+                <b class="health-badge" data-health="collaboration">{{ number_format($collaborationOverdue) }} overdue</b>
+            </article>
+            <article class="analytics-health-card">
+                <div class="health-icon"><i class="ph-light ph-check-square"></i></div>
+                <div><span>Team tasks completed</span><strong data-metric="collaboration_completed">{{ number_format($collaborationCompleted) }}</strong><small>completed during the selected trend period</small></div>
+                <b class="health-badge">Selected period</b>
+            </article>
+        </div>
+    </section>
 </div>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('jsfiles/admin/analytics.js') }}"></script>
+@endpush

@@ -32,24 +32,62 @@ class DashboardController extends Controller
      */
     public function analytics()
     {
-        return view('admin.analytics', $this->analyticsData());
+        return view('admin.analytics', $this->analyticsData('7d'));
     }
 
     /**
-     * Export a combined operational/analytics report.
+     * Export the brief dashboard summary.
+     */
+    public function exportDashboardPdf()
+    {
+        $pdf = Pdf::loadView('admin.reports.dashboard', $this->dashboardData());
+
+        return $pdf->download(
+            'KNOWURLOCAL_Dashboard_Summary_' . now()->format('Y-m-d') . '.pdf'
+        );
+    }
+
+    /**
+     * Export analytics for the exact period currently selected by the admin.
+     */
+    public function exportAnalyticsPdf()
+    {
+        $period = request()->query('period', '7d');
+        $month = request()->query('month');
+        $data = $this->analyticsData($period, $month);
+
+        $pdf = Pdf::loadView('admin.reports.analytics', $data);
+
+        return $pdf->download(
+            'KNOWURLOCAL_Analytics_' . ($data['period'] === 'month' ? $data['selectedMonth'] : $data['period']) . '_' . now()->format('Y-m-d') . '.pdf'
+        );
+    }
+
+    /**
+     * Export the full report, combining the concise dashboard summary with
+     * the selected analytics period.
+     */
+    public function exportFullPdf()
+    {
+        $analytics = $this->analyticsData(
+            request()->query('period', '7d'),
+            request()->query('month')
+        );
+
+        $data = array_merge($this->dashboardData(), $analytics);
+        $pdf = Pdf::loadView('admin.reports.full', $data);
+
+        return $pdf->download(
+            'KNOWURLOCAL_Full_Report_' . now()->format('Y-m-d') . '.pdf'
+        );
+    }
+
+    /**
+     * Backwards-compatible alias for older links/bookmarks.
      */
     public function exportPdf()
     {
-        $data = array_merge(
-            $this->dashboardData(true),
-            $this->analyticsData()
-        );
-
-        $pdf = Pdf::loadView('admin.report', $data);
-
-        return $pdf->download(
-            'KNOWURLOCAL_Admin_Report_' . now()->format('Y-m-d') . '.pdf'
-        );
+        return $this->exportDashboardPdf();
     }
 
     /**
@@ -257,14 +295,22 @@ class DashboardController extends Controller
      * Trend counts are aggregated by the database rather than loading
      * every request/log row into application memory.
      */
-    private function analyticsData(): array
+    private function analyticsData(?string $requestedPeriod = null, ?string $requestedMonth = null): array
     {
         $totalInquiries = SupportRequest::count();
 
-        $answeredInquiries = SupportRequest::where(
-            'status',
-            'answered'
-        )->count();
+        $statusCounts = SupportRequest::query()
+            ->select('status')
+            ->selectRaw('COUNT(*) AS total')
+            ->groupBy('status')
+            ->pluck('total', 'status')
+            ->map(fn ($value) => (int) $value);
+
+        $pendingInquiries = (int) ($statusCounts['pending'] ?? 0);
+        $awaitingConfirmation = (int) ($statusCounts['awaiting_confirmation'] ?? 0);
+        $needsFollowUp = (int) ($statusCounts['needs_follow_up'] ?? 0);
+        $answeredInquiries = (int) ($statusCounts['answered'] ?? 0);
+        $openInquiries = $pendingInquiries + $awaitingConfirmation + $needsFollowUp;
 
         $responseRate = $totalInquiries > 0
             ? round(($answeredInquiries / $totalInquiries) * 100)
@@ -287,13 +333,39 @@ class DashboardController extends Controller
             : $answeredInquiries;
 
         $averageResponseMinutes = $this->averageResponseMinutes();
+        $averageResponseTime = $this->formatMinutes($averageResponseMinutes);
 
-        $averageResponseTime = $this->formatMinutes(
-            $averageResponseMinutes
-        );
+        // The trend is user-selectable: a rolling 7-day window, a rolling
+        // 30-day window, or a calendar month such as July 2026.
+        $period = $requestedPeriod ?? request()->query('period', '7d');
+        if (! in_array($period, ['7d', '30d', 'month'], true)) {
+            $period = '7d';
+        }
 
-        $start = now()->startOfDay()->subDays(6);
-        $end = now()->endOfDay();
+        $selectedMonth = $requestedMonth ?? request()->query('month');
+        $periodLabel = '7 days';
+
+        if ($period === 'month') {
+            try {
+                $monthDate = $selectedMonth
+                    ? Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth()
+                    : now()->startOfMonth();
+            } catch (\Throwable $e) {
+                $monthDate = now()->startOfMonth();
+            }
+
+            $start = $monthDate->copy()->startOfMonth();
+            $end = $monthDate->copy()->endOfMonth();
+            $selectedMonth = $start->format('Y-m');
+            $periodLabel = $start->format('F Y');
+        } elseif ($period === '30d') {
+            $start = now()->startOfDay()->subDays(29);
+            $end = now()->endOfDay();
+            $periodLabel = '30 days';
+        } else {
+            $start = now()->startOfDay()->subDays(6);
+            $end = now()->endOfDay();
+        }
 
         $submittedByDay = SupportRequest::query()
             ->whereBetween('created_at', [$start, $end])
@@ -311,31 +383,74 @@ class DashboardController extends Controller
             ->groupBy('date')
             ->pluck('total', 'date');
 
-        $inquiryTrend = collect(range(0, 6))
-            ->map(function (int $day) use (
-                $start,
-                $submittedByDay,
-                $answeredByDay
-            ) {
+        $days = $start->diffInDays($end) + 1;
+        $inquiryTrend = collect(range(0, $days - 1))
+            ->map(function (int $day) use ($start, $submittedByDay, $answeredByDay) {
                 $date = $start->copy()->addDays($day);
                 $key = $date->format('Y-m-d');
 
                 return [
                     'date' => $key,
-                    'label' => $date->format('D'),
+                    'label' => $date->format('M j'),
                     'submitted' => (int) ($submittedByDay[$key] ?? 0),
                     'answered' => (int) ($answeredByDay[$key] ?? 0),
                 ];
             })
             ->all();
 
-        $totalChatbotInteractions = ChatbotLog::count();
+        $trendSubmitted = collect($inquiryTrend)->sum('submitted');
+        $trendAnswered = collect($inquiryTrend)->sum('answered');
+        // Do not present answered/submitted as a percentage: answers can legitimately
+        // exceed submissions in a period because administrators may clear a backlog.
+        // The UI therefore reports the actual number answered in the selected period.
+        $trendResponseRate = null;
+
+        // Data-management health: useful for administrators maintaining the
+        // public knowledge base, not just support operations.
+        $totalAgencies = Agency::count();
+        $incompleteAgencies = Agency::query()
+            ->where(function ($query) {
+                $query
+                    ->whereNull('agency_location')->orWhere('agency_location', '')
+                    ->orWhereNull('agency_description')->orWhere('agency_description', '')
+                    ->orWhereNull('services_offered')->orWhere('services_offered', '')
+                    ->orWhereNull('office_hours')->orWhere('office_hours', '')
+                    ->orWhereNull('lat')->orWhereNull('lng')
+                    ->orWhereNull('agency_type_id')->orWhereNull('category_id');
+            })
+            ->count();
+        $completeAgencies = max(0, $totalAgencies - $incompleteAgencies);
+
+        $totalFaqs = Faq::count();
+        $incompleteFaqs = Faq::query()
+            ->where(function ($query) {
+                $query
+                    ->whereNull('agency_id')
+                    ->orWhereNull('question')->orWhere('question', '')
+                    ->orWhereNull('answer')->orWhere('answer', '')
+                    ->orWhereNull('question_fil')->orWhere('question_fil', '')
+                    ->orWhereNull('answer_fil')->orWhere('answer_fil', '');
+            })
+            ->count();
+        $completeFaqs = max(0, $totalFaqs - $incompleteFaqs);
+
+        // Which agencies receive the most support requests? This is more
+        // actionable than showing only chatbot agency popularity.
+        $topSupportAgencies = SupportRequest::query()
+            ->whereNotNull('agency_id')
+            ->select('agency_id')
+            ->selectRaw('COUNT(*) AS request_count')
+            ->groupBy('agency_id')
+            ->orderByDesc('request_count')
+            ->limit(5)
+            ->with('agency')
+            ->get();
 
         /*
-         * Analytics migrations may not have been applied yet on an older
-         * installation. Keep the Analytics page renderable instead of
-         * throwing SQL errors for missing columns.
+         * Chatbot / knowledge-base analytics. The feature remains compatible
+         * with installations that have not yet applied the analytics columns.
          */
+        $totalChatbotInteractions = ChatbotLog::count();
         $hasOutcome = Schema::hasColumn('chatbot_logs', 'outcome');
         $hasFaqId = Schema::hasColumn('chatbot_logs', 'faq_id');
         $hasMatchMethod = Schema::hasColumn('chatbot_logs', 'match_method');
@@ -371,7 +486,7 @@ class DashboardController extends Controller
                     ->selectRaw('COUNT(*) AS usage_count')
                     ->groupBy('faq_id')
                     ->orderByDesc('usage_count')
-                    ->with('faq')
+                    ->with('faq.agency')
                     ->limit(5)
                     ->get();
             }
@@ -402,14 +517,44 @@ class DashboardController extends Controller
             ? round(($fallbackQuestions / $knowledgeQuestions) * 100)
             : 0;
 
+        // Collaboration is operational workload, so include it as a separate
+        // signal instead of mixing it into support-request counts.
+        $collaborationOpen = CollaborationTask::whereIn('status', ['open', 'in_progress'])->count();
+        $collaborationOverdue = CollaborationTask::whereIn('status', ['open', 'in_progress'])
+            ->whereNotNull('due_at')
+            ->where('due_at', '<', now())
+            ->count();
+        $collaborationCompleted = CollaborationTask::where('status', 'completed')
+            ->whereBetween('completed_at', [$start, $end])
+            ->count();
+
         return compact(
+            'period',
+            'selectedMonth',
+            'periodLabel',
+            'start',
+            'end',
             'totalInquiries',
+            'pendingInquiries',
+            'awaitingConfirmation',
+            'needsFollowUp',
+            'openInquiries',
             'answeredInquiries',
             'responseRate',
             'seenAnswers',
             'unseenAnswers',
             'averageResponseTime',
             'inquiryTrend',
+            'trendSubmitted',
+            'trendAnswered',
+            'trendResponseRate',
+            'totalAgencies',
+            'completeAgencies',
+            'incompleteAgencies',
+            'totalFaqs',
+            'completeFaqs',
+            'incompleteFaqs',
+            'topSupportAgencies',
             'totalChatbotInteractions',
             'knowledgeQuestions',
             'faqAnswered',
@@ -420,8 +565,84 @@ class DashboardController extends Controller
             'ruleMatches',
             'semanticMatches',
             'popularFaqs',
-            'popularAgencies'
+            'popularAgencies',
+            'collaborationOpen',
+            'collaborationOverdue',
+            'collaborationCompleted'
         );
+    }
+
+    /**
+     * JSON snapshot used by the Analytics page for background refreshes.
+     * The Blade page remains the initial render; this endpoint keeps the
+     * visible metrics and lists synchronized without a full page reload.
+     */
+    public function analyticsDataJson()
+    {
+        $data = $this->analyticsData(
+            request()->query('period', '7d'),
+            request()->query('month')
+        );
+
+        return response()->json([
+            'period' => $data['period'],
+            'selected_month' => $data['selectedMonth'],
+            'period_label' => $data['periodLabel'],
+            'updated_at' => now()->toIso8601String(),
+            'metrics' => [
+                'total_inquiries' => $data['totalInquiries'],
+                'open_inquiries' => $data['openInquiries'],
+                'answered_inquiries' => $data['answeredInquiries'],
+                'response_rate' => $data['responseRate'],
+                'average_response_time' => $data['averageResponseTime'],
+                'seen_answers' => $data['seenAnswers'],
+                'unseen_answers' => $data['unseenAnswers'],
+                'pending' => $data['pendingInquiries'],
+                'awaiting_confirmation' => $data['awaitingConfirmation'],
+                'needs_follow_up' => $data['needsFollowUp'],
+                'trend_submitted' => $data['trendSubmitted'],
+                'trend_answered' => $data['trendAnswered'],
+                'trend_response_rate' => $data['trendResponseRate'],
+                'total_agencies' => $data['totalAgencies'],
+                'complete_agencies' => $data['completeAgencies'],
+                'incomplete_agencies' => $data['incompleteAgencies'],
+                'total_faqs' => $data['totalFaqs'],
+                'complete_faqs' => $data['completeFaqs'],
+                'incomplete_faqs' => $data['incompleteFaqs'],
+                'chatbot_interactions' => $data['totalChatbotInteractions'],
+                'knowledge_questions' => $data['knowledgeQuestions'],
+                'faq_answered' => $data['faqAnswered'],
+                'faq_answer_rate' => $data['faqAnswerRate'],
+                'fallback_questions' => $data['fallbackQuestions'],
+                'fallback_rate' => $data['fallbackRate'],
+                'clarification_questions' => $data['clarificationQuestions'],
+                'rule_matches' => $data['ruleMatches'],
+                'semantic_matches' => $data['semanticMatches'],
+                'collaboration_open' => $data['collaborationOpen'],
+                'collaboration_overdue' => $data['collaborationOverdue'],
+                'collaboration_completed' => $data['collaborationCompleted'],
+            ],
+            'status_counts' => [
+                'pending' => $data['pendingInquiries'],
+                'awaiting_confirmation' => $data['awaitingConfirmation'],
+                'needs_follow_up' => $data['needsFollowUp'],
+                'answered' => $data['answeredInquiries'],
+            ],
+            'trend' => $data['inquiryTrend'],
+            'support_agencies' => $data['topSupportAgencies']->map(fn ($item) => [
+                'name' => $item->agency?->agency_name ?? 'Unassigned agency',
+                'count' => (int) $item->request_count,
+            ])->values(),
+            'popular_faqs' => $data['popularFaqs']->map(fn ($item) => [
+                'question' => $item->faq?->question ?? 'FAQ no longer available',
+                'agency' => $item->faq?->agency?->agency_name,
+                'count' => (int) $item->usage_count,
+            ])->values(),
+            'popular_agencies' => $data['popularAgencies']->map(fn ($item) => [
+                'name' => $item->agency?->agency_name ?? 'Agency no longer available',
+                'count' => (int) $item->interaction_count,
+            ])->values(),
+        ]);
     }
 
     /**

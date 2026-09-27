@@ -28,17 +28,23 @@
             </p>
         </div>
 
-        <a
-            href="{{ route('admin.dashboard.export') }}"
-            class="dashboard-export-button"
-            target="_blank"
-            rel="noopener"
-            aria-label="Export dashboard report as PDF"
-            title="Export PDF"
-        >
-            <i class="ph-light ph-file-pdf" aria-hidden="true"></i>
-            <span>Export PDF</span>
-        </a>
+        <details class="admin-export-menu">
+            <summary class="dashboard-export-button" aria-label="Export report">
+                <i class="ph-light ph-export" aria-hidden="true"></i>
+                <span>Export</span>
+                <i class="ph-light ph-caret-down export-caret" aria-hidden="true"></i>
+            </summary>
+            <div class="admin-export-dropdown">
+                <a href="{{ route('admin.dashboard.export') }}" target="_blank" rel="noopener">
+                    <i class="ph-light ph-file-pdf"></i>
+                    <span><strong>Dashboard summary</strong><small>Current operational snapshot</small></span>
+                </a>
+                <a href="{{ route('admin.report.full') }}" target="_blank" rel="noopener">
+                    <i class="ph-light ph-files"></i>
+                    <span><strong>Full administrative report</strong><small>Dashboard + 7-day analytics</small></span>
+                </a>
+            </div>
+        </details>
     </section>
 
 

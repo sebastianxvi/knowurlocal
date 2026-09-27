@@ -1094,3 +1094,9 @@
     background: currentColor;
     opacity: .55;
 }
+
+/* =========================================================
+   REPORT EXPORT MENU
+   ========================================================= */
+.admin-export-menu{position:relative;flex:0 0 auto}.admin-export-menu summary{list-style:none;cursor:pointer}.admin-export-menu summary::-webkit-details-marker{display:none}.dashboard-export-button{user-select:none}.export-caret{font-size:12px!important;color:#8a96a8;transition:transform .16s ease}.admin-export-menu[open] .export-caret{transform:rotate(180deg)}.admin-export-dropdown{position:absolute;top:calc(100% + 7px);right:0;z-index:40;width:250px;padding:6px;border:1px solid #dfe5ee;border-radius:10px;background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.12)}.admin-export-dropdown a{display:flex;align-items:flex-start;gap:9px;padding:9px;border-radius:7px;color:#334155;text-decoration:none}.admin-export-dropdown a:hover{background:#f6f8fc}.admin-export-dropdown a>i{font-size:16px;color:#315fbd;margin-top:1px}.admin-export-dropdown a span{display:flex;flex-direction:column;gap:2px}.admin-export-dropdown strong{font-size:10px;font-weight:650;color:#334155}.admin-export-dropdown small{font-size:8px;color:#94a3b8;line-height:1.3}
+@media(max-width:620px){.admin-export-dropdown{right:auto;left:0}.dashboard-export-button{min-height:32px;padding:0 10px}}

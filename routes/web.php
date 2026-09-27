@@ -290,6 +290,9 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::get('/analytics', [DashboardController::class, 'analytics'])
         ->name('admin.analytics');
 
+    Route::get('/analytics/data', [DashboardController::class, 'analyticsDataJson'])
+        ->name('admin.analytics.data');
+
     Route::post('/dashboard/collaboration', [CollaborationController::class, 'store'])
         ->name('admin.dashboard.collaboration.store');
 
@@ -301,8 +304,18 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
 
     Route::get(
         '/dashboard/export',
-        [DashboardController::class, 'exportPdf']
+        [DashboardController::class, 'exportDashboardPdf']
     )->name('admin.dashboard.export');
+
+    Route::get(
+        '/analytics/export',
+        [DashboardController::class, 'exportAnalyticsPdf']
+    )->name('admin.analytics.export');
+
+    Route::get(
+        '/reports/full/export',
+        [DashboardController::class, 'exportFullPdf']
+    )->name('admin.report.full');
 
     // LOGS (we will restrict data later)
     Route::get('/logs', [UserLogController::class, 'index'])
