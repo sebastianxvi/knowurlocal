@@ -221,6 +221,121 @@ async function handleRealtimeResponse(payload) {
 }
 
 /**
+ * Handle a direct/simple Support Request answer.
+ *
+ * This is separate from the official response-builder event because
+ * the legacy answer workflow does not create a response row.
+ */
+async function handleRealtimeAnswer(payload) {
+    if (
+        !payload ||
+        typeof payload !== 'object' ||
+        payload.status !== 'answered'
+    ) {
+        return;
+    }
+
+    const supportRequestId =
+        Number(payload.support_request_id);
+
+    if (
+        !Number.isSafeInteger(supportRequestId) ||
+        supportRequestId <= 0
+    ) {
+        return;
+    }
+
+    const card =
+        findInquiryCard(supportRequestId);
+
+    if (!card) {
+        return;
+    }
+
+    try {
+        const inquiry =
+            await fetchInquiry(supportRequestId);
+
+        if (
+            Number(inquiry.id) !==
+            supportRequestId
+        ) {
+            return;
+        }
+
+        updateInquiryCard(
+            card,
+            inquiry
+        );
+    } catch (error) {
+        console.error(
+            'KNOWURLOCAL realtime inquiry answer update failed.',
+            error
+        );
+    }
+}
+
+/**
+ * Handle any authoritative Support Request mutation.
+ *
+ * Unlike the response-created event, this event is emitted for
+ * every workflow transition that can change the citizen's tab:
+ * awaiting_confirmation, needs_follow_up, answered, and pending.
+ */
+async function handleRealtimeStatusUpdate(payload) {
+    if (
+        !payload ||
+        typeof payload !== 'object'
+    ) {
+        return;
+    }
+
+    const supportRequestId =
+        Number(payload.id ?? payload.support_request_id);
+
+    if (
+        !Number.isSafeInteger(supportRequestId) ||
+        supportRequestId <= 0
+    ) {
+        return;
+    }
+
+    const card =
+        findInquiryCard(supportRequestId);
+
+    if (!card) {
+        return;
+    }
+
+    try {
+        const inquiry =
+            await fetchInquiry(supportRequestId);
+
+        if (
+            Number(inquiry.id) !==
+            supportRequestId
+        ) {
+            return;
+        }
+
+        /*
+         * updateInquiryCard dispatches inquiry:updated after the
+         * authoritative status is written to the card. The filter
+         * module then immediately recalculates visibility/counts.
+         */
+        updateInquiryCard(
+            card,
+            inquiry
+        );
+    } catch (error) {
+        console.error(
+            'KNOWURLOCAL realtime inquiry status update failed.',
+            error
+        );
+    }
+}
+
+/**
  * Subscribe to the authenticated user's private channel.
  */
 function connectRealtime() {
@@ -250,6 +365,14 @@ function connectRealtime() {
         .listen(
             '.support.request.response.created',
             handleRealtimeResponse
+        )
+        .listen(
+            '.support.request.answer.created',
+            handleRealtimeAnswer
+        )
+        .listen(
+            '.support.request.updated',
+            handleRealtimeStatusUpdate
         );
 
     realtimeInitialized = true;

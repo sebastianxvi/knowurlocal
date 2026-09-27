@@ -20,7 +20,7 @@ const STATUS_CONFIG = {
 
     awaiting_confirmation: {
         label: 'Response available',
-        icon: 'ph-seal-question',
+        icon: 'ph-question',
     },
 
     needs_follow_up: {
@@ -364,7 +364,7 @@ function renderOfficialResponse(card, inquiry) {
         );
 
         title.appendChild(
-            createIcon('ph-seal-check')
+            createIcon('ph-check-circle')
         );
 
         const titleText = document.createElement('span');
@@ -479,6 +479,67 @@ function removePendingMessage(card) {
 }
 
 /**
+ * Keeps the small "New" response marker synchronized with the
+ * authoritative inquiry state.
+ */
+function updateUnreadIndicator(card, inquiry) {
+    const status = inquiry?.status;
+
+    if (inquiry?.answer_seen_at) {
+        card.dataset.answerSeen = '1';
+    }
+
+    const isUnread =
+        card?.dataset.answerSeen !== '1' &&
+        (
+            (
+                status === 'awaiting_confirmation' &&
+                !inquiry?.answer_seen_at
+            ) ||
+            (
+                status === 'answered' &&
+                !inquiry?.answer_seen_at
+            )
+        );
+
+    let indicator =
+        card.querySelector('.inquiry-unread-badge');
+
+    if (!isUnread) {
+        indicator?.remove();
+        return;
+    }
+
+    if (indicator) {
+        return;
+    }
+
+    const statusBadge =
+        card.querySelector('.inquiry-status-badge');
+
+    if (!statusBadge) {
+        return;
+    }
+
+    indicator = createElement(
+        'span',
+        'inquiry-unread-badge'
+    );
+
+    indicator.title = 'New response';
+    indicator.setAttribute(
+        'aria-label',
+        'New response'
+    );
+    indicator.textContent = 'New';
+
+    statusBadge.insertAdjacentElement(
+        'afterend',
+        indicator
+    );
+}
+
+/**
  * Updates the status UI.
  */
 function updateStatus(card, status) {
@@ -549,7 +610,7 @@ function createConfirmationSection(requestId) {
     );
 
     headerIcon.appendChild(
-        createIcon('ph-seal-question')
+        createIcon('ph-question')
     );
 
     const headerContent =
@@ -841,6 +902,11 @@ export function updateInquiryCard(
     updateStatus(
         card,
         inquiry.status
+    );
+
+    updateUnreadIndicator(
+        card,
+        inquiry
     );
 
     renderOfficialResponse(

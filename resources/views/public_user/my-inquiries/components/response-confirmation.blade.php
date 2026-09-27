@@ -4,7 +4,7 @@
 >
     <div class="response-confirmation-header">
         <div class="response-confirmation-icon" aria-hidden="true">
-            <i class="ph-light ph-seal-question"></i>
+            <i class="ph-light ph-question"></i>
         </div>
 
         <div>

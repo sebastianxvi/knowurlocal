@@ -30,6 +30,9 @@
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}">
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="user-id" content="{{ auth()->id() }}">
+    <meta name="broadcast-auth-endpoint" content="{{ url('/broadcasting/auth') }}">
+
 </head>
 <body>
 
@@ -511,7 +514,9 @@
         };
     </script>
 
-    <script src="{{ asset('jsfiles/public_user/navbar.js') }}" defer></script>
+    @vite('resources/js/echo.js')
+<script src="{{ asset('jsfiles/public_user/navbar.js') }}" defer></script>
+<script type="module" src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}"></script>
 <script src="{{ asset('jsfiles/public_user/map.js') }}" defer></script>
 <script src="{{ asset('jsfiles/public_user/chatbot.js') }}" defer></script>
 

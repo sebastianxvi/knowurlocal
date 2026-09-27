@@ -160,39 +160,50 @@ class AppServiceProvider extends ServiceProvider
                  */
                 if (!auth()->check()) {
 
-                    $view->with(
-                        'hasUnreadInquiry',
-                        false
-                    );
+                    $view->with([
+                        'hasUnreadInquiry' => false,
+                        'unreadInquiryCount' => 0,
+                    ]);
 
                     return;
                 }
 
                 /*
-                 * Check whether the authenticated user has at least
-                 * one answered inquiry whose answer has not yet been seen.
+                 * A citizen notification represents an official response
+                 * that still needs the citizen's attention.
+                 *
+                 * awaiting_confirmation is always actionable because the
+                 * citizen must review and confirm/follow up.
+                 *
+                 * answered + answer_seen_at NULL supports the legacy/simple
+                 * answer workflow where the response has not yet been opened.
                  */
-                $hasUnreadInquiry =
+                $unreadInquiryCount =
                     SupportRequest::where(
                         'user_id',
                         auth()->id()
                     )
-                    ->where(
-                        'status',
-                        'answered'
-                    )
-                    ->whereNull(
-                        'answer_seen_at'
-                    )
-                    ->exists();
+                    ->where(function ($query) {
+                        $query
+                            ->where('status', 'awaiting_confirmation')
+                            ->whereNull('answer_seen_at')
+                            ->orWhere(function ($query) {
+                                $query
+                                    ->where('status', 'answered')
+                                    ->whereNull('answer_seen_at');
+                            });
+                    })
+                    ->count();
 
                 /*
-                 * Make the result available to the public-user view.
+                 * Keep the boolean available for existing public views,
+                 * while exposing the authoritative numeric count for the
+                 * notification badge.
                  */
-                $view->with(
-                    'hasUnreadInquiry',
-                    $hasUnreadInquiry
-                );
+                $view->with([
+                    'hasUnreadInquiry' => $unreadInquiryCount > 0,
+                    'unreadInquiryCount' => $unreadInquiryCount,
+                ]);
             }
         );
 

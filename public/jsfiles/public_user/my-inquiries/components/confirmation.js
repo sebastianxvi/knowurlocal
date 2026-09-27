@@ -259,6 +259,19 @@ function initializeConfirmation() {
             );
 
             /*
+            | Tell the filter module that the inquiry moved
+            | to a different workflow tab.
+            */
+            window.dispatchEvent(
+                new CustomEvent("inquiry:updated", {
+                    detail: {
+                        card,
+                        status: card.dataset.status,
+                    },
+                })
+            );
+
+            /*
             | The confirmation UI is no longer needed after
             | the citizen accepts the response.
             */
@@ -477,6 +490,19 @@ function initializeConfirmation() {
             updateStatusLabel(
                 card,
                 card.dataset.status
+            );
+
+            /*
+            | Tell the filter module that the inquiry moved
+            | from Needs Attention to Follow-up.
+            */
+            window.dispatchEvent(
+                new CustomEvent("inquiry:updated", {
+                    detail: {
+                        card,
+                        status: card.dataset.status,
+                    },
+                })
             );
 
             /*

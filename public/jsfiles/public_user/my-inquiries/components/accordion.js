@@ -71,7 +71,7 @@ function initializeAccordion() {
         | Support both the current and legacy unread indicator names.
         */
         const unreadIndicator = card.querySelector(
-            ".unread-inquiry-dot, .unread-dot"
+            ".inquiry-unread-badge, .unread-inquiry-dot, .unread-dot"
         );
 
         /*
@@ -120,6 +120,14 @@ function initializeAccordion() {
             | that the request succeeded.
             */
             unreadIndicator.remove();
+
+            // Keep the client-side card state aligned with the server so
+            // subsequent UI refreshes do not treat this response as new.
+            card.dataset.answerSeen = "1";
+
+            window.dispatchEvent(
+                new CustomEvent("inquiry:notification-changed")
+            );
 
         } catch (error) {
             /*
@@ -179,7 +187,10 @@ function initializeAccordion() {
         | The legacy "seen" endpoint is only relevant once
         | the inquiry has reached the answered state.
         */
-        if (card.dataset.status === "answered") {
+        if (
+            card.dataset.status === "awaiting_confirmation" ||
+            card.dataset.status === "answered"
+        ) {
             markAnswerAsSeen(card);
         }
     };

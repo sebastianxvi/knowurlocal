@@ -28,7 +28,7 @@
     <title>KNOWURLOCAL | My Inquiries</title>
 
     <!-- Phosphor Icons -->
-    <script src="https://unpkg.com/phosphor-icons"></script>
+    <script src="https://unpkg.com/phosphor-icons@1.4.2"></script>
 
     <!-- Global theme -->
     <link

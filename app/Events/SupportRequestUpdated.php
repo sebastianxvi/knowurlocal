@@ -16,14 +16,28 @@ class SupportRequestUpdated implements ShouldBroadcastNow
         public int $id,
         public string $action = 'updated',
         public ?int $responseId = null,
+        public ?int $userId = null,
     ) {
     }
 
     public function broadcastOn(): array
     {
-        return [
+        $channels = [
             new PrivateChannel('admin.support-requests'),
         ];
+
+        /*
+         * Citizen-side status changes use the same authoritative
+         * event as the admin workspace. The user channel is private,
+         * so only the owner of this inquiry receives the update.
+         */
+        if ($this->userId !== null) {
+            $channels[] = new PrivateChannel(
+                'App.Models.User.' . $this->userId
+            );
+        }
+
+        return $channels;
     }
 
     public function broadcastAs(): string

@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Services\SupportRequestResponseService;
 use App\Events\SupportRequestResponseCreated;
+use App\Events\SupportRequestAnswerCreated;
 use App\Events\SupportRequestUpdated;
 
 class SupportRequestController extends Controller
@@ -346,6 +347,19 @@ if ($request->hasFile('answer_image')) {
             $support->fresh(),
             'answer_updated'
         );
+
+        try {
+            broadcast(new SupportRequestAnswerCreated(
+                userId: (int) $support->user_id,
+                supportRequestId: (int) $support->id,
+                status: 'answered',
+            ));
+        } catch (\Throwable $e) {
+            \Log::warning('Citizen support answer realtime broadcast failed.', [
+                'support_request_id' => $support->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         $newData = $this->buildAuditSnapshot($support->fresh());
 
@@ -1099,6 +1113,36 @@ public function userInquiry($id)
 
     /**
      * =========================================================
+     * 🔔 CITIZEN NOTIFICATION COUNT
+     * =========================================================
+     *
+     * Returns the current authoritative count used by the
+     * public navigation notification badge.
+     */
+    public function notificationCount()
+    {
+        $count = SupportRequest::query()
+            ->where('user_id', auth()->id())
+            ->where(function ($query) {
+                $query
+                    ->where('status', 'awaiting_confirmation')
+                    ->whereNull('answer_seen_at')
+                    ->orWhere(function ($query) {
+                        $query
+                            ->where('status', 'answered')
+                            ->whereNull('answer_seen_at');
+                    });
+            })
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'count' => $count,
+        ]);
+    }
+
+    /**
+     * =========================================================
      * 👤 USER VIEW
      * =========================================================
      *
@@ -1173,7 +1217,7 @@ public function userInquiry($id)
     public function markAnswerSeen($id)
     {
         /*
-         * Retrieve only an answered request belonging to the
+         * Retrieve only a request with a response available to the
          * currently authenticated user.
          *
          * This prevents IDOR-style access where one user could
@@ -1185,9 +1229,12 @@ public function userInquiry($id)
                 'user_id',
                 auth()->id()
             )
-            ->where(
+            ->whereIn(
                 'status',
-                'answered'
+                [
+                    'awaiting_confirmation',
+                    'answered',
+                ]
             )
             ->firstOrFail();
 
@@ -1500,6 +1547,19 @@ public function update(
         $support->fresh(),
         'answer_updated'
     );
+
+    try {
+        broadcast(new SupportRequestAnswerCreated(
+            userId: (int) $support->user_id,
+            supportRequestId: (int) $support->id,
+            status: 'answered',
+        ));
+    } catch (\Throwable $e) {
+        \Log::warning('Citizen support answer update realtime broadcast failed.', [
+            'support_request_id' => $support->id,
+            'error' => $e->getMessage(),
+        ]);
+    }
 
     /*
      * =====================================================
@@ -1987,6 +2047,7 @@ if (
                 id: (int) $supportRequest->id,
                 action: $action,
                 responseId: $responseId,
+                userId: (int) $supportRequest->user_id,
             ));
         } catch (\Throwable $e) {
             // Realtime delivery must never roll back a successful database operation.

@@ -153,6 +153,11 @@ body{
 }
 
 </style>
+
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="user-id" content="{{ auth()->id() }}">
+    <meta name="broadcast-auth-endpoint" content="{{ url('/broadcasting/auth') }}">
+
 </head>
 
 <body>
@@ -217,7 +222,9 @@ body{
 
 </div>
 
+@vite('resources/js/echo.js')
 <script src="{{ asset('jsfiles/public_user/navbar.js') }}" defer></script>
+<script type="module" src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}"></script>
 
 </body>
 </html>

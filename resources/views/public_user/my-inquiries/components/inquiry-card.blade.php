@@ -10,7 +10,7 @@
 
     $statusIcons = [
         'pending' => 'ph-clock',
-        'awaiting_confirmation' => 'ph-seal-question',
+        'awaiting_confirmation' => 'ph-question',
         'needs_follow_up' => 'ph-arrow-counter-clockwise',
         'answered' => 'ph-check',
     ];
@@ -20,6 +20,7 @@
     class="inquiry-card"
     data-id="{{ $req->id }}"
     data-status="{{ $req->status }}"
+    data-answer-seen="{{ $req->answer_seen_at ? '1' : '0' }}"
 >
     <button
         type="button"
@@ -43,6 +44,20 @@
 
                     {{ $statusLabels[$req->status] ?? ucfirst(str_replace('_', ' ', $req->status)) }}
                 </span>
+
+                @if (
+                    $req->status === 'awaiting_confirmation' && is_null($req->answer_seen_at) ||
+                    ($req->status === 'answered' && is_null($req->answer_seen_at))
+                )
+                    <span
+                        class="inquiry-unread-badge"
+                        data-unread-response
+                        title="New response"
+                        aria-label="New response"
+                    >
+                        New
+                    </span>
+                @endif
 
                 @if ($req->created_at)
                     <time
@@ -109,7 +124,7 @@
                         <div class="official-response-title">
 
                             <i
-                                class="ph-light ph-seal-check"
+                                class="ph-light ph-check-circle"
                                 aria-hidden="true"
                             ></i>
 

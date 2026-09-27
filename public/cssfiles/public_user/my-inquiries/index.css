@@ -149,7 +149,74 @@
    ========================================================= */
 
 .inquiries-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
     margin-bottom: 22px;
+}
+
+.inquiries-search-row {
+    width: 100%;
+}
+
+.inquiries-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 9px;
+    background: var(--surface, #ffffff);
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.inquiries-search:focus-within {
+    border-color: rgba(37, 99, 235, 0.45);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.inquiries-search > i {
+    flex: 0 0 auto;
+    margin-left: 12px;
+    color: var(--text-muted, #9ca3af);
+    font-size: 16px;
+}
+
+.inquiries-search input {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 38px 0 9px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text-primary, #111827);
+    font-size: 12px;
+}
+
+.inquiries-search input::placeholder {
+    color: var(--text-muted, #9ca3af);
+}
+
+.inquiries-search-clear {
+    position: absolute;
+    right: 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted, #9ca3af);
+    cursor: pointer;
+}
+
+.inquiries-search-clear:hover {
+    background: var(--surface-secondary, #f9fafb);
+    color: var(--text-primary, #374151);
 }
 
 .inquiries-filter-tabs {
@@ -185,6 +252,26 @@
 .inquiries-filter-tab i {
     font-size: 15px;
     opacity: 0.88;
+}
+
+.inquiries-filter-tab strong {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--surface-secondary, #f3f4f6);
+    color: var(--text-muted, #6b7280);
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.inquiries-filter-tab.active strong {
+    background: var(--primary-soft, #eff6ff);
+    color: var(--primary-color, #2563eb);
 }
 
 .inquiries-filter-tab:hover {
@@ -380,6 +467,21 @@
     border-color: #bbf7d0;
     background: #f0fdf4;
     color: #15803d;
+}
+
+.inquiry-unread-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 0 7px;
+    border: 1px solid #fecaca;
+    border-radius: 999px;
+    background: #fef2f2;
+    color: #dc2626;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.01em;
 }
 
 .inquiry-date {
@@ -1003,6 +1105,7 @@
    ========================================================= */
 
 .inquiries-back-button:focus-visible,
+.inquiries-search-clear:focus-visible,
 .inquiries-filter-tab:focus-visible,
 .inquiry-toggle:focus-visible,
 .response-image-trigger:focus-visible,
@@ -1013,91 +1116,163 @@
     outline-offset: 3px;
 }
 
-
 /* =========================================================
-   RESPONSIVE
+   STANDALONE PAGE / RESPONSIVE FOUNDATION
    ========================================================= */
+
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    overflow-x: clip;
+}
+
+body {
+    background: var(--page-background, #f7f8fa);
+    overflow-x: clip;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+.image-lightbox,
+.image-lightbox * {
+    box-sizing: border-box;
+}
 
 @media (max-width: 760px) {
     .inquiries-page {
-        padding: 24px 18px 48px;
+        width: 100%;
+        max-width: 100%;
+        padding: 22px 16px 48px;
     }
 
     .inquiries-page-header {
+        width: 100%;
         align-items: flex-start;
         flex-direction: column;
-        gap: 14px;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .inquiries-header-copy {
+        width: 100%;
+    }
+
+    .inquiries-header-copy h1 {
+        font-size: 24px;
+    }
+
+    .inquiries-header-copy p {
+        max-width: 100%;
+        font-size: 12px;
     }
 
     .inquiries-back-button {
         order: -1;
+        align-self: flex-start;
     }
 
+    .inquiries-search {
+        min-height: 44px;
+    }
+
+    /*
+     * Keep the filter bar fully inside the viewport.
+     * Four compact controls share the available width rather
+     * than creating a horizontal scrolling strip.
+     */
     .inquiries-filter-tabs {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         width: 100%;
-        overflow-x: auto;
-    }
-
-    .inquiries-filter-tab {
-        flex: 1 0 auto;
-    }
-
-    .inquiries-section-heading {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 6px;
-    }
-}
-
-@media (max-width: 520px) {
-    .inquiries-page {
-        padding: 20px 14px 40px;
-    }
-
-    .inquiries-header-copy h1 {
-        font-size: 23px;
-    }
-
-    .inquiries-header-copy p {
-        font-size: 12px;
-    }
-
-    .inquiries-filter-tabs {
-        gap: 2px;
+        max-width: 100%;
+        gap: 3px;
+        overflow: hidden;
         padding: 3px;
     }
 
     .inquiries-filter-tab {
-        min-height: 33px;
-        padding: 0 9px;
-        font-size: 11px;
+        min-width: 0;
+        width: 100%;
+        flex: none;
+        padding: 0 6px;
+        gap: 5px;
+        overflow: hidden;
     }
 
     .inquiries-filter-tab span {
-        display: none;
-    }
-
-    .inquiries-filter-tab i {
-        font-size: 16px;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .inquiry-toggle {
+        align-items: flex-start;
         gap: 10px;
         padding: 13px;
+    }
+
+    .inquiry-chevron {
+        flex: 0 0 30px;
+        margin-top: 2px;
     }
 
     .inquiry-card-topline {
         gap: 6px;
     }
 
-    .inquiry-date {
-        margin-left: 0;
-        width: 100%;
+    .inquiry-question {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .inquiry-agency {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .official-response-header {
+        flex-wrap: wrap;
+    }
+
+    .response-component-text p {
+        overflow-wrap: anywhere;
+    }
+
+    .response-component-image img {
+        display: block;
+        width: auto;
+        max-width: 100%;
+        height: auto;
+    }
+
+    .response-link-info a,
+    .response-file-info a,
+    .response-qr-info a {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .inquiries-section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 5px;
     }
 
     .inquiry-details {
-        margin-left: 13px;
-        margin-right: 13px;
+        margin-left: 12px;
+        margin-right: 12px;
     }
 
     .official-response,
@@ -1111,10 +1286,97 @@
 
     .confirmation-btn {
         width: 100%;
+        min-width: 0;
     }
 
     .image-lightbox {
+        width: 100%;
+        max-width: 100%;
         padding: 16px;
+        overflow: hidden;
+    }
+}
+
+@media (max-width: 520px) {
+    .inquiries-page {
+        padding: 18px 12px 36px;
+    }
+
+    .inquiries-header-copy h1 {
+        font-size: 22px;
+    }
+
+    .inquiries-header-copy p {
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    /*
+     * 16px prevents mobile browsers from automatically zooming
+     * the page when the search field receives focus.
+     */
+    .inquiries-search input {
+        min-height: 42px;
+        font-size: 16px;
+    }
+
+    .inquiries-filter-tabs {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 2px;
+        padding: 3px;
+    }
+
+    .inquiries-filter-tab {
+        min-height: 34px;
+        padding: 0 4px;
+        font-size: 11px;
+    }
+
+    .inquiries-filter-tab span {
+        display: none;
+    }
+
+    .inquiries-filter-tab strong {
+        display: inline-flex;
+    }
+
+    .inquiries-filter-tab i {
+        flex: 0 0 auto;
+        font-size: 16px;
+    }
+
+    .inquiry-toggle {
+        padding: 12px;
+    }
+
+    .inquiry-card-topline {
+        align-items: flex-start;
+    }
+
+    .inquiry-id,
+    .inquiry-status-badge,
+    .inquiry-unread-badge {
+        flex: 0 0 auto;
+    }
+
+    .inquiry-date {
+        flex-basis: 100%;
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .inquiry-details {
+        margin-left: 10px;
+        margin-right: 10px;
+    }
+
+    .official-response,
+    .response-confirmation {
+        padding: 11px;
+    }
+
+    .image-lightbox {
+        padding: 12px;
     }
 }
 

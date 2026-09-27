@@ -93,14 +93,14 @@
                 aria-hidden="true"
             ></i>
 
-            @if($hasUnreadInquiry ?? false)
-
-                <span
-                    class="menu-notification-dot"
-                    aria-label="You have an unread inquiry response"
-                ></span>
-
-            @endif
+            <span
+                class="menu-notification-badge"
+                data-inquiry-notification-badge
+                data-count="{{ $unreadInquiryCount ?? 0 }}"
+                aria-live="polite"
+                aria-atomic="true"
+                @if(($unreadInquiryCount ?? 0) <= 0) hidden @endif
+            >{{ ($unreadInquiryCount ?? 0) > 99 ? '99+' : ($unreadInquiryCount ?? 0) }}</span>
 
         </button>
 
@@ -178,14 +178,14 @@
                     </span>
 
 
-                    @if($hasUnreadInquiry ?? false)
-
-                        <span
-                            class="account-notification-dot"
-                            aria-label="You have an unread inquiry response"
-                        ></span>
-
-                    @endif
+                    <span
+                        class="account-notification-badge"
+                        data-inquiry-notification-badge
+                        data-count="{{ $unreadInquiryCount ?? 0 }}"
+                        aria-live="polite"
+                        aria-atomic="true"
+                        @if(($unreadInquiryCount ?? 0) <= 0) hidden @endif
+                    >{{ ($unreadInquiryCount ?? 0) > 99 ? '99+' : ($unreadInquiryCount ?? 0) }}</span>
 
 
                     <i
@@ -219,12 +219,14 @@
 
                         </span>
 
-                        @if($hasUnreadInquiry ?? false)
-                            <span
-                                class="inquiry-notification-dot"
-                                aria-label="You have an unread inquiry response"
-                            ></span>
-                        @endif
+                        <span
+                            class="inquiry-notification-badge"
+                            data-inquiry-notification-badge
+                            data-count="{{ $unreadInquiryCount ?? 0 }}"
+                            aria-live="polite"
+                            aria-atomic="true"
+                            @if(($unreadInquiryCount ?? 0) <= 0) hidden @endif
+                        >{{ ($unreadInquiryCount ?? 0) > 99 ? '99+' : ($unreadInquiryCount ?? 0) }}</span>
                     </a>
 
 

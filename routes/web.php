@@ -191,6 +191,13 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     ->name('user.inquiries.follow-up');
 
     Route::get(
+        '/my-inquiries/notification-count',
+        [SupportRequestController::class, 'notificationCount']
+    )
+    ->middleware('throttle:120,1')
+    ->name('user.inquiries.notification-count');
+
+    Route::get(
         '/my-inquiries/{id}',
         [SupportRequestController::class, 'userInquiry']
     )

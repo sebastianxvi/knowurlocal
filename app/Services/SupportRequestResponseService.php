@@ -80,6 +80,7 @@ class SupportRequestResponseService
                  */
                 $supportRequest->update([
                     'status' => 'awaiting_confirmation',
+                    'answer_seen_at' => null,
                 ]);
 
                 return $response->load('components');
