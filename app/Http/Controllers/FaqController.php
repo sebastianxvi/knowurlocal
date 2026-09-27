@@ -178,11 +178,37 @@ public function prepareFromSupport(
         }
 
         /*
-         * Prepare the question independently. Structured response blocks are
-         * translated one-by-one below, so the answer language can never
-         * overwrite the question language.
+         * Translate the entire conversion in one batch.
+         *
+         * This is the key reliability change: a support request can contain
+         * several response blocks, so making one remote AI request per block
+         * made the whole conversion vulnerable to latency and transient
+         * provider failures.
          */
-        $questionPair = $translator->prepareTextPair($support->question);
+        $translationInputs = [
+            'question' => (string) $support->question,
+        ];
+
+        if (!$latestResponse) {
+            $translationInputs['answer'] = $responseAnswer;
+        }
+
+        if ($latestResponse) {
+            foreach ($latestResponse->components as $component) {
+                if ($component->type === 'text' && trim((string) $component->content) !== '') {
+                    $translationInputs['component_' . $component->id] = (string) $component->content;
+                }
+            }
+        }
+
+        $translated = $translator->prepareTextPairs($translationInputs);
+
+        $questionPair = $translated['question'] ?? [
+            'language' => 'en',
+            'en' => trim((string) $support->question),
+            'fil' => trim((string) $support->question),
+        ];
+
         $questionDraft = [
             'detected_language' => $questionPair['language'],
             'question' => $questionPair['en'],
@@ -190,20 +216,19 @@ public function prepareFromSupport(
         ];
 
         if (!$latestResponse) {
-            $legacyDraft = $translator->prepareSupportRequestFaq(
-                $support->question,
-                $responseAnswer
-            );
-            $questionDraft['answer'] = $legacyDraft['answer'];
-            $questionDraft['answer_fil'] = $legacyDraft['answer_fil'];
+            $answerPair = $translated['answer'] ?? [
+                'en' => $responseAnswer,
+                'fil' => $responseAnswer,
+            ];
+
+            $questionDraft['answer'] = $answerPair['en'];
+            $questionDraft['answer_fil'] = $answerPair['fil'];
         }
 
         /*
-         * Build bilingual response blocks independently.
-         * Each source block keeps its original wording in its own
-         * language and receives one translated counterpart. This avoids
-         * letting the language of the question incorrectly determine the
-         * language of the administrator's answer.
+         * Build bilingual response blocks from the authoritative structured
+         * response. Attachments are copied without sending their URLs or file
+         * contents through the translation model.
          */
         if ($latestResponse) {
             foreach ($latestResponse->components as $component) {
@@ -215,7 +240,10 @@ public function prepareFromSupport(
                         continue;
                     }
 
-                    $pair = $translator->prepareTextPair($text);
+                    $pair = $translated['component_' . $component->id] ?? [
+                        'en' => $text,
+                        'fil' => $text,
+                    ];
 
                     $responseComponents[] = [
                         'type' => 'text',

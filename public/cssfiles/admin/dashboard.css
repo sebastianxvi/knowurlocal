@@ -1,24 +1,6 @@
 /* =========================================================
    KNOWURLOCAL — ADMIN DASHBOARD
-   ========================================================= */
-
-/*
- * Dashboard-specific styling only.
- *
- * The dashboard follows the visual language of the
- * KNOWURLOCAL admin shell:
- *
- * - clean SaaS-style cards
- * - restrained borders
- * - subtle shadows
- * - semantic colors
- * - Phosphor light icons
- * - responsive layouts
- */
-
-
-/* =========================================================
-   DASHBOARD CONTAINER
+   Compact operational-report layout
    ========================================================= */
 
 .dashboard-content {
@@ -27,148 +9,240 @@
     margin: 0 auto;
 }
 
-/* =========================================================
-   DASHBOARD EXPORT
-   ========================================================= */
+.dashboard-section {
+    margin-bottom: 26px;
+}
+
+.dashboard-report-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 22px;
+}
+
+.dashboard-report-heading {
+    min-width: 0;
+}
+
+.dashboard-report-heading h2 {
+    margin: 2px 0 0;
+    color: #172033;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+}
+
+.dashboard-report-heading p {
+    margin: 5px 0 0;
+    max-width: 680px;
+    color: #7b8799;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.eyebrow {
+    display: block;
+    color: #718096;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
 
 .dashboard-export-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-
     gap: 7px;
-
-    flex-shrink: 0;
-
-    padding: 8px 12px;
-
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 0 12px;
     border: 1px solid #d7dee9;
     border-radius: 8px;
-
-    background: #ffffff;
-
+    background: #fff;
     color: #315fbd;
-
     font-size: 11px;
     font-weight: 600;
-
     text-decoration: none;
-
-    box-shadow:
-        0 1px 2px rgba(15, 23, 42, 0.03);
-
-    transition:
-        background-color 0.18s ease,
-        border-color 0.18s ease,
-        box-shadow 0.18s ease,
-        transform 0.18s ease;
+    box-shadow: 0 1px 2px rgba(15,23,42,.03);
+    transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
-
 
 .dashboard-export-button i {
     font-size: 16px;
 }
 
-
 .dashboard-export-button:hover {
     background: #f4f8ff;
-
     border-color: #c9d7ef;
-
-    box-shadow:
-        0 3px 8px rgba(49, 95, 189, 0.08);
-
-    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(49,95,189,.08);
 }
 
-
-.dashboard-export-button:active {
-    transform: translateY(0);
-}
-
-
-.dashboard-export-button:focus-visible {
+.dashboard-export-button:focus-visible,
+.dashboard-analytics-link:focus-visible,
+.dashboard-metric:focus-visible,
+.dashboard-attention-item:focus-visible {
     outline: 2px solid #8fb1ed;
-
     outline-offset: 2px;
 }
 
 
 /* =========================================================
-   EXPORT — MOBILE
+   SNAPSHOT
    ========================================================= */
 
-@media (max-width: 700px) {
-
-    .section-heading {
-        align-items: flex-start;
-    }
-
-    .dashboard-export-button span {
-        display: none;
-    }
-
-    .dashboard-export-button {
-        width: 34px;
-        height: 34px;
-
-        padding: 0;
-    }
-
+.dashboard-snapshot-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
 }
 
-/* =========================================================
-   SECTION
-   ========================================================= */
+.dashboard-metric {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+    min-height: 92px;
+    padding: 15px;
+    overflow: hidden;
+    border: 1px solid #e5e9f0;
+    border-radius: 11px;
+    background: #fff;
+    color: inherit;
+    text-decoration: none;
+    box-shadow: 0 1px 2px rgba(15,23,42,.03);
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
 
-.dashboard-section {
-    margin-bottom: 36px;
+.dashboard-metric:hover {
+    border-color: #d5ddea;
+    box-shadow: 0 5px 14px rgba(15,23,42,.05);
+    transform: translateY(-1px);
+}
+
+.dashboard-metric-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 9px;
+    background: #edf4ff;
+    color: #315fbd;
+}
+
+.dashboard-metric-icon i {
+    font-size: 17px;
+}
+
+.dashboard-metric-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding-right: 16px;
+}
+
+.dashboard-metric-label {
+    color: #718096;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.dashboard-metric-copy strong {
+    margin-top: 2px;
+    color: #172033;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+.dashboard-metric-copy small {
+    margin-top: 4px;
+    overflow: hidden;
+    color: #8b96a8;
+    font-size: 9px;
+    line-height: 1.35;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.dashboard-metric-arrow {
+    position: absolute;
+    top: 15px;
+    right: 14px;
+    color: #94a3b8;
+    font-size: 14px;
+    opacity: 0;
+    transform: translate(-2px, 2px);
+    transition: opacity .18s ease, transform .18s ease;
+}
+
+.dashboard-metric:hover .dashboard-metric-arrow {
+    opacity: 1;
+    transform: translate(0, 0);
+}
+
+.dashboard-metric-faqs .dashboard-metric-icon {
+    background: #f0edff;
+    color: #7059c7;
+}
+
+.dashboard-metric-users .dashboard-metric-icon {
+    background: #e9f8f6;
+    color: #237c73;
+}
+
+.dashboard-metric-support .dashboard-metric-icon {
+    background: #edf4ff;
+    color: #315fbd;
+}
+
+.dashboard-metric-support.is-attention .dashboard-metric-icon {
+    background: #fff1cc;
+    color: #a36b00;
+}
+
+.dashboard-metric-support.is-attention .dashboard-metric-copy strong {
+    color: #a36b00;
 }
 
 
 /* =========================================================
-   SECTION HEADING
+   SECTION HEADINGS
    ========================================================= */
 
 .section-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 24px;
-
-    margin-bottom: 16px;
+    gap: 18px;
+    margin-bottom: 12px;
 }
 
 .section-heading-main {
     display: flex;
     align-items: flex-start;
-    gap: 11px;
-
+    gap: 10px;
     min-width: 0;
 }
-
-
-/* =========================================================
-   SECTION HEADING ICON
-   ========================================================= */
 
 .section-heading-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-
     width: 32px;
     height: 32px;
-
-    flex-shrink: 0;
-
+    flex: 0 0 32px;
     margin-top: 1px;
-
     border: 1px solid #e0e7f1;
     border-radius: 8px;
-
     background: #f5f8fc;
-
     color: #315fbd;
 }
 
@@ -176,2972 +250,830 @@
     font-size: 17px;
 }
 
-
-/*
- * Warm heading treatment for sections containing
- * items that require administrative attention.
- */
 .section-heading-icon.attention {
     border-color: #f0dfb7;
-
     background: #fff8e8;
-
     color: #a36b00;
 }
-
-
-/* =========================================================
-   SECTION HEADING COPY
-   ========================================================= */
 
 .section-heading-copy {
     min-width: 0;
 }
 
-.eyebrow {
-    display: block;
-
-    margin-bottom: 2px;
-
-    font-size: 10px;
-    font-weight: 600;
-    line-height: 1.3;
-
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-
-    color: #718096;
-}
-
 .section-heading-copy h2 {
-    margin: 0;
-
-    font-size: 18px;
+    margin: 2px 0 0;
+    color: #172033;
+    font-size: 16px;
     font-weight: 600;
     line-height: 1.3;
-
-    letter-spacing: -0.01em;
-
-    color: #172033;
 }
 
 .section-heading-copy p {
     margin: 3px 0 0;
-
-    font-size: 11px;
-    line-height: 1.45;
-
     color: #7b8799;
+    font-size: 10px;
+    line-height: 1.4;
 }
 
-
-/* =========================================================
-   SECTION ACTION
-   ========================================================= */
-
-.section-action {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-
-    flex-shrink: 0;
-
-    padding: 7px 10px;
-
-    border: 1px solid transparent;
-    border-radius: 7px;
-
-    color: #315fbd;
-    text-decoration: none;
-
-    font-size: 11px;
+.dashboard-section-count {
+    flex: 0 0 auto;
+    color: #7b8799;
+    font-size: 10px;
     font-weight: 500;
-
-    transition:
-        background-color 0.2s ease,
-        border-color 0.2s ease,
-        color 0.2s ease,
-        transform 0.2s ease;
-}
-
-.section-action:hover {
-    background: #f5f8ff;
-    border-color: #e1e9f7;
-    color: #244d9c;
-}
-
-.section-action i {
-    font-size: 14px;
-
-    transition: transform 0.2s ease;
-}
-
-.section-action:hover i {
-    transform: translateX(2px);
 }
 
 
 /* =========================================================
-   OVERVIEW GRID
+   NEEDS ATTENTION
    ========================================================= */
 
-.overview-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(4, minmax(0, 1fr));
-
-    gap: 12px;
-}
-
-
-/* =========================================================
-   OVERVIEW CARD
-   ========================================================= */
-
-/*
- * The overview card can be used as an anchor element.
- *
- * color: inherit
- * Prevents the browser from applying the default
- * blue link color.
- *
- * text-decoration: none
- * Removes the default underline from anchor elements.
- *
- * cursor: pointer
- * Clearly communicates that the entire card is clickable.
- */
-.overview-card {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-
-    min-width: 0;
-
-    padding: 16px;
-
-    background: #ffffff;
-
+.dashboard-attention-list {
+    overflow: hidden;
     border: 1px solid #e5e9f0;
-    border-radius: 12px;
+    border-radius: 11px;
+    background: #fff;
+}
 
+.dashboard-attention-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+    padding: 12px 14px;
     color: inherit;
     text-decoration: none;
-
-    cursor: pointer;
-
-    box-shadow:
-        0 1px 2px rgba(15, 23, 42, 0.03);
-
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease,
-        border-color 0.2s ease,
-        background-color 0.2s ease;
+    transition: background-color .18s ease;
 }
 
-
-/*
- * Hover feedback gives the user a clear indication
- * that the entire card is interactive.
- */
-.overview-card:hover {
-    transform: translateY(-2px);
-
-    border-color: #d8dee9;
-
-    background: #ffffff;
-
-    box-shadow:
-        0 6px 18px rgba(15, 23, 42, 0.07);
+.dashboard-attention-item + .dashboard-attention-item {
+    border-top: 1px solid #edf0f4;
 }
 
-
-/*
- * Keyboard users must receive the same visual clarity
- * as mouse users.
- *
- * :focus-visible only appears when the element receives
- * keyboard-style focus, avoiding unnecessary outlines
- * during normal mouse clicks.
- */
-.overview-card:focus-visible {
-    outline: 2px solid #8fb1ed;
-    outline-offset: 3px;
-
-    border-color: #8fb1ed;
+.dashboard-attention-item:hover {
+    background: #fafbfd;
 }
 
-
-/*
- * Prevents the card from appearing lifted while pressed.
- */
-.overview-card:active {
-    transform: translateY(0);
-}
-
-/* =========================================================
-   OVERVIEW CARD ARROW
-   ========================================================= */
-
-/*
- * This arrow is optional but recommended.
- *
- * It gives users a subtle indication that the card
- * opens another administrative page.
- */
-.overview-card-arrow {
-    flex: 0 0 auto;
-
-    margin-left: auto;
-    padding-top: 2px;
-
-    font-size: 16px;
-
-    color: #94a3b8;
-
-    opacity: 0;
-
-    transform: translate(-2px, 2px);
-
-    transition:
-        opacity 0.18s ease,
-        transform 0.18s ease,
-        color 0.18s ease;
-}
-
-
-/*
- * The arrow becomes visible when the card is hovered
- * or focused using the keyboard.
- */
-.overview-card:hover .overview-card-arrow,
-.overview-card:focus-visible .overview-card-arrow {
-    opacity: 1;
-
-    color: #315fbd;
-
-    transform: translate(0, 0);
-}
-
-
-/* =========================================================
-   OVERVIEW ICON
-   ========================================================= */
-
-.overview-icon {
+.dashboard-attention-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-
-    width: 34px;
-    height: 34px;
-
-    flex-shrink: 0;
-
-    border-radius: 9px;
-
-    background: #f1f5fb;
-
-    color: #315fbd;
-}
-
-.overview-icon i {
-    font-size: 18px;
-}
-
-
-/* =========================================================
-   OVERVIEW SEMANTIC COLORS
-   ========================================================= */
-
-/*
- * Agencies
- *
- * Blue communicates primary directory/system information.
- */
-.overview-card:nth-child(1) .overview-icon {
-    background: #edf4ff;
-    color: #315fbd;
-}
-
-
-/*
- * FAQs
- *
- * Purple separates knowledge-base content from
- * general directory information.
- */
-.overview-card:nth-child(2) .overview-icon {
-    background: #f1efff;
-    color: #6957c9;
-}
-
-
-/*
- * Public users
- *
- * Teal provides a calm, neutral-positive treatment
- * for citizen accounts.
- */
-.overview-card:nth-child(3) .overview-icon {
-    background: #eef8f7;
-    color: #237c73;
-}
-
-
-/*
- * Pending inquiries
- *
- * Amber communicates that administrator attention
- * may be required.
- */
-.overview-card:nth-child(4) .overview-icon {
-    background: #fff1c9;
-    color: #a36b00;
-}
-
-
-/* =========================================================
-   OVERVIEW INFO
-   ========================================================= */
-
-.overview-info {
-    display: flex;
-    flex-direction: column;
-
-    min-width: 0;
-}
-
-.overview-label {
-    font-size: 11px;
-    font-weight: 500;
-
-    color: #64748b;
-}
-
-.overview-info strong {
-    margin-top: 2px;
-
-    font-size: 22px;
-    font-weight: 600;
-    line-height: 1.2;
-
-    color: #172033;
-}
-
-.overview-meta {
-    margin-top: 3px;
-
-    font-size: 10px;
-
-    color: #94a3b8;
-}
-
-/* =========================================================
-   AGENCY BREAKDOWN
-   ========================================================= */
-
-.overview-breakdown {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-
-    margin-top: 8px;
-}
-
-.overview-breakdown > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1.5;
-
-    color: #64748b;
-}
-
-.overview-breakdown > span strong {
-    margin-top: 0;
-
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1.5;
-
-    color: #526078;
-}
-
-
-/* =========================================================
-   TOP FAQ CONTRIBUTOR
-   ========================================================= */
-
-.overview-top-contributor {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 3px;
-
-    margin-top: 8px;
-}
-
-.overview-meta-label {
-    font-size: 11px;
-    font-weight: 500;
-    line-height: 1.4;
-
-    color: #94a3b8;
-}
-
-.overview-meta-value {
-    max-width: 100%;
-
-    overflow-wrap: anywhere;
-
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1.5;
-
-    color: #64748b;
-}
-
-
-/* =========================================================
-   ATTENTION CARD STATE
-   ========================================================= */
-
-.overview-card.has-attention {
-    border-color: #f2dfb3;
-}
-
-.overview-card.has-attention .overview-icon {
-    background: #fff7df;
-    color: #a36b00;
-}
-
-
-/* =========================================================
-   ATTENTION LIST
-   ========================================================= */
-
-.attention-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-
-/* =========================================================
-   ATTENTION ITEM
-   ========================================================= */
-
-.attention-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    min-width: 0;
-
-    padding: 12px 14px;
-
-    border: 1px solid;
-    border-radius: 10px;
-
-    text-decoration: none;
-
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease,
-        background-color 0.2s ease;
-}
-
-.attention-item:hover {
-    transform: translateY(-1px);
-
-    box-shadow:
-        0 4px 12px rgba(15, 23, 42, 0.05);
-}
-
-
-/* =========================================================
-   ATTENTION ICON
-   ========================================================= */
-
-.attention-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 32px;
-    height: 32px;
-
-    flex-shrink: 0;
-
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
     border-radius: 8px;
+    background: #fff1cc;
+    color: #a36b00;
 }
 
-.attention-icon i {
-    font-size: 17px;
-}
-
-
-/* =========================================================
-   ATTENTION — WARNING
-   ========================================================= */
-
-.attention-warning {
-    background: #fffaf0;
-    border-color: #f3dfad;
-}
-
-.attention-warning .attention-icon {
-    background: #fff0c7;
-    color: #9a6700;
-}
-
-
-/* =========================================================
-   ATTENTION — INFORMATION
-   ========================================================= */
-
-.attention-info {
-    background: #f7faff;
-    border-color: #dbe7f7;
-}
-
-.attention-info .attention-icon {
-    background: #e8f1ff;
+.dashboard-attention-item.is-info .dashboard-attention-icon {
+    background: #eaf2ff;
     color: #315fbd;
 }
 
-
-/* =========================================================
-   ATTENTION — SUCCESS
-   ========================================================= */
-
-.attention-success {
-    background: #f4fbf7;
-    border-color: #d8eee1;
-}
-
-.attention-success .attention-icon {
+.dashboard-attention-item.is-success .dashboard-attention-icon {
     background: #ddf5e7;
     color: #18804b;
 }
 
+.dashboard-attention-icon i {
+    font-size: 15px;
+}
 
-/* =========================================================
-   ATTENTION CONTENT
-   ========================================================= */
-
-.attention-content {
+.dashboard-attention-copy {
     display: flex;
     flex-direction: column;
-
     min-width: 0;
-
     flex: 1;
 }
 
-.attention-content strong {
-    font-size: 12px;
-    font-weight: 600;
-
+.dashboard-attention-copy strong {
+    overflow: hidden;
     color: #172033;
-}
-
-.attention-content span {
-    margin-top: 2px;
-
     font-size: 11px;
+    font-weight: 600;
     line-height: 1.4;
-
-    color: #718096;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
-.attention-arrow {
-    flex-shrink: 0;
+.dashboard-attention-copy small {
+    margin-top: 2px;
+    overflow: hidden;
+    color: #7b8799;
+    font-size: 9px;
+    line-height: 1.4;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
 
-    font-size: 16px;
-
+.dashboard-attention-item > i {
+    flex: 0 0 auto;
     color: #94a3b8;
-
-    transition:
-        transform 0.2s ease,
-        color 0.2s ease;
+    font-size: 14px;
+    transition: transform .18s ease;
 }
 
-.attention-item:hover .attention-arrow {
-    color: #315fbd;
-
+.dashboard-attention-item:hover > i {
     transform: translateX(2px);
 }
 
+
 /* =========================================================
-   ATTENTION ITEM HEADING
+   TEAM COLLABORATION
    ========================================================= */
 
-/*
- * Keeps the main alert title and priority badge
- * aligned while allowing them to wrap on small screens.
- */
-.attention-item-heading {
-    display: flex;
+.dashboard-team-summary {
+    display: inline-flex;
     align-items: center;
+    gap: 5px;
+    flex: 0 0 auto;
+    color: #7b8799;
+    font-size: 10px;
+}
+
+.dashboard-team-summary strong {
+    color: #172033;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.dashboard-team-summary-dot {
+    color: #c3cad5;
+}
+
+.dashboard-team-card {
+    overflow: hidden;
+    border: 1px solid #e5e9f0;
+    border-radius: 11px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15,23,42,.03);
+}
+
+.dashboard-team-domains {
+    display: flex;
     flex-wrap: wrap;
     gap: 7px;
-
-    min-width: 0;
-}
-
-
-/*
- * The title remains flexible so long text does not
- * force the entire alert item outside the viewport.
- */
-.attention-item-heading strong {
-    min-width: 0;
-}
-
-
-/* =========================================================
-   ATTENTION DESCRIPTION
-   ========================================================= */
-
-/*
- * Replaces the generic content span styling for the
- * more descriptive second line.
- */
-.attention-description {
-    display: block;
-
-    margin-top: 3px;
-
-    font-size: 11px;
-    line-height: 1.45;
-
-    color: #718096;
-}
-
-
-/* =========================================================
-   ATTENTION META
-   ========================================================= */
-
-/*
- * Shows which administrative area owns the task.
- */
-.attention-meta {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-
-    margin-top: 7px;
-
-    font-size: 10px;
-    line-height: 1.3;
-
-    color: #94a3b8;
-}
-
-
-/*
- * Keeps the contextual icon visually lightweight.
- */
-.attention-meta i {
-    font-size: 12px;
-}
-
-
-/* =========================================================
-   ATTENTION PRIORITY BADGE
-   ========================================================= */
-
-/*
- * Base badge styling.
- *
- * The badge is intentionally compact so it supports
- * the title instead of overpowering it.
- */
-.attention-priority {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 3px 6px;
-
-    border: 1px solid transparent;
-    border-radius: 999px;
-
-    font-size: 9px;
-    font-weight: 600;
-    line-height: 1.2;
-
-    letter-spacing: 0.01em;
-    text-transform: capitalize;
-
-    white-space: nowrap;
-}
-
-
-/* =========================================================
-   HIGH PRIORITY
-   ========================================================= */
-
-/*
- * High priority is used for pending citizen inquiries
- * because an administrator response is still required.
- */
-.attention-priority-high {
-    border-color: #efd49a;
-
-    background: #fff0c7;
-
-    color: #956300;
-}
-
-
-/* =========================================================
-   MEDIUM PRIORITY
-   ========================================================= */
-
-/*
- * Medium priority is used for content completeness
- * tasks that do not immediately block citizen support.
- */
-.attention-priority-medium {
-    border-color: #d5e2f7;
-
-    background: #eaf2ff;
-
-    color: #315fbd;
-}
-
-
-/* =========================================================
-   CLEAR STATUS
-   ========================================================= */
-
-/*
- * Healthy state badge for the empty attention list.
- */
-.attention-priority-clear {
-    border-color: #cce7d7;
-
-    background: #ddf5e7;
-
-    color: #18804b;
-}
-
-
-/* =========================================================
-   ATTENTION ITEM FOCUS
-   ========================================================= */
-
-/*
- * Makes keyboard navigation visible.
- *
- * The outline is placed outside the component so it
- * does not change the item's dimensions.
- */
-.attention-item:focus-visible {
-    outline: 2px solid #8fb1ed;
-    outline-offset: 3px;
-}
-
-
-/* =========================================================
-   ATTENTION STATE COLOR REFINEMENT
-   ========================================================= */
-
-/*
- * Keeps the description and metadata aligned with
- * the semantic color of each alert state.
- */
-.attention-warning .attention-description {
-    color: #8f7951;
-}
-
-.attention-info .attention-description {
-    color: #7185a5;
-}
-
-.attention-success .attention-description {
-    color: #5f8a70;
-}
-
-
-/* =========================================================
-   ATTENTION RESPONSIVE
-   ========================================================= */
-
-@media (max-width: 700px) {
-
-    /*
-     * Allows the heading and priority badge to wrap
-     * naturally on narrow screens.
-     */
-    .attention-item-heading {
-        align-items: flex-start;
-        gap: 5px;
-    }
-
-
-    /*
-     * Prevents the arrow from being squeezed by
-     * long alert content.
-     */
-    .attention-arrow {
-        margin-top: 2px;
-    }
-
-
-    /*
-     * Gives the metadata enough room to wrap if needed.
-     */
-    .attention-meta {
-        flex-wrap: wrap;
-    }
-
-}
-
-
-/* =========================================================
-   ATTENTION REDUCED MOTION
-   ========================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-
-    .attention-item-heading,
-    .attention-priority {
-        transition: none;
-    }
-
-}
-
-
-/* =========================================================
-   MANAGEMENT GRID
-   ========================================================= */
-
-.management-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr));
-
-    gap: 12px;
-}
-
-
-/* =========================================================
-   MANAGEMENT CARD
-   ========================================================= */
-
-.management-card {
-    min-width: 0;
-
-    padding: 18px;
-
-    background: #ffffff;
-
-    border: 1px solid #e5e9f0;
-    border-radius: 12px;
-
-    box-shadow:
-        0 1px 2px rgba(15, 23, 42, 0.03);
-}
-
-
-/* =========================================================
-   MANAGEMENT HEADER
-   ========================================================= */
-
-.management-header {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-}
-
-.management-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 34px;
-    height: 34px;
-
-    flex-shrink: 0;
-
-    border-radius: 9px;
-
-    background: #f1f5fb;
-    color: #315fbd;
-}
-
-.management-icon i {
-    font-size: 18px;
-}
-
-.management-header h2 {
-    margin: 0;
-
-    font-size: 15px;
-    font-weight: 600;
-
-    color: #172033;
-}
-
-
-/* =========================================================
-   MANAGEMENT STATS
-   ========================================================= */
-
-.management-stats {
-    display: grid;
-
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr));
-
-    gap: 10px;
-
-    margin-top: 22px;
-}
-
-.management-stats > div {
-    padding: 12px;
-
-    background: #f8fafc;
-
-    border: 1px solid #edf0f4;
-    border-radius: 9px;
-}
-
-.management-stats strong {
-    display: block;
-
-    font-size: 19px;
-    font-weight: 600;
-
-    color: #172033;
-}
-
-.management-stats span {
-    display: block;
-
-    margin-top: 3px;
-
-    font-size: 10px;
-
-    color: #718096;
-}
-
-
-/* =========================================================
-   MANAGEMENT FOOTER
-   ========================================================= */
-
-.management-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-
-    margin-top: 16px;
-    padding-top: 13px;
-
-    border-top: 1px solid #edf0f4;
-}
-
-.management-footer > span {
-    min-width: 0;
-
-    font-size: 10px;
-
-    color: #94a3b8;
-}
-
-.management-footer a {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-
-    flex-shrink: 0;
-
-    font-size: 11px;
-    font-weight: 500;
-
-    color: #315fbd;
-    text-decoration: none;
-}
-
-.management-footer a i {
-    font-size: 13px;
-}
-
-
-/* =========================================================
-   USER INQUIRIES
-   ========================================================= */
-
-.inquiry-overview {
-    display: grid;
-
-    grid-template-columns:
-        repeat(3, minmax(0, 1fr));
-
-    overflow: hidden;
-
-    background: #ffffff;
-
-    border: 1px solid #e1e7ef;
-    border-radius: 12px;
-}
-
-
-/* =========================================================
-   INQUIRY STAT
-   ========================================================= */
-
-.inquiry-stat {
-    position: relative;
-
-    display: flex;
-    flex-direction: column;
-
-    min-width: 0;
-
-    padding: 18px 20px;
-
-    text-decoration: none;
-
-    background: #ffffff;
-
-    transition:
-        background-color 0.2s ease;
-}
-
-.inquiry-stat + .inquiry-stat {
-    border-left: 1px solid #e7ebf1;
-}
-
-
-/* =========================================================
-   STAT LABEL
-   ========================================================= */
-
-.inquiry-stat-label {
-    font-size: 11px;
-    line-height: 1.4;
-
-    color: #718096;
-}
-
-
-/* =========================================================
-   STAT VALUE
-   ========================================================= */
-
-.inquiry-stat-value {
-    margin-top: 5px;
-
-    font-size: 24px;
-    font-weight: 600;
-    line-height: 1.15;
-
-    color: #172033;
-}
-
-
-/*
- * Pending number.
- */
-.inquiry-stat-action .inquiry-stat-value {
-    color: #a36b00;
-}
-
-
-/* =========================================================
-   STAT DESCRIPTION
-   ========================================================= */
-
-.inquiry-stat-description {
-    margin-top: 4px;
-
-    font-size: 10px;
-    line-height: 1.4;
-
-    color: #8b96a8;
-}
-
-
-/* =========================================================
-   CLICKABLE PENDING STAT
-   ========================================================= */
-
-.inquiry-stat-action {
-    transition:
-        background-color 0.18s ease,
-        box-shadow 0.18s ease;
-}
-
-.inquiry-stat-action:hover {
-    background: #fff9e9;
-}
-
-.inquiry-stat-action:focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: -2px;
-}
-
-
-/* =========================================================
-   PENDING ARROW
-   ========================================================= */
-
-.inquiry-stat-arrow {
-    position: absolute;
-
-    top: 18px;
-    right: 18px;
-
-    font-size: 15px;
-
-    color: #a36b00;
-
-    opacity: 0;
-
-    transform: translate(-2px, 2px);
-
-    transition:
-        opacity 0.18s ease,
-        transform 0.18s ease;
-}
-
-.inquiry-stat-action:hover .inquiry-stat-arrow {
-    opacity: 1;
-
-    transform: translate(0, 0);
-}
-
-
-/* =========================================================
-   INQUIRY INSIGHT
-   ========================================================= */
-
-.inquiry-insight {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-
-    margin-top: 10px;
     padding: 12px 14px;
-
-    border: 1px solid #f1dfb6;
-    border-radius: 10px;
-
-    background: #fffaf0;
-}
-
-
-/*
- * Healthy state.
- *
- * Applied when there are no pending inquiries.
- */
-.inquiry-insight.is-success {
-    border-color: #d8eee1;
-
-    background: #f4fbf7;
-}
-
-/* =========================================================
-   SEMANTIC OVERVIEW COLORS
-   ========================================================= */
-
-.overview-agencies {
-    border-top: 3px solid #4f7fe8;
-}
-
-.overview-agencies .overview-icon {
-    background: #eaf2ff;
-    color: #3568c9;
-}
-
-
-.overview-faqs {
-    border-top: 3px solid #8069d8;
-}
-
-.overview-faqs .overview-icon {
-    background: #f0edff;
-    color: #7059c7;
-}
-
-
-.overview-users {
-    border-top: 3px solid #3ca79b;
-}
-
-.overview-users .overview-icon {
-    background: #e9f8f6;
-    color: #25867c;
-}
-
-
-.overview-pending {
-    border-top: 3px solid #e2a72e;
-}
-
-.overview-pending .overview-icon {
-    background: #fff1cc;
-    color: #a66b00;
-}
-
-.overview-pending .overview-info strong {
-    color: #9a6500;
-}
-
-
-/* =========================================================
-   MANAGEMENT DATA COLORS
-   ========================================================= */
-
-.management-complete {
-    background: #f3fbf6 !important;
-    border-color: #d9eee1 !important;
-}
-
-.management-complete strong {
-    color: #18804b !important;
-}
-
-.management-complete span {
-    color: #4d8062 !important;
-}
-
-
-.management-attention {
-    background: #fffaf0 !important;
-    border-color: #f0dfb9 !important;
-}
-
-.management-attention strong {
-    color: #a36b00 !important;
-}
-
-.management-attention span {
-    color: #92733c !important;
-}
-
-
-/* =========================================================
-   MANAGEMENT CARD IDENTITY
-   ========================================================= */
-
-.management-agencies .management-icon {
-    background: #edf4ff;
-    color: #3568c9;
-}
-
-.management-faqs .management-icon {
-    background: #f0edff;
-    color: #7059c7;
-}
-
-
-/* =========================================================
-   INQUIRY SEMANTIC COLORS
-   ========================================================= */
-
-/*
- * TOTAL
- *
- * Blue represents general system information.
- * This is the neutral/default inquiry state.
- */
-.inquiry-total {
-    background: #eef4ff;
-    border-left: 1px solid #d8e4f7;
-}
-
-.inquiry-total .inquiry-stat-label {
-    color: #4d6fae;
-}
-
-.inquiry-total .inquiry-stat-value {
-    color: #315fbd;
-}
-
-.inquiry-total .inquiry-stat-description {
-    color: #7185a5;
-}
-
-
-/*
- * PENDING
- *
- * Amber communicates that administrator action
- * is still required.
- */
-.inquiry-pending {
-    background: #fff8e8;
-}
-
-.inquiry-pending .inquiry-stat-label {
-    color: #936a21;
-}
-
-.inquiry-pending .inquiry-stat-value {
-    color: #a36b00;
-}
-
-.inquiry-pending .inquiry-stat-description {
-    color: #96794a;
-}
-
-
-/*
- * ANSWERED
- *
- * Green communicates that the inquiry has already
- * received a response.
- */
-.inquiry-answered {
-    background: #eaf8f0;
-    border-left: 1px solid #d5ebdd;
-}
-
-.inquiry-answered .inquiry-stat-label {
-    color: #397455;
-}
-
-.inquiry-answered .inquiry-stat-value {
-    color: #168047;
-}
-
-.inquiry-answered .inquiry-stat-description {
-    color: #5f8a70;
-}
-
-
-/* =========================================================
-   INQUIRY INSIGHT STATES
-   ========================================================= */
-
-/*
- * WARNING STATE
- *
- * Used when at least one inquiry is still pending.
- */
-.inquiry-insight.is-warning {
-    border-color: #efd9a8;
-    background: #fff9eb;
-}
-
-.inquiry-insight.is-warning .inquiry-insight-icon {
-    border-color: #efd9a8;
-    background: #ffedbd;
-    color: #a36b00;
-}
-
-
-/*
- * SUCCESS STATE
- *
- * Used when there are no pending inquiries.
- */
-.inquiry-insight.is-success {
-    border-color: #d4eadc;
-    background: #f2faf5;
-}
-
-.inquiry-insight.is-success .inquiry-insight-icon {
-    border-color: #c8e5d3;
-    background: #dcf3e4;
-    color: #18804b;
-}
-
-
-/* =========================================================
-   INSIGHT ICON
-   ========================================================= */
-
-.inquiry-insight-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 30px;
-    height: 30px;
-
-    flex: 0 0 30px;
-
-    border: 1px solid #f1dfb6;
-    border-radius: 8px;
-
-    background: #fff1c9;
-
-    color: #a36b00;
-}
-
-.inquiry-insight-icon i {
-    font-size: 15px;
-}
-
-
-/*
- * Healthy-state icon.
- */
-.inquiry-insight.is-success .inquiry-insight-icon {
-    border-color: #cfe9da;
-
-    background: #ddf5e7;
-
-    color: #18804b;
-}
-
-
-/* =========================================================
-   INSIGHT TEXT
-   ========================================================= */
-
-.inquiry-insight-copy {
-    display: flex;
-    flex-direction: column;
-
-    min-width: 0;
-
-    gap: 2px;
-}
-
-.inquiry-insight-copy strong {
-    font-size: 11px;
-    font-weight: 600;
-
-    line-height: 1.4;
-
-    color: #344054;
-}
-
-.inquiry-insight-copy span {
-    font-size: 10px;
-
-    line-height: 1.4;
-
-    color: #7c8799;
-}
-
-/* =========================================================
-   ANALYTICS
-   ========================================================= */
-
-/*
- * Analytics metrics are presented as a four-column grid
- * on larger screens.
- *
- * Each metric communicates a different aspect of inquiry
- * performance without relying on a chart alone.
- */
-.analytics-metrics {
-    display: grid;
-
-    grid-template-columns:
-        repeat(4, minmax(0, 1fr));
-
-    gap: 10px;
-
-    margin-bottom: 12px;
-}
-
-
-/* =========================================================
-   ANALYTICS METRIC
-   ========================================================= */
-
-.analytics-metric {
-    display: flex;
-    align-items: flex-start;
-    gap: 11px;
-
-    min-width: 0;
-
-    padding: 15px;
-
-    border: 1px solid #e5e9f0;
-    border-radius: 10px;
-
-    background: #ffffff;
-
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease,
-        border-color 0.2s ease;
-}
-
-.analytics-metric:hover {
-    transform: translateY(-1px);
-
-    border-color: #d8dee9;
-
-    box-shadow:
-        0 5px 14px rgba(15, 23, 42, 0.05);
-}
-
-
-/* =========================================================
-   ANALYTICS METRIC ICON
-   ========================================================= */
-
-.analytics-metric-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 32px;
-    height: 32px;
-
-    flex: 0 0 32px;
-
-    border-radius: 8px;
-
-    background: #edf4ff;
-
-    color: #315fbd;
-}
-
-.analytics-metric-icon i {
-    font-size: 16px;
-}
-
-
-/* =========================================================
-   ANALYTICS METRIC CONTENT
-   ========================================================= */
-
-.analytics-metric-content {
-    display: flex;
-    flex-direction: column;
-
-    min-width: 0;
-}
-
-.analytics-metric-content > span {
-    font-size: 10px;
-    font-weight: 500;
-    line-height: 1.35;
-
-    color: #718096;
-}
-
-.analytics-metric-content strong {
-    margin-top: 3px;
-
-    font-size: 20px;
-    font-weight: 600;
-    line-height: 1.2;
-
-    color: #172033;
-}
-
-.analytics-metric-content small {
-    margin-top: 3px;
-
-    font-size: 9px;
-    line-height: 1.4;
-
-    color: #94a3b8;
-}
-
-
-/* =========================================================
-   ANALYTICS SEMANTIC COLORS
-   ========================================================= */
-
-/*
- * Response rate
- *
- * Blue represents overall system performance.
- */
-.analytics-response {
-    background: #f4f8ff;
-    border-color: #dce7f8;
-}
-
-.analytics-response .analytics-metric-icon {
-    background: #e6efff;
-    color: #315fbd;
-}
-
-.analytics-response .analytics-metric-content strong {
-    color: #315fbd;
-}
-
-
-/*
- * Response time
- *
- * Purple distinguishes time/performance information
- * from inquiry status.
- */
-.analytics-time {
-    background: #f7f5ff;
-    border-color: #e6e1f8;
-}
-
-.analytics-time .analytics-metric-icon {
-    background: #eeebff;
-    color: #6957c9;
-}
-
-.analytics-time .analytics-metric-content strong {
-    color: #6957c9;
-}
-
-
-/*
- * Answers seen
- *
- * Green represents successful citizen visibility.
- */
-.analytics-seen {
-    background: #f1faf5;
-    border-color: #d8eee1;
-}
-
-.analytics-seen .analytics-metric-icon {
-    background: #ddf5e7;
-    color: #18804b;
-}
-
-.analytics-seen .analytics-metric-content strong {
-    color: #18804b;
-}
-
-
-/*
- * Awaiting view
- *
- * Amber is informational here rather than an error.
- * It simply means the citizen has not opened the answer yet.
- */
-.analytics-unseen {
-    background: #fff9ed;
-    border-color: #efdfbd;
-}
-
-.analytics-unseen .analytics-metric-icon {
-    background: #ffedc2;
-    color: #a36b00;
-}
-
-.analytics-unseen .analytics-metric-content strong {
-    color: #a36b00;
-}
-
-
-/* =========================================================
-   ANALYTICS CHART CARD
-   ========================================================= */
-
-.analytics-chart-card {
-    overflow: hidden;
-
-    background: #ffffff;
-
-    border: 1px solid #e5e9f0;
-    border-radius: 12px;
-
-    box-shadow:
-        0 1px 2px rgba(15, 23, 42, 0.03);
-}
-
-
-/* =========================================================
-   ANALYTICS CHART HEADER
-   ========================================================= */
-
-.analytics-chart-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-
-    padding: 17px 18px 14px;
-
     border-bottom: 1px solid #edf0f4;
 }
 
-.analytics-chart-header h3 {
-    margin: 2px 0 0;
-
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.3;
-
-    color: #172033;
-}
-
-.analytics-period {
-    flex-shrink: 0;
-
-    padding: 5px 8px;
-
-    border: 1px solid #e3e8f0;
-    border-radius: 6px;
-
-    background: #f8fafc;
-
-    font-size: 9px;
-    font-weight: 500;
-
-    color: #718096;
-}
-
-
-/* =========================================================
-   CHART AREA
-   ========================================================= */
-
-.analytics-chart {
-    padding: 18px 18px 14px;
-}
-
-
-/*
- * Seven equal columns represent the seven calendar days.
- */
-.analytics-chart-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(7, minmax(0, 1fr));
-
-    gap: 12px;
-
-    height: 190px;
-
-    padding: 10px 8px 0;
-
-    border-bottom: 1px solid #e7ebf1;
-}
-
-
-/* =========================================================
-   CHART DAY
-   ========================================================= */
-
-.analytics-chart-day {
-    display: flex;
-    flex-direction: column;
-
-    min-width: 0;
-}
-
-.analytics-bars {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 5px;
-
-    height: 160px;
-}
-
-
-/* =========================================================
-   CHART BARS
-   ========================================================= */
-
-.analytics-bar {
-    width: 18px;
-
-    min-height: 3px;
-
-    border-radius: 5px 5px 2px 2px;
-
-    transition:
-        height 0.35s ease,
-        opacity 0.2s ease,
-        transform 0.2s ease;
-}
-
-.analytics-bar:hover {
-    opacity: 0.8;
-
-    transform: translateY(-2px);
-}
-
-
-/*
- * Submitted inquiries.
- *
- * Blue represents incoming citizen activity.
- */
-.analytics-bar-submitted {
-    background: #5b82d6;
-}
-
-
-/*
- * Answered inquiries.
- *
- * Green represents completed administrator responses.
- */
-.analytics-bar-answered {
-    background: #45a875;
-}
-
-
-/* =========================================================
-   CHART DAY LABEL
-   ========================================================= */
-
-.analytics-day-label {
-    display: block;
-
-    margin-top: 9px;
-
-    text-align: center;
-
-    font-size: 9px;
-    font-weight: 500;
-
-    color: #7b8799;
-}
-
-
-/* =========================================================
-   CHART LEGEND
-   ========================================================= */
-
-.analytics-legend {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-
-    padding: 12px 8px 2px;
-}
-
-.analytics-legend span {
+.dashboard-team-domain {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-
+    gap: 4px;
+    padding: 5px 8px;
+    border: 1px solid #e3e8f0;
+    border-radius: 7px;
+    background: #f8fafc;
+    color: #61708a;
     font-size: 9px;
-
-    color: #718096;
+    line-height: 1.2;
 }
 
-.analytics-legend-dot {
-    width: 7px;
-    height: 7px;
+.dashboard-team-domain strong {
+    color: #315fbd;
+    font-size: 10px;
+}
 
+.dashboard-team-domain.is-empty {
+    color: #94a3b8;
+}
+
+.dashboard-team-members {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dashboard-team-member {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 11px 14px;
+}
+
+.dashboard-team-member:nth-child(n + 3) {
+    border-top: 1px solid #edf0f4;
+}
+
+.dashboard-team-member:nth-child(even) {
+    border-left: 1px solid #edf0f4;
+}
+
+.dashboard-team-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
     border-radius: 50%;
+    background: #edf4ff;
+    color: #315fbd;
+    font-size: 10px;
+    font-weight: 600;
 }
 
-.analytics-legend-dot.submitted {
-    background: #5b82d6;
+.dashboard-team-member-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
 }
 
-.analytics-legend-dot.answered {
-    background: #45a875;
+.dashboard-team-member-copy strong {
+    overflow: hidden;
+    color: #172033;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.35;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
-
-/* =========================================================
-   ANALYTICS RESPONSIVE — TABLET
-   ========================================================= */
-
-@media (max-width: 1000px) {
-
-    .analytics-metrics {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-    }
-
+.dashboard-team-member-copy small {
+    margin-top: 2px;
+    color: #8b96a8;
+    font-size: 9px;
 }
 
+.dashboard-team-member-count {
+    flex: 0 0 auto;
+    color: #315fbd;
+    font-size: 9px;
+    font-weight: 600;
+}
 
-/* =========================================================
-   ANALYTICS RESPONSIVE — MOBILE
-   ========================================================= */
-
-@media (max-width: 700px) {
-
-    .analytics-metrics {
-        grid-template-columns:
-            1fr;
-    }
-
-
-    .analytics-metric {
-        padding: 14px;
-    }
-
-
-    .analytics-chart-header {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-
-    .analytics-chart {
-        padding-left: 10px;
-        padding-right: 10px;
-    }
-
-
-    .analytics-chart-grid {
-        gap: 4px;
-
-        height: 160px;
-
-        padding-left: 2px;
-        padding-right: 2px;
-    }
-
-
-    .analytics-bars {
-        height: 130px;
-
-        gap: 3px;
-    }
-
-
-    .analytics-bar {
-        width: 12px;
-    }
-
-
-    .analytics-day-label {
-        font-size: 8px;
-    }
-
+.dashboard-team-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 70px;
+    padding: 16px;
+    color: #94a3b8;
+    font-size: 10px;
+    text-align: center;
 }
 
 
 /* =========================================================
-   CHATBOT PERFORMANCE
+   ANALYTICS LINK
    ========================================================= */
 
-/*
- * The chatbot analytics section uses the same visual language
- * as the existing dashboard analytics:
- *
- * - blue = normal/system information
- * - purple = knowledge/matching
- * - green = successful answers
- * - amber = fallback/attention
- */
+.dashboard-analytics-section {
+    margin-bottom: 8px;
+}
 
+.dashboard-analytics-link {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+    padding: 13px 14px;
+    border: 1px solid #e5e9f0;
+    border-radius: 11px;
+    background: #fff;
+    color: inherit;
+    text-decoration: none;
+    box-shadow: 0 1px 2px rgba(15,23,42,.03);
+    transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
 
-/* =========================================================
-   CHATBOT HEADING
-   ========================================================= */
+.dashboard-analytics-link:hover {
+    border-color: #d6dfef;
+    background: #fafcff;
+    box-shadow: 0 4px 12px rgba(15,23,42,.04);
+}
 
-.chatbot-heading-icon {
+.dashboard-analytics-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    border-radius: 8px;
     background: #f0edff;
-    border-color: #e3ddfb;
     color: #7059c7;
 }
 
-
-/* =========================================================
-   CHATBOT METRICS
-   ========================================================= */
-
-.chatbot-metrics {
-    margin-bottom: 12px;
-}
-
-
-/*
- * FAQ answer rate
- *
- * Blue communicates overall chatbot effectiveness.
- */
-
-.chatbot-answer-rate {
-    background: #f4f8ff;
-    border-color: #dce7f8;
-}
-
-.chatbot-answer-rate .analytics-metric-icon {
-    background: #e6efff;
-    color: #315fbd;
-}
-
-.chatbot-answer-rate .analytics-metric-content strong {
-    color: #315fbd;
-}
-
-
-/*
- * Fallback rate
- *
- * Amber communicates questions that need attention.
- */
-
-.chatbot-fallback-rate {
-    background: #fff9ed;
-    border-color: #efdfbd;
-}
-
-.chatbot-fallback-rate .analytics-metric-icon {
-    background: #ffedc2;
-    color: #a36b00;
-}
-
-.chatbot-fallback-rate .analytics-metric-content strong {
-    color: #a36b00;
-}
-
-
-/*
- * FAQ answers
- *
- * Green communicates successful knowledge-base answers.
- */
-
-.chatbot-faq-answers {
-    background: #f1faf5;
-    border-color: #d8eee1;
-}
-
-.chatbot-faq-answers .analytics-metric-icon {
-    background: #ddf5e7;
-    color: #18804b;
-}
-
-.chatbot-faq-answers .analytics-metric-content strong {
-    color: #18804b;
-}
-
-
-/*
- * Knowledge questions
- *
- * Purple separates chatbot activity from the
- * success/failure metrics.
- */
-
-.chatbot-total {
-    background: #f7f5ff;
-    border-color: #e6e1f8;
-}
-
-.chatbot-total .analytics-metric-icon {
-    background: #eeebff;
-    color: #6957c9;
-}
-
-.chatbot-total .analytics-metric-content strong {
-    color: #6957c9;
-}
-
-
-/* =========================================================
-   CHATBOT ANALYTICS GRID
-   ========================================================= */
-
-.chatbot-analytics-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr));
-
-    gap: 12px;
-
-    margin-bottom: 12px;
-}
-
-
-/* =========================================================
-   CHATBOT ANALYTICS CARD
-   ========================================================= */
-
-.chatbot-analytics-card {
-    min-width: 0;
-
-    overflow: hidden;
-
-    background: #ffffff;
-
-    border: 1px solid #e5e9f0;
-    border-radius: 12px;
-
-    box-shadow:
-        0 1px 2px rgba(15, 23, 42, 0.03);
-
-    transition:
-        border-color 0.2s ease,
-        box-shadow 0.2s ease;
-}
-
-.chatbot-analytics-card:hover {
-    border-color: #d8dee9;
-
-    box-shadow:
-        0 5px 16px rgba(15, 23, 42, 0.05);
-}
-
-
-/* =========================================================
-   CHATBOT CARD HEADER
-   ========================================================= */
-
-.chatbot-card-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-
-    gap: 16px;
-
-    padding: 16px 18px;
-
-    border-bottom: 1px solid #edf0f4;
-}
-
-.chatbot-card-header h3 {
-    margin: 2px 0 0;
-
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.3;
-
-    color: #172033;
-}
-
-
-/* =========================================================
-   CHATBOT CARD ICON
-   ========================================================= */
-
-.chatbot-card-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 32px;
-    height: 32px;
-
-    flex: 0 0 32px;
-
-    border: 1px solid #dce7f8;
-    border-radius: 8px;
-
-    background: #edf4ff;
-
-    color: #315fbd;
-}
-
-.chatbot-card-icon i {
+.dashboard-analytics-icon i {
     font-size: 16px;
 }
 
-
-/*
- * Warning card icon.
- */
-
-.chatbot-warning-icon {
-    border-color: #f0dfb9;
-
-    background: #fff1cc;
-
-    color: #a36b00;
-}
-
-
-/* =========================================================
-   MOST USED FAQS
-   ========================================================= */
-
-.chatbot-ranking-list {
+.dashboard-analytics-copy {
     display: flex;
     flex-direction: column;
-}
-
-.chatbot-ranking-item {
-    display: flex;
-    align-items: center;
-
-    gap: 14px;
-
     min-width: 0;
-
-    padding: 14px 18px;
-
-    transition:
-        background-color 0.18s ease;
-}
-
-.chatbot-ranking-item + .chatbot-ranking-item {
-    border-top: 1px solid #edf0f4;
-}
-
-.chatbot-ranking-item:hover {
-    background: #fafbfd;
-}
-
-
-/*
- * FAQ title + agency.
- */
-
-.chatbot-ranking-main {
-    display: flex;
-    flex-direction: column;
-
-    min-width: 0;
-
     flex: 1;
 }
 
-.chatbot-ranking-main strong {
-    overflow: hidden;
-
+.dashboard-analytics-copy strong {
+    margin-top: 1px;
+    color: #172033;
     font-size: 11px;
     font-weight: 600;
-    line-height: 1.45;
-
-    color: #172033;
-
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    overflow-wrap: anywhere;
 }
 
-.chatbot-ranking-main span {
-    margin-top: 3px;
-
+.dashboard-analytics-copy small {
+    margin-top: 2px;
     overflow: hidden;
-
-    font-size: 10px;
-    line-height: 1.35;
-
     color: #7b8799;
-
+    font-size: 9px;
+    line-height: 1.4;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
 
-
-/*
- * FAQ usage count.
- */
-
-.chatbot-ranking-count {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    min-width: 34px;
-
-    padding: 5px 8px;
-
-    border: 1px solid #dce7f8;
-    border-radius: 7px;
-
-    background: #f4f8ff;
-
-    font-size: 11px;
-    font-weight: 600;
-
-    color: #315fbd;
-}
-
-
-/* =========================================================
-   KNOWLEDGE GAPS
-   ========================================================= */
-
-.chatbot-gap-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.chatbot-gap-item {
-    display: flex;
-    align-items: center;
-
-    gap: 11px;
-
-    min-width: 0;
-
-    padding: 13px 18px;
-}
-
-.chatbot-gap-item + .chatbot-gap-item {
-    border-top: 1px solid #edf0f4;
-}
-
-
-/* =========================================================
-   KNOWLEDGE GAP ICON
-   ========================================================= */
-
-.chatbot-gap-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 30px;
-    height: 30px;
-
-    flex: 0 0 30px;
-
-    border-radius: 8px;
-}
-
-.chatbot-gap-icon i {
+.dashboard-analytics-link > i {
+    flex: 0 0 auto;
+    color: #94a3b8;
     font-size: 15px;
+    transition: transform .18s ease;
 }
 
-
-/*
- * Fallback.
- */
-
-.chatbot-gap-warning {
-    background: #fff1cc;
-    color: #a36b00;
-}
-
-
-/*
- * Clarification.
- */
-
-.chatbot-gap-info {
-    background: #eaf2ff;
-    color: #315fbd;
-}
-
-
-/*
- * Matching methods.
- */
-
-.chatbot-gap-success {
-    background: #ddf5e7;
-    color: #18804b;
+.dashboard-analytics-link:hover > i {
+    transform: translateX(2px);
 }
 
 
 /* =========================================================
-   KNOWLEDGE GAP CONTENT
+   RESPONSIVE
    ========================================================= */
 
-.chatbot-gap-content {
-    display: flex;
-    flex-direction: column;
-
-    min-width: 0;
-
-    flex: 1;
-}
-
-.chatbot-gap-content strong {
-    font-size: 11px;
-    font-weight: 600;
-
-    line-height: 1.4;
-
-    color: #172033;
-}
-
-.chatbot-gap-content span {
-    margin-top: 2px;
-
-    font-size: 10px;
-    line-height: 1.4;
-
-    color: #7b8799;
-}
-
-
-/*
- * Main gap count.
- */
-
-.chatbot-gap-count {
-    flex-shrink: 0;
-
-    min-width: 28px;
-
-    text-align: right;
-
-    font-size: 13px;
-    font-weight: 600;
-
-    color: #172033;
-}
-
-
-/* =========================================================
-   MATCHING METHOD COUNTS
-   ========================================================= */
-
-.chatbot-match-counts {
-    display: flex;
-    align-items: center;
-
-    gap: 6px;
-
-    flex-shrink: 0;
-}
-
-.chatbot-match-counts span {
-    padding: 4px 7px;
-
-    border: 1px solid #e3e8f0;
-    border-radius: 6px;
-
-    background: #f8fafc;
-
-    font-size: 9px;
-    font-weight: 500;
-
-    color: #61708a;
-}
-
-
-/* =========================================================
-   EMPTY STATE
-   ========================================================= */
-
-.chatbot-analytics-empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    gap: 8px;
-
-    min-height: 100px;
-
-    padding: 20px;
-
-    font-size: 10px;
-
-    line-height: 1.4;
-
-    text-align: center;
-
-    color: #94a3b8;
-}
-
-.chatbot-analytics-empty i {
-    flex-shrink: 0;
-
-    font-size: 17px;
-}
-
-
-/* =========================================================
-   MOST REQUESTED AGENCIES
-   ========================================================= */
-
-.chatbot-agency-card {
-    margin-top: 0;
-}
-
-.chatbot-agency-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.chatbot-agency-item {
-    display: flex;
-    align-items: center;
-
-    gap: 12px;
-
-    min-width: 0;
-
-    padding: 13px 18px;
-
-    transition:
-        background-color 0.18s ease;
-}
-
-.chatbot-agency-item + .chatbot-agency-item {
-    border-top: 1px solid #edf0f4;
-}
-
-.chatbot-agency-item:hover {
-    background: #fafbfd;
-}
-
-
-/* =========================================================
-   AGENCY RANK
-   ========================================================= */
-
-.chatbot-agency-rank {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 28px;
-    height: 28px;
-
-    flex: 0 0 28px;
-
-    border: 1px solid #e2e8f0;
-    border-radius: 7px;
-
-    background: #f8fafc;
-
-    font-size: 10px;
-    font-weight: 600;
-
-    color: #64748b;
-}
-
-
-/*
- * Highlight the first three rankings.
- */
-
-.chatbot-agency-item:nth-child(1) .chatbot-agency-rank {
-    background: #edf4ff;
-    border-color: #dce7f8;
-    color: #315fbd;
-}
-
-.chatbot-agency-item:nth-child(2) .chatbot-agency-rank {
-    background: #f1efff;
-    border-color: #e3ddfb;
-    color: #6957c9;
-}
-
-.chatbot-agency-item:nth-child(3) .chatbot-agency-rank {
-    background: #eef8f7;
-    border-color: #d8eee9;
-    color: #237c73;
-}
-
-
-/* =========================================================
-   AGENCY INFORMATION
-   ========================================================= */
-
-.chatbot-agency-info {
-    display: flex;
-    flex-direction: column;
-
-    min-width: 0;
-
-    flex: 1;
-}
-
-.chatbot-agency-info strong {
-    overflow: hidden;
-
-    font-size: 11px;
-    font-weight: 600;
-
-    line-height: 1.4;
-
-    color: #172033;
-
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-.chatbot-agency-info span {
-    margin-top: 2px;
-
-    font-size: 10px;
-
-    color: #7b8799;
-}
-
-
-/* =========================================================
-   AGENCY COUNT
-   ========================================================= */
-
-.chatbot-agency-count {
-    flex-shrink: 0;
-
-    font-size: 13px;
-    font-weight: 600;
-
-    color: #315fbd;
-}
-
-
-/* =========================================================
-   CHATBOT RESPONSIVE — TABLET
-   ========================================================= */
-
-@media (max-width: 1000px) {
-
-    .chatbot-analytics-grid {
-        grid-template-columns:
-            1fr;
+@media (max-width: 1050px) {
+    .dashboard-snapshot-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-
 }
 
-
-/* =========================================================
-   CHATBOT RESPONSIVE — MOBILE
-   ========================================================= */
-
-@media (max-width: 700px) {
-
-    .chatbot-card-header {
-        padding: 14px 15px;
-    }
-
-    .chatbot-ranking-item,
-    .chatbot-gap-item,
-    .chatbot-agency-item {
-        padding-left: 15px;
-        padding-right: 15px;
-    }
-
-    .chatbot-gap-item {
-        align-items: flex-start;
-    }
-
-    .chatbot-gap-count {
-        padding-top: 5px;
-    }
-
-    .chatbot-match-counts {
-        flex-direction: column;
-        align-items: flex-end;
-    }
-
-    .chatbot-match-counts span {
-        white-space: nowrap;
-    }
-
-}
-
-
-/* =========================================================
-   CHATBOT ACCESSIBILITY
-   ========================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-
-    .chatbot-analytics-card,
-    .chatbot-ranking-item,
-    .chatbot-agency-item {
-        transition: none;
-    }
-
-}
-
-
-/* =========================================================
-   RECENT ACTIVITY
-   ========================================================= */
-
-.activity-list {
-    overflow: hidden;
-
-    background: #ffffff;
-
-    border: 1px solid #e5eaf1;
-    border-radius: 12px;
-}
-
-
-/* =========================================================
-   ACTIVITY ITEM
-   ========================================================= */
-
-.activity-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    min-width: 0;
-
-    padding: 13px 15px;
-
-    transition:
-        background-color 0.18s ease;
-}
-
-.activity-item + .activity-item {
-    border-top: 1px solid #edf0f4;
-}
-
-.activity-item:hover {
-    background: #fafbfd;
-}
-
-
-/* =========================================================
-   ACTIVITY ICON
-   ========================================================= */
-
-.activity-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 32px;
-    height: 32px;
-
-    flex: 0 0 32px;
-
-    border: 1px solid #e3e8f0;
-    border-radius: 8px;
-
-    background: #f7f9fc;
-
-    color: #61708a;
-}
-
-.activity-icon i {
-    font-size: 16px;
-}
-
-
-/* =========================================================
-   ACTIVITY CONTENT
-   ========================================================= */
-
-.activity-content {
-    min-width: 0;
-
-    flex: 1;
-}
-
-.activity-actor {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-
-    min-width: 0;
-}
-
-.activity-actor strong {
-    overflow: hidden;
-
-    font-size: 12px;
-    font-weight: 600;
-
-    line-height: 1.35;
-
-    white-space: nowrap;
-    text-overflow: ellipsis;
-
-    color: #1f2937;
-}
-
-.activity-role {
-    flex-shrink: 0;
-
-    padding: 2px 6px;
-
-    border: 1px solid #e6eaf0;
-    border-radius: 999px;
-
-    font-size: 9px;
-    font-weight: 500;
-    line-height: 1.2;
-
-    color: #7b8799;
-    background: #fafbfc;
-
-    text-transform: capitalize;
-}
-
-
-/* =========================================================
-   ACTIVITY DESCRIPTION
-   ========================================================= */
-
-.activity-description {
-    display: block;
-
-    overflow: hidden;
-
-    margin-top: 2px;
-
-    font-size: 11px;
-    line-height: 1.45;
-
-    white-space: nowrap;
-    text-overflow: ellipsis;
-
-    color: #69768a;
-}
-
-.activity-target {
-    color: #43516a;
-}
-
-
-/* =========================================================
-   ACTIVITY TIME
-   ========================================================= */
-
-.activity-time {
-    flex-shrink: 0;
-
-    font-size: 10px;
-    line-height: 1.3;
-
-    color: #98a2b3;
-
-    white-space: nowrap;
-}
-
-.activity-item time {
-    flex-shrink: 0;
-
-    font-size: 10px;
-
-    color: #94a3b8;
-}
-
-
-/* =========================================================
-   ACTIVITY EMPTY STATE
-   ========================================================= */
-
-.activity-empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-
-    padding: 24px;
-
-    font-size: 11px;
-
-    color: #94a3b8;
-}
-
-.activity-empty i {
-    font-size: 16px;
-}
-
-
-/* =========================================================
-   RESPONSIVE — TABLET
-   ========================================================= */
-
-@media (max-width: 1000px) {
-
-    .overview-grid {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-    }
-
-}
-
-
-/* =========================================================
-   RESPONSIVE — MOBILE
-   ========================================================= */
-
-@media (max-width: 700px) {
-
-    .dashboard-section {
-        margin-bottom: 24px;
-    }
-
-
-    /* Section heading */
-
+@media (max-width: 720px) {
+    .dashboard-report-header,
     .section-heading {
         align-items: flex-start;
         flex-direction: column;
-        gap: 8px;
     }
 
-
-    /* Overview */
-
-    .overview-grid {
-        grid-template-columns:
-            1fr;
+    .dashboard-export-button {
+        align-self: flex-end;
     }
 
-
-    /* Management */
-
-    .management-grid {
-        grid-template-columns:
-            1fr;
+    .dashboard-snapshot-grid {
+        grid-template-columns: 1fr;
     }
 
-
-    /* Inquiry stats */
-
-    .inquiry-overview {
-        grid-template-columns:
-            1fr;
+    .dashboard-team-members {
+        grid-template-columns: 1fr;
     }
 
-    .inquiry-stat + .inquiry-stat {
+    .dashboard-team-member:nth-child(even) {
         border-left: 0;
-
-        border-top: 1px solid #e7ebf1;
     }
 
-    .inquiry-stat {
-        padding: 15px 16px;
+    .dashboard-team-member + .dashboard-team-member {
+        border-top: 1px solid #edf0f4;
     }
 
-
-    /* Management footer */
-
-    .management-footer {
-        align-items: flex-start;
-        flex-direction: column;
+    .dashboard-team-summary {
+        align-self: flex-start;
     }
 
+    .dashboard-analytics-copy small {
+        white-space: normal;
+    }
+}
 
-    /* Activity */
-
-    .activity-item {
-        align-items: flex-start;
+@media (max-width: 480px) {
+    .dashboard-metric {
+        min-height: 84px;
+        padding: 13px;
     }
 
-    .activity-item time {
-        display: none;
+    .dashboard-metric-copy strong {
+        font-size: 20px;
     }
 
-    .activity-description {
+    .dashboard-attention-copy strong,
+    .dashboard-attention-copy small {
         white-space: normal;
     }
 
+    .dashboard-team-domains {
+        gap: 5px;
+    }
+
+    .dashboard-analytics-link {
+        align-items: flex-start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-metric,
+    .dashboard-export-button,
+    .dashboard-attention-item,
+    .dashboard-team-member,
+    .dashboard-analytics-link {
+        transition: none;
+    }
 }
 
 
 /* =========================================================
-   ACCESSIBILITY
+   COLLABORATION — REAL SHARED WORK
    ========================================================= */
 
-@media (prefers-reduced-motion: reduce) {
+.dashboard-collaboration-add,
+.dashboard-primary-button,
+.dashboard-secondary-button,
+.dashboard-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid #d7dee9;
+    border-radius: 8px;
+    font: inherit;
+    cursor: pointer;
+    transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
 
-    .overview-card,
-    .overview-card-arrow,
-    .attention-item,
-    .attention-arrow,
-    .section-action,
-    .inquiry-stat,
-    .inquiry-stat-arrow,
-    .activity-item {
-        transition: none;
+.dashboard-collaboration-add {
+    min-height: 32px;
+    padding: 0 10px;
+    background: #edf4ff;
+    border-color: #d2e0fa;
+    color: #315fbd;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.dashboard-collaboration-add:hover {
+    background: #e5efff;
+    border-color: #bfd2f3;
+}
+
+.dashboard-collaboration-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 9px;
+}
+
+.dashboard-collaboration-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    min-width: 0;
+    padding: 9px 11px;
+    border: 1px solid #e5e9f0;
+    border-radius: 9px;
+    background: #fff;
+}
+
+.dashboard-collaboration-stat strong {
+    color: #172033;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.dashboard-collaboration-stat span {
+    overflow: hidden;
+    color: #7b8799;
+    font-size: 9px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.dashboard-collaboration-stat.is-primary strong {
+    color: #315fbd;
+}
+
+.dashboard-collaboration-card {
+    overflow: hidden;
+    border: 1px solid #e5e9f0;
+    border-radius: 11px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(15,23,42,.03);
+}
+
+.dashboard-collaboration-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 10px 12px;
+}
+
+.dashboard-collaboration-item + .dashboard-collaboration-item {
+    border-top: 1px solid #edf0f4;
+}
+
+.dashboard-collaboration-item.is-overdue {
+    background: #fffaf8;
+}
+
+.dashboard-collaboration-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    border-radius: 8px;
+    background: #edf4ff;
+    color: #315fbd;
+}
+
+.dashboard-collaboration-item-copy {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.dashboard-collaboration-item-copy strong {
+    overflow: hidden;
+    color: #172033;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.35;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.dashboard-collaboration-item-copy small {
+    margin-top: 2px;
+    overflow: hidden;
+    color: #7b8799;
+    font-size: 9px;
+    line-height: 1.35;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.dashboard-collaboration-item-meta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    flex: 0 0 auto;
+}
+
+.dashboard-collaboration-due {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #7b8799;
+    font-size: 9px;
+    white-space: nowrap;
+}
+
+.dashboard-collaboration-due.is-overdue {
+    color: #b54708;
+    font-weight: 600;
+}
+
+.dashboard-collaboration-status {
+    min-width: 92px;
+    height: 29px;
+    padding: 0 24px 0 8px;
+    border: 1px solid #dfe5ed;
+    border-radius: 7px;
+    background: #fff;
+    color: #52627a;
+    font: inherit;
+    font-size: 9px;
+    cursor: pointer;
+}
+
+.dashboard-collaboration-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 74px;
+    padding: 16px;
+    color: #8b96a8;
+}
+
+.dashboard-collaboration-empty i {
+    font-size: 19px;
+}
+
+.dashboard-collaboration-empty div {
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboard-collaboration-empty strong {
+    color: #52627a;
+    font-size: 10px;
+}
+
+.dashboard-collaboration-empty span {
+    margin-top: 2px;
+    font-size: 9px;
+}
+
+.dashboard-collaboration-modal[hidden] {
+    display: none;
+}
+
+.dashboard-collaboration-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.dashboard-collaboration-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15,23,42,.48);
+    backdrop-filter: blur(2px);
+}
+
+.dashboard-collaboration-modal-card {
+    position: relative;
+    width: min(560px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow: auto;
+    padding: 18px;
+    border: 1px solid #e2e7ef;
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: 0 20px 55px rgba(15,23,42,.18);
+}
+
+.dashboard-collaboration-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.dashboard-collaboration-modal-header h3 {
+    margin: 2px 0 0;
+    color: #172033;
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.dashboard-icon-button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background: #fff;
+    color: #64748b;
+}
+
+.dashboard-icon-button:hover {
+    background: #f8fafc;
+    border-color: #cfd7e4;
+}
+
+.dashboard-collaboration-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dashboard-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.dashboard-collaboration-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.dashboard-collaboration-form label > span {
+    color: #52627a;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.dashboard-collaboration-form label > span em {
+    color: #94a3b8;
+    font-style: normal;
+    font-weight: 400;
+}
+
+.dashboard-collaboration-form input,
+.dashboard-collaboration-form select,
+.dashboard-collaboration-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #dfe5ed;
+    border-radius: 8px;
+    background: #fff;
+    color: #172033;
+    font: inherit;
+    font-size: 10px;
+    outline: none;
+}
+
+.dashboard-collaboration-form input,
+.dashboard-collaboration-form select {
+    min-height: 36px;
+    padding: 0 10px;
+}
+
+.dashboard-collaboration-form textarea {
+    padding: 9px 10px;
+    resize: vertical;
+}
+
+.dashboard-collaboration-form input:focus,
+.dashboard-collaboration-form select:focus,
+.dashboard-collaboration-form textarea:focus {
+    border-color: #9fb9e7;
+    box-shadow: 0 0 0 3px rgba(49,95,189,.08);
+}
+
+.dashboard-target-row {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 7px;
+}
+
+.dashboard-collaboration-form-error {
+    padding: 9px 10px;
+    border: 1px solid #f2c9c9;
+    border-radius: 8px;
+    background: #fff3f3;
+    color: #b42318;
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+.dashboard-collaboration-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 7px;
+    margin-top: 2px;
+}
+
+.dashboard-secondary-button,
+.dashboard-primary-button {
+    min-height: 34px;
+    padding: 0 11px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.dashboard-secondary-button {
+    background: #fff;
+    color: #52627a;
+}
+
+.dashboard-secondary-button:hover {
+    background: #f8fafc;
+}
+
+.dashboard-primary-button {
+    border-color: #315fbd;
+    background: #315fbd;
+    color: #fff;
+}
+
+.dashboard-primary-button:hover {
+    background: #2a55aa;
+}
+
+.dashboard-primary-button:disabled {
+    cursor: wait;
+    opacity: .65;
+}
+
+@media (max-width: 720px) {
+    .dashboard-collaboration-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .dashboard-collaboration-item {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .dashboard-collaboration-item-meta {
+        width: 100%;
+        padding-left: 40px;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 520px) {
+    .dashboard-form-grid,
+    .dashboard-target-row {
+        grid-template-columns: 1fr;
+    }
 }

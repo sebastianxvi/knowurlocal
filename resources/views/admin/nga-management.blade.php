@@ -43,175 +43,96 @@
      STICKY NGA & NGO CONTROLS
      ========================================================= -->
 
-<div class="agency-controls">
-
-    {{-- =====================================================
-         STATUS TABS
-         ===================================================== --}}
+<div class="admin-data-controls">
 
     @if(auth()->user()->role === 'superadmin')
-
-        <div class="agency-status-tabs">
-
-            {{-- ACTIVE --}}
-            <a
-                href="{{ route('admin.nga', array_merge(
-                    request()->except('page', 'status'),
-                    ['status' => 'active']
-                )) }}"
-                class="agency-status-tab {{ $status === 'active' ? 'active' : '' }}"
-            >
-                <i class="ph-light ph-buildings"></i>
-
-                <span>Active</span>
-
-                <span class="status-count">
-                    {{ $activeCount }}
-                </span>
-            </a>
-
-
-            {{-- TRASHED --}}
-            <a
-                href="{{ route('admin.nga', array_merge(
-                    request()->except('page', 'status'),
-                    ['status' => 'trashed']
-                )) }}"
-                class="agency-status-tab {{ $status === 'trashed' ? 'active' : '' }}"
-            >
-                <i class="ph-light ph-trash"></i>
-
-                <span>Trashed</span>
-
-                <span class="status-count">
-                    {{ $trashedCount }}
-                </span>
-            </a>
-
-        </div>
-
+        @include('admin.components.status-tabs', [
+            'ariaLabel' => 'Agency collections',
+            'tabs' => [
+                [
+                    'href' => route('admin.nga', array_merge(request()->except('page', 'status'), ['status' => 'active'])),
+                    'label' => 'Active',
+                    'icon' => 'ph-buildings',
+                    'count' => $activeCount,
+                    'active' => $status === 'active',
+                ],
+                [
+                    'href' => route('admin.nga', array_merge(request()->except('page', 'status'), ['status' => 'trashed'])),
+                    'label' => 'Trashed',
+                    'icon' => 'ph-trash',
+                    'count' => $trashedCount,
+                    'active' => $status === 'trashed',
+                ],
+            ],
+        ])
     @endif
 
+    <section class="support-filter-toolbar admin-filter-toolbar" aria-label="Agency filters">
+        <form method="GET" action="{{ route('admin.nga') }}" class="support-filter-form">
+            <input type="hidden" name="status" value="{{ $status }}">
 
-    {{-- =====================================================
-         FILTER BAR
-         ===================================================== --}}
+            <div class="support-filter-field support-search-field">
+                <label for="agency-search" class="sr-only">Search agencies</label>
+                <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" id="agency-search" name="search" placeholder="Search agency..." value="{{ request('search') }}" autocomplete="off">
+            </div>
 
-    <form method="GET" action="{{ route('admin.nga') }}">
-
-        <input
-            type="hidden"
-            name="status"
-            value="{{ $status }}"
-        >
-
-        <div class="filter-card">
-
-            <div class="filter-bar">
-
-                <!-- SEARCH -->
-                <input
-                    type="text"
-                    name="search"
-                    placeholder="Search agency"
-                    value="{{ request('search') }}"
-                >
-
-                <!-- TYPE -->
+            <div class="support-filter-field">
+                <label for="filterType" class="sr-only">Filter by type</label>
+                <i class="ph-light ph-buildings" aria-hidden="true"></i>
                 <select name="type" id="filterType">
-
-                    <option value="">
-                        All Types
-                    </option>
-
+                    <option value="">All Types</option>
                     @foreach($types as $type)
-
-                        <option
-                            value="{{ $type->id }}"
-                            {{ request('type') == $type->id ? 'selected' : '' }}
-                        >
-                            {{ $type->name }}
-                        </option>
-
+                        <option value="{{ $type->id }}" {{ request('type') == $type->id ? 'selected' : '' }}>{{ $type->name }}</option>
                     @endforeach
-
                 </select>
+            </div>
 
-
-                <!-- CATEGORY -->
+            <div class="support-filter-field">
+                <label for="filterCategory" class="sr-only">Filter by category</label>
+                <i class="ph-light ph-folders" aria-hidden="true"></i>
                 <select name="category" id="filterCategory">
-
-                    <option value="">
-                        All Categories
-                    </option>
-
+                    <option value="">All Categories</option>
                     @foreach($categories as $category)
-
-                        <option
-                            value="{{ $category->id }}"
-                            {{ request('category') == $category->id ? 'selected' : '' }}
-                        >
-                            {{ $category->category_name }}
-                        </option>
-
+                        <option value="{{ $category->id }}" {{ request('category') == $category->id ? 'selected' : '' }}>{{ $category->category_name }}</option>
                     @endforeach
-
                 </select>
+            </div>
 
-
-                <!-- SORT -->
-                <select name="sort">
-
-                    <option
-                        value="latest"
-                        {{ request('sort') == 'latest' ? 'selected' : '' }}
-                    >
-                        Newest First
-                    </option>
-
-                    <option
-                        value="oldest"
-                        {{ request('sort') == 'oldest' ? 'selected' : '' }}
-                    >
-                        Oldest First
-                    </option>
-
+            <div class="support-filter-field">
+                <label for="agency-sort" class="sr-only">Sort agencies</label>
+                <i class="ph-light ph-arrows-down-up" aria-hidden="true"></i>
+                <select name="sort" id="agency-sort">
+                    <option value="latest" {{ request('sort') == 'latest' ? 'selected' : '' }}>Newest First</option>
+                    <option value="oldest" {{ request('sort') == 'oldest' ? 'selected' : '' }}>Oldest First</option>
                 </select>
+            </div>
 
-
-                <!-- FILTER -->
-                <button type="submit">
-                    Filter
+            <button type="submit" class="support-filter-submit admin-icon-button" aria-label="Apply filters" title="Apply filters">
+                <i class="ph-light ph-sliders-horizontal" aria-hidden="true"></i>
+                <span class="sr-only">Filter</span>
+            </button>
+        
+            @if($status === 'active')
+                <button type="button" class="add-agencybtn admin-add-action" onclick="openModal()" aria-label="Add agency" title="Add agency">
+                    <i class="ph-light ph-plus" aria-hidden="true"></i>
+                    <span class="sr-only">Add agency</span>
                 </button>
+            @endif
 
-            </div>
+        </form>
 
-
-            <!-- ADD AGENCY -->
-            <div>
-
-                @if($status === 'active')
-
-                    <button
-                        type="button"
-                        class="add-agencybtn"
-                        onclick="openModal()"
-                    >
-                        + Add Agency
-                    </button>
-
-                @endif
-
-            </div>
-
-        </div>
-
-    </form>
+    </section>
 
 </div>
 
     <!-- ================= TABLE ================= -->
-    <div class="table-wrapper">
+    @include('admin.components.list-result-meta', [
+    'count' => $agencies->total(),
+    'label' => 'agency',
+])
+
+<div class="table-wrapper">
 
         <table class="table">
             <thead>
@@ -350,7 +271,7 @@
             <!-- EDIT -->
             <button
                 type="button"
-                class="btn btn-primary"
+                class="btn btn-primary admin-table-icon-action" aria-label="Edit" title="Edit"
 
                 data-id="{{ $agency->id }}"
                 data-name="{{ $agency->agency_name }}"
@@ -369,7 +290,7 @@
                 data-contacts="{{ $agencyContacts->toJson() }}"
             >
             <i class="ph-light ph-pencil-simple"></i>
-                Edit
+                <span class="sr-only">Edit</span>
             </button>
 
 
@@ -387,11 +308,11 @@
 
                 <button
                     type="button"
-                    class="btn btn-danger delete-btn"
+                    class="btn btn-danger delete-btn admin-table-icon-action" aria-label="Trash" title="Trash"
                     data-agency-name="{{ $agency->agency_name }}"
                 >
                     <i class="ph-light ph-trash"></i>
-                    Trash
+                    <span class="sr-only">Trash</span>
                 </button>
 
             </form>
@@ -424,11 +345,11 @@
 
                 <button
                     type="button"
-                    class="btn btn-restore restore-btn"
+                    class="btn btn-restore restore-btn admin-table-icon-action" aria-label="Restore" title="Restore"
                     data-agency-name="{{ $agency->agency_name }}"
                 >
                     <i class="ph-light ph-arrow-counter-clockwise"></i>
-                    Restore
+                    <span class="sr-only">Restore</span>
                 </button>
 
             </form>
@@ -448,11 +369,11 @@
 
                 <button
                     type="button"
-                    class="btn btn-danger force-delete-btn"
+                    class="btn btn-danger force-delete-btn admin-table-icon-action" aria-label="Delete Permanently" title="Delete Permanently"
                     data-agency-name="{{ $agency->agency_name }}"
                 >
                     <i class="ph-light ph-trash"></i>
-                    Delete Permanently
+                    <span class="sr-only">Delete Permanently</span>
                 </button>
 
             </form>

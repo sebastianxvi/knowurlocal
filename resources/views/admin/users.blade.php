@@ -17,86 +17,61 @@
 
 <div class="admin-page">
 
-    {{-- ================= STATUS TABS ================= --}}
-<div class="admin-status-tabs">
+    {{-- Shared status navigation --}}
+    @include('admin.components.status-tabs', [
+        'ariaLabel' => 'User status',
+        'tabs' => [
+            [
+                'href' => route('admin.users', array_merge(request()->except('page'), ['status' => 'active'])),
+                'label' => 'Active',
+                'icon' => 'ph-user-check',
+                'count' => $activeCount,
+                'active' => request('status', 'active') === 'active',
+            ],
+            [
+                'href' => route('admin.users', array_merge(request()->except('page'), ['status' => 'deactivated'])),
+                'label' => 'Deactivated',
+                'icon' => 'ph-user-minus',
+                'count' => $deactivatedCount,
+                'active' => request('status') === 'deactivated',
+            ],
+        ],
+    ])
 
-    {{-- ACTIVE --}}
-    <a
-        href="{{ route(
-            'admin.users',
-            array_merge(
-                request()->except('page'),
-                ['status' => 'active']
-            )
-        ) }}"
-        class="admin-status-tab {{ request('status') === 'active' ? 'active' : '' }}"
-    >
-        <i class="ph-light ph-user-check"></i>
+    {{-- Shared filter toolbar --}}
+    <section class="support-filter-toolbar admin-filter-toolbar" aria-label="User filters">
+        <form method="GET" action="{{ route('admin.users') }}" class="support-filter-form">
+            <input type="hidden" name="status" value="{{ request('status') }}">
 
-        <span>Active</span>
+            <div class="support-filter-field support-search-field">
+                <label for="user-search" class="sr-only">Search users</label>
+                <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" id="user-search" name="search" placeholder="Search user..." value="{{ request('search') }}" autocomplete="off">
+            </div>
 
-        <span class="status-count">
-            {{ $activeCount }}
-        </span>
-    </a>
+            <div class="support-filter-field">
+                <label for="user-sort" class="sr-only">Sort users</label>
+                <i class="ph-light ph-arrows-down-up" aria-hidden="true"></i>
+                <select name="sort" id="user-sort">
+                    <option value="desc" {{ request('sort', 'desc') === 'desc' ? 'selected' : '' }}>Newest First</option>
+                    <option value="asc" {{ request('sort') === 'asc' ? 'selected' : '' }}>Oldest First</option>
+                </select>
+            </div>
 
-
-    {{-- DEACTIVATED --}}
-    <a
-        href="{{ route(
-            'admin.users',
-            array_merge(
-                request()->except('page'),
-                ['status' => 'deactivated']
-            )
-        ) }}"
-        class="admin-status-tab {{ request('status') === 'deactivated' ? 'active' : '' }}"
-    >
-        <i class="ph-light ph-user-minus"></i>
-
-        <span>Deactivated</span>
-
-        <span class="status-count">
-            {{ $deactivatedCount }}
-        </span>
-    </a>
-
-</div>
-
-    <!-- ================= FILTER ================= -->
-    <div class="filter-card">
-
-        <form method="GET" action="{{ route('admin.users') }}" class="filter-bar">
-
-            <!-- SEARCH -->
-            <input 
-                type="text" 
-                name="search"
-                placeholder="Search user..."
-                value="{{ request('search') }}"
-            >
-
-            <!-- SORT -->
-            <select name="sort">
-                <option value="desc" {{ request('sort') == 'desc' ? 'selected' : '' }}>Newest First</option>
-                <option value="asc" {{ request('sort') == 'asc' ? 'selected' : '' }}>Oldest First</option>
-            </select>
-
-            {{-- PRESERVE CURRENT STATUS TAB --}}
-            <input
-                type="hidden"
-                name="status"
-                value="{{ request('status') }}"
-            >
-
-            <button type="submit">Filter</button>
-
+            <button type="submit" class="support-filter-submit admin-icon-button" aria-label="Apply filters" title="Apply filters">
+                <i class="ph-light ph-sliders-horizontal" aria-hidden="true"></i>
+                <span class="sr-only">Filter</span>
+            </button>
         </form>
-
-    </div>
+    </section>
 
     <!-- ================= TABLE ================= -->
-    <div class="table-wrapper">
+    @include('admin.components.list-result-meta', [
+    'count' => $users->total(),
+    'label' => 'user',
+])
+
+<div class="table-wrapper">
 
         <table class="table">
 
@@ -207,11 +182,9 @@
 
                     <button
                         type="submit"
-                        class="btn btn-danger deactivate-user-btn"
-                    >
-                        <i class="ph-light ph-user-minus"></i>
-                        Deactivate
-                    </button>
+                        class="btn btn-danger deactivate-user-btn admin-table-icon-action"
+                     aria-label="Deactivate" title="Deactivate">
+                        <i class="ph-light ph-user-minus"></i><span class="sr-only">Deactivate</span></button>
 
                 </form>
 
@@ -240,11 +213,9 @@
 
                     <button
                         type="submit"
-                        class="btn btn-primary reactivate-user-btn"
-                    >
-                        <i class="ph-light ph-user-check"></i>
-                        Reactivate
-                    </button>
+                        class="btn btn-primary reactivate-user-btn admin-table-icon-action"
+                     aria-label="Reactivate" title="Reactivate">
+                        <i class="ph-light ph-user-check"></i><span class="sr-only">Reactivate</span></button>
 
                 </form>
 
@@ -259,11 +230,9 @@
 
                     <button
                         type="submit"
-                        class="btn btn-danger delete-user-btn"
-                    >
-                        <i class="ph-light ph-trash"></i>
-                        Delete Permanently
-                    </button>
+                        class="btn btn-danger delete-user-btn admin-table-icon-action"
+                     aria-label="Delete Permanently" title="Delete Permanently">
+                        <i class="ph-light ph-trash"></i><span class="sr-only">Delete Permanently</span></button>
 
                 </form>
 

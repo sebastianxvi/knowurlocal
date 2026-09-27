@@ -8,6 +8,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\ChatbotLogController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CollaborationController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\SupportRequestController;
@@ -289,8 +290,17 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::get('/analytics', [DashboardController::class, 'analytics'])
         ->name('admin.analytics');
 
+    Route::post('/dashboard/collaboration', [CollaborationController::class, 'store'])
+        ->name('admin.dashboard.collaboration.store');
+
+    Route::patch('/dashboard/collaboration/{task}/status', [CollaborationController::class, 'updateStatus'])
+        ->name('admin.dashboard.collaboration.status');
+
+    Route::get('/dashboard/collaboration/targets', [CollaborationController::class, 'targets'])
+        ->name('admin.dashboard.collaboration.targets');
+
     Route::get(
-        '/admin/dashboard/export',
+        '/dashboard/export',
         [DashboardController::class, 'exportPdf']
     )->name('admin.dashboard.export');
 

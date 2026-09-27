@@ -39,69 +39,83 @@
 <div class="logs-page">
 
     <!-- FILTER -->
-    <div class="filter-card">
+    <section class="support-filter-toolbar admin-filter-toolbar" aria-label="Activity log filters">
+        <form method="GET" class="support-filter-form">
+            <div class="support-filter-field support-search-field">
+                <label for="logs-search" class="sr-only">Search logs</label>
+                <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" id="logs-search" name="search" value="{{ request('search') }}" placeholder="Search user or action..." autocomplete="off">
+            </div>
 
-        <!-- LEFT -->
-        <form method="GET" class="filter-bar">
+            <div class="support-filter-field">
+                <label for="logs-action" class="sr-only">Filter by action</label>
+                <i class="ph-light ph-funnel" aria-hidden="true"></i>
+                <select name="action" id="logs-action">
+                    <option value="">All Actions</option>
+                    @foreach($availableActions as $action)
+                        <option value="{{ $action }}" {{ request('action') == $action ? 'selected' : '' }}>
+                            {{ ucfirst(str_replace('_',' ', $action)) }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
 
-            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search user or action">
+            <div class="support-filter-field">
+                <label for="logs-date" class="sr-only">Filter by date</label>
+                <i class="ph-light ph-calendar-blank" aria-hidden="true"></i>
+                <select name="date" id="logs-date">
+                    <option value="">All Dates</option>
+                    @foreach($availableDates as $date)
+                        <option value="{{ $date }}" {{ request('date') == $date ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::parse($date)->format('M d, Y') }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
 
-            <select name="action">
-                <option value="">All Actions</option>
+            <div class="support-filter-field">
+                <label for="logs-sort" class="sr-only">Sort logs</label>
+                <i class="ph-light ph-arrows-down-up" aria-hidden="true"></i>
+                <select name="sort" id="logs-sort">
+                    <option value="desc" {{ request('sort', 'desc') == 'desc' ? 'selected' : '' }}>Newest First</option>
+                    <option value="asc" {{ request('sort') == 'asc' ? 'selected' : '' }}>Oldest First</option>
+                </select>
+            </div>
 
-                @foreach($availableActions as $action)
-                    <option value="{{ $action }}" {{ request('action') == $action ? 'selected' : '' }}>
-                        {{ ucfirst(str_replace('_',' ', $action)) }}
-                    </option>
-                @endforeach
-            </select>
-
-            <select name="date">
-                <option value="">All Dates</option>
-
-                @foreach($availableDates as $date)
-                    <option value="{{ $date }}" {{ request('date') == $date ? 'selected' : '' }}>
-                        {{ \Carbon\Carbon::parse($date)->format('M d, Y') }}
-                    </option>
-                @endforeach
-            </select>
-
-            <select name="sort">
-                <option value="desc" {{ request('sort') == 'desc' ? 'selected' : '' }}>Newest First</option>
-                <option value="asc" {{ request('sort') == 'asc' ? 'selected' : '' }}>Oldest First</option>
-            </select>
-
-            <!-- KEEP ROLE -->
             <input type="hidden" name="role" value="{{ request('role') }}">
 
-            <button type="submit">Filter</button>
-
+            <button type="submit" class="support-filter-submit admin-icon-button" aria-label="Apply filters" title="Apply filters">
+                <i class="ph-light ph-sliders-horizontal" aria-hidden="true"></i>
+                <span class="sr-only">Filter</span>
+            </button>
         </form>
 
-        <!-- RIGHT -->
-        <div class="log-tabs">
-
+        <nav class="support-dataset-tabs admin-filter-tabs" aria-label="Activity log actor">
             <a href="{{ route('admin.logs', array_merge(request()->all(), ['role' => ''])) }}"
-               class="tab {{ request('role') == '' ? 'active' : '' }}">
-               All
+               class="support-dataset-tab {{ request('role') == '' ? 'is-active' : '' }}"
+               aria-current="{{ request('role') == '' ? 'page' : 'false' }}">
+                <span>All</span>
             </a>
-
             <a href="{{ route('admin.logs', array_merge(request()->all(), ['role' => 'admin'])) }}"
-               class="tab {{ request('role') == 'admin' ? 'active' : '' }}">
-               Admin
+               class="support-dataset-tab {{ request('role') == 'admin' ? 'is-active' : '' }}"
+               aria-current="{{ request('role') == 'admin' ? 'page' : 'false' }}">
+                <span>Admin</span>
             </a>
-
             <a href="{{ route('admin.logs', array_merge(request()->all(), ['role' => 'user'])) }}"
-               class="tab {{ request('role') == 'user' ? 'active' : '' }}">
-               User
+               class="support-dataset-tab {{ request('role') == 'user' ? 'is-active' : '' }}"
+               aria-current="{{ request('role') == 'user' ? 'page' : 'false' }}">
+                <span>User</span>
             </a>
-
-        </div>
-
-    </div>
+        </nav>
+    </section>
 
     <!-- TABLE -->
-    <div class="table-wrapper">
+    @include('admin.components.list-result-meta', [
+    'count' => $logs->total(),
+    'label' => 'log',
+])
+
+<div class="table-wrapper">
 
         <table class="table">
 

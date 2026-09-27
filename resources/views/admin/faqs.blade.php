@@ -29,30 +29,28 @@
     <div class="faq-controls">
 
     @if(auth()->user()->role === 'superadmin')
-        <nav class="support-dataset-tabs" aria-label="FAQ collections">
-            <a
-                href="{{ route('faqs.index', array_merge(request()->except('page'), ['status' => 'active'])) }}"
-                class="support-dataset-tab {{ $status === 'active' ? 'is-active' : '' }}"
-                aria-current="{{ $status === 'active' ? 'page' : 'false' }}"
-            >
-                <i class="ph-light ph-book-open" aria-hidden="true"></i>
-                <span>Active</span>
-                <span class="support-dataset-count">{{ $activeCount }}</span>
-            </a>
-
-            <a
-                href="{{ route('faqs.index', array_merge(request()->except('page'), ['status' => 'trashed'])) }}"
-                class="support-dataset-tab {{ $status === 'trashed' ? 'is-active' : '' }}"
-                aria-current="{{ $status === 'trashed' ? 'page' : 'false' }}"
-            >
-                <i class="ph-light ph-trash" aria-hidden="true"></i>
-                <span>Trashed</span>
-                <span class="support-dataset-count">{{ $trashedCount }}</span>
-            </a>
-        </nav>
+        @include('admin.components.status-tabs', [
+            'ariaLabel' => 'FAQ collections',
+            'tabs' => [
+                [
+                    'href' => route('faqs.index', array_merge(request()->except('page'), ['status' => 'active'])),
+                    'label' => 'Active',
+                    'icon' => 'ph-book-open',
+                    'count' => $activeCount,
+                    'active' => $status === 'active',
+                ],
+                [
+                    'href' => route('faqs.index', array_merge(request()->except('page'), ['status' => 'trashed'])),
+                    'label' => 'Trashed',
+                    'icon' => 'ph-trash',
+                    'count' => $trashedCount,
+                    'active' => $status === 'trashed',
+                ],
+            ],
+        ])
     @endif
 
-    <section class="support-filter-toolbar" aria-label="FAQ filters">
+    <section class="support-filter-toolbar admin-filter-toolbar" aria-label="FAQ filters">
         <form method="GET" action="{{ route('faqs.index') }}" class="support-filter-form">
             <input type="hidden" name="status" value="{{ $status }}">
 
@@ -104,22 +102,22 @@
                 </select>
             </div>
 
-            <button type="submit" class="support-filter-submit">
+            <button type="submit" class="support-filter-submit admin-icon-button" aria-label="Apply filters" title="Apply filters">
                 <i class="ph-light ph-sliders-horizontal" aria-hidden="true"></i>
-                <span>Filter</span>
+                <span class="sr-only">Filter</span>
             </button>
 
             @if(request()->has('search') || request()->has('agency') || request()->has('date') || request('sort', 'latest') !== 'latest')
-                <a href="{{ route('faqs.index', ['status' => $status]) }}" class="support-filter-clear">
+                <a href="{{ route('faqs.index', ['status' => $status]) }}" class="support-filter-clear admin-icon-button" aria-label="Clear filters" title="Clear filters">
                     <i class="ph-light ph-x" aria-hidden="true"></i>
                     <span>Clear</span>
                 </a>
             @endif
 
             @if($status === 'active')
-                <button type="button" class="add-agencybtn" onclick="openFaqModal('add')">
+                <button type="button" class="add-agencybtn admin-add-action" onclick="openFaqModal('add')" aria-label="Add FAQ" title="Add FAQ">
                     <i class="ph-light ph-plus" aria-hidden="true"></i>
-                    <span>Add FAQ</span>
+                    <span class="sr-only">Add FAQ</span>
                 </button>
             @endif
         </form>
@@ -127,7 +125,12 @@
 </div>
 
     <!-- ================= TABLE ================= -->
-    <div class="table-wrapper">
+    @include('admin.components.list-result-meta', [
+    'count' => $faqs->total(),
+    'label' => 'FAQ',
+])
+
+<div class="table-wrapper">
         <table class="table">
             <thead>
                 <tr>
@@ -220,7 +223,7 @@
             {{-- EDIT --}}
             <button
                 type="button"
-                class="btn btn-primary edit-btn"
+                class="btn btn-primary edit-btn admin-table-icon-action" aria-label="Edit" title="Edit"
 
                 data-id="{{ $faq->id }}"
                 data-agency="{{ $faq->agency_id }}"
@@ -236,7 +239,7 @@
                 data-response-components='{{ json_encode($faq->response_components ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}'
             >
                 <i class="ph-light ph-pencil-simple"></i>
-                Edit
+                <span class="sr-only">Edit</span>
             </button>
 
 
@@ -252,11 +255,11 @@
 
                 <button
                     type="button"
-                    class="btn btn-danger delete-btn"
+                    class="btn btn-danger delete-btn admin-table-icon-action" aria-label="Trash" title="Trash"
                     data-faq-question="{{ $faq->question }}"
                 >
                     <i class="ph-light ph-trash"></i>
-                    Trash
+                    <span class="sr-only">Trash</span>
                 </button>
 
             </form>
@@ -288,11 +291,11 @@
 
                 <button
                     type="button"
-                    class="btn btn-restore restore-btn"
+                    class="btn btn-restore restore-btn admin-table-icon-action" aria-label="Restore" title="Restore"
                     data-faq-question="{{ $faq->question }}"
                 >
                     <i class="ph-light ph-arrow-counter-clockwise"></i>
-                    Restore
+                    <span class="sr-only">Restore</span>
                 </button>
 
             </form>
@@ -313,11 +316,11 @@
 
                 <button
                     type="button"
-                    class="btn btn-danger force-delete-btn"
+                    class="btn btn-danger force-delete-btn admin-table-icon-action" aria-label="Delete Permanently" title="Delete Permanently"
                     data-faq-question="{{ $faq->question }}"
                 >
                     <i class="ph-light ph-trash"></i>
-                    Delete Permanently
+                    <span class="sr-only">Delete Permanently</span>
                 </button>
 
             </form>

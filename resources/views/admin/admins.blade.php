@@ -16,172 +16,79 @@
 
 <div class="admin-page">
 
-    {{-- STATUS TABS --}}
-@if(auth()->user()->role === 'superadmin')
+    {{-- Shared status navigation --}}
+    @if(auth()->user()->role === 'superadmin')
+        @include('admin.components.status-tabs', [
+            'ariaLabel' => 'Administrator status',
+            'tabs' => [
+                [
+                    'href' => route('admin.admins', array_merge(request()->except('page'), ['status' => 'active'])),
+                    'label' => 'Active',
+                    'icon' => 'ph-user-check',
+                    'count' => $activeCount,
+                    'active' => request('status', 'active') === 'active',
+                ],
+                [
+                    'href' => route('admin.admins', array_merge(request()->except('page'), ['status' => 'pending'])),
+                    'label' => 'Pending',
+                    'icon' => 'ph-user-plus',
+                    'count' => $pendingCount,
+                    'active' => request('status') === 'pending',
+                ],
+                [
+                    'href' => route('admin.admins', array_merge(request()->except('page'), ['status' => 'deactivated'])),
+                    'label' => 'Deactivated',
+                    'icon' => 'ph-user-minus',
+                    'count' => $deactivatedCount,
+                    'active' => request('status') === 'deactivated',
+                ],
+            ],
+        ])
+    @endif
 
-<div class="admin-status-tabs">
+    {{-- Shared filter toolbar --}}
+    <section class="support-filter-toolbar admin-filter-toolbar" aria-label="Administrator filters">
+        <form method="GET" action="{{ route('admin.admins') }}" class="support-filter-form">
+            <input type="hidden" name="status" value="{{ request('status') }}">
 
-    {{-- ACTIVE --}}
-    <a
-        href="{{ route(
-            'admin.admins',
-            array_merge(
-                request()->except('page'),
-                ['status' => 'active']
-            )
-        ) }}"
-        class="admin-status-tab {{ request('status') === 'active' ? 'active' : '' }}"
-    >
-        <i class="ph-light ph-user-check"></i>
+            <div class="support-filter-field support-search-field">
+                <label for="admin-search" class="sr-only">Search administrators</label>
+                <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" id="admin-search" name="search" placeholder="Search admin..." value="{{ request('search') }}" autocomplete="off">
+            </div>
 
-        <span>Active</span>
+            <div class="support-filter-field">
+                <label for="admin-role-filter" class="sr-only">Filter by role</label>
+                <i class="ph-light ph-users-three" aria-hidden="true"></i>
+                <select name="role" id="admin-role-filter">
+                    <option value="">All Roles</option>
+                    <option value="admin" {{ request('role') === 'admin' ? 'selected' : '' }}>Admin</option>
+                    <option value="superadmin" {{ request('role') === 'superadmin' ? 'selected' : '' }}>Superadmin</option>
+                </select>
+            </div>
 
-        <span class="status-count">
-            {{ $activeCount }}
-        </span>
-    </a>
+            <div class="support-filter-field">
+                <label for="admin-sort" class="sr-only">Sort administrators</label>
+                <i class="ph-light ph-arrows-down-up" aria-hidden="true"></i>
+                <select name="sort" id="admin-sort">
+                    <option value="desc" {{ request('sort', 'desc') === 'desc' ? 'selected' : '' }}>Newest First</option>
+                    <option value="asc" {{ request('sort') === 'asc' ? 'selected' : '' }}>Oldest First</option>
+                </select>
+            </div>
 
+            <button type="submit" class="support-filter-submit admin-icon-button" aria-label="Apply filters" title="Apply filters">
+                <i class="ph-light ph-sliders-horizontal" aria-hidden="true"></i>
+                <span class="sr-only">Filter</span>
+            </button>
+        
+            <button type="button" class="add-agencybtn admin-add-action" onclick="openInviteModal()" aria-label="Invite administrator" title="Invite administrator">
+                <i class="ph-light ph-user-plus" aria-hidden="true"></i>
+                <span class="sr-only">Invite administrator</span>
+            </button>
 
-    {{-- PENDING --}}
-    <a
-        href="{{ route(
-            'admin.admins',
-            array_merge(
-                request()->except('page'),
-                ['status' => 'pending']
-            )
-        ) }}"
-        class="admin-status-tab {{ request('status') === 'pending' ? 'active' : '' }}"
-    >
-        <i class="ph-light ph-user-plus"></i>
+        </form>
 
-        <span>Pending</span>
-
-        <span class="status-count">
-            {{ $pendingCount }}
-        </span>
-    </a>
-
-
-    {{-- DEACTIVATED --}}
-    <a
-        href="{{ route(
-            'admin.admins',
-            array_merge(
-                request()->except('page'),
-                ['status' => 'deactivated']
-            )
-        ) }}"
-        class="admin-status-tab {{ request('status') === 'deactivated' ? 'active' : '' }}"
-    >
-        <i class="ph-light ph-user-minus"></i>
-
-        <span>Deactivated</span>
-
-        <span class="status-count">
-            {{ $deactivatedCount }}
-        </span>
-    </a>
-
-</div>
-
-@endif
-
-    <!-- ================= FILTER + ACTION BAR ================= -->
-
-<div class="filter-card">
-
-    <form
-        method="GET"
-        action="{{ route('admin.admins') }}"
-        class="filter-bar"
-    >
-
-        {{-- SEARCH --}}
-        <input
-            type="text"
-            name="search"
-            placeholder="Search admin..."
-            value="{{ request('search') }}"
-        >
-
-
-        {{-- ROLE FILTER --}}
-        <select name="role">
-
-            <option value="">
-                All Roles
-            </option>
-
-            <option
-                value="admin"
-                {{ request('role') === 'admin' ? 'selected' : '' }}
-            >
-                Admin
-            </option>
-
-            <option
-                value="superadmin"
-                {{ request('role') === 'superadmin' ? 'selected' : '' }}
-            >
-                Superadmin
-            </option>
-
-        </select>
-
-
-        {{-- SORT --}}
-        <select name="sort">
-
-            <option
-                value="desc"
-                {{ request('sort', 'desc') === 'desc' ? 'selected' : '' }}
-            >
-                Newest First
-            </option>
-
-            <option
-                value="asc"
-                {{ request('sort') === 'asc' ? 'selected' : '' }}
-            >
-                Oldest First
-            </option>
-
-        </select>
-
-
-        {{-- PRESERVE CURRENT STATUS TAB --}}
-        <input
-            type="hidden"
-            name="status"
-            value="{{ request('status') }}"
-        >
-
-
-        {{-- FILTER --}}
-        <button type="submit">
-            Filter
-        </button>
-
-    </form>
-
-
-    {{-- INVITE --}}
-    <button
-        type="button"
-        class="add-agencybtn"
-        onclick="openInviteModal()"
-    >
-
-        <i class="ph-light ph-user-plus"></i>
-
-        <span>
-            Invite
-        </span>
-
-    </button>
-
-</div>
+    </section>
 
     @if(session('success'))
 <script>
@@ -190,7 +97,12 @@
 @endif
 
     <!-- ================= TABLE ================= -->
-    <div class="table-wrapper">
+    @include('admin.components.list-result-meta', [
+    'count' => $admins->total(),
+    'label' => 'administrator',
+])
+
+<div class="table-wrapper">
 
         <table class="table">
 
@@ -268,11 +180,9 @@
 
                 <button
                     type="button"
-                    class="btn btn-primary approve-btn"
-                >
-                    <i class="ph-light ph-user-check"></i>
-                    Approve
-                </button>
+                    class="btn btn-primary approve-btn admin-table-icon-action"
+                 aria-label="Approve" title="Approve">
+                    <i class="ph-light ph-user-check"></i><span class="sr-only">Approve</span></button>
             </form>
 
         @endif
@@ -294,11 +204,9 @@
 
                     <button
                         type="button"
-                        class="btn btn-primary promote-btn"
-                    >
-                        <i class="ph-light ph-arrow-up"></i>
-                        Promote
-                    </button>
+                        class="btn btn-primary promote-btn admin-table-icon-action"
+                     aria-label="Promote" title="Promote">
+                        <i class="ph-light ph-arrow-up"></i><span class="sr-only">Promote</span></button>
                 </form>
 
             @endif
@@ -315,11 +223,9 @@
 
                     <button
                         type="button"
-                        class="btn btn-danger demote-btn"
-                    >
-                        <i class="ph-light ph-arrow-down"></i>
-                        Demote
-                    </button>
+                        class="btn btn-danger demote-btn admin-table-icon-action"
+                     aria-label="Demote" title="Demote">
+                        <i class="ph-light ph-arrow-down"></i><span class="sr-only">Demote</span></button>
                 </form>
 
             @endif
@@ -336,11 +242,9 @@
 
                     <button
                         type="button"
-                        class="btn btn-danger deactivate-admin-btn"
-                    >
-                        <i class="ph-light ph-user-minus"></i>
-                        Deactivate
-                    </button>
+                        class="btn btn-danger deactivate-admin-btn admin-table-icon-action"
+                     aria-label="Deactivate" title="Deactivate">
+                        <i class="ph-light ph-user-minus"></i><span class="sr-only">Deactivate</span></button>
                 </form>
 
             @endif
@@ -362,11 +266,9 @@
 
                 <button
                     type="button"
-                    class="btn btn-primary reactivate-admin-btn"
-                >
-                    <i class="ph-light ph-user-check"></i>
-                    Reactivate
-                </button>
+                    class="btn btn-primary reactivate-admin-btn admin-table-icon-action"
+                 aria-label="Reactivate" title="Reactivate">
+                    <i class="ph-light ph-user-check"></i><span class="sr-only">Reactivate</span></button>
             </form>
 
 
@@ -380,11 +282,9 @@
 
                 <button
                     type="button"
-                    class="btn btn-danger delete-admin-btn"
-                >
-                    <i class="ph-light ph-trash"></i>
-                    Delete Permanently
-                </button>
+                    class="btn btn-danger delete-admin-btn admin-table-icon-action"
+                 aria-label="Delete Permanently" title="Delete Permanently">
+                    <i class="ph-light ph-trash"></i><span class="sr-only">Delete Permanently</span></button>
             </form>
 
         @endif

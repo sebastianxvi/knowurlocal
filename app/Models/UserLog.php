@@ -287,6 +287,12 @@ public function supportRequest()
                 'delete_user' =>
                     'Delete User',
 
+            'create_collaboration_task' =>
+                'Create Collaboration Task',
+
+            'update_collaboration_task' =>
+                'Update Collaboration Task',
+
 
             /*
              * =====================================================

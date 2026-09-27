@@ -34,120 +34,71 @@
      administrator scrolls through the category table.
      ========================================================= --}}
 
-<div class="category-controls">
+<div class="admin-data-controls">
 
     @if(auth()->user()->role === 'superadmin')
-
-        <div class="category-status-tabs">
-
-            {{-- ACTIVE --}}
-            <a
-                href="{{ route('admin.categories', array_merge(
-                    request()->except('page', 'status'),
-                    ['status' => 'active']
-                )) }}"
-                class="category-status-tab {{ ($status ?? 'active') === 'active' ? 'active' : '' }}"
-            >
-                <i class="ph-light ph-folders"></i>
-
-                <span>Active</span>
-
-                <span class="status-count">
-                    {{ $activeCount ?? 0 }}
-                </span>
-            </a>
-
-
-            {{-- TRASHED --}}
-            <a
-                href="{{ route('admin.categories', array_merge(
-                    request()->except('page', 'status'),
-                    ['status' => 'trashed']
-                )) }}"
-                class="category-status-tab {{ ($status ?? 'active') === 'trashed' ? 'active' : '' }}"
-            >
-                <i class="ph-light ph-trash"></i>
-
-                <span>Trashed</span>
-
-                <span class="status-count">
-                    {{ $trashedCount ?? 0 }}
-                </span>
-            </a>
-
-        </div>
-
+        @include('admin.components.status-tabs', [
+            'ariaLabel' => 'Category collections',
+            'tabs' => [
+                [
+                    'href' => route('admin.categories', array_merge(request()->except('page', 'status'), ['status' => 'active'])),
+                    'label' => 'Active',
+                    'icon' => 'ph-folders',
+                    'count' => $activeCount ?? 0,
+                    'active' => ($status ?? 'active') === 'active',
+                ],
+                [
+                    'href' => route('admin.categories', array_merge(request()->except('page', 'status'), ['status' => 'trashed'])),
+                    'label' => 'Trashed',
+                    'icon' => 'ph-trash',
+                    'count' => $trashedCount ?? 0,
+                    'active' => ($status ?? 'active') === 'trashed',
+                ],
+            ],
+        ])
     @endif
 
+    <section class="support-filter-toolbar admin-filter-toolbar" aria-label="Category filters">
+        <form method="GET" action="{{ route('admin.categories') }}" class="support-filter-form">
+            <input type="hidden" name="status" value="{{ $status ?? 'active' }}">
 
-    <form method="GET" action="{{ route('admin.categories') }}">
-
-        <input
-            type="hidden"
-            name="status"
-            value="{{ $status ?? 'active' }}"
-        >
-
-        <div class="filter-card">
-
-            <div class="filter-bar">
-
-                <input
-                    type="text"
-                    name="search"
-                    placeholder="Search category"
-                    value="{{ request('search') }}"
-                >
-
-                <select name="sort">
-
-                    <option
-                        value="latest"
-                        {{ request('sort', 'latest') === 'latest' ? 'selected' : '' }}
-                    >
-                        Newest First
-                    </option>
-
-                    <option
-                        value="oldest"
-                        {{ request('sort') === 'oldest' ? 'selected' : '' }}
-                    >
-                        Oldest First
-                    </option>
-
-                </select>
-
-                <button type="submit">
-                    Filter
-                </button>
-
+            <div class="support-filter-field support-search-field">
+                <label for="category-search" class="sr-only">Search categories</label>
+                <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" id="category-search" name="search" placeholder="Search category..." value="{{ request('search') }}" autocomplete="off">
             </div>
 
+            <div class="support-filter-field">
+                <label for="category-sort" class="sr-only">Sort categories</label>
+                <i class="ph-light ph-arrows-down-up" aria-hidden="true"></i>
+                <select name="sort" id="category-sort">
+                    <option value="latest" {{ request('sort', 'latest') === 'latest' ? 'selected' : '' }}>Newest First</option>
+                    <option value="oldest" {{ request('sort') === 'oldest' ? 'selected' : '' }}>Oldest First</option>
+                </select>
+            </div>
 
+            <button type="submit" class="support-filter-submit admin-icon-button" aria-label="Apply filters" title="Apply filters">
+                <i class="ph-light ph-sliders-horizontal" aria-hidden="true"></i>
+                <span class="sr-only">Filter</span>
+            </button>
+        
             @if(($status ?? 'active') === 'active')
-
-                <div>
-
-                    <button
-                        type="button"
-                        class="add-agencybtn"
-                        onclick="openModal()"
-                    >
-                        <i class="ph-light ph-plus"></i>
-                        Add Category
-                    </button>
-
-                </div>
-
+                <button type="button" class="add-agencybtn admin-add-action" onclick="openModal()" aria-label="Add category" title="Add category">
+                    <i class="ph-light ph-plus" aria-hidden="true"></i>
+                    <span class="sr-only">Add category</span>
+                </button>
             @endif
 
-        </div>
+        </form>
 
-    </form>
+    </section>
 
 </div>
 
-</form>
+@include('admin.components.list-result-meta', [
+    'count' => $categories->total(),
+    'label' => 'category',
+])
 
 <div class="table-wrapper">
 
@@ -213,7 +164,7 @@
             {{-- EDIT --}}
             <button
                 type="button"
-                class="btn btn-primary edit-category"
+                class="btn btn-primary edit-category admin-table-icon-action" aria-label="Edit" title="Edit"
 
                 data-id="{{ $category->id }}"
                 data-name="{{ $category->category_name }}"
@@ -225,7 +176,7 @@
                 ) }}"
             >
                 <i class="ph-light ph-pencil-simple"></i>
-                Edit
+                <span class="sr-only">Edit</span>
             </button>
 
 
@@ -244,11 +195,11 @@
 
                 <button
                     type="button"
-                    class="btn btn-danger delete-category"
+                    class="btn btn-danger delete-category admin-table-icon-action" aria-label="Trash" title="Trash"
                     data-category-name="{{ $category->category_name }}"
                 >
                     <i class="ph-light ph-trash"></i>
-                    Trash
+                    <span class="sr-only">Trash</span>
                 </button>
 
             </form>
@@ -281,11 +232,11 @@
 
                 <button
                     type="button"
-                    class="btn btn-restore restore-category"
+                    class="btn btn-restore restore-category admin-table-icon-action" aria-label="Restore" title="Restore"
                     data-category-name="{{ $category->category_name }}"
                 >
                     <i class="ph-light ph-arrow-counter-clockwise"></i>
-                    Restore
+                    <span class="sr-only">Restore</span>
                 </button>
 
             </form>
@@ -306,11 +257,11 @@
 
                 <button
                     type="button"
-                    class="btn btn-danger force-delete-category"
+                    class="btn btn-danger force-delete-category admin-table-icon-action" aria-label="Delete Permanently" title="Delete Permanently"
                     data-category-name="{{ $category->category_name }}"
                 >
                     <i class="ph-light ph-trash"></i>
-                    Delete Permanently
+                    <span class="sr-only">Delete Permanently</span>
                 </button>
 
             </form>

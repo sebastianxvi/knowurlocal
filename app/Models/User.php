@@ -51,4 +51,15 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function collaborationTasksCreated()
+    {
+        return $this->hasMany(CollaborationTask::class, 'created_by_id');
+    }
+
+    public function collaborationTasksAssigned()
+    {
+        return $this->hasMany(CollaborationTask::class, 'assigned_to_id');
+    }
+
 }

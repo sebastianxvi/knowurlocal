@@ -150,6 +150,7 @@
 
                     <input
                         type="search"
+                        id="support-search"
                         name="search"
                         value="{{ $search ?? '' }}"
                         placeholder="Search question..."
@@ -284,14 +285,14 @@
                 {{-- FILTER --}}
                 <button
                     type="submit"
-                    class="support-filter-submit"
-                >
+                    class="support-filter-submit admin-icon-button"
+                 aria-label="Apply filters" title="Apply filters">
                     <i
                         class="ph-light ph-sliders-horizontal"
                         aria-hidden="true"
                     ></i>
 
-                    <span>Filter</span>
+                    <span class="sr-only">Filter</span>
                 </button>
 
 
@@ -307,7 +308,7 @@
                         href="{{ route('admin.support.requests', [
                             'status' => 'active'
                         ]) }}"
-                        class="support-filter-clear"
+                        class="support-filter-clear admin-icon-button" aria-label="Clear filters" title="Clear filters"
                     >
                         <i
                             class="ph-light ph-x"
@@ -332,40 +333,10 @@
 
     <section class="support-request-section">
 
-        <div class="support-section-heading">
-
-            <div>
-
-                <span class="support-section-eyebrow">
-                    {{ $status === 'active' ? 'Current requests' : 'Archived requests' }}
-                </span>
-
-                <h2>
-                    {{ $status === 'active' ? 'Support queue' : 'Trash' }}
-                </h2>
-
-            </div>
-
-
-            @if($status === 'active')
-
-                <div class="support-section-meta">
-
-                    <i
-                        class="ph-light ph-list-dashes"
-                        aria-hidden="true"
-                    ></i>
-
-                    <span>
-                        {{ $requests->total() }}
-                        {{ Str::plural('request', $requests->total()) }}
-                    </span>
-
-                </div>
-
-            @endif
-
-        </div>
+        @include('admin.components.list-result-meta', [
+            'count' => $requests->total(),
+            'label' => 'request',
+        ])
 
         @include('admin.support-requests.components.request-table', [
             'requests' => $requests,

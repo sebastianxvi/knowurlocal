@@ -3528,3 +3528,668 @@ body.admin-drawer-open .sidebar:focus-within {
 @media (max-width:680px){
     .sidebar-header{min-height:54px !important;padding-left:8px !important;}
 }
+
+/* ---------- ICON-AWARE FILTER FIELDS ---------- */
+/*
+ * Filter toolbars such as Support Requests and FAQ Management place
+ * a Phosphor icon inside the field.  The shared filter reset above
+ * intentionally normalizes padding, but that also removes the left
+ * inset required by those icons and causes the label/placeholder to
+ * render underneath the icon.
+ */
+.support-filter-field > i + input,
+.support-filter-field > i + select,
+.support-filter-field input,
+.support-filter-field select{
+    padding-left:36px !important;
+}
+
+.support-filter-field select{
+    padding-right:34px !important;
+}
+
+.support-filter-field > i{
+    left:12px !important;
+    z-index:2 !important;
+    pointer-events:none !important;
+}
+
+@media (max-width:600px){
+    .support-filter-field > i + input,
+    .support-filter-field > i + select,
+    .support-filter-field input,
+    .support-filter-field select{
+        padding-left:36px !important;
+    }
+}
+
+
+/* =========================================================
+   SHARED LIST CONTROLS — SUPPORT REQUESTS AS THE CANONICAL UI
+   ========================================================= */
+
+/* Every admin dataset/status switch uses the exact Support Request
+ * segmented-tab structure. Legacy page-specific classes remain
+ * available for scripts/backward compatibility, but the shared
+ * component below owns the visual presentation. */
+.admin-status-tabs-unified,
+.admin-status-tabs,
+.faq-status-tabs,
+.agency-status-tabs,
+.category-status-tabs,
+.log-tabs,
+.admin-filter-tabs,
+.support-dataset-tabs{
+    display:flex !important;
+    align-items:center !important;
+    gap:3px !important;
+    width:max-content !important;
+    max-width:100% !important;
+    margin:0 0 10px !important;
+    padding:3px !important;
+    border:1px solid var(--admin-border) !important;
+    border-radius:10px !important;
+    background:#f2f4f7 !important;
+    box-shadow:none !important;
+    overflow-x:auto;
+    scrollbar-width:none;
+}
+
+.admin-status-tabs-unified::-webkit-scrollbar,
+.admin-status-tabs::-webkit-scrollbar,
+.faq-status-tabs::-webkit-scrollbar,
+.agency-status-tabs::-webkit-scrollbar,
+.category-status-tabs::-webkit-scrollbar,
+.log-tabs::-webkit-scrollbar,
+.admin-filter-tabs::-webkit-scrollbar,
+.support-dataset-tabs::-webkit-scrollbar{
+    display:none;
+}
+
+.admin-status-tabs-unified .support-dataset-tab,
+.admin-status-tabs .admin-status-tab,
+.faq-status-tabs .faq-status-tab,
+.agency-status-tabs .agency-status-tab,
+.category-status-tabs .category-status-tab,
+.log-tabs .tab,
+.admin-filter-tabs .support-dataset-tab,
+.support-dataset-tabs .support-dataset-tab{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:7px !important;
+    flex:0 0 auto !important;
+    min-height:34px !important;
+    padding:6px 10px !important;
+    border:0 !important;
+    border-radius:8px !important;
+    background:transparent !important;
+    color:#667085 !important;
+    font-size:11px !important;
+    font-weight:550 !important;
+    line-height:1 !important;
+    text-decoration:none !important;
+    white-space:nowrap !important;
+    box-shadow:none !important;
+    transform:none !important;
+}
+
+.admin-status-tabs-unified .support-dataset-tab:hover,
+.admin-status-tabs .admin-status-tab:hover,
+.faq-status-tabs .faq-status-tab:hover,
+.agency-status-tabs .agency-status-tab:hover,
+.category-status-tabs .category-status-tab:hover,
+.log-tabs .tab:hover,
+.admin-filter-tabs .support-dataset-tab:hover,
+.support-dataset-tabs .support-dataset-tab:hover{
+    background:#fff !important;
+    color:#344054 !important;
+}
+
+.admin-status-tabs-unified .support-dataset-tab.is-active,
+.admin-status-tabs .admin-status-tab.active,
+.faq-status-tabs .faq-status-tab.active,
+.agency-status-tabs .agency-status-tab.active,
+.category-status-tabs .category-status-tab.active,
+.log-tabs .tab.active,
+.admin-filter-tabs .support-dataset-tab.is-active,
+.support-dataset-tabs .support-dataset-tab.is-active{
+    background:#fff !important;
+    color:#1d4ed8 !important;
+    box-shadow:0 1px 3px rgba(16,24,40,.08) !important;
+}
+
+.admin-status-tabs-unified .support-dataset-tab i,
+.admin-status-tabs .admin-status-tab i,
+.faq-status-tabs .faq-status-tab i,
+.agency-status-tabs .agency-status-tab i,
+.category-status-tabs .category-status-tab i,
+.support-dataset-tabs .support-dataset-tab i{
+    font-size:15px !important;
+    line-height:1 !important;
+    flex:0 0 auto;
+}
+
+.admin-status-tabs-unified .support-dataset-count,
+.support-dataset-tabs .support-dataset-count,
+.admin-status-tabs .status-count,
+.agency-status-tabs .status-count,
+.category-status-tabs .status-count,
+.faq-status-tabs .status-count{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    min-width:19px !important;
+    height:19px !important;
+    padding:0 5px !important;
+    border-radius:999px !important;
+    background:#e9edf3 !important;
+    color:#667085 !important;
+    font-size:9px !important;
+    font-weight:700 !important;
+    line-height:1 !important;
+}
+
+.admin-status-tabs-unified .support-dataset-tab.is-active .support-dataset-count,
+.support-dataset-tabs .support-dataset-tab.is-active .support-dataset-count,
+.admin-status-tabs .admin-status-tab.active .status-count,
+.agency-status-tabs .agency-status-tab.active .status-count,
+.category-status-tabs .category-status-tab.active .status-count,
+.faq-status-tabs .faq-status-tab.active .status-count{
+    background:#eaf2ff !important;
+    color:#2563eb !important;
+}
+
+/* One canonical filter surface. Page-specific sticky/glass wrappers
+ * are intentionally neutralized so every list page follows Support
+ * Requests instead of having its own filter-card geometry. */
+.admin-data-controls,
+.faq-controls,
+.agency-controls,
+.category-controls{
+    position:static !important;
+    top:auto !important;
+    z-index:auto !important;
+    padding:0 !important;
+    margin:0 !important;
+    background:transparent !important;
+    backdrop-filter:none !important;
+    border-radius:0 !important;
+}
+
+.support-filter-toolbar.admin-filter-toolbar,
+.support-filter-toolbar{
+    width:100% !important;
+    min-width:0 !important;
+    margin:0 0 14px !important;
+    padding:11px !important;
+    border:1px solid var(--admin-border) !important;
+    border-radius:12px !important;
+    background:var(--admin-surface) !important;
+    box-shadow:var(--admin-shadow-sm) !important;
+}
+
+.support-filter-form{
+    display:flex !important;
+    align-items:center !important;
+    gap:8px !important;
+    width:100% !important;
+    min-width:0 !important;
+    flex-wrap:nowrap !important;
+}
+
+.support-filter-form > input[type="hidden"]{
+    display:none !important;
+}
+
+.support-filter-field{
+    position:relative !important;
+    display:flex !important;
+    align-items:center !important;
+    min-width:0 !important;
+    flex:1 1 150px !important;
+}
+
+.support-filter-field.support-search-field{
+    flex:2.2 1 240px !important;
+}
+
+.support-filter-field > i{
+    position:absolute !important;
+    left:12px !important;
+    z-index:2 !important;
+    color:#98a2b3 !important;
+    font-size:15px !important;
+    line-height:1 !important;
+    pointer-events:none !important;
+}
+
+.support-filter-field input,
+.support-filter-field select{
+    width:100% !important;
+    min-width:0 !important;
+    height:38px !important;
+    padding:0 34px 0 36px !important;
+    border:1px solid var(--admin-border) !important;
+    border-radius:8px !important;
+    background:#fff !important;
+    color:#344054 !important;
+    font-size:11px !important;
+    outline:none !important;
+    box-shadow:none !important;
+    transition:border-color .16s ease,box-shadow .16s ease,background-color .16s ease !important;
+}
+
+.support-filter-field input::placeholder{
+    color:#98a2b3 !important;
+}
+
+.support-filter-field input:focus,
+.support-filter-field select:focus{
+    border-color:#93b4ef !important;
+    box-shadow:0 0 0 3px rgba(37,99,235,.08) !important;
+}
+
+.support-filter-field select{
+    appearance:auto;
+    cursor:pointer;
+}
+
+.support-filter-submit,
+.support-filter-clear,
+.admin-filter-toolbar .add-agencybtn{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:7px !important;
+    flex:0 0 auto !important;
+    min-width:82px !important;
+    height:38px !important;
+    min-height:38px !important;
+    padding:0 14px !important;
+    border-radius:8px !important;
+    font-size:11px !important;
+    font-weight:600 !important;
+    line-height:1 !important;
+    white-space:nowrap !important;
+}
+
+.support-filter-submit{
+    border:1px solid var(--admin-primary) !important;
+    background:var(--admin-primary) !important;
+    color:#fff !important;
+}
+
+.support-filter-submit:hover{
+    background:#1d4ed8 !important;
+    border-color:#1d4ed8 !important;
+}
+
+.support-filter-submit i,
+.support-filter-clear i,
+.admin-filter-toolbar .add-agencybtn i{
+    font-size:15px !important;
+    line-height:1 !important;
+}
+
+.support-filter-clear{
+    border:1px solid var(--admin-border) !important;
+    background:#fff !important;
+    color:#667085 !important;
+    text-decoration:none !important;
+}
+
+.support-filter-clear:hover{
+    background:#f8fafc !important;
+    color:#344054 !important;
+}
+
+.admin-filter-actions{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    gap:8px !important;
+    margin-top:8px !important;
+}
+
+.admin-filter-toolbar .admin-filter-actions .add-agencybtn{
+    background:var(--admin-primary) !important;
+    border:1px solid var(--admin-primary) !important;
+    color:#fff !important;
+    box-shadow:none !important;
+}
+
+.admin-filter-toolbar .admin-filter-actions .add-agencybtn:hover{
+    background:#1d4ed8 !important;
+    border-color:#1d4ed8 !important;
+}
+
+/* Logs actor tabs use the same segmented control but sit below the
+ * filter row so the filter itself remains visually identical to all
+ * other list pages. */
+.admin-filter-toolbar .admin-filter-tabs{
+    margin:8px 0 0 !important;
+}
+
+@media (max-width:980px){
+    .support-filter-form{
+        flex-wrap:wrap !important;
+    }
+
+    .support-filter-field,
+    .support-filter-field.support-search-field{
+        flex:1 1 190px !important;
+    }
+
+    .support-filter-submit,
+    .support-filter-clear{
+        flex:0 0 auto !important;
+    }
+}
+
+@media (max-width:680px){
+    .admin-status-tabs-unified,
+    .admin-status-tabs,
+    .faq-status-tabs,
+    .agency-status-tabs,
+    .category-status-tabs,
+    .log-tabs,
+    .admin-filter-tabs,
+    .support-dataset-tabs{
+        width:100% !important;
+        max-width:100% !important;
+        overflow-x:auto !important;
+    }
+
+    .support-filter-form{
+        display:grid !important;
+        grid-template-columns:1fr !important;
+        gap:8px !important;
+    }
+
+    .support-filter-field,
+    .support-filter-field.support-search-field,
+    .support-filter-submit,
+    .support-filter-clear{
+        width:100% !important;
+        min-width:0 !important;
+    }
+
+    .admin-filter-actions{
+        width:100% !important;
+    }
+
+    .admin-filter-toolbar .admin-filter-actions .add-agencybtn{
+        width:100% !important;
+    }
+}
+
+/* Shared visually-hidden form labels used by every admin filter. */
+.admin-page .sr-only,
+.logs-page .sr-only,
+.support-page .sr-only,
+.sr-only{
+    position:absolute !important;
+    width:1px !important;
+    height:1px !important;
+    padding:0 !important;
+    margin:-1px !important;
+    overflow:hidden !important;
+    clip:rect(0,0,0,0) !important;
+    white-space:nowrap !important;
+    border:0 !important;
+}
+
+/* List-page content rhythm is identical to Support Requests. The
+ * admin layout already supplies the page padding, so individual
+ * modules must not add their own centered/max-width shell. */
+.admin-page,
+.logs-page,
+.support-page{
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+
+/* =========================================================
+   ADMIN CONTROL SYSTEM V2
+   Compact, icon-first actions with a single responsive toolbar.
+   ========================================================= */
+
+.support-filter-toolbar.admin-filter-toolbar,
+.support-filter-toolbar{
+    overflow:visible !important;
+}
+
+.support-filter-form{
+    flex-wrap:nowrap !important;
+    align-items:center !important;
+}
+
+.support-filter-field{
+    flex:1 1 150px !important;
+}
+
+.support-filter-field.support-search-field{
+    flex:2 1 260px !important;
+}
+
+/* Icon-only filter/reset controls. Accessible names remain in the DOM. */
+.admin-icon-button{
+    position:relative !important;
+    width:38px !important;
+    min-width:38px !important;
+    max-width:38px !important;
+    height:38px !important;
+    min-height:38px !important;
+    padding:0 !important;
+    gap:0 !important;
+    border-radius:8px !important;
+    flex:0 0 38px !important;
+}
+
+.support-filter-submit.admin-icon-button,
+.support-filter-clear.admin-icon-button{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+}
+
+.admin-icon-button i{
+    margin:0 !important;
+    font-size:16px !important;
+    line-height:1 !important;
+}
+
+/* Create/invite actions use familiar icons instead of long labels. */
+.admin-filter-toolbar .admin-add-action{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:38px !important;
+    min-width:38px !important;
+    max-width:38px !important;
+    height:38px !important;
+    min-height:38px !important;
+    padding:0 !important;
+    gap:0 !important;
+    flex:0 0 38px !important;
+    border-radius:8px !important;
+}
+
+.admin-filter-toolbar .admin-add-action i{
+    margin:0 !important;
+    font-size:17px !important;
+}
+
+/* Legacy wrappers no longer create a second toolbar row. */
+.admin-filter-toolbar .admin-filter-actions{
+    display:contents !important;
+}
+
+.admin-icon-button,
+.admin-add-action,
+.admin-table-icon-action{
+    cursor:pointer !important;
+}
+
+/* Table actions are compact icon buttons; their names remain available to
+ * screen readers and in the native title tooltip. */
+.tablebtn{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-end !important;
+    gap:5px !important;
+    flex-wrap:nowrap !important;
+}
+
+.tablebtn form{
+    margin:0 !important;
+    padding:0 !important;
+}
+
+.tablebtn .admin-table-icon-action{
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    width:34px !important;
+    min-width:34px !important;
+    max-width:34px !important;
+    height:34px !important;
+    min-height:34px !important;
+    padding:0 !important;
+    gap:0 !important;
+    border-radius:8px !important;
+    line-height:1 !important;
+}
+
+.tablebtn .admin-table-icon-action i{
+    margin:0 !important;
+    font-size:15px !important;
+}
+
+.support-filter-field select{
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+}
+
+@media (max-width:1080px){
+    .support-filter-form{
+        flex-wrap:wrap !important;
+    }
+
+    .support-filter-field,
+    .support-filter-field.support-search-field{
+        flex:1 1 180px !important;
+    }
+}
+
+@media (max-width:680px){
+    .support-filter-form{
+        display:grid !important;
+        grid-template-columns:minmax(0,1fr) auto !important;
+        gap:8px !important;
+    }
+
+    .support-filter-field,
+    .support-filter-field.support-search-field{
+        width:auto !important;
+        min-width:0 !important;
+        flex:none !important;
+    }
+
+    .support-filter-field.support-search-field{
+        grid-column:1 / -1 !important;
+    }
+
+    .support-filter-submit.admin-icon-button,
+    .support-filter-clear.admin-icon-button,
+    .admin-filter-toolbar .admin-add-action{
+        width:38px !important;
+        min-width:38px !important;
+        max-width:38px !important;
+    }
+
+    .tablebtn{
+        justify-content:flex-start !important;
+        flex-wrap:wrap !important;
+    }
+}
+
+
+/* =========================================================
+   ADMIN LIST RESULT META
+   One compact result counter between the toolbar and table.
+   It replaces page-specific section headings for list pages.
+   ========================================================= */
+.admin-list-result-meta{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:7px;
+    min-height:28px;
+    margin:0 2px 8px;
+    color:var(--admin-muted, #667085);
+    font-size:12px;
+    font-weight:500;
+    line-height:1;
+    white-space:nowrap;
+}
+.admin-list-result-meta i{
+    color:#98a2b3;
+    font-size:15px;
+    line-height:1;
+}
+@media (max-width:680px){
+    .admin-list-result-meta{
+        justify-content:flex-start;
+        margin-left:2px;
+        margin-right:2px;
+    }
+}
+
+/* =========================================================
+   TABLE ACTION ALIGNMENT
+   Icon actions are centered in their action cell instead of
+   being pushed against the right edge by legacy table rules.
+   ========================================================= */
+.tablebtn{
+    width:100% !important;
+    box-sizing:border-box !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:6px !important;
+    min-height:34px !important;
+    padding:0 !important;
+}
+.tablebtn form{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    margin:0 !important;
+    padding:0 !important;
+}
+.tablebtn .admin-table-icon-action{
+    flex:0 0 34px !important;
+}
+.table tbody td:has(.tablebtn){
+    vertical-align:middle !important;
+    text-align:center !important;
+}
+
+/* Support request action groups follow the same centered-cell rule. */
+.support-request-actions{
+    vertical-align:middle !important;
+    text-align:center !important;
+}
+.support-request-actions .support-row-actions{
+    width:100%;
+    min-height:34px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+}

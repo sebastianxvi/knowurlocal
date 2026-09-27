@@ -1068,27 +1068,55 @@ const supportRequestIdInput =
              * The server retrieves the authoritative
              * Support Request information from the database.
              */
-            const response = await fetch(
-                supportFaqPrepareUrl,
-                {
-                    method: "POST",
-                    credentials: "same-origin",
+            let response = null;
 
-                    headers: {
+            /*
+             * One client-side retry protects the workflow from a transient
+             * connection reset or provider-backed 5xx response. The server
+             * itself also retries/fails over its AI request, so this is only
+             * the final network safety net.
+             */
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    response = await fetch(
+                        supportFaqPrepareUrl,
+                        {
+                            method: "POST",
+                            credentials: "same-origin",
 
-                        "Accept":
-                            "application/json",
+                            headers: {
+                                "Accept":
+                                    "application/json",
 
-                        "X-Requested-With":
-                            "XMLHttpRequest",
+                                "X-Requested-With":
+                                    "XMLHttpRequest",
 
-                        "X-CSRF-TOKEN":
-                            document.querySelector(
-                                'meta[name="csrf-token"]'
-                            )?.getAttribute("content")
+                                "X-CSRF-TOKEN":
+                                    document.querySelector(
+                                        'meta[name="csrf-token"]'
+                                    )?.getAttribute("content")
+                            }
+                        }
+                    );
+                } catch (networkError) {
+                    if (attempt === 2) {
+                        throw networkError;
                     }
+
+                    await new Promise(resolve => setTimeout(resolve, 700));
+                    continue;
                 }
-            );
+
+                if (
+                    attempt === 1 &&
+                    [408, 429, 500, 502, 503, 504].includes(response.status)
+                ) {
+                    await new Promise(resolve => setTimeout(resolve, 700));
+                    continue;
+                }
+
+                break;
+            }
 
 
             /*
@@ -1290,6 +1318,7 @@ if (supportRequestIdInput) {
                     "Unable to prepare FAQ",
 
                 text:
+                    error?.message ||
                     "The bilingual FAQ draft could not be generated. Please try again.",
 
                 icon:

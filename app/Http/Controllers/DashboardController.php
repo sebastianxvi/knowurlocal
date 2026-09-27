@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Agency;
 use App\Models\ChatbotLog;
+use App\Models\CollaborationTask;
 use App\Models\Faq;
 use App\Models\SupportRequest;
 use App\Models\User;
@@ -40,7 +41,7 @@ class DashboardController extends Controller
     public function exportPdf()
     {
         $data = array_merge(
-            $this->dashboardData(),
+            $this->dashboardData(true),
             $this->analyticsData()
         );
 
@@ -58,7 +59,7 @@ class DashboardController extends Controller
      * dashboard summary cards use COUNT/EXISTS queries instead of
      * loading full tables into PHP.
      */
-    private function dashboardData(): array
+    private function dashboardData(bool $includeReportActivity = false): array
     {
         $totalAgencies = Agency::count();
 
@@ -74,38 +75,43 @@ class DashboardController extends Controller
 
         $totalFaqs = Faq::count();
 
-        $faqCountsByAgency = Faq::query()
-            ->whereNotNull('agency_id')
-            ->whereHas('agency')
-            ->select('agency_id')
-            ->selectRaw('COUNT(*) AS faq_count')
-            ->groupBy('agency_id')
-            ->orderByDesc('faq_count')
-            ->get();
+        /*
+         * Contributor ranking is report-only data. Avoid the extra grouped
+         * queries on the normal dashboard request.
+         */
+        $topFaqCount = 0;
+        $topFaqContributorTieCount = 0;
+        $topFaqContributors = collect();
 
-        $topFaqCount = (int) ($faqCountsByAgency->first()?->faq_count ?? 0);
+        if ($includeReportActivity) {
+            $faqCountsByAgency = Faq::query()
+                ->whereNotNull('agency_id')
+                ->whereHas('agency')
+                ->select('agency_id')
+                ->selectRaw('COUNT(*) AS faq_count')
+                ->groupBy('agency_id')
+                ->orderByDesc('faq_count')
+                ->get();
 
-        $topFaqAgencyIds = $topFaqCount > 0
-            ? $faqCountsByAgency
-                ->where('faq_count', $topFaqCount)
-                ->pluck('agency_id')
-            : collect();
+            $topFaqCount = (int) ($faqCountsByAgency->first()?->faq_count ?? 0);
 
-        $topFaqContributorTieCount = $topFaqAgencyIds->count();
+            $topFaqAgencyIds = $topFaqCount > 0
+                ? $faqCountsByAgency
+                    ->where('faq_count', $topFaqCount)
+                    ->pluck('agency_id')
+                : collect();
 
-        $topFaqContributors = $topFaqContributorTieCount > 0
-            ? Agency::query()
-                ->whereIn('id', $topFaqAgencyIds)
-                ->orderBy('agency_abbreviation')
-                ->pluck('agency_abbreviation')
-            : collect();
+            $topFaqContributorTieCount = $topFaqAgencyIds->count();
+
+            $topFaqContributors = $topFaqContributorTieCount > 0
+                ? Agency::query()
+                    ->whereIn('id', $topFaqAgencyIds)
+                    ->orderBy('agency_abbreviation')
+                    ->pluck('agency_abbreviation')
+                : collect();
+        }
 
         $totalUsers = User::where('role', 'user')->count();
-
-        $totalAdmins = User::whereIn(
-            'role',
-            ['admin', 'superadmin']
-        )->count();
 
         $totalInquiries = SupportRequest::count();
 
@@ -118,10 +124,6 @@ class DashboardController extends Controller
             'status',
             'answered'
         )->count();
-
-        $pendingInquiryPercentage = $totalInquiries > 0
-            ? round(($pendingInquiries / $totalInquiries) * 100)
-            : 0;
 
         $incompleteAgencies = Agency::query()
             ->where(function ($query) {
@@ -171,43 +173,57 @@ class DashboardController extends Controller
             $incompleteAgencies +
             $incompleteFaqs;
 
-        $answeredToday = SupportRequest::query()
-            ->where('status', 'answered')
-            ->whereDate('answered_at', today())
+        /*
+         * Collaboration is based on explicit work handoffs/review requests,
+         * not audit-log volume. A task only appears here when one administrator
+         * has actually asked another administrator to do something.
+         */
+        $collaborationQuery = CollaborationTask::query()
+            ->whereIn('status', ['open', 'in_progress'])
+            ->with(['creator', 'assignee', 'target'])
+            ->orderByRaw("CASE WHEN due_at IS NOT NULL AND due_at < ? THEN 0 ELSE 1 END", [now()])
+            ->orderByRaw("CASE WHEN status = 'in_progress' THEN 0 ELSE 1 END")
+            ->latest('created_at');
+
+        if (auth()->user()->role === 'admin') {
+            $collaborationQuery->where(function ($query) {
+                $query
+                    ->where('assigned_to_id', auth()->id())
+                    ->orWhere('created_by_id', auth()->id());
+            });
+        }
+
+        $collaborationOpenCount = (clone $collaborationQuery)->count();
+
+        $collaborationYourActionCount = CollaborationTask::query()
+            ->where('assigned_to_id', auth()->id())
+            ->whereIn('status', ['open', 'in_progress'])
             ->count();
 
-        $teamRespondersToday = UserLog::query()
-            ->with('user:id,first_name,last_name,role')
-            ->whereDate('created_at', today())
-            ->whereIn('action', [
-                'answer_support_request',
-                'forward_support_response',
-            ])
-            ->whereHas('user', function ($query) {
-                $query->whereIn('role', ['admin', 'superadmin']);
-            })
-            ->latest()
-            ->get()
-            ->unique('user_id')
-            ->take(5)
-            ->values();
+        $collaborationReviewCount = CollaborationTask::query()
+            ->where('assigned_to_id', auth()->id())
+            ->where('task_type', 'review')
+            ->whereIn('status', ['open', 'in_progress'])
+            ->count();
 
-        $recentTeamActivity = UserLog::query()
-            ->with('user:id,first_name,last_name,role')
-            ->whereIn('action', [
-                'answer_support_request',
-                'forward_support_response',
-                'delete_support_request',
-                'restore_support_request',
-            ])
-            ->latest()
-            ->limit(5)
+        $collaborationHandoffCount = (clone $collaborationQuery)
+            ->where('task_type', 'handoff')
+            ->count();
+
+        $collaborationTasks = (clone $collaborationQuery)
+            ->limit(6)
             ->get();
 
-        $recentActivity = $this->authorizedActivityQuery()
-            ->latest()
-            ->limit(8)
-            ->get();
+        /*
+         * The full activity feed is useful in the PDF report but is not
+         * rendered on the operational dashboard.
+         */
+        $recentActivity = $includeReportActivity
+            ? $this->authorizedActivityQuery()
+                ->latest()
+                ->limit(8)
+                ->get()
+            : collect();
 
         return compact(
             'totalAgencies',
@@ -218,19 +234,19 @@ class DashboardController extends Controller
             'topFaqContributorTieCount',
             'topFaqContributors',
             'totalUsers',
-            'totalAdmins',
             'totalInquiries',
             'pendingInquiries',
             'answeredInquiries',
-            'pendingInquiryPercentage',
             'incompleteAgencies',
             'completeAgencies',
             'incompleteFaqs',
             'completeFaqs',
             'totalNeedsAttention',
-            'answeredToday',
-            'teamRespondersToday',
-            'recentTeamActivity',
+            'collaborationOpenCount',
+            'collaborationYourActionCount',
+            'collaborationReviewCount',
+            'collaborationHandoffCount',
+            'collaborationTasks',
             'recentActivity'
         );
     }
@@ -478,10 +494,13 @@ class DashboardController extends Controller
      * - public-user activity.
      *
      * Superadmins see all activity.
+     *
+     * Administrative actions that represent meaningful data-management
+     * work for the dashboard and audit system.
      */
-    private function authorizedActivityQuery()
+    private function administrativeActions(): array
     {
-        $adminActions = [
+        return [
             'admin_login',
             'admin_logout',
             'create_agency',
@@ -503,6 +522,8 @@ class DashboardController extends Controller
             'delete_support_request',
             'restore_support_request',
             'force_delete_support_request',
+            'answer_support_request',
+            'forward_support_response',
             'approve_admin',
             'invite_admin',
             'promote_admin',
@@ -514,6 +535,23 @@ class DashboardController extends Controller
             'reactivate_user',
             'delete_user',
         ];
+    }
+
+    /**
+     * Meaningful work events used by the dashboard collaboration summary.
+     * Authentication events are intentionally excluded.
+     */
+    private function collaborationActions(): array
+    {
+        return array_values(array_diff(
+            $this->administrativeActions(),
+            ['admin_login', 'admin_logout']
+        ));
+    }
+
+    private function authorizedActivityQuery()
+    {
+
 
         $query = UserLog::with([
             'user',
@@ -524,6 +562,8 @@ class DashboardController extends Controller
 
         if (auth()->user()->role === 'admin') {
             $currentAdminId = auth()->id();
+
+            $adminActions = $this->administrativeActions();
 
             $query->where(function ($query) use (
                 $currentAdminId,

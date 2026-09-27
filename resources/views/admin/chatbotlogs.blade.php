@@ -18,108 +18,84 @@
 <div class="logs-page">
 
     <!-- ================= FILTER ================= -->
-
-    <div class="filter-card">
-
-        <form method="GET" class="filter-bar">
-
-            <!-- SEARCH -->
-            <input
-                type="text"
-                name="search"
-                value="{{ request('search') }}"
-                placeholder="Search question, answer, user or agency"
-            >
-
-            <!-- OUTCOME -->
-            <select name="outcome">
-
-                <option value="">All Outcomes</option>
-
-                @foreach($availableOutcomes as $outcome)
-
-                    <option
-                        value="{{ $outcome }}"
-                        {{ request('outcome') === $outcome ? 'selected' : '' }}
-                    >
-                        {{ ucfirst(str_replace('_', ' ', $outcome)) }}
-                    </option>
-
-                @endforeach
-
-            </select>
-
-
-            <!-- MATCH METHOD -->
-            <select name="match_method">
-
-                <option value="">All Match Methods</option>
-
-                @foreach($availableMatchMethods as $method)
-
-                    <option
-                        value="{{ $method }}"
-                        {{ request('match_method') === $method ? 'selected' : '' }}
-                    >
-                        {{ ucfirst($method) }}
-                    </option>
-
-                @endforeach
-
-            </select>
-
-
-            <!-- DATE -->
-            <select name="date">
-
-                <option value="">All Dates</option>
-
-                @foreach($availableDates as $date)
-
-                    <option
-                        value="{{ $date }}"
-                        {{ request('date') === $date ? 'selected' : '' }}
-                    >
-                        {{ \Carbon\Carbon::parse($date)->format('M d, Y') }}
-                    </option>
-
-                @endforeach
-
-            </select>
-
-
-            <!-- SORT -->
-            <select name="sort">
-
-                <option
-                    value="desc"
-                    {{ request('sort', 'desc') === 'desc' ? 'selected' : '' }}
+    <section class="support-filter-toolbar admin-filter-toolbar" aria-label="Chatbot log filters">
+        <form method="GET" class="support-filter-form">
+            <div class="support-filter-field support-search-field">
+                <label for="chatbot-search" class="sr-only">Search chatbot logs</label>
+                <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
+                <input
+                    type="search"
+                    id="chatbot-search"
+                    name="search"
+                    value="{{ request('search') }}"
+                    placeholder="Search question, answer, user or agency..."
+                    autocomplete="off"
                 >
-                    Newest First
-                </option>
+            </div>
 
-                <option
-                    value="asc"
-                    {{ request('sort') === 'asc' ? 'selected' : '' }}
-                >
-                    Oldest First
-                </option>
+            <div class="support-filter-field">
+                <label for="chatbot-outcome" class="sr-only">Filter by outcome</label>
+                <i class="ph-light ph-target" aria-hidden="true"></i>
+                <select name="outcome" id="chatbot-outcome">
+                    <option value="">All Outcomes</option>
+                    @foreach($availableOutcomes as $outcome)
+                        <option value="{{ $outcome }}" {{ request('outcome') === $outcome ? 'selected' : '' }}>
+                            {{ ucfirst(str_replace('_', ' ', $outcome)) }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
 
-            </select>
+            <div class="support-filter-field">
+                <label for="chatbot-match-method" class="sr-only">Filter by match method</label>
+                <i class="ph-light ph-git-branch" aria-hidden="true"></i>
+                <select name="match_method" id="chatbot-match-method">
+                    <option value="">All Match Methods</option>
+                    @foreach($availableMatchMethods as $method)
+                        <option value="{{ $method }}" {{ request('match_method') === $method ? 'selected' : '' }}>
+                            {{ ucfirst($method) }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
 
+            <div class="support-filter-field">
+                <label for="chatbot-date" class="sr-only">Filter by date</label>
+                <i class="ph-light ph-calendar-blank" aria-hidden="true"></i>
+                <select name="date" id="chatbot-date">
+                    <option value="">All Dates</option>
+                    @foreach($availableDates as $date)
+                        <option value="{{ $date }}" {{ request('date') === $date ? 'selected' : '' }}>
+                            {{ \Carbon\Carbon::parse($date)->format('M d, Y') }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
 
-            <button type="submit">
-                Filter
+            <div class="support-filter-field">
+                <label for="chatbot-sort" class="sr-only">Sort chatbot logs</label>
+                <i class="ph-light ph-arrows-down-up" aria-hidden="true"></i>
+                <select name="sort" id="chatbot-sort">
+                    <option value="desc" {{ request('sort', 'desc') === 'desc' ? 'selected' : '' }}>Newest First</option>
+                    <option value="asc" {{ request('sort') === 'asc' ? 'selected' : '' }}>Oldest First</option>
+                </select>
+            </div>
+
+            <button type="submit" class="support-filter-submit admin-icon-button" aria-label="Apply filters" title="Apply filters">
+                <i class="ph-light ph-sliders-horizontal" aria-hidden="true"></i>
+                <span class="sr-only">Filter</span>
             </button>
-
         </form>
-
-    </div>
-
+    </section>
 
     <!-- ================= TABLE ================= -->
 
-    <div class="table-wrapper">
+    @include('admin.components.list-result-meta', [
+    'count' => $logs->total(),
+    'label' => 'log',
+])
+
+<div class="table-wrapper">
 
         <table class="table">
 

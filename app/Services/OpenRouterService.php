@@ -29,12 +29,41 @@ class OpenRouterService
             );
         }
 
+        /*
+         * OpenRouter can fail over to another model when the selected model
+         * or provider is temporarily unavailable. Keep the primary model
+         * configurable, but provide a sane secondary model so one provider
+         * outage does not break FAQ preparation.
+         */
+        $fallbackModels = array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) config(
+                'services.openrouter.fallback_models',
+                'deepseek/deepseek-chat-v3.1'
+            ))
+        )));
+
+        $models = array_values(array_unique(
+            array_filter(
+                array_merge([$model], $fallbackModels),
+                static fn ($value) => $value !== ''
+            )
+        ));
+
         $payload = [
             'model' => $model,
             'messages' => $messages,
             'temperature' => $temperature,
-            'max_tokens' => 1000,
+            'max_tokens' => 4000,
         ];
+
+        /*
+         * OpenRouter's `models` array is the provider/model failover path.
+         * It is ignored when it only contains the primary model.
+         */
+        if (count($models) > 1) {
+            $payload['models'] = $models;
+        }
 
         if ($responseFormat !== null) {
             $payload['response_format'] = $responseFormat;
@@ -49,28 +78,48 @@ class OpenRouterService
             ->withHeaders([
                 'X-Title' => 'KNOWURLOCAL FAQ Assistant',
             ])
-            ->retry(1, 350, throw: false)
-            ->connectTimeout(3)
-            ->timeout(12);
-
-        $response = $request->post(
-            'https://openrouter.ai/api/v1/chat/completions',
-            $payload
-        );
+            ->connectTimeout(5)
+            ->timeout(30);
 
         /*
-         * Some OpenRouter models/providers do not support response_format.
-         * If strict JSON mode is rejected, retry once without that optional
-         * parameter; the translation prompt still requires JSON and the
-         * caller validates the returned structure.
+         * Do not rely on a single HTTP attempt. A 429/5xx/provider timeout
+         * is a normal transient failure for an external AI service.
          */
-        if ($response->failed() && $responseFormat !== null) {
-            unset($payload['response_format']);
+        $response = null;
+        $lastStatus = null;
 
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
             $response = $request->post(
                 'https://openrouter.ai/api/v1/chat/completions',
                 $payload
             );
+
+            $lastStatus = $response->status();
+
+            if ($response->successful()) {
+                break;
+            }
+
+            /*
+             * Some OpenRouter models/providers do not support response_format.
+             * Removing only this optional field is safer than changing the
+             * actual translation request.
+             */
+            if ($responseFormat !== null && isset($payload['response_format'])) {
+                unset($payload['response_format']);
+                continue;
+            }
+
+            /*
+             * Retry transient provider/rate-limit failures once. Do not
+             * repeatedly hammer authentication or validation failures.
+             */
+            if (in_array($response->status(), [408, 409, 425, 429, 500, 502, 503, 504], true)) {
+                usleep(400000);
+                continue;
+            }
+
+            break;
         }
 
         if ($response->failed()) {
@@ -82,7 +131,7 @@ class OpenRouterService
      * provider details to the browser.
      */
     \Log::error('OPENROUTER REQUEST FAILED', [
-        'status' => $response->status(),
+        'status' => $lastStatus ?? $response?->status(),
     ]);
 
     /*
