@@ -13,7 +13,7 @@ class OpenRouterService
      * This service is responsible only for communicating
      * with OpenRouter. It does not know anything about FAQs.
      */
-    public function chat(array $messages, float $temperature = 0.3): array
+    public function chat(array $messages, float $temperature = 0.3, ?array $responseFormat = null): array
     {
         // Read the secret from Laravel's server-side configuration.
         // The API key must never come from the browser.
@@ -29,31 +29,49 @@ class OpenRouterService
             );
         }
 
-        // Send the request to OpenRouter.
-        $response = Http::withToken($apiKey)
+        $payload = [
+            'model' => $model,
+            'messages' => $messages,
+            'temperature' => $temperature,
+            'max_tokens' => 1000,
+        ];
+
+        if ($responseFormat !== null) {
+            $payload['response_format'] = $responseFormat;
+        }
+
+        /*
+         * AI calls are external and can occasionally fail transiently.
+         * Retry once for transport/provider errors.
+         */
+        $request = Http::withToken($apiKey)
             ->acceptJson()
-
-            // Prevent an external provider from keeping
-            // the Laravel request open indefinitely.
+            ->withHeaders([
+                'X-Title' => 'KNOWURLOCAL FAQ Assistant',
+            ])
+            ->retry(1, 350, throw: false)
             ->connectTimeout(3)
-            ->timeout(12)
+            ->timeout(12);
 
-            ->post(
+        $response = $request->post(
+            'https://openrouter.ai/api/v1/chat/completions',
+            $payload
+        );
+
+        /*
+         * Some OpenRouter models/providers do not support response_format.
+         * If strict JSON mode is rejected, retry once without that optional
+         * parameter; the translation prompt still requires JSON and the
+         * caller validates the returned structure.
+         */
+        if ($response->failed() && $responseFormat !== null) {
+            unset($payload['response_format']);
+
+            $response = $request->post(
                 'https://openrouter.ai/api/v1/chat/completions',
-                [
-                    // Tell OpenRouter which model to use.
-                    'model' => $model,
-
-                    // Send the conversation prepared by the caller.
-                    'messages' => $messages,
-
-                    // Keep translation output relatively deterministic.
-                    'temperature' => $temperature,
-
-                    // Prevent unnecessarily large AI responses.
-                    'max_tokens' => 1000,
-                ]
+                $payload
             );
+        }
 
         if ($response->failed()) {
 

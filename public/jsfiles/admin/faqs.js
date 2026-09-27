@@ -1072,11 +1072,15 @@ const supportRequestIdInput =
                 supportFaqPrepareUrl,
                 {
                     method: "POST",
+                    credentials: "same-origin",
 
                     headers: {
 
                         "Accept":
                             "application/json",
+
+                        "X-Requested-With":
+                            "XMLHttpRequest",
 
                         "X-CSRF-TOKEN":
                             document.querySelector(
@@ -1088,10 +1092,25 @@ const supportRequestIdInput =
 
 
             /*
-             * Parse Laravel's JSON response.
+             * Parse Laravel's JSON response defensively.
+             *
+             * A proxy, expired session, or unexpected server error can
+             * return HTML instead of JSON. Never let that turn into an
+             * opaque "Unexpected token <" error in the FAQ workflow.
              */
+            const contentType =
+                response.headers.get("content-type") || "";
+
             const result =
-                await response.json();
+                contentType.includes("application/json")
+                    ? await response.json()
+                    : {
+                        success: false,
+                        message:
+                            response.status === 419
+                                ? "Your admin session expired. Refresh the page and try again."
+                                : `The FAQ preparation service returned HTTP ${response.status}.`
+                    };
 
 
             /*
