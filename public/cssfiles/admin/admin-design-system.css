@@ -4193,3 +4193,324 @@ body.admin-drawer-open .sidebar:focus-within {
     justify-content:center;
     gap:6px;
 }
+
+
+/* =========================================================
+   ADMIN SHELL — STABLE FOOTER + NOTIFICATION CENTER
+   ========================================================= */
+@media (min-width:901px){
+    .sidebar{
+        display:flex !important;
+        flex-direction:column !important;
+        min-height:100vh !important;
+        height:100vh !important;
+    }
+    .sidebar-main{
+        flex:1 1 auto !important;
+        min-height:0 !important;
+        overflow-x:hidden !important;
+        overflow-y:auto !important;
+    }
+    .sidebar-footer{
+        flex:0 0 auto !important;
+        width:100% !important;
+        min-width:0 !important;
+        box-sizing:border-box !important;
+        margin-top:auto !important;
+    }
+    .sidebar-footer form,
+    .sidebar-footer .logout-btn{
+        width:100% !important;
+        box-sizing:border-box !important;
+    }
+}
+
+.admin-notification-center{
+    position:relative;
+    flex:0 0 auto;
+}
+.admin-notification-trigger{
+    cursor:pointer;
+}
+.admin-notification-trigger.active{
+    background:#eff6ff !important;
+    color:#1d4ed8 !important;
+    border-color:#bfdbfe !important;
+}
+.admin-notification-panel{
+    position:absolute;
+    top:calc(100% + 10px);
+    right:0;
+    width:min(390px, calc(100vw - 24px));
+    max-height:min(620px, calc(100vh - 100px));
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    background:#fff;
+    border:1px solid #e4e9f0;
+    border-radius:14px;
+    box-shadow:0 22px 60px rgba(15,23,42,.16), 0 4px 14px rgba(15,23,42,.05);
+    z-index:1300;
+}
+.admin-notification-panel[hidden]{display:none !important;}
+.admin-notification-panel-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    padding:15px 16px 11px;
+    border-bottom:1px solid #edf1f5;
+}
+.admin-notification-eyebrow{
+    display:block;
+    margin-bottom:3px;
+    color:#98a2b3;
+    font-size:8px;
+    font-weight:700;
+    letter-spacing:.09em;
+    text-transform:uppercase;
+}
+.admin-notification-panel-header h2{
+    margin:0;
+    color:#182230;
+    font-size:15px;
+    font-weight:650;
+    letter-spacing:-.02em;
+}
+.admin-notification-summary{
+    display:flex;
+    gap:8px;
+    padding:10px 16px;
+    border-bottom:1px solid #f0f2f5;
+    background:#fafbfc;
+    color:#667085;
+    font-size:10px;
+}
+.admin-notification-summary span{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+}
+.admin-notification-summary span + span::before{
+    content:'';
+    width:3px;
+    height:3px;
+    border-radius:50%;
+    background:#cbd2dc;
+    margin-right:4px;
+}
+.admin-notification-summary strong{color:#182230;font-weight:700;}
+.admin-notification-list{
+    min-height:0;
+    overflow:auto;
+    padding:5px 6px 7px;
+}
+.admin-notification-section-label{
+    padding:9px 10px 5px;
+    color:#98a2b3;
+    font-size:8px;
+    font-weight:750;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+.admin-notification-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+    padding:10px;
+    border-radius:10px;
+    color:inherit;
+    text-decoration:none;
+    transition:background-color .16s ease, transform .16s ease;
+}
+.admin-notification-item:hover{
+    background:#f7f9fc;
+}
+.admin-notification-item.is-new{
+    background:#eff6ff;
+}
+.admin-notification-item-icon{
+    display:grid;
+    place-items:center;
+    width:32px;
+    height:32px;
+    flex:0 0 32px;
+    border-radius:9px;
+    font-size:15px;
+}
+.admin-notification-item-icon.is-support{background:#fff7ed;color:#ea580c;}
+.admin-notification-item-icon.is-collaboration{background:#eff6ff;color:#2563eb;}
+.admin-notification-item-copy{
+    display:flex;
+    flex-direction:column;
+    gap:3px;
+    min-width:0;
+    flex:1 1 auto;
+}
+.admin-notification-item-copy strong{
+    overflow:hidden;
+    color:#243044;
+    font-size:10px;
+    font-weight:600;
+    line-height:1.35;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.admin-notification-item-copy small{
+    overflow:hidden;
+    color:#8a94a4;
+    font-size:9px;
+    line-height:1.3;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.admin-notification-item-arrow{
+    flex:0 0 auto;
+    color:#b2bac6;
+    font-size:13px;
+}
+.admin-notification-empty{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    padding:34px 22px 30px;
+    color:#98a2b3;
+    text-align:center;
+}
+.admin-notification-empty i{font-size:26px;color:#22c55e;margin-bottom:4px;}
+.admin-notification-empty strong{color:#475467;font-size:11px;font-weight:650;}
+.admin-notification-empty span{max-width:270px;font-size:9px;line-height:1.5;}
+.admin-notification-panel-footer{
+    display:flex;
+    gap:6px;
+    padding:9px 10px;
+    border-top:1px solid #edf1f5;
+    background:#fff;
+}
+.admin-notification-panel-footer a{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:5px;
+    flex:1 1 0;
+    min-height:31px;
+    padding:0 8px;
+    border:1px solid #e5eaf0;
+    border-radius:8px;
+    color:#475467;
+    font-size:9px;
+    font-weight:600;
+    text-decoration:none;
+}
+.admin-notification-panel-footer a:hover{background:#f8fafc;color:#182230;}
+@media (max-width:680px){
+    .admin-notification-panel{
+        position:fixed;
+        top:calc(var(--admin-header-height, 72px) + 6px);
+        right:10px;
+        width:min(390px, calc(100vw - 20px));
+    }
+}
+
+
+/* =========================================================
+   ADMIN SHELL — STABLE SIDEBAR FOOTER
+   ---------------------------------------------------------
+   Keep the navigation area flexible and the footer fixed to
+   the bottom of the actual sidebar box. This avoids Chrome's
+   layout/overflow rounding differences from moving the logout
+   control when the hover rail expands.
+   ========================================================= */
+.sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100dvh !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+}
+
+.sidebar-main {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-gutter: stable;
+}
+
+.sidebar-footer {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    margin-top: 0 !important;
+    overflow: hidden !important;
+}
+
+.sidebar-footer form,
+.sidebar-footer .logout-btn {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.sidebar-footer .logout-btn {
+    display: flex !important;
+    align-items: center !important;
+    min-width: 0 !important;
+}
+
+/* Rail state: keep the icon centered inside a fixed footer row. */
+.sidebar-footer .logout-btn {
+    justify-content: flex-start !important;
+}
+
+.sidebar-footer .logout-btn span {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+@media (min-width: 901px) {
+    .sidebar-footer {
+        padding: 10px 10px 14px !important;
+    }
+
+    .sidebar-footer .logout-btn {
+        min-height: 40px !important;
+        padding: 8px 11px !important;
+        gap: 11px !important;
+    }
+
+    .sidebar:not(:hover):not(:focus-within) .sidebar-footer .logout-btn {
+        width: 52px !important;
+        justify-content: center !important;
+        padding-inline: 0 !important;
+    }
+
+    .sidebar:not(:hover):not(:focus-within) .sidebar-footer .logout-btn span {
+        display: none !important;
+    }
+
+    .sidebar:hover .sidebar-footer .logout-btn,
+    .sidebar:focus-within .sidebar-footer .logout-btn {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        padding-inline: 11px !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .sidebar-main {
+        overflow-y: auto !important;
+    }
+
+    .sidebar-footer {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+}

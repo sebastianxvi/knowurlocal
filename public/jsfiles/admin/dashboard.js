@@ -1,130 +1,279 @@
 (() => {
-    const modal = document.getElementById('collaboration-modal');
-    const openButton = document.getElementById('open-collaboration-modal');
-    const form = document.getElementById('collaboration-form');
-    const typeSelect = document.getElementById('collaboration-target-type');
-    const targetSelect = document.getElementById('collaboration-target-id');
-    const errorEl = document.getElementById('collaboration-form-error');
-    const submitButton = document.getElementById('collaboration-submit');
-    const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+    const initCollaboration = () => {
+        const modal = document.getElementById('collaboration-modal');
+        const openButton = document.getElementById('open-collaboration-modal');
+        const form = document.getElementById('collaboration-form');
 
-    if (!modal || !openButton || !form) return;
-
-    const openModal = () => {
-        modal.hidden = false;
-        modal.setAttribute('aria-hidden', 'false');
-        document.body.classList.add('dashboard-collaboration-modal-open');
-        form.querySelector('input[name="title"]')?.focus();
-    };
-
-    const closeModal = () => {
-        modal.setAttribute('aria-hidden', 'true');
-        modal.hidden = true;
-        document.body.classList.remove('dashboard-collaboration-modal-open');
-        errorEl.hidden = true;
-        errorEl.textContent = '';
-    };
-
-    openButton.addEventListener('click', openModal);
-    modal.querySelectorAll('[data-close-collaboration-modal]').forEach((el) => el.addEventListener('click', closeModal));
-
-    const setError = (message) => {
-        errorEl.textContent = message;
-        errorEl.hidden = !message;
-    };
-
-    const loadTargets = async () => {
-        const type = typeSelect.value;
-        targetSelect.replaceChildren();
-        targetSelect.append(new Option(type ? 'Loading records…' : 'Choose a record', ''));
-        targetSelect.disabled = !type;
-        if (!type) return;
-
-        try {
-            const response = await fetch(`{{ route('admin.dashboard.collaboration.targets') }}?type=${encodeURIComponent(type)}`, {
-                headers: { 'Accept': 'application/json' },
-                credentials: 'same-origin',
-            });
-            const payload = await response.json();
-            if (!response.ok) throw new Error(payload.message || 'Unable to load records.');
-
-            targetSelect.replaceChildren();
-            targetSelect.append(new Option('Choose a record', ''));
-            payload.data.forEach((item) => targetSelect.append(new Option(item.label, item.id)));
-            targetSelect.disabled = payload.data.length === 0;
-            if (!payload.data.length) targetSelect.append(new Option('No records found', ''));
-        } catch (error) {
-            targetSelect.replaceChildren(new Option('Unable to load records', ''));
-            targetSelect.disabled = true;
+        if (!modal || !openButton || !form) {
+            return;
         }
-    };
 
-    typeSelect.addEventListener('change', loadTargets);
+        const typeSelect = document.getElementById('collaboration-target-type');
+        const targetSelect = document.getElementById('collaboration-target-id');
+        const errorEl = document.getElementById('collaboration-form-error');
+        const submitButton = document.getElementById('collaboration-submit');
 
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        setError('');
-        submitButton.disabled = true;
-        submitButton.dataset.originalText = submitButton.textContent;
-        submitButton.textContent = 'Creating…';
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const storeUrl = form.dataset.storeUrl || '';
+        const targetsUrl = form.dataset.targetsUrl || '';
+        const statusBaseUrl = form.dataset.statusBaseUrl || '';
 
-        const body = new FormData(form);
+        const setError = (message = '') => {
+            if (!errorEl) return;
+            errorEl.textContent = message;
+            errorEl.hidden = !message;
+        };
 
-        try {
-            const response = await fetch('{{ route('admin.dashboard.collaboration.store') }}', {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrf,
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                credentials: 'same-origin',
-                body,
+        const openModal = () => {
+            modal.hidden = false;
+            modal.removeAttribute('aria-hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('dashboard-collaboration-modal-open');
+            form.querySelector('input[name="title"]')?.focus();
+        };
+
+        const closeModal = () => {
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('dashboard-collaboration-modal-open');
+            setError('');
+        };
+
+        openButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            openModal();
+        });
+
+        modal.querySelectorAll('[data-close-collaboration-modal]').forEach((element) => {
+            element.addEventListener('click', (event) => {
+                event.preventDefault();
+                closeModal();
             });
+        });
 
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                const validation = payload.errors ? Object.values(payload.errors).flat()[0] : null;
-                throw new Error(validation || payload.message || 'Unable to create the collaboration task.');
+        const loadTargets = async () => {
+            if (!typeSelect || !targetSelect) return;
+
+            const type = typeSelect.value;
+
+            targetSelect.replaceChildren(
+                new Option(type ? 'Loading records…' : 'Choose a record', '')
+            );
+            targetSelect.disabled = !type;
+
+            if (!type) return;
+
+            if (!targetsUrl) {
+                targetSelect.replaceChildren(new Option('Unable to load records', ''));
+                targetSelect.disabled = true;
+                return;
             }
 
-            window.location.reload();
-        } catch (error) {
-            setError(error.message || 'Unable to create the collaboration task.');
-            submitButton.disabled = false;
-            submitButton.textContent = submitButton.dataset.originalText || 'Create task';
-        }
-    });
+            try {
+                const url = new URL(targetsUrl, window.location.origin);
+                url.searchParams.set('type', type);
 
-    document.querySelectorAll('[data-collaboration-status]').forEach((select) => {
-        select.addEventListener('change', async () => {
-            const taskId = select.dataset.taskId;
-            const nextStatus = select.value;
-            select.disabled = true;
+                const response = await fetch(url.toString(), {
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                });
+
+                const payload = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    throw new Error(payload.message || 'Unable to load records.');
+                }
+
+                const items = Array.isArray(payload.data) ? payload.data : [];
+
+                targetSelect.replaceChildren(new Option('Choose a record', ''));
+
+                items.forEach((item) => {
+                    targetSelect.append(
+                        new Option(String(item.label ?? 'Record'), String(item.id))
+                    );
+                });
+
+                if (!items.length) {
+                    targetSelect.append(new Option('No records found', ''));
+                }
+
+                targetSelect.disabled = items.length === 0;
+            } catch (error) {
+                targetSelect.replaceChildren(new Option('Unable to load records', ''));
+                targetSelect.disabled = true;
+            }
+        };
+
+        typeSelect?.addEventListener('change', loadTargets);
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            setError('');
+
+            if (!storeUrl) {
+                setError('The collaboration service endpoint is unavailable. Please refresh the page and try again.');
+                return;
+            }
+
+            if (!csrf) {
+                setError('Your session token is unavailable. Please refresh the page and try again.');
+                return;
+            }
+
+            submitButton?.setAttribute('disabled', 'disabled');
+
+            const originalText = submitButton?.textContent?.trim() || 'Create task';
+            if (submitButton) {
+                submitButton.textContent = 'Creating…';
+            }
 
             try {
-                const response = await fetch(`{{ url('/admin/dashboard/collaboration') }}/${taskId}/status`, {
-                    method: 'PATCH',
+                const response = await fetch(storeUrl, {
+                    method: 'POST',
                     headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
                         'X-CSRF-TOKEN': csrf,
                         'X-Requested-With': 'XMLHttpRequest',
                     },
                     credentials: 'same-origin',
-                    body: JSON.stringify({ status: nextStatus }),
+                    body: new FormData(form),
                 });
+
                 const payload = await response.json().catch(() => ({}));
-                if (!response.ok) throw new Error(payload.message || 'Unable to update the task.');
+
+                if (!response.ok) {
+                    const validation = payload.errors
+                        ? Object.values(payload.errors).flat()[0]
+                        : null;
+
+                    throw new Error(
+                        validation ||
+                        payload.message ||
+                        `Unable to create the collaboration task (HTTP ${response.status}).`
+                    );
+                }
+
                 window.location.reload();
             } catch (error) {
-                window.alert(error.message || 'Unable to update the task.');
-                select.disabled = false;
+                setError(error.message || 'Unable to create the collaboration task.');
+
+                if (submitButton) {
+                    submitButton.removeAttribute('disabled');
+                    submitButton.textContent = originalText;
+                }
             }
         });
-    });
 
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && !modal.hidden) closeModal();
-    });
+        document.querySelectorAll('[data-collaboration-status]').forEach((select) => {
+            select.addEventListener('change', async () => {
+                const taskId = select.dataset.taskId;
+                const nextStatus = select.value;
+
+                if (!taskId || !statusBaseUrl || !csrf) {
+                    return;
+                }
+
+                select.disabled = true;
+
+                try {
+                    const response = await fetch(
+                        `${statusBaseUrl}/${encodeURIComponent(taskId)}/status`,
+                        {
+                            method: 'PATCH',
+                            headers: {
+                                Accept: 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrf,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({ status: nextStatus }),
+                        }
+                    );
+
+                    const payload = await response.json().catch(() => ({}));
+
+                    if (!response.ok) {
+                        throw new Error(
+                            payload.message ||
+                            `Unable to update the task (HTTP ${response.status}).`
+                        );
+                    }
+
+                    window.location.reload();
+                } catch (error) {
+                    window.alert(error.message || 'Unable to update the task.');
+                    select.disabled = false;
+                }
+            });
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !modal.hidden) {
+                closeModal();
+            }
+        });
+    };
+
+
+    const initCollaborationRealtime = () => {
+        if (window.__knowurlocalCollaborationSubscribed) return;
+        const realtimeRoot = document.querySelector('[data-collaboration-realtime="true"]');
+        const echo = window.Echo;
+        const adminId = realtimeRoot?.dataset.adminId;
+
+        if (!realtimeRoot || !adminId) {
+            return;
+        }
+
+        if (!echo) {
+            return;
+        }
+
+        try {
+            window.__knowurlocalCollaborationSubscribed = true;
+            echo.private(`admin.${adminId}`)
+                .listen('.collaboration.task.updated', (event) => {
+                    /*
+                     * The server remains authoritative. A small reload keeps
+                     * counters, ordering, permissions, and task state perfectly
+                     * synchronized without duplicating backend business logic
+                     * in the browser.
+                     */
+                    if (event?.task?.id) {
+                        window.dispatchEvent(new CustomEvent('collaboration:updated', {
+                            detail: event,
+                        }));
+
+                        window.setTimeout(() => {
+                            window.location.reload();
+                        }, 250);
+                    }
+                });
+        } catch (error) {
+            console.warn('Realtime collaboration is unavailable.', error);
+        }
+    };
+
+    const initDashboard = () => {
+        initCollaboration();
+        initCollaborationRealtime();
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDashboard, { once: true });
+    } else {
+        initDashboard();
+    }
+
+    /*
+     * Vite loads Echo as a deferred module while this legacy page script can
+     * execute earlier. Listen for Echo's readiness so realtime subscription
+     * is not lost because of script execution order.
+     */
+    window.addEventListener('knowurlocal:echo-ready', initCollaborationRealtime, { once: true });
 })();

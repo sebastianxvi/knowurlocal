@@ -1077,3 +1077,20 @@
         grid-template-columns: 1fr;
     }
 }
+
+
+/* Real-time collaboration connection state */
+.dashboard-collaboration-add.is-realtime {
+    position: relative;
+}
+.dashboard-collaboration-add.is-realtime::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    background: currentColor;
+    opacity: .55;
+}

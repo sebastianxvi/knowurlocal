@@ -28,3 +28,17 @@ Broadcast::channel('admin.support-requests', function ($user) {
         'superadmin',
     ], true);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Administrator Collaboration Channel
+|--------------------------------------------------------------------------
+|
+| Each administrator gets a private channel. A task event is only sent to
+| the creator and assignee, and Laravel authorizes the subscription here.
+|
+*/
+Broadcast::channel('admin.{id}', function ($user, $id) {
+    return in_array($user->role, ['admin', 'superadmin'], true)
+        && (int) $user->id === (int) $id;
+});

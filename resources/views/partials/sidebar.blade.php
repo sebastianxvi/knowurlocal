@@ -43,11 +43,6 @@
             @if(auth()->check() && in_array(auth()->user()->role, ['admin','superadmin']))
                 <a href="{{ route('admin.support.requests') }}" class="{{ request()->routeIs('admin.support.requests') ? 'active' : '' }}">
                     <i class="ph-light ph-chat-circle"></i><span>Support Requests</span>
-                    <span
-                        class="sidebar-notification js-support-pending-badge"
-                        hidden
-                        aria-live="polite"
-                    >0</span>
                 </a>
             @endif
 

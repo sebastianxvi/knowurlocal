@@ -58,6 +58,7 @@ if (!reverbReady) {
         wssPort: reverbPort,
         forceTLS: forceTLS,
         enabledTransports: forceTLS ? ["wss"] : ["ws"],
+        disableStats: true,
         authEndpoint: broadcastAuthEndpoint,
         auth: {
             headers: {
@@ -67,14 +68,24 @@ if (!reverbReady) {
         },
     });
 
+    const dispatchEchoReady = () => {
+        window.dispatchEvent(new CustomEvent("knowurlocal:echo-ready"));
+    };
+
+    const connection = window.Echo?.connector?.pusher?.connection;
+    if (connection) {
+        if (connection.state === "connected") {
+            dispatchEchoReady();
+        } else {
+            connection.bind("connected", dispatchEchoReady);
+        }
+    }
+
     /*
      * Diagnostics are intentionally quiet unless debugging is enabled.
      * Never log secrets, cookies, CSRF values, or authentication headers.
      */
     if (reverbDebug) {
-        const connection =
-            window.Echo?.connector?.pusher?.connection;
-
         if (connection) {
             connection.bind("connected", () => {
                 console.info("Reverb WebSocket connected.");

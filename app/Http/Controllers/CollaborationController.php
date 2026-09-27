@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\CollaborationTaskUpdated;
 use App\Models\Agency;
 use App\Models\Category;
 use App\Models\CollaborationTask;
@@ -63,6 +64,7 @@ class CollaborationController extends Controller
         ]);
 
         $this->log($task, 'create_collaboration_task');
+        broadcast(new CollaborationTaskUpdated($task, 'created'));
 
         return response()->json([
             'message' => 'Collaboration task created and assigned.',
@@ -83,6 +85,7 @@ class CollaborationController extends Controller
         $task->save();
 
         $this->log($task, 'update_collaboration_task');
+        broadcast(new CollaborationTaskUpdated($task, 'status_updated'));
 
         return response()->json([
             'message' => 'Collaboration task updated.',

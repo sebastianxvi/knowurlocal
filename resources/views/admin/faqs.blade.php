@@ -426,6 +426,8 @@
     id="faqForm"
     method="POST"
     action="{{ route('faqs.store') }}"
+    data-store-url="{{ route('faqs.store') }}"
+    data-base-url="{{ route('faqs.index') }}"
     enctype="multipart/form-data"
 >
     @csrf

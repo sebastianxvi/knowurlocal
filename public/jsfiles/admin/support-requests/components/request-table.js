@@ -1403,6 +1403,69 @@ function createRealtimeSupportRequestRow(
 }
 
 
+/**
+ * Update or remove an existing row after a Support Request realtime event.
+ *
+ * The server remains authoritative: the row is rebuilt from the event
+ * payload instead of mutating individual cells with partially trusted data.
+ *
+ * @param {Object} request
+ * @returns {"updated"|"removed"|"ignored"}
+ */
+function updateRealtimeSupportRequestRow(request) {
+    if (!supportRequestsTableBody || !request?.id) {
+        return "ignored";
+    }
+
+    const selectorId = CSS.escape(String(request.id));
+    const existingRow = supportRequestsTableBody.querySelector(
+        `[data-request-id="${selectorId}"]`
+    );
+
+    /*
+     * If the current page does not contain the ticket, there is nothing
+     * to update. The next normal navigation/server render will contain
+     * the authoritative state.
+     */
+    if (!existingRow) {
+        return "ignored";
+    }
+
+    /*
+     * Deleted records are not rendered in the active dataset.
+     */
+    if (request.deleted) {
+        existingRow.remove();
+        return "removed";
+    }
+
+    /*
+     * A status/agency/question change may cause the request to stop
+     * matching the currently displayed filters. Remove it rather than
+     * leaving stale data visible.
+     */
+    if (!realtimeRequestMatchesCurrentView(request)) {
+        existingRow.remove();
+        return "removed";
+    }
+
+    const replacement = createRealtimeSupportRequestRow(request);
+
+    if (!replacement) {
+        return "ignored";
+    }
+
+    existingRow.replaceWith(replacement);
+    replacement.classList.add("realtime-updated-row");
+
+    window.setTimeout(() => {
+        replacement.classList.remove("realtime-updated-row");
+    }, 1800);
+
+    return "updated";
+}
+
+
 /*
 |--------------------------------------------------------------------------
 | REALTIME FILTER MATCHING
@@ -1626,6 +1689,7 @@ function initializeRequestTable() {
 
 export {
     createRealtimeSupportRequestRow,
+    updateRealtimeSupportRequestRow,
     realtimeRequestMatchesCurrentView,
     closeAllActionMenus,
     initializeRequestTable,

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\SupportRequest;
+use App\Models\CollaborationTask;
 use App\Session\LoggingDatabaseSessionHandler;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
@@ -91,6 +92,60 @@ class AppServiceProvider extends ServiceProvider
                 $ipLimit,
             ];
         });
+
+        /*
+         * Share the lightweight admin notification center with the shared
+         * header. Notifications are intentionally derived from current
+         * actionable records; no separate notification-history table is
+         * required. Reverb handles the live delivery layer.
+         */
+        View::composer(
+            'partials.header',
+            function ($view) {
+                if (!auth()->check() || !in_array(auth()->user()->role, ['admin', 'superadmin'], true)) {
+                    $view->with([
+                        'adminNotificationSupportCount' => 0,
+                        'adminNotificationSupportRequests' => collect(),
+                        'adminNotificationCollaborationCount' => 0,
+                        'adminNotificationCollaborationTasks' => collect(),
+                    ]);
+                    return;
+                }
+
+                $adminId = auth()->id();
+
+                $supportQuery = SupportRequest::query()
+                    ->whereIn('status', ['pending', 'needs_follow_up'])
+                    ->with(['user', 'agency'])
+                    ->orderByRaw('CASE WHEN assigned_admin_id = ? THEN 0 ELSE 1 END', [$adminId])
+                    ->latest('created_at');
+
+                $supportCount = (clone $supportQuery)->count();
+                $supportRequests = $supportQuery->limit(5)->get();
+
+                $collaborationQuery = CollaborationTask::query()
+                    ->whereIn('status', ['open', 'in_progress'])
+                    ->where(function ($query) use ($adminId) {
+                        $query
+                            ->where('assigned_to_id', $adminId)
+                            ->orWhere('created_by_id', $adminId);
+                    })
+                    ->with(['creator', 'assignee'])
+                    ->orderByRaw('CASE WHEN assigned_to_id = ? THEN 0 ELSE 1 END', [$adminId])
+                    ->orderByRaw("CASE WHEN due_at IS NOT NULL AND due_at < ? THEN 0 ELSE 1 END", [now()])
+                    ->latest('created_at');
+
+                $collaborationCount = (clone $collaborationQuery)->count();
+                $collaborationTasks = $collaborationQuery->limit(5)->get();
+
+                $view->with([
+                    'adminNotificationSupportCount' => $supportCount,
+                    'adminNotificationSupportRequests' => $supportRequests,
+                    'adminNotificationCollaborationCount' => $collaborationCount,
+                    'adminNotificationCollaborationTasks' => $collaborationTasks,
+                ]);
+            }
+        );
 
         /*
          * Share unread inquiry information with public-user

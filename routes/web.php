@@ -341,6 +341,11 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
 
     Route::post('/faqs/translate', [FaqController::class, 'translate'])
         ->name('faqs.translate');
+
+    Route::get(
+        '/faqs/{faqId}/response-attachments/{componentIndex}',
+        [FaqController::class, 'responseAttachment']
+    )->name('admin.faqs.response-attachment');
     Route::get('/users', [UserController::class, 'index'])
         ->name('admin.users');
 

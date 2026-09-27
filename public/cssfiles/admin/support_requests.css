@@ -1858,3 +1858,19 @@ body.support-modal-open {
     }
 
 }
+
+/* Realtime state feedback */
+.support-table tr.realtime-new-row,
+.support-table tr.realtime-updated-row {
+    animation: support-realtime-row-highlight 1.8s ease-out;
+}
+
+@keyframes support-realtime-row-highlight {
+    0% {
+        background: rgba(37, 99, 235, 0.10);
+    }
+    100% {
+        background: transparent;
+    }
+}
+

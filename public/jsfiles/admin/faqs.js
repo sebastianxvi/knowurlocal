@@ -1822,7 +1822,7 @@ resetTextareaHeights();
 ) {
 
     form.action =
-        "/faqs";
+        form.dataset.storeUrl;
 
     methodInput.value =
         "POST";
@@ -1867,7 +1867,7 @@ resetTextareaHeights();
         ) {
 
             form.action =
-                `/faqs/${data.id}`;
+                `${form.dataset.baseUrl}/${encodeURIComponent(data.id)}`;
 
             methodInput.value =
                 "PUT";
@@ -2031,7 +2031,7 @@ resetTextareaHeights();
      * A Support Request becomes a new FAQ.
      */
     form.action =
-        "/faqs";
+        form.dataset.storeUrl;
 
 
     methodInput.value =

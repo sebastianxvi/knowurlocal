@@ -140,6 +140,7 @@
 <script src="{{ asset('jsfiles/components/modal-system.js') }}"></script>
 
 <script src="{{ asset('jsfiles/admin/admin-shell.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/admin-notifications.js') }}"></script>
 
 
 

@@ -13,7 +13,7 @@
 >
 @endpush
 
-<div class="dashboard-content">
+<div class="dashboard-content" data-collaboration-realtime="true" data-admin-id="{{ auth()->id() }}">
 
     {{-- =====================================================
          REPORT HEADER
@@ -246,7 +246,7 @@
     {{-- =====================================================
          TEAM COLLABORATION
          ===================================================== --}}
-    <section class="dashboard-section">
+    <section class="dashboard-section" id="team-collaboration">
 
         <div class="section-heading">
             <div class="section-heading-main">
@@ -300,7 +300,7 @@
                     $isOverdue = $task->due_at && $task->due_at->isPast();
                 @endphp
 
-                <article class="dashboard-collaboration-item {{ $isOverdue ? 'is-overdue' : '' }}" data-collaboration-task data-task-id="{{ $task->id }}">
+                <article class="dashboard-collaboration-item {{ $isOverdue ? 'is-overdue' : '' }}" id="collaboration-task-{{ $task->id }}" data-collaboration-task data-task-id="{{ $task->id }}">
                     <div class="dashboard-collaboration-item-icon">
                         <i class="ph-light {{ $task->task_type === 'review' ? 'ph-check-square' : ($task->task_type === 'assist' ? 'ph-handshake' : 'ph-arrow-bend-up-right') }}" aria-hidden="true"></i>
                     </div>
@@ -366,7 +366,13 @@
                 </button>
             </div>
 
-            <form id="collaboration-form" class="dashboard-collaboration-form">
+            <form
+                id="collaboration-form"
+                class="dashboard-collaboration-form"
+                data-store-url="{{ route('admin.dashboard.collaboration.store') }}"
+                data-targets-url="{{ route('admin.dashboard.collaboration.targets') }}"
+                data-status-base-url="{{ url('/admin/dashboard/collaboration') }}"
+            >
                 @csrf
 
                 <div class="dashboard-form-grid">

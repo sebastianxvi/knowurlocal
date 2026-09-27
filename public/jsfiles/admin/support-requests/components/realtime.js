@@ -46,6 +46,7 @@
 
 import {
     createRealtimeSupportRequestRow,
+    updateRealtimeSupportRequestRow,
     realtimeRequestMatchesCurrentView,
 } from './request-table.js';
 
@@ -265,6 +266,22 @@ if (currentSort === 'oldest') {
 }
 
 
+/**
+ * Handle a server-authoritative Support Request update.
+ *
+ * This covers official responses, answer edits, citizen confirmations,
+ * and follow-up requests. The existing row is replaced only when the
+ * updated ticket still belongs to the current filtered view.
+ */
+function handleRealtimeSupportRequestUpdate(request) {
+    if (!request?.id) {
+        return;
+    }
+
+    updateRealtimeSupportRequestRow(request);
+}
+
+
 /*
 |--------------------------------------------------------------------------
 | CONNECT TO LARAVEL ECHO
@@ -335,6 +352,10 @@ function connectRealtime() {
         .listen(
             '.support.request.created',
             handleRealtimeSupportRequest
+        )
+        .listen(
+            '.support.request.updated',
+            handleRealtimeSupportRequestUpdate
         )
         .subscribed(
             () => {

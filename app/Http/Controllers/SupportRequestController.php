@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Services\SupportRequestResponseService;
 use App\Events\SupportRequestResponseCreated;
+use App\Events\SupportRequestUpdated;
 
 class SupportRequestController extends Controller
 {
@@ -341,6 +342,11 @@ if ($request->hasFile('answer_image')) {
         null,
 ]);
 
+        $this->broadcastSupportRequestUpdated(
+            $support->fresh(),
+            'answer_updated'
+        );
+
         $newData = $this->buildAuditSnapshot($support->fresh());
 
         $this->logAction(
@@ -542,12 +548,26 @@ if (
     *
     * Only now do we notify the citizen through Reverb.
     */
-    broadcast(new SupportRequestResponseCreated(
-        userId: (int) $supportRequest->user_id,
-        supportRequestId: (int) $supportRequest->id,
-        responseId: (int) $response->id,
-        status: 'awaiting_confirmation',
-    ));
+    try {
+        broadcast(new SupportRequestResponseCreated(
+            userId: (int) $supportRequest->user_id,
+            supportRequestId: (int) $supportRequest->id,
+            responseId: (int) $response->id,
+            status: 'awaiting_confirmation',
+        ));
+    } catch (\Throwable $e) {
+        \Log::warning('Citizen support response realtime broadcast failed.', [
+            'support_request_id' => $supportRequest->id,
+            'response_id' => $response->id,
+            'error' => $e->getMessage(),
+        ]);
+    }
+
+    $this->broadcastSupportRequestUpdated(
+        $supportRequest->fresh(),
+        'response_created',
+        (int) $response->id
+    );
 
     $this->logAction(
         'forward_support_response',
@@ -1270,6 +1290,12 @@ public function confirmResponse($id)
         'answer_seen_at' => now(),
     ]);
 
+    $this->broadcastSupportRequestUpdated(
+        $supportRequest->fresh(),
+        'confirmed',
+        (int) $response->id
+    );
+
     return response()->json([
         'success' => true,
         'status' => 'answered',
@@ -1354,6 +1380,12 @@ public function requestFollowUp(Request $request, $id)
     $supportRequest->update([
         'status' => 'needs_follow_up',
     ]);
+
+    $this->broadcastSupportRequestUpdated(
+        $supportRequest->fresh(),
+        'follow_up_requested',
+        (int) $response->id
+    );
 
     return response()->json([
         'success' => true,
@@ -1463,6 +1495,11 @@ public function update(
          */
         'answer_seen_at' => null,
     ]);
+
+    $this->broadcastSupportRequestUpdated(
+        $support->fresh(),
+        'answer_updated'
+    );
 
     /*
      * =====================================================
@@ -1936,6 +1973,31 @@ if (
      * This is particularly important because a Support Request
      * can later be permanently deleted.
      */
+    /**
+     * Broadcast an authoritative Support Request update to administrator
+     * browsers after the database mutation has succeeded.
+     */
+    private function broadcastSupportRequestUpdated(
+        SupportRequest $supportRequest,
+        string $action = 'updated',
+        ?int $responseId = null
+    ): void {
+        try {
+            broadcast(new SupportRequestUpdated(
+                id: (int) $supportRequest->id,
+                action: $action,
+                responseId: $responseId,
+            ));
+        } catch (\Throwable $e) {
+            // Realtime delivery must never roll back a successful database operation.
+            \Log::warning('Support Request realtime broadcast failed.', [
+                'support_request_id' => $supportRequest->id,
+                'action' => $action,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     private function buildAuditSnapshot(
         SupportRequest $support
     ): array {
