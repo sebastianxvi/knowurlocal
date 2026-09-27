@@ -3286,3 +3286,245 @@ body.admin-drawer-open .sidebar:focus-within {
 .sidebar .sidebar-footer .logout-btn span {
     display: inline !important;
 }
+
+/* =========================================================
+   FINAL NAVIGATION STATE POLISH
+   Active = quiet blue typography/icon only.
+   Hover = soft gray surface + tiny motion, shared by nav + sign out.
+   No active box, border, scale, or layout shift.
+   ========================================================= */
+.sidebar .admin-nav > a,
+.sidebar .sidebar-footer .logout-btn {
+    border: 0 !important;
+    background: transparent !important;
+    color: #667085 !important;
+    transform: translateX(0) !important;
+    box-shadow: none !important;
+    transition:
+        background-color 150ms ease,
+        color 150ms ease,
+        transform 150ms cubic-bezier(.2,.8,.2,1) !important;
+}
+
+.sidebar .admin-nav > a:hover,
+.sidebar .admin-nav > a:focus-visible,
+.sidebar .sidebar-footer .logout-btn:hover,
+.sidebar .sidebar-footer .logout-btn:focus-visible {
+    background: #f3f4f6 !important;
+    color: #344054 !important;
+    transform: translateX(2px) !important;
+    outline: none !important;
+}
+
+.sidebar .admin-nav > a > i,
+.sidebar .sidebar-footer .logout-btn > i {
+    color: #8490a3 !important;
+    transform: translateX(0) scale(1) rotate(0deg) !important;
+    transition:
+        color 150ms ease,
+        transform 180ms cubic-bezier(.2,.8,.2,1) !important;
+}
+
+.sidebar .admin-nav > a:hover > i,
+.sidebar .admin-nav > a:focus-visible > i,
+.sidebar .sidebar-footer .logout-btn:hover > i,
+.sidebar .sidebar-footer .logout-btn:focus-visible > i {
+    color: #667085 !important;
+    transform: translateX(1px) scale(1.06) rotate(-2deg) !important;
+}
+
+/* Active route: blue label/icon only. */
+.sidebar .admin-nav > a.active,
+.sidebar .admin-nav > a.active:hover,
+.sidebar .admin-nav > a.active:focus-visible {
+    color: #2563eb !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    transform: translateX(0) !important;
+    font-weight: 600 !important;
+}
+
+.sidebar .admin-nav > a.active > i,
+.sidebar .admin-nav > a.active:hover > i,
+.sidebar .admin-nav > a.active:focus-visible > i {
+    color: #2563eb !important;
+    transform: translateX(0) scale(1) rotate(0deg) !important;
+}
+
+/* Remove every legacy active marker. */
+.sidebar .admin-nav > a::before,
+.sidebar .admin-nav > a.active::before {
+    display: none !important;
+    content: none !important;
+}
+
+/* Sign out intentionally uses the exact same hover language as navigation. */
+.sidebar .sidebar-footer .logout-btn,
+.sidebar .sidebar-footer .logout-btn:hover,
+.sidebar .sidebar-footer .logout-btn:focus-visible {
+    min-height: 35px !important;
+    padding: 7px 9px !important;
+    border-radius: 8px !important;
+}
+
+.sidebar .sidebar-footer .logout-btn:hover,
+.sidebar .sidebar-footer .logout-btn:focus-visible {
+    border-color: transparent !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sidebar .admin-nav > a,
+    .sidebar .sidebar-footer .logout-btn,
+    .sidebar .admin-nav > a > i,
+    .sidebar .sidebar-footer .logout-btn > i {
+        transition: none !important;
+    }
+}
+
+/* =========================================================
+   DRAWER HEADER + SCROLLBAR HARDENING
+   ---------------------------------------------------------
+   The drawer header is a self-contained row. The brand and
+   close control never compete for the same hit area, and no
+   hover/focus state is allowed to reflow either element.
+   ========================================================= */
+.sidebar-header{
+    position:relative !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    width:100% !important;
+    min-height:56px !important;
+    margin:0 0 12px !important;
+    padding:6px 2px 8px 9px !important;
+    border-bottom:1px solid #e7eaf0 !important;
+    flex:0 0 auto !important;
+    isolation:isolate;
+}
+
+.sidebar-header .sidebar-brand,
+.sidebar-header .sidebar-brand:hover,
+.sidebar-header .sidebar-brand:focus,
+.sidebar-header .sidebar-brand:focus-visible{
+    position:static !important;
+    display:flex !important;
+    align-items:center !important;
+    flex:1 1 auto !important;
+    min-width:0 !important;
+    width:auto !important;
+    height:auto !important;
+    min-height:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    border-radius:0 !important;
+    background:transparent !important;
+    box-shadow:none !important;
+    color:inherit !important;
+    transform:none !important;
+    transition:none !important;
+    pointer-events:auto !important;
+}
+
+.sidebar-header .sidebar-brand-mark{display:none !important;}
+
+.sidebar-header .sidebar-brand-copy,
+.sidebar-header .sidebar-brand-copy:hover,
+.sidebar-header .sidebar-brand-copy:focus{
+    display:flex !important;
+    flex-direction:column !important;
+    justify-content:center !important;
+    align-items:flex-start !important;
+    gap:1px !important;
+    width:auto !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    opacity:1 !important;
+    visibility:visible !important;
+    overflow:visible !important;
+    transform:none !important;
+    pointer-events:none !important;
+}
+
+.sidebar-header .sidebar-brand-copy strong,
+.sidebar-header .sidebar-brand-copy small{
+    display:block !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+}
+
+.sidebar-header .sidebar-brand-copy strong{
+    color:#101828 !important;
+    font-size:12px !important;
+    line-height:1.25 !important;
+    letter-spacing:.01em !important;
+}
+
+.sidebar-header .sidebar-brand-copy small{
+    color:#98a2b3 !important;
+    font-size:9px !important;
+    line-height:1.25 !important;
+}
+
+.sidebar-header .sidebar-mobile-close{
+    position:relative !important;
+    inset:auto !important;
+    z-index:20 !important;
+    flex:0 0 34px !important;
+    display:grid !important;
+    place-items:center !important;
+    width:34px !important;
+    height:34px !important;
+    min-width:34px !important;
+    min-height:34px !important;
+    margin:0 !important;
+    padding:0 !important;
+    border:1px solid #dfe4ec !important;
+    border-radius:9px !important;
+    background:#fff !important;
+    color:#667085 !important;
+    cursor:pointer !important;
+    pointer-events:auto !important;
+    touch-action:manipulation !important;
+    box-shadow:none !important;
+    transform:none !important;
+    transition:background-color 150ms ease,border-color 150ms ease,color 150ms ease !important;
+}
+
+.sidebar-header .sidebar-mobile-close:hover,
+.sidebar-header .sidebar-mobile-close:focus-visible{
+    background:#f3f4f6 !important;
+    border-color:#d0d5dd !important;
+    color:#344054 !important;
+    outline:none !important;
+    transform:none !important;
+}
+
+.sidebar-header .sidebar-mobile-close i{pointer-events:none !important;font-size:16px !important;}
+
+.sidebar:hover .sidebar-header,
+.sidebar:focus-within .sidebar-header,
+.sidebar:hover .sidebar-header .sidebar-brand,
+.sidebar:focus-within .sidebar-header .sidebar-brand{
+    width:auto !important;
+    min-width:0 !important;
+    transform:none !important;
+    background:transparent !important;
+}
+
+/* Clean scrollbar: scrolling remains available without a visual rail. */
+.sidebar{
+    scrollbar-width:none !important;
+    -ms-overflow-style:none !important;
+}
+.sidebar::-webkit-scrollbar{
+    width:0 !important;
+    height:0 !important;
+    display:none !important;
+}
+
+@media (max-width:680px){
+    .sidebar-header{min-height:54px !important;padding-left:8px !important;}
+}
