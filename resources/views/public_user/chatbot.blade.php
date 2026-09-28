@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatbot</title>
 
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}?v={{ filemtime(public_path('cssfiles/public_user/chatbot.css')) }}">
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -52,6 +52,14 @@
     </div>
     
 
-    <script src="{{ asset('jsfiles/public_user/chatbot.js') }}"></script>
+    <div id="image-modal" aria-hidden="true">
+        <button type="button" id="image-close" aria-label="Close image preview">
+            <i class="ph-light ph-x"></i>
+        </button>
+        <img id="modal-img" src="" alt="FAQ image preview">
+    </div>
+
+    <script src="{{ asset('jsfiles/public_user/qrcode-core.js') }}?v={{ filemtime(public_path('jsfiles/public_user/qrcode-core.js')) }}"></script>
+    <script src="{{ asset('jsfiles/public_user/chatbot.js') }}?v={{ filemtime(public_path('jsfiles/public_user/chatbot.js')) }}"></script>
 </body>
 </html>

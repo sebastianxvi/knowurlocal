@@ -75,7 +75,9 @@ function escapeHTML(str){
     return String(str ?? "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 
 }
 
@@ -205,22 +207,265 @@ async function loadSuggestions(){
 
 
 
+function renderFaqImages(attachments) {
+    if (!Array.isArray(attachments)) return '';
+
+    return attachments
+        .filter((attachment) => attachment?.type === 'image')
+        .map((attachment) => {
+            const label = escapeHTML(attachment?.label || 'FAQ image');
+            const url = attachment?.url;
+
+            if (!url || !isSafeUrl(url)) return '';
+
+            const safeUrl = escapeHTML(url);
+
+            return `
+                <figure class="chat-faq-image-attachment">
+                    <button
+                        type="button"
+                        class="chat-faq-image-button"
+                        data-image-url="${safeUrl}"
+                        aria-label="Open ${label} image"
+                    >
+                        <img
+                            src="${safeUrl}"
+                            alt="${label}"
+                            class="chat-faq-inline-image clickable-image"
+                            loading="lazy"
+                            referrerpolicy="no-referrer"
+                        >
+                    </button>
+                    ${label !== 'FAQ image' ? `<figcaption>${label}</figcaption>` : ''}
+                </figure>
+            `;
+        })
+        .join('');
+}
+
+function renderFaqFilesAndLinks(attachments) {
+    if (!Array.isArray(attachments)) return '';
+
+    return attachments
+        .filter((attachment) => ['file', 'link'].includes(attachment?.type))
+        .map((attachment) => {
+            const label = escapeHTML(attachment?.label || 'Attachment');
+            const url = attachment?.url;
+            const type = attachment?.type;
+
+            if (!url || !isSafeUrl(url)) return '';
+
+            const safeUrl = escapeHTML(url);
+            const visibleText = label !== 'Attachment' ? label : url;
+
+            if (type === 'file') {
+                return `
+                    <a
+                        class="chat-faq-file-link"
+                        href="${safeUrl}"
+                        download
+                        aria-label="Download ${label}"
+                    >
+                        <i class="ph-light ph-file-arrow-down"></i>
+                        <span>${visibleText}</span>
+                        <i class="ph-light ph-download-simple"></i>
+                    </a>
+                `;
+            }
+
+            return `
+                <a
+                    class="chat-faq-plain-link"
+                    href="${safeUrl}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    ${visibleText}
+                    <i class="ph-light ph-arrow-up-right"></i>
+                </a>
+            `;
+        })
+        .join('');
+}
+
+function renderFaqQRAttachments(attachments) {
+    if (!Array.isArray(attachments)) return '';
+
+    return attachments
+        .filter((attachment) => attachment?.type === 'qr_code')
+        .map((attachment, index) => {
+            const label = escapeHTML(attachment?.label || 'QR code');
+            const url = attachment?.url;
+
+            if (!url || !isSafeUrl(url)) return '';
+
+            const safeUrl = escapeHTML(url);
+            const qrId = `chat-faq-qr-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`;
+
+            return `
+                <div class="chat-faq-qr-section">
+                    <div class="chat-faq-qr-heading">
+                        <i class="ph-light ph-qr-code"></i>
+                        <span>${label}</span>
+                    </div>
+                    <div
+                        id="${qrId}"
+                        class="chat-faq-qr"
+                        data-qr-value="${safeUrl}"
+                        aria-label="${label} QR code"
+                    ></div>
+                    <a
+                        href="${safeUrl}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="chat-faq-qr-open"
+                    >
+                        Open destination
+                        <i class="ph-light ph-arrow-up-right"></i>
+                    </a>
+                </div>
+            `;
+        })
+        .join('');
+}
+
 function renderFaqAttachments(attachments) {
     if (!Array.isArray(attachments) || attachments.length === 0) return '';
 
     return `
-        <div class="chat-faq-attachments">
-            ${attachments.map((attachment) => {
-                const label = escapeHTML(attachment?.label || 'Attachment');
-                const url = attachment?.url;
-                if (!url || !isSafeUrl(url)) return '';
-                const safeUrl = escapeHTML(url);
-                const type = attachment?.type || 'file';
-                const icon = type === 'image' ? 'ph-image' : type === 'qr_code' ? 'ph-qr-code' : type === 'link' ? 'ph-link' : 'ph-file';
-                return `<a class="chat-faq-attachment" href="${safeUrl}" target="_blank" rel="noopener noreferrer"><i class="ph-light ${icon}"></i><span>${label}</span><i class="ph-light ph-arrow-up-right"></i></a>`;
-            }).join('')}
+        <div class="chat-faq-attachments" aria-label="FAQ attachments">
+            ${renderFaqImages(attachments)}
+            <div class="chat-faq-file-link-list">
+                ${renderFaqFilesAndLinks(attachments)}
+            </div>
+            ${renderFaqQRAttachments(attachments)}
         </div>
     `;
+}
+
+/**
+ * Render QR codes with a reliable image-service fallback.
+ *
+ * The FAQ database remains the only source of the QR destination.
+ * The QR service only turns that existing URL into pixels; it does not
+ * generate, alter, or select any KNOWURLOCAL response content.
+ */
+function renderFaqQRCodes(root = document) {
+    root.querySelectorAll('.chat-faq-qr[data-qr-value]').forEach((container) => {
+        if (container.dataset.qrRendered === '1') return;
+
+        const value = container.dataset.qrValue;
+        if (!value || !isSafeUrl(value)) return;
+
+        const encoded = encodeURIComponent(value);
+        const externalQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encoded}`;
+
+        const img = document.createElement('img');
+        img.className = 'chat-faq-qr-image';
+        img.alt = container.getAttribute('aria-label') || 'Scannable QR code';
+        img.width = 180;
+        img.height = 180;
+        img.loading = 'eager';
+        img.decoding = 'async';
+        img.referrerPolicy = 'no-referrer';
+
+        img.addEventListener('load', () => {
+            container.replaceChildren(img);
+            container.dataset.qrRendered = '1';
+        }, { once: true });
+
+        img.addEventListener('error', () => {
+            // Keep a deterministic local fallback when the image service is
+            // unavailable. This also makes failures visible instead of
+            // leaving an empty white QR box.
+            const QRCore = window.QRCodeCore;
+
+            if (typeof QRCore !== 'function') {
+                container.innerHTML = `
+                    <a
+                        href="${escapeHTML(value)}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="chat-faq-qr-fallback"
+                    >
+                        Open QR destination
+                    </a>
+                `;
+                return;
+            }
+
+            try {
+                let qr = null;
+                let lastError = null;
+
+                for (const level of [
+                    QRCore.CorrectLevel?.M,
+                    QRCore.CorrectLevel?.L
+                ]) {
+                    if (level === undefined) continue;
+
+                    try {
+                        const candidate = new QRCore(0, level);
+                        candidate.addData(value);
+                        candidate.make();
+                        qr = candidate;
+                        break;
+                    } catch (error) {
+                        lastError = error;
+                    }
+                }
+
+                if (!qr) throw lastError || new Error('Unable to encode QR data.');
+
+                const moduleCount = qr.getModuleCount();
+                const quietZone = 4;
+                const viewSize = moduleCount + (quietZone * 2);
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+
+                svg.setAttribute('viewBox', `0 0 ${viewSize} ${viewSize}`);
+                svg.setAttribute('role', 'img');
+                svg.setAttribute('aria-label', container.getAttribute('aria-label') || 'Scannable QR code');
+                svg.setAttribute('shape-rendering', 'crispEdges');
+                svg.classList.add('chat-faq-qr-svg');
+
+                const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                background.setAttribute('width', String(viewSize));
+                background.setAttribute('height', String(viewSize));
+                background.setAttribute('fill', '#ffffff');
+                svg.appendChild(background);
+
+                for (let row = 0; row < moduleCount; row++) {
+                    for (let col = 0; col < moduleCount; col++) {
+                        if (!qr.isDark(row, col)) continue;
+                        const module = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        module.setAttribute('x', String(col + quietZone));
+                        module.setAttribute('y', String(row + quietZone));
+                        module.setAttribute('width', '1');
+                        module.setAttribute('height', '1');
+                        module.setAttribute('fill', '#111827');
+                        svg.appendChild(module);
+                    }
+                }
+
+                container.replaceChildren(svg);
+                container.dataset.qrRendered = '1';
+            } catch (error) {
+                console.error('Failed to render FAQ QR code:', error);
+                container.innerHTML = `
+                    <a
+                        href="${escapeHTML(value)}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="chat-faq-qr-fallback"
+                    >
+                        Open QR destination
+                    </a>
+                `;
+            }
+        }, { once: true });
+
+        img.src = externalQrUrl;
+    });
 }
 
 function renderSuggestions(questions){
@@ -464,387 +709,6 @@ async function sendToHuman(question){
 
 
 /*
- * Send a selected clarification FAQ back to
- * the Laravel controller.
- *
- * The FAQ ID is treated only as a selector.
- * The server remains responsible for retrieving
- * and returning the approved answer.
- */
-async function selectClarificationFaq(
-    faqId,
-    question
-){
-
-    /*
-     * Reject invalid IDs before making a request.
-     */
-    const numericFaqId =
-        Number(faqId);
-
-    if(
-        !Number.isInteger(numericFaqId) ||
-        numericFaqId <= 0
-    ){
-        return;
-    }
-
-    /*
-     * Remember the selected FAQ question.
-     *
-     * This is useful for support fallback and
-     * conversation state.
-     */
-    lastUserMessage =
-        question;
-
-    /*
-     * Display the selected option as the user's
-     * chosen message.
-     */
-    addMessage(
-        question,
-        "user"
-    );
-
-    /*
-     * Disable all clarification buttons immediately.
-     *
-     * This prevents double-clicking and sending
-     * multiple identical requests.
-     */
-    document
-        .querySelectorAll(
-            ".chatbot-faq-choice"
-        )
-        .forEach(button => {
-
-            button.disabled = true;
-
-        });
-
-    /*
-     * Show the same typing indicator used by
-     * normal chatbot requests.
-     */
-    const typingMessage =
-        addMessage(
-            `
-            <div class="typing">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-            `,
-            "bot",
-            true
-        );
-
-    try{
-
-        const res =
-            await fetch(
-                '/chat',
-                {
-                    method: 'POST',
-
-                    headers: {
-                        'Content-Type':
-                            'application/json',
-
-                        'Accept':
-                            'application/json',
-
-                        'X-CSRF-TOKEN':
-                            csrfToken
-                    },
-
-                    /*
-                     * The FAQ ID tells the backend exactly
-                     * which approved FAQ the user selected.
-                     *
-                     * The message is also sent so the request
-                     * remains compatible with the existing
-                     * chatbot validation.
-                     */
-                    body: JSON.stringify({
-                        message:
-                            question,
-
-                        faq_id:
-                            numericFaqId,
-
-                        agency_id:
-                            agencyId
-                    })
-                }
-            );
-
-        /*
-         * Read the response as text first so malformed
-         * Laravel responses can be diagnosed safely.
-         */
-        const text =
-            await res.text();
-
-        let data;
-
-        try{
-
-            data =
-                JSON.parse(text);
-
-        }catch(error){
-
-            console.error(
-                "Chatbot returned non-JSON response:",
-                text
-            );
-
-            throw new Error(
-                `Server returned HTTP ${res.status}`
-            );
-
-        }
-
-        if(!res.ok){
-
-            console.error(
-                "FAQ selection API error:",
-                data
-            );
-
-            throw new Error(
-                data.message ||
-                `FAQ selection failed (${res.status})`
-            );
-
-        }
-
-        if(
-            !data?.choices?.[0]?.message
-        ){
-
-            throw new Error(
-                "Invalid chatbot response format."
-            );
-
-        }
-
-        const messageData =
-            data.choices[0].message;
-
-        /*
-         * Sanitize the approved answer before
-         * inserting it into the chatbot bubble.
-         */
-        let html =
-            allowSafeHTML(
-                messageData.content || ''
-            ).replace(
-                /\n/g,
-                "<br>"
-            );
-
-        /*
-         * Preserve the existing FAQ-image behavior.
-         */
-        if(
-            messageData.image &&
-            isSafeUrl(messageData.image)
-        ){
-
-            const safeImageUrl =
-                escapeHTML(
-                    messageData.image
-                );
-
-            html += `
-                <div class="chat-image">
-                    <img
-                        src="${safeImageUrl}"
-                        alt="FAQ Image"
-                        class="clickable-image"
-                        loading="lazy"
-                        referrerpolicy="no-referrer"
-                    >
-                </div>
-            `;
-
-        }
-
-        html += renderFaqAttachments(messageData.attachments);
-
-        if (
-            messageData.image &&
-            isSafeUrl(messageData.image)
-        ) {
-            const safeImageUrl = escapeHTML(messageData.image);
-
-            html += `
-                <div class="chat-image">
-                    <img
-                        src="${safeImageUrl}"
-                        alt="FAQ Image"
-                        class="clickable-image"
-                        loading="lazy"
-                        referrerpolicy="no-referrer"
-                    >
-                </div>
-            `;
-        }
-
-        /*
-         * Replace the typing indicator with
-         * the actual approved FAQ answer.
-         */
-        typingMessage
-            .querySelector(".bubble")
-            .innerHTML = html;
-
-        chatbox.scrollTo({
-            top:
-                chatbox.scrollHeight,
-
-            behavior:
-                "smooth"
-        });
-
-    }catch(error){
-
-        console.error(
-            "FAQ selection error:",
-            error
-        );
-
-        typingMessage
-            .querySelector(".bubble")
-            .textContent =
-                "Sorry, something went wrong. Please try again.";
-
-    }finally{
-
-        /*
-         * Re-enable the input regardless of whether
-         * the request succeeded or failed.
-         */
-        if(messageInput){
-
-            messageInput.disabled =
-                false;
-
-            messageInput.focus();
-
-        }
-
-    }
-
-}
-
-
-/*
- * Render clarification choices returned by Laravel.
- *
- * These become modern clickable capsules.
- */
-function renderClarificationChoices(
-    faqs
-){
-
-    /*
-     * Only accept an actual array.
-     */
-    if(!Array.isArray(faqs)) {
-        return;
-    }
-
-    /*
-     * Only display the first two choices.
-     *
-     * The backend currently sends two candidates.
-     */
-    const choices =
-        faqs.slice(0, 2);
-
-    if(choices.length === 0) {
-        return;
-    }
-
-    /*
-     * Create a container for the choices.
-     */
-    const container =
-        document.createElement("div");
-
-    container.classList.add(
-        "chatbot-faq-choices"
-    );
-
-    choices.forEach(faq => {
-
-        /*
-         * Ignore malformed FAQ records.
-         */
-        if(
-            !faq ||
-            !faq.id ||
-            !faq.question
-        ){
-            return;
-        }
-
-        /*
-         * Buttons are preferable to generic divs
-         * because they provide native keyboard
-         * accessibility.
-         */
-        const button =
-            document.createElement("button");
-
-        button.type =
-            "button";
-
-        button.classList.add(
-            "chatbot-faq-choice"
-        );
-
-        /*
-         * textContent prevents FAQ database content
-         * from being interpreted as HTML.
-         */
-        button.textContent =
-            faq.question;
-
-        /*
-         * Clicking the capsule selects that FAQ.
-         */
-        button.addEventListener(
-            "click",
-            () => {
-
-                selectClarificationFaq(
-                    faq.id,
-                    faq.question
-                );
-
-            }
-        );
-
-        container.appendChild(
-            button
-        );
-
-    });
-
-    /*
-     * Return the finished capsule group.
-     */
-    return container;
-
-}
-
-
-/*
  * Normal chatbot message submission.
  */
 function sendMessage(){
@@ -973,10 +837,18 @@ function sendMessage(){
                 data
             );
 
-            throw new Error(
-                data.message ||
-                `Chatbot request failed (${response.status})`
-            );
+            const serverMessage =
+                data?.choices?.[0]?.message?.content ||
+                data?.message ||
+                `Chatbot request failed (${response.status})`;
+
+            const serverError =
+                new Error(serverMessage);
+
+            serverError.serverMessage =
+                serverMessage;
+
+            throw serverError;
 
         }
 
@@ -1007,13 +879,23 @@ function sendMessage(){
         /*
          * Sanitize the chatbot's normal text response.
          */
-        let html =
-            allowSafeHTML(
-                messageData.content || ''
-            ).replace(
-                /\n/g,
-                "<br>"
-            );
+        const attachments = Array.isArray(messageData.attachments)
+            ? messageData.attachments
+            : [];
+
+        // Keep the response hierarchy predictable: images first, then text,
+        // then file/link lines, and finally QR codes.
+        let html = renderFaqImages(attachments);
+
+        html += allowSafeHTML(
+            messageData.content || ''
+        ).replace(
+            /\n/g,
+            "<br>"
+        );
+
+        html += `<div class="chat-faq-file-link-list">${renderFaqFilesAndLinks(attachments)}</div>`;
+        html += renderFaqQRAttachments(attachments);
 
 
         /*
@@ -1037,35 +919,6 @@ function sendMessage(){
 
 
         /*
-         * Show an FAQ image only when the backend
-         * supplied a safe URL.
-         */
-        if (
-            messageData.image &&
-            isSafeUrl(messageData.image)
-        ) {
-
-            const safeImageUrl =
-                escapeHTML(
-                    messageData.image
-                );
-
-            html += `
-                <div class="chat-image">
-                    <img
-                        src="${safeImageUrl}"
-                        alt="FAQ Image"
-                        class="clickable-image"
-                        loading="lazy"
-                        referrerpolicy="no-referrer"
-                    >
-                </div>
-            `;
-
-        }
-
-
-        /*
          * Replace the typing indicator with the
          * chatbot's text response.
          */
@@ -1074,40 +927,10 @@ function sendMessage(){
                 ".bubble"
             );
 
-        html += renderFaqAttachments(messageData.attachments);
+        bubble.innerHTML = html;
 
-        bubble.innerHTML =
-            html;
-
-
-        /*
-         * If Laravel marked the response as a
-         * clarification, render the FAQ capsules
-         * underneath the clarification message.
-         */
-        if (
-            messageData.clarification &&
-            Array.isArray(messageData.faqs)
-        ) {
-
-            const choices =
-                renderClarificationChoices(
-                    messageData.faqs
-                );
-
-            /*
-             * Append the buttons to the same bot bubble
-             * so they visually belong to the clarification.
-             */
-            if(choices){
-
-                bubble.appendChild(
-                    choices
-                );
-
-            }
-
-        }
+        // QR pixels are rendered only after their containers exist in the DOM.
+        renderFaqQRCodes(bubble);
 
 
         /*
@@ -1148,6 +971,7 @@ function sendMessage(){
         typingMessage
             .querySelector(".bubble")
             .textContent =
+                error?.serverMessage ||
                 "Sorry, something went wrong. Please try again.";
 
         /*
@@ -1363,11 +1187,6 @@ let agencyId =
             chatbot.dataset.agency
         )
         : null;
-
-let agencyName =
-    chatbot?.dataset.agencyName ||
-    null;
-
 
 /*
  * =========================================================
@@ -1662,18 +1481,27 @@ document.addEventListener(
     "click",
     function(e){
 
+        const imageButton =
+            e.target.closest(".chat-faq-image-button");
+
+        const image =
+            e.target.closest(".clickable-image");
+
+        const imageUrl =
+            imageButton?.dataset.imageUrl ||
+            image?.getAttribute("src") ||
+            null;
+
         if(
-            e.target.classList.contains(
-                "clickable-image"
-            )
+            imageUrl &&
+            isSafeUrl(imageUrl) &&
+            imageModal &&
+            modalImg
         ){
 
-            modalImg.src =
-                e.target.src;
-
-            imageModal.classList.add(
-                "active"
-            );
+            modalImg.src = imageUrl;
+            imageModal.classList.add("active");
+            imageModal.setAttribute("aria-hidden", "false");
 
         }
 
@@ -1693,6 +1521,8 @@ if(imageClose){
             imageModal.classList.remove(
                 "active"
             );
+            imageModal.setAttribute("aria-hidden", "true");
+            modalImg.removeAttribute("src");
 
         }
     );

@@ -126,27 +126,6 @@ Route::post('/resend-otp', [AuthController::class, 'resendOtp'])
 Route::view('/privacy', 'privacy');
 Route::view('/terms', 'terms');
 
-// Route::get('/map', [PageController::class, 'map'])->name('map');
-// Route::get('/chat', fn() => view('public_user.chatbot'))->name('chat');
-// Route::get('/chat/suggestions', [ChatbotController::class, 'suggestions']);
-// Route::get('/agencies', [PageController::class, 'agencies'])->name('agencies');
-// Route::get('/about', fn() => view('public_user.about'))->name('about');
-
-// Route::get('/agency/{id}', [AgencyController::class, 'show'])->name('agency.show');
-// Route::get('/navigate/{agency}', [AgencyController::class, 'navigate'])->name('navigate');
-
-// // API
-// Route::get('/api/agencies', [AgencyController::class, 'getAll']);
-
-// // Chatbot
-// Route::post('/chat', [ChatbotController::class, 'ask']);
-// Route::post('/chat/support', [ChatbotController::class, 'submitSupportRequest']);
-
-// // FAQ
-// Route::resource('faqs', FaqController::class);
-
-
-
 Route::middleware(['auth', 'no.cache'])->group(function () {
 
     Route::get('/map', [PageController::class, 'map'])->name('map');
@@ -206,8 +185,9 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
 
 
 
-    Route::get('/chat', fn() => view('public_user.chatbot'))->name('chat');
-    Route::get('/chat/suggestions', [ChatbotController::class, 'suggestions']);
+    Route::get('/chat', fn () => view('public_user.chatbot'))->name('chat');
+    Route::get('/chat/suggestions', [ChatbotController::class, 'suggestions'])
+        ->name('chatbot.suggestions');
 
     Route::get('/agencies', [PageController::class, 'agencies'])->name('agencies');
     Route::get('/about', fn() => view('public_user.about'))->name('about');
@@ -220,15 +200,18 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
 
     // Chatbot
     Route::post('/chat', [ChatbotController::class, 'ask'])
-        ->middleware('throttle:chatbot');
+        ->middleware('throttle:chatbot')
+        ->name('chatbot.ask');
 
     Route::get('/chat/faqs/{faqId}/attachments/{componentIndex}', [ChatbotController::class, 'faqAttachment'])
         ->name('chatbot.faq-attachment');
         
     Route::post(
-    '/chat/support',
-    [ChatbotController::class, 'submitSupportRequest']
-)->middleware('throttle:support-request');
+        '/chat/support',
+        [ChatbotController::class, 'submitSupportRequest']
+    )
+        ->middleware('throttle:support-request')
+        ->name('chatbot.support');
 
 
     // 🔥 YOUR NEW FEATURE
