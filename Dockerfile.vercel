@@ -1,0 +1,104 @@
+# =========================================================
+# Frontend build
+# =========================================================
+
+FROM node:24-bookworm-slim AS frontend
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+
+RUN npm ci
+
+COPY vite.config.js ./
+COPY resources ./resources
+COPY public ./public
+
+RUN npm run build
+
+
+# =========================================================
+# FrankenPHP base
+# =========================================================
+
+FROM dunglas/frankenphp:1-php8.4-bookworm AS base
+
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
+    && install-php-extensions \
+        bcmath \
+        intl \
+        mbstring \
+        pcntl \
+        pdo_mysql \
+        xml \
+        zip
+
+WORKDIR /app
+
+
+# =========================================================
+# PHP dependencies
+# =========================================================
+
+FROM base AS dependencies
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+COPY composer.json composer.lock ./
+
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --no-progress \
+    --no-scripts \
+    --optimize-autoloader \
+    --prefer-dist
+
+COPY . .
+
+COPY --from=frontend /app/public/build ./public/build
+
+RUN mkdir -p \
+        storage/framework/cache \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/logs \
+        bootstrap/cache \
+    && composer dump-autoload \
+        --no-dev \
+        --classmap-authoritative
+
+
+# =========================================================
+# Production runtime
+# =========================================================
+
+FROM base AS runtime
+
+COPY --from=dependencies --chown=www-data:www-data /app /app
+
+COPY --chown=www-data:www-data Caddyfile /etc/frankenphp/Caddyfile
+
+# Runtime configuration/bootstrap script.
+COPY docker/entrypoint.sh /usr/local/bin/knowurlocal-entrypoint
+
+RUN chmod +x /usr/local/bin/knowurlocal-entrypoint \
+    && setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp \
+    && mkdir -p /app/certs \
+    && chown -R www-data:www-data \
+        /config/caddy \
+        /data/caddy \
+        /app/storage \
+        /app/bootstrap/cache \
+        /app/certs
+
+ENV PORT=80 \
+    APP_ENV=production \
+    APP_DEBUG=false \
+    LOG_CHANNEL=stderr
+
+USER www-data
+
+ENTRYPOINT ["/usr/local/bin/knowurlocal-entrypoint"]
+
+CMD ["frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile"]
