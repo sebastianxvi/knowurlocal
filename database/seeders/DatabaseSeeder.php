@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -11,24 +10,17 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Seed the application's database.
+     * Seed required reference data for a fresh KnowUrLocal database.
+     * Demo agencies, FAQs, and test accounts are intentionally not created
+     * automatically so production cannot accidentally receive test content.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'first_name' => 'Test',
-            'last_name' => 'User',
-            'email' => 'test@example.com',
-        ]);
-
-        // Create the initial superadmin account.
         $this->call([
-            SuperAdminSeeder::class,
             AgencyTypeSeeder::class,
             ContactTypeSeeder::class,
+            TemporaryCategorySeeder::class,
+            SuperAdminSeeder::class,
         ]);
-        
     }
 }

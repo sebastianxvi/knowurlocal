@@ -22,7 +22,7 @@ class ChatbotController extends Controller
      * Build the public response exclusively from the selected FAQ record.
      *
      * The AI never supplies answer text. It only selects an existing FAQ
-     * and a stored language variant. All response content comes from MySQL.
+     * and a stored language variant. All response content comes from the configured PostgreSQL database.
      */
     private function faqResponsePayload(Faq $faq, string $language): array
     {

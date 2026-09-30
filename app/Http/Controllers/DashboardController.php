@@ -723,8 +723,8 @@ class DashboardController extends Controller
     /**
      * Use a database aggregate for average response time.
      *
-     * MySQL/MariaDB are the production targets for KNOWURLOCAL.
-     * The fallback keeps local SQLite-based tests functional.
+     * Use each supported database driver's native date-difference
+     * expression, with a collection fallback for SQLite tests.
      */
     private function averageResponseMinutes(): ?int
     {
@@ -740,7 +740,15 @@ class DashboardController extends Controller
                 'AVG(TIMESTAMPDIFF(MINUTE, created_at, answered_at)) AS average_minutes'
             )->value('average_minutes');
 
-            return $average === null ? null : (int) round($average);
+            return $average === null ? null : (int) round((float) $average);
+        }
+
+        if ($driver === 'pgsql') {
+            $average = $query->selectRaw(
+                'AVG(EXTRACT(EPOCH FROM (answered_at - created_at)) / 60.0) AS average_minutes'
+            )->value('average_minutes');
+
+            return $average === null ? null : (int) round((float) $average);
         }
 
         $rows = $query->select([

@@ -10,7 +10,18 @@ class SuperAdminSeeder extends Seeder
 {
     public function run(): void
     {
-        // 🧠 Prevent duplicate superadmin
+        $email = trim((string) env('SUPERADMIN_EMAIL', ''));
+        $password = (string) env('SUPERADMIN_PASSWORD', '');
+
+        if ($email === '' || $password === '') {
+            $this->command?->warn(
+                'Superadmin not created: set SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD before running db:seed.'
+            );
+
+            return;
+        }
+
+        // Do not silently replace or reset an existing superadmin account.
         if (User::where('role', 'superadmin')->exists()) {
             return;
         }
@@ -18,8 +29,8 @@ class SuperAdminSeeder extends Seeder
         User::create([
             'first_name' => 'Super',
             'last_name'  => 'Admin',
-            'email'      => env('SUPERADMIN_EMAIL'),
-            'password'   => Hash::make(env('SUPERADMIN_PASSWORD')),
+            'email'      => $email,
+            'password'   => Hash::make($password),
             'email_verified_at' => now(),
 
             // 🔐 CRITICAL

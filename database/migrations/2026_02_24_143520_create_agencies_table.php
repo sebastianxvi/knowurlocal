@@ -156,7 +156,7 @@ return new class extends Migration
             /*
              * Stores the path / filename of the uploaded agency
              * image rather than storing the actual image binary
-             * inside MySQL.
+             * inside the database.
              */
             $table->string('agency_image')->nullable();
 

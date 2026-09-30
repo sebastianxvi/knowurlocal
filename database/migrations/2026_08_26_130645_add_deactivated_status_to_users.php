@@ -1,7 +1,9 @@
+
 <?php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,22 +13,30 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Preserve the existing column's nullability and default.
         Schema::table('users', function (Blueprint $table) {
-
-            /*
-             * Rebuild the existing status enum so accounts can
-             * explicitly represent a deactivated state.
-             *
-             * Existing pending and active values remain valid.
-             */
-            $table->enum('status', [
-                'pending',
-                'active',
-                'deactivated',
-            ])
-            ->default('active')
-            ->change();
+            $table->string('status')
+                ->default('active')
+                ->change();
         });
+
+        // PostgreSQL requires a separate CHECK constraint.
+        DB::statement("
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = 'users_status_check'
+              AND conrelid = 'users'::regclass
+        ) THEN
+            ALTER TABLE users
+            ADD CONSTRAINT users_status_check
+            CHECK (status IN ('pending', 'active', 'deactivated'));
+        END IF;
+    END
+    $$;
+");
     }
 
     /**
@@ -34,19 +44,21 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
+        // Do not silently discard the deactivated state.
+        if (DB::table('users')->where('status', 'deactivated')->exists()) {
+            throw new RuntimeException(
+                'Cannot roll back: users with deactivated status exist.'
+            );
+        }
 
-            /*
-             * Before rolling this back, make sure no user has
-             * status = deactivated, otherwise MySQL cannot safely
-             * reduce the enum values.
-             */
-            $table->enum('status', [
-                'pending',
-                'active',
-            ])
-            ->default('active')
-            ->change();
+        DB::statement(
+            'ALTER TABLE users DROP CONSTRAINT users_status_check'
+        );
+
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('status')
+                ->default('active')
+                ->change();
         });
     }
 };
