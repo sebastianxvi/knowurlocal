@@ -24,6 +24,12 @@
         >
         <meta name="realtime-driver" content="{{ config('broadcasting.default') }}"
 >
+    <meta name="reverb-app-key" content="{{ config('broadcasting.connections.reverb.key') }}">
+    <meta name="reverb-host" content="{{ config('broadcasting.connections.reverb.options.host') }}">
+    <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.options.port') }}">
+    <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme') }}">
+    <meta name="realtime-debug" content="{{ app()->environment('local') ? 'true' : 'false' }}">
+
 
     <title>
         @yield('title', 'Admin')

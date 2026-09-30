@@ -13,6 +13,7 @@
         "ably/laravel-broadcaster": "*",
         "barryvdh/laravel-dompdf": "*",
         "laravel/framework": "^12.0",
+        "laravel/reverb": "*",
         "league/flysystem-aws-s3-v3": "^3.0",
         "resend/resend-laravel": "*"
     },

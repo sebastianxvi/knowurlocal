@@ -116,6 +116,12 @@ function handleRealtimeSupportRequest(request) {
         return;
     }
 
+    if (document.querySelector('meta[name="realtime-debug"]')?.content === 'true') {
+        console.info('[KnowUrLocal realtime] Received support.request.created.', {
+            supportRequestId: request.id ?? null,
+        });
+    }
+
 
     /*
     |--------------------------------------------------------------------------
@@ -359,28 +365,18 @@ function connectRealtime() {
         )
         .subscribed(
             () => {
-                /*
-                |--------------------------------------------------------------------------
-                | Successful subscription
-                |--------------------------------------------------------------------------
-                |
-                | No additional UI action is required.
-                |--------------------------------------------------------------------------
-                */
+                if (document.querySelector('meta[name="realtime-debug"]')?.content === 'true') {
+                    console.info('[KnowUrLocal realtime] Subscribed to admin.support-requests.');
+                }
             }
         )
         .error(
-            () => {
-                /*
-                |--------------------------------------------------------------------------
-                | Connection errors
-                |--------------------------------------------------------------------------
-                |
-                | Echo manages the underlying connection lifecycle.
-                |
-                | We intentionally avoid noisy console logging here.
-                |--------------------------------------------------------------------------
-                */
+            (error) => {
+                console.error('[KnowUrLocal realtime] Failed to subscribe to admin.support-requests.', {
+                    type: error?.type,
+                    status: error?.status,
+                    code: error?.code,
+                });
             }
         );
 

@@ -256,16 +256,25 @@ class ChatbotController extends Controller
 
         $supportRequest->load(['user', 'agency']);
 
-        broadcast(new SupportRequestCreated(
-            id: $supportRequest->id,
-            question: $supportRequest->question,
-            status: $supportRequest->status,
-            agencyId: $supportRequest->agency_id,
-            agencyName: $supportRequest->agency?->agency_name,
-            userName: $supportRequest->user?->first_name ?? 'User',
-            createdAt: $supportRequest->created_at?->toIso8601String()
-                ?? now()->toIso8601String(),
-        ));
+        try {
+            broadcast(new SupportRequestCreated(
+                id: $supportRequest->id,
+                question: $supportRequest->question,
+                status: $supportRequest->status,
+                agencyId: $supportRequest->agency_id,
+                agencyName: $supportRequest->agency?->agency_name,
+                userName: $supportRequest->user?->first_name ?? 'User',
+                createdAt: $supportRequest->created_at?->toIso8601String()
+                    ?? now()->toIso8601String(),
+            ));
+        } catch (\Throwable $exception) {
+            // The request is already persisted; a realtime outage must not
+            // turn a successful support submission into a failed response.
+            Log::error('Failed to broadcast newly created support request.', [
+                'support_request_id' => $supportRequest->id,
+                'exception' => get_class($exception),
+            ]);
+        }
 
         return response()->json([
             'success' => true,
