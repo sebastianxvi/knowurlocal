@@ -97,7 +97,7 @@ class AppServiceProvider extends ServiceProvider
          * Share the lightweight admin notification center with the shared
          * header. Notifications are intentionally derived from current
          * actionable records; no separate notification-history table is
-         * required. Reverb handles the live delivery layer.
+         * required. Ably handles the live delivery layer.
          */
         View::composer(
             'partials.header',
