@@ -24,6 +24,7 @@
         name="broadcast-auth-endpoint"
         content="{{ url('/broadcasting/auth') }}"
     >
+    <meta name="realtime-driver" content="{{ config('broadcasting.default') }}">
 
     <title>KNOWURLOCAL | My Inquiries</title>
 
@@ -63,7 +64,7 @@
 )
 
 
-<!-- Laravel Echo / Ably -->
+<!-- Laravel Echo / Reverb -->
 @vite('resources/js/echo.js')
 
 <!-- Local QR generator shared with the chatbot attachment renderer -->

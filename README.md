@@ -57,3 +57,27 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Vercel deployment notes (KnowUrLocal)
+
+### Persistent file storage
+
+The Vercel runtime filesystem is ephemeral. Configure an S3-compatible object store before production traffic is enabled. The app supports separate public and private prefixes within the configured bucket:
+
+- `PUBLIC_STORAGE_DRIVER=s3`
+- `PRIVATE_STORAGE_DRIVER=s3`
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, and `AWS_BUCKET`
+- `AWS_PUBLIC_PREFIX=public` and `AWS_PRIVATE_PREFIX=private` (change if your bucket layout differs)
+- `AWS_PUBLIC_URL` set to the public base URL for the public prefix, such as the bucket's public URL or a CDN URL
+- `AWS_ENDPOINT` and `AWS_USE_PATH_STYLE_ENDPOINT` when required by your S3-compatible provider
+
+The bucket/prefix used for private attachments must not permit public reads. Those files continue to be streamed through Laravel routes, where the existing authorization checks run. Do not enable S3 storage until the bucket policy and public URL have been tested. Existing files stored on a local disk are not copied automatically; migrate them separately before switching production traffic.
+
+For local development, keep both driver variables set to `local`.
+
+
+### Realtime deployment
+
+Keep `BROADCAST_CONNECTION=reverb` and `VITE_REALTIME_DRIVER=reverb` for local development. For a Vercel production build, configure `BROADCAST_CONNECTION=ably` and `ABLY_KEY` (the server-side Ably API key) in the Vercel project environment. The frontend reads the Laravel broadcasting driver from a server-rendered meta tag, so it does not depend on a Vite build-time environment variable. Never expose `ABLY_KEY` in a `VITE_*` variable.
+
+The Ably Echo adapter uses Laravel's existing `/broadcasting/auth` endpoint for private-channel authorization. Keep `routes/channels.php` authorization callbacks intact. The existing server-side Ably broadcaster publishes events; browser clients must not receive the Ably API secret. Confirm the Ably account/key has the required publish and subscribe capabilities, and test user, admin, and collaboration channels with separate accounts before production traffic.

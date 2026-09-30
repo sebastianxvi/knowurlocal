@@ -331,7 +331,7 @@ public function prepareFromSupport(
                 'label' => 'Support Request image',
                 'source_legacy_support_request_id' => $support->id,
                 'attachment_url' => Storage::disk('public')->exists($support->answer_image)
-                    ? asset('storage/' . ltrim($support->answer_image, '/'))
+                    ? Storage::disk('public')->url(ltrim($support->answer_image, '/'))
                     : null,
             ];
         }

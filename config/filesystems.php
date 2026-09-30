@@ -29,31 +29,61 @@ return [
     */
 
     'disks' => [
-
-    'local' => [
-        'driver' => 'local',
-        'root' => storage_path('app/private'),
-        'serve' => true,
-        'throw' => false,
-        'report' => false,
-    ],
-
-    'private' => [
-        'driver' => 'local',
-        'root' => storage_path('app/private'),
-        'throw' => false,
-        'report' => false,
-    ],
-
-    'public' => [
+        'local' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
-            'visibility' => 'public',
+            'root' => storage_path('app/private'),
+            'serve' => true,
             'throw' => false,
             'report' => false,
         ],
 
+        // Public uploads are served by the public bucket/prefix when S3 is enabled.
+        'public' => env('PUBLIC_STORAGE_DRIVER', 'local') === 's3'
+            ? [
+                'driver' => 's3',
+                'key' => env('AWS_ACCESS_KEY_ID'),
+                'secret' => env('AWS_SECRET_ACCESS_KEY'),
+                'region' => env('AWS_DEFAULT_REGION'),
+                'bucket' => env('AWS_BUCKET'),
+                'root' => trim(env('AWS_PUBLIC_PREFIX', 'public'), '/'),
+                'url' => env('AWS_PUBLIC_URL', env('AWS_URL')),
+                'endpoint' => env('AWS_ENDPOINT'),
+                'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+                'throw' => true,
+                'report' => false,
+            ]
+            : [
+                'driver' => 'local',
+                'root' => storage_path('app/public'),
+                'url' => rtrim(env('APP_URL', 'http://localhost'), '/') . '/storage',
+                'visibility' => 'public',
+                'throw' => false,
+                'report' => false,
+            ],
+
+        // Private uploads are never given public object URLs; controllers authorize
+        // access and stream them through Laravel routes.
+        'private' => env('PRIVATE_STORAGE_DRIVER', 'local') === 's3'
+            ? [
+                'driver' => 's3',
+                'key' => env('AWS_ACCESS_KEY_ID'),
+                'secret' => env('AWS_SECRET_ACCESS_KEY'),
+                'region' => env('AWS_DEFAULT_REGION'),
+                'bucket' => env('AWS_BUCKET'),
+                'root' => trim(env('AWS_PRIVATE_PREFIX', 'private'), '/'),
+                'endpoint' => env('AWS_ENDPOINT'),
+                'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+                'throw' => true,
+                'report' => false,
+            ]
+            : [
+                'driver' => 'local',
+                'root' => storage_path('app/private'),
+                'throw' => false,
+                'report' => false,
+            ],
+
+        // Explicit S3 disk retained for code/integrations that need the raw bucket.
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
@@ -66,7 +96,6 @@ return [
             'throw' => false,
             'report' => false,
         ],
-
     ],
 
     /*

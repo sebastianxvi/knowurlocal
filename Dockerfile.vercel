@@ -29,7 +29,7 @@ RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
         intl \
         mbstring \
         pcntl \
-        pdo_mysql \
+        pdo_pgsql \
         xml \
         zip
 
@@ -84,13 +84,11 @@ COPY docker/entrypoint.sh /usr/local/bin/knowurlocal-entrypoint
 
 RUN chmod +x /usr/local/bin/knowurlocal-entrypoint \
     && setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp \
-    && mkdir -p /app/certs \
     && chown -R www-data:www-data \
         /config/caddy \
         /data/caddy \
         /app/storage \
-        /app/bootstrap/cache \
-        /app/certs
+        /app/bootstrap/cache
 
 ENV PORT=80 \
     APP_ENV=production \

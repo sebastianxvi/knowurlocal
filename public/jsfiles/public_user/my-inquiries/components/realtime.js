@@ -2,7 +2,7 @@
  * KNOWURLOCAL
  * My Inquiries — Realtime Updates
  *
- * Ably tells us that an inquiry changed.
+ * Reverb tells us that an inquiry changed.
  * Laravel then provides the authoritative state.
  */
 
@@ -39,7 +39,7 @@ function getCurrentUserId() {
 }
 
 /**
- * Validate the small payload received from Ably.
+ * Validate the small payload received from Reverb.
  *
  * We intentionally do not trust this payload as the
  * source of the actual inquiry contents.

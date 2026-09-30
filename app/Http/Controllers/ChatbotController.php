@@ -92,7 +92,7 @@ class ChatbotController extends Controller
             'content' => implode("\n\n", $texts),
             'attachments' => $attachments,
             'image' => filled($faq->image)
-                ? asset('storage/' . ltrim((string) $faq->image, '/'))
+                ? Storage::disk('public')->url(ltrim((string) $faq->image, '/'))
                 : null,
         ];
     }

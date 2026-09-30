@@ -157,6 +157,7 @@ body{
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="user-id" content="{{ auth()->id() }}">
     <meta name="broadcast-auth-endpoint" content="{{ url('/broadcasting/auth') }}">
+    <meta name="realtime-driver" content="{{ config('broadcasting.default') }}">
 
 </head>
 
@@ -176,7 +177,7 @@ body{
     <img 
         class="card-thumb"
         src="{{ $agency->agency_image 
-            ? asset('storage/'.$agency->agency_image) 
+            ? Storage::disk('public')->url($agency->agency_image) 
             : asset('images/admin/placeholder.jpg') }}"
         alt="{{ e($agency->agency_name) }}"
         onerror="this.onerror=null;this.src='{{ asset('images/admin/placeholder.jpg') }}';"

@@ -61,6 +61,7 @@
     >
     <meta name="user-id" content="{{ auth()->id() }}">
     <meta name="broadcast-auth-endpoint" content="{{ url('/broadcasting/auth') }}">
+    <meta name="realtime-driver" content="{{ config('broadcasting.default') }}">
 
 
 
