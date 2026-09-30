@@ -74,18 +74,10 @@ RUN npm ci
 
 
 # ---------------------------------------------------------
-# Reverb configuration for Vite build
+# Ably configuration
 # ---------------------------------------------------------
-
-ARG VITE_REVERB_APP_KEY
-ARG VITE_REVERB_HOST
-ARG VITE_REVERB_PORT=443
-ARG VITE_REVERB_SCHEME=https
-
-ENV VITE_REVERB_APP_KEY=${VITE_REVERB_APP_KEY}
-ENV VITE_REVERB_HOST=${VITE_REVERB_HOST}
-ENV VITE_REVERB_PORT=${VITE_REVERB_PORT}
-ENV VITE_REVERB_SCHEME=${VITE_REVERB_SCHEME}
+# ABLY_KEY is supplied as a server-side runtime environment variable.
+# It must not be passed to Vite or embedded in browser assets.
 
 
 # ---------------------------------------------------------

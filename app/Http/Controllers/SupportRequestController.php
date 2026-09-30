@@ -560,7 +560,7 @@ if (
     * The support request now has an official response
     * waiting for citizen confirmation.
     *
-    * Only now do we notify the citizen through Reverb.
+    * Only now do we notify the citizen through Ably.
     */
     try {
         broadcast(new SupportRequestResponseCreated(
@@ -1056,7 +1056,7 @@ public function viewCitizenResponseAttachment(
  * latest official response.
  *
  * Realtime notifications use this endpoint to retrieve
- * authoritative database state after Reverb reports
+ * authoritative database state after Ably reports
  * that something changed.
  */
 public function userInquiry($id)

@@ -1,7 +1,7 @@
 /**
  * KNOWURLOCAL — Public Notification Realtime
  *
- * Reverb delivers the "a new official response exists" signal.
+ * Ably delivers the "a new official response exists" signal.
  * Laravel remains authoritative for the numeric unread count.
  */
 

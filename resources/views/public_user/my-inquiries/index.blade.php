@@ -63,7 +63,7 @@
 )
 
 
-<!-- Laravel Echo / Reverb -->
+<!-- Laravel Echo / Ably -->
 @vite('resources/js/echo.js')
 
 <!-- Local QR generator shared with the chatbot attachment renderer -->
