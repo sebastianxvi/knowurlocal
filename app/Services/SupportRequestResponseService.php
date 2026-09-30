@@ -46,6 +46,12 @@ class SupportRequestResponseService
                 'forwarded_at' => now(),
             ]);
 
+            // Track uploaded paths in memory. Once PostgreSQL marks a
+            // transaction as failed, querying $response->components from
+            // inside the catch block would fail too and hide the original
+            // database exception (SQLSTATE 25P02).
+            $storedFilePaths = [];
+
             try {
                 foreach ($components as $index => $component) {
                     $content = $component['content'] ?? null;
@@ -64,6 +70,10 @@ class SupportRequestResponseService
                             'support-responses',
                             'private'
                         );
+
+                        if (is_string($content) && $content !== '') {
+                            $storedFilePaths[] = $content;
+                        }
                     }
 
                     $response->components()->create([
@@ -91,15 +101,11 @@ class SupportRequestResponseService
                  * database operation fails, remove the stored
                  * files before allowing the exception to propagate.
                  */
-                foreach ($response->components as $component) {
-                    if (
-                        in_array($component->type, ['image', 'file'], true)
-                        && $component->content
-                    ) {
-                        Storage::disk('private')->delete(
-                            $component->content
-                        );
-                    }
+                // Do not query the database here: PostgreSQL may already
+                // have aborted the transaction, which would mask the
+                // original exception with SQLSTATE 25P02.
+                foreach ($storedFilePaths as $storedFilePath) {
+                    Storage::disk('private')->delete($storedFilePath);
                 }
 
                 throw $exception;
