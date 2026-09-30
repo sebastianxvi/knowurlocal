@@ -62,14 +62,14 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 
 ### Persistent file storage
 
-The Vercel runtime filesystem is ephemeral. Configure an S3-compatible object store before production traffic is enabled. The app supports separate public and private prefixes within the configured bucket:
+The Vercel runtime filesystem is ephemeral. Configure an S3-compatible object store before production traffic is enabled. Separate public and private buckets are supported and recommended when using Supabase Storage:
 
-- `PUBLIC_STORAGE_DRIVER=s3`
-- `PRIVATE_STORAGE_DRIVER=s3`
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, and `AWS_BUCKET`
-- `AWS_PUBLIC_PREFIX=public` and `AWS_PRIVATE_PREFIX=private` (change if your bucket layout differs)
-- `AWS_PUBLIC_URL` set to the public base URL for the public prefix, such as the bucket's public URL or a CDN URL
+- `PUBLIC_STORAGE_DRIVER=s3` and `PRIVATE_STORAGE_DRIVER=s3`
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_DEFAULT_REGION`
+- `AWS_PUBLIC_BUCKET` set to the public bucket name and `AWS_PRIVATE_BUCKET` set to the private bucket name
+- `AWS_PUBLIC_URL` set to the public base URL for the public bucket, such as the bucket's public URL or a CDN URL
 - `AWS_ENDPOINT` and `AWS_USE_PATH_STYLE_ENDPOINT` when required by your S3-compatible provider
+- `AWS_PUBLIC_PREFIX` and `AWS_PRIVATE_PREFIX` are optional; with separate buckets, they default to the bucket root. If using a legacy single bucket instead, set `AWS_BUCKET`; the disks retain the `public` and `private` prefixes by default.
 
 The bucket/prefix used for private attachments must not permit public reads. Those files continue to be streamed through Laravel routes, where the existing authorization checks run. Do not enable S3 storage until the bucket policy and public URL have been tested. Existing files stored on a local disk are not copied automatically; migrate them separately before switching production traffic.
 

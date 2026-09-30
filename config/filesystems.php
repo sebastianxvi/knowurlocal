@@ -44,8 +44,10 @@ return [
                 'key' => env('AWS_ACCESS_KEY_ID'),
                 'secret' => env('AWS_SECRET_ACCESS_KEY'),
                 'region' => env('AWS_DEFAULT_REGION'),
-                'bucket' => env('AWS_BUCKET'),
-                'root' => trim(env('AWS_PUBLIC_PREFIX', 'public'), '/'),
+                'bucket' => env('AWS_PUBLIC_BUCKET', env('AWS_BUCKET')),
+                // Separate Supabase buckets store objects at their bucket root by default.
+                // Keep the legacy prefixes only when using the older single-bucket setup.
+                'root' => trim((string) env('AWS_PUBLIC_PREFIX', env('AWS_PUBLIC_BUCKET') ? '' : 'public'), '/'),
                 'url' => env('AWS_PUBLIC_URL', env('AWS_URL')),
                 'endpoint' => env('AWS_ENDPOINT'),
                 'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
@@ -69,8 +71,10 @@ return [
                 'key' => env('AWS_ACCESS_KEY_ID'),
                 'secret' => env('AWS_SECRET_ACCESS_KEY'),
                 'region' => env('AWS_DEFAULT_REGION'),
-                'bucket' => env('AWS_BUCKET'),
-                'root' => trim(env('AWS_PRIVATE_PREFIX', 'private'), '/'),
+                'bucket' => env('AWS_PRIVATE_BUCKET', env('AWS_BUCKET')),
+                // Separate Supabase buckets store objects at their bucket root by default.
+                // Keep the legacy prefixes only when using the older single-bucket setup.
+                'root' => trim((string) env('AWS_PRIVATE_PREFIX', env('AWS_PRIVATE_BUCKET') ? '' : 'private'), '/'),
                 'endpoint' => env('AWS_ENDPOINT'),
                 'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
                 'throw' => true,
