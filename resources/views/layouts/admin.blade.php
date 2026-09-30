@@ -138,6 +138,13 @@
 {{-- MODAL SYSTEM --}}
 
 <script src="{{ asset('jsfiles/components/modal-system.js') }}"></script>
+<script>
+    // Shared feedback for every admin route; the modal system consumes each message once.
+    window.__FLASH_SUCCESS__ = @json(session('success'));
+    window.__FLASH_ERROR__ = @json(session('error'));
+    window.__FLASH_WARNING__ = @json(session('warning'));
+    window.__FLASH_INFO__ = @json(session('info'));
+</script>
 
 <script src="{{ asset('jsfiles/admin/admin-shell.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/admin-notifications.js') }}"></script>

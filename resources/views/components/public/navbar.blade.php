@@ -36,6 +36,20 @@
 
                         <button
                             type="button"
+                            id="searchClearBtn"
+                            class="search-clear-btn"
+                            aria-label="Clear search"
+                            title="Clear search"
+                            hidden
+                        >
+                            <i
+                                class="ph-light ph-x"
+                                aria-hidden="true"
+                            ></i>
+                        </button>
+
+                        <button
+                            type="button"
                             id="searchBtn"
                             aria-label="Search agencies"
                             title="Search agencies"

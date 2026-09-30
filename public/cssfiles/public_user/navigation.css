@@ -82,7 +82,7 @@ body{
 
 
 .pill-back:focus-visible{
-    outline:2px solid rgba(124,58,237,0.45);
+    outline:2px solid rgba(82,114,201,0.42);
     outline-offset:3px;
 }
 
@@ -178,7 +178,7 @@ body{
 
 
 #openRoute:focus-visible{
-    outline:2px solid rgba(124,58,237,0.45);
+    outline:2px solid rgba(82,114,201,0.42);
     outline-offset:3px;
 }
 
@@ -259,8 +259,8 @@ body{
 
     border-radius:50%;
 
-    background:#f3f0ff;
-    color:#7c3aed;
+    background:#eef3ff;
+    color:#5272c9;
 
     font-size:17px;
 
@@ -346,7 +346,7 @@ body{
 
 
 .route-hint:hover > i{
-    background:#ede9fe;
+    background:#e4ebff;
 
     transform:scale(1.05);
 }
@@ -360,7 +360,7 @@ body{
 
 
 .route-hint:focus-visible{
-    outline:2px solid rgba(124,58,237,0.45);
+    outline:2px solid rgba(82,114,201,0.42);
 
     outline-offset:3px;
 }
@@ -434,7 +434,7 @@ body{
 
     background:#ffffff;
 
-    color:#7c3aed;
+    color:#5272c9;
 
     box-shadow:
         0 8px 22px rgba(15,23,42,0.16);
@@ -447,7 +447,7 @@ body{
 
 
 .nav-map-control:focus-visible{
-    outline:2px solid rgba(124,58,237,0.45);
+    outline:2px solid rgba(82,114,201,0.42);
 
     outline-offset:3px;
 }
@@ -778,7 +778,7 @@ body{
 
 
 .route-modal-header button:focus-visible{
-    outline:2px solid rgba(124,58,237,0.45);
+    outline:2px solid rgba(82,114,201,0.42);
 
     outline-offset:2px;
 }
@@ -1042,17 +1042,17 @@ body{
     background:#f1f5ff;
 
     border-color:
-        rgba(124,58,237,0.28);
+        rgba(82,114,201,0.28);
 
     box-shadow:
-        0 4px 12px rgba(124,58,237,0.08);
+        0 4px 12px rgba(82,114,201,0.08);
 
     transform:translateY(-1px);
 }
 
 
 .travel-mode.active .travel-mode-icon{
-    color:#7c3aed;
+    color:#5272c9;
 }
 
 
@@ -1064,12 +1064,12 @@ body{
 
 
 .travel-mode.active .travel-mode-time{
-    color:#6d28d9;
+    color:#3f5fb5;
 }
 
 
 .travel-mode:focus-visible{
-    outline:2px solid rgba(124,58,237,0.45);
+    outline:2px solid rgba(82,114,201,0.42);
 
     outline-offset:2px;
 }
@@ -1235,7 +1235,7 @@ body{
 
     background:#f1f5ff;
 
-    color:#7c3aed;
+    color:#5272c9;
 
     transition:
         background 0.2s ease,
@@ -1468,4 +1468,273 @@ body{
         border-radius:16px;
     }
 
+}
+
+/* =========================================================
+   KNOWURLOCAL DESIGN SYSTEM ALIGNMENT
+   Clean blue accents, soft surfaces, and responsive floating panels.
+   ========================================================= */
+
+:root {
+    --nav-brand: #5272c9;
+    --nav-brand-strong: #3f5fb5;
+    --nav-brand-soft: #eef3ff;
+    --nav-page-text: #263449;
+    --nav-page-muted: #78869a;
+    --nav-page-border: rgba(148, 163, 184, 0.24);
+    --nav-page-surface: rgba(255, 255, 255, 0.96);
+    --nav-page-shadow:
+        0 18px 48px rgba(15, 23, 42, 0.13),
+        0 3px 10px rgba(15, 23, 42, 0.045);
+}
+
+html,
+body {
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--nav-page-text);
+    background: #eef2f7;
+}
+
+.nav-pill,
+#openRoute,
+.route-hint,
+.location-status,
+.travel-time-card,
+.route-modal-content {
+    border: 1px solid var(--nav-page-border);
+    background: var(--nav-page-surface);
+    box-shadow: var(--nav-page-shadow);
+}
+
+.nav-pill {
+    gap: 11px;
+    padding: 8px 13px 8px 9px;
+    border-radius: 16px;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.pill-back {
+    background: #f0f4ff;
+    color: var(--nav-brand);
+}
+
+.pill-back:hover {
+    background: #e5ecff;
+    color: var(--nav-brand-strong);
+}
+
+.pill-sub {
+    font-size: 9px;
+    font-weight: 650;
+    letter-spacing: 0.035em;
+    color: #8793a6;
+}
+
+.pill-name {
+    margin-top: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #263449;
+}
+
+#openRoute {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    color: var(--nav-brand);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+#openRoute:hover {
+    color: var(--nav-brand-strong);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+}
+
+.route-hint {
+    border-radius: 15px;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.route-hint > i {
+    background: var(--nav-brand-soft);
+    color: var(--nav-brand);
+}
+
+.route-hint:hover > i {
+    background: #e4ebff;
+}
+
+.location-status {
+    border-radius: 12px;
+    padding: 8px 11px;
+    font-size: 10px;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.leaflet-top .leaflet-control.nav-map-controls {
+    gap: 8px;
+}
+
+.nav-map-control {
+    border-color: var(--nav-page-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.96);
+    color: #526176;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.10);
+}
+
+.nav-map-control:hover {
+    color: var(--nav-brand);
+    background: #fff;
+}
+
+.travel-time-card {
+    width: 336px;
+    padding: 15px;
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.travel-time-label {
+    font-size: 13px;
+    font-weight: 720;
+    letter-spacing: -0.025em;
+}
+
+.travel-time-subtext {
+    margin-top: 4px;
+    font-size: 10px;
+    color: var(--nav-page-muted);
+}
+
+.travel-mode {
+    padding: 9px 6px;
+    border-color: rgba(148, 163, 184, 0.18);
+    border-radius: 13px;
+    background: #f8faff;
+}
+
+.travel-mode.active {
+    border-color: rgba(82, 114, 201, 0.30);
+    background: #f0f4ff;
+    box-shadow: 0 5px 14px rgba(82, 114, 201, 0.09);
+}
+
+.travel-mode.active .travel-mode-icon,
+.travel-mode.active .travel-mode-time {
+    color: var(--nav-brand);
+}
+
+.travel-mode-name {
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.travel-mode-time {
+    font-size: 13px;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+}
+
+.travel-time-disclaimer {
+    color: #7a8799;
+    font-size: 9px;
+}
+
+.route-modal-content {
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.route-modal-header {
+    padding: 15px 16px;
+    border-bottom-color: rgba(148, 163, 184, 0.18);
+}
+
+.route-mode-icon {
+    background: var(--nav-brand-soft);
+    color: var(--nav-brand);
+}
+
+#routeModeName {
+    font-size: 14px;
+    font-weight: 720;
+    letter-spacing: -0.02em;
+}
+
+#routeModeSummary {
+    font-size: 10px;
+}
+
+#routeContainer {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 600px) {
+    .nav-pill {
+        top: 10px;
+        left: 10px;
+        max-width: calc(100vw - 82px);
+        padding: 7px 10px 7px 7px;
+        border-radius: 14px;
+    }
+
+    .pill-name {
+        max-width: calc(100vw - 145px);
+        font-size: 11px;
+    }
+
+    .route-toggle {
+        top: 10px;
+        right: 10px;
+    }
+
+    #openRoute {
+        width: 40px;
+        height: 40px;
+        border-radius: 13px;
+    }
+
+    .location-status {
+        top: 61px;
+        left: 10px;
+        max-width: calc(100vw - 20px);
+    }
+
+    .travel-time-card {
+        left: 10px;
+        right: 10px;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        padding: 12px;
+        border-radius: 17px;
+    }
+
+    .travel-mode {
+        padding: 7px 4px;
+        border-radius: 11px;
+    }
+
+    .route-modal-content {
+        border-radius: 18px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

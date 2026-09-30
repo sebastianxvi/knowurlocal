@@ -401,6 +401,6 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('jsfiles/components/modal-system.js') }}"></script>
+
 <script src="{{ asset('jsfiles/admin/admins.js') }}"></script>
 @endpush

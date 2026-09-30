@@ -10,6 +10,7 @@ use App\Http\Controllers\ChatbotLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CollaborationController;
 use App\Http\Controllers\FaqController;
+use App\Http\Controllers\FaqFeedbackController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\SupportRequestController;
 use App\Http\Controllers\UserActivityController;
@@ -203,6 +204,10 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
         ->middleware('throttle:chatbot')
         ->name('chatbot.ask');
 
+    Route::post('/chat/feedback', [FaqFeedbackController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('chatbot.feedback.store');
+
     Route::get('/chat/faqs/{faqId}/attachments/{componentIndex}', [ChatbotController::class, 'faqAttachment'])
         ->name('chatbot.faq-attachment');
         
@@ -339,6 +344,10 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
         ->name('admin.categories.destroy');
 
     // ================= FAQ MANAGEMENT =================
+    Route::get('/faqs/{faq}/feedback', [FaqFeedbackController::class, 'forFaq'])
+        ->whereNumber('faq')
+        ->name('admin.faqs.feedback');
+
     Route::resource('faqs', FaqController::class)
         ->only(['index', 'store', 'update', 'destroy']);
 

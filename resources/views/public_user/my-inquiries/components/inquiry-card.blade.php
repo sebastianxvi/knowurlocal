@@ -145,114 +145,59 @@
 
 
                     <div class="response-components">
-
-                        @foreach ($latestResponse->components as $component)
-
-                            @switch($component->type)
-
-                                @case('text')
-                                    <div class="response-component response-component-text">
-                                        <p>{{ $component->content }}</p>
-                                    </div>
-                                    @break
-
-                                @case('image')
-                                    @if ($component->attachment_url)
-                                        <div class="response-component response-component-image">
-                                            @if ($component->label)
-                                                <span class="response-component-label">
-                                                    {{ $component->label }}
-                                                </span>
-                                            @endif
-
-                                            <button
-                                                type="button"
-                                                class="response-image-trigger"
-                                                data-image-url="{{ $component->attachment_url }}"
-                                                aria-label="View response image"
-                                            >
-                                                <img
-                                                    src="{{ $component->attachment_url }}"
-                                                    alt="{{ $component->label ?: 'Official response image' }}"
-                                                    loading="lazy"
-                                                >
-                                            </button>
-                                        </div>
+                        {{-- Match the chatbot attachment order: images, answer text, file/link lines, then QR. --}}
+                        @foreach ($latestResponse->components->where('type', 'image') as $component)
+                            @if ($component->attachment_url)
+                                <div class="response-component response-component-image">
+                                    @if ($component->label)
+                                        <span class="response-component-label">{{ $component->label }}</span>
                                     @endif
-                                    @break
-
-                                @case('file')
-                                    @if ($component->attachment_url)
-                                        <div class="response-component response-component-file">
-                                            <i class="ph-light ph-file" aria-hidden="true"></i>
-
-                                            <div class="response-file-info">
-                                                @if ($component->label)
-                                                    <span class="response-component-label">
-                                                        {{ $component->label }}
-                                                    </span>
-                                                @endif
-
-                                                <a
-                                                    href="{{ $component->attachment_url }}"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                >
-                                                    View document
-                                                </a>
-                                            </div>
-                                        </div>
-                                    @endif
-                                    @break
-
-                                @case('link')
-                                    <div class="response-component response-component-link">
-                                        <i class="ph-light ph-link" aria-hidden="true"></i>
-
-                                        <div class="response-link-info">
-                                            @if ($component->label)
-                                                <span class="response-component-label">
-                                                    {{ $component->label }}
-                                                </span>
-                                            @endif
-
-                                            <a
-                                                href="{{ $component->content }}"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                            >
-                                                {{ $component->content }}
-                                            </a>
-                                        </div>
-                                    </div>
-                                    @break
-
-                                @case('qr_code')
-                                    <div class="response-component response-component-qr">
-                                        <i class="ph-light ph-qr-code" aria-hidden="true"></i>
-
-                                        <div class="response-qr-info">
-                                            @if ($component->label)
-                                                <span class="response-component-label">
-                                                    {{ $component->label }}
-                                                </span>
-                                            @endif
-
-                                            <a
-                                                href="{{ $component->content }}"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                            >
-                                                Open QR destination
-                                            </a>
-                                        </div>
-                                    </div>
-                                    @break
-
-                            @endswitch
-
+                                    <button type="button" class="response-image-trigger" data-image-url="{{ $component->attachment_url }}" aria-label="View response image">
+                                        <img src="{{ $component->attachment_url }}" alt="{{ $component->label ?: 'Official response image' }}" loading="lazy">
+                                    </button>
+                                </div>
+                            @endif
                         @endforeach
 
+                        @foreach ($latestResponse->components->where('type', 'text') as $component)
+                            <div class="response-component response-component-text"><p>{{ $component->content }}</p></div>
+                        @endforeach
+
+                        <div class="response-attachment-links" aria-label="Response files and links">
+                            @foreach ($latestResponse->components->where('type', 'file') as $component)
+                                @if ($component->attachment_url)
+                                    <a class="response-attachment-link response-file-link" href="{{ $component->attachment_url }}" download>
+                                        <i class="ph-light ph-file-arrow-down" aria-hidden="true"></i>
+                                        <span>{{ $component->label ?: 'Download file' }}</span>
+                                        <i class="ph-light ph-download-simple response-attachment-trailing" aria-hidden="true"></i>
+                                    </a>
+                                @endif
+                            @endforeach
+
+                            @foreach ($latestResponse->components->where('type', 'link') as $component)
+                                @php $linkScheme = strtolower((string) parse_url((string) $component->content, PHP_URL_SCHEME)); @endphp
+                                @if (in_array($linkScheme, ['http', 'https'], true))
+                                    <a class="response-attachment-link response-plain-link" href="{{ $component->content }}" target="_blank" rel="noopener noreferrer">
+                                        <span>{{ $component->label ?: $component->content }}</span>
+                                        <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i>
+                                    </a>
+                                @endif
+                            @endforeach
+                        </div>
+
+                        @foreach ($latestResponse->components->where('type', 'qr_code') as $component)
+                            @php $qrScheme = strtolower((string) parse_url((string) $component->content, PHP_URL_SCHEME)); @endphp
+                            @if (in_array($qrScheme, ['http', 'https'], true))
+                                <div class="response-component response-component-qr">
+                                    <div class="response-qr-heading">
+                                        <i class="ph-light ph-qr-code" aria-hidden="true"></i>
+                                        <span>{{ $component->label ?: 'QR code' }}</span>
+                                    </div>
+                                    <div class="response-qr-code" data-qr-value="{{ $component->content }}" role="img" aria-label="{{ $component->label ?: 'Scannable QR code' }}"></div>
+                                    <a class="response-qr-open" href="{{ $component->content }}" target="_blank" rel="noopener noreferrer">Open destination <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></a>
+                                </div>
+                            @endif
+                        @endforeach
                     </div>
 
                 </section>

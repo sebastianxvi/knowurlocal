@@ -475,6 +475,26 @@ function createSelectedAgencyIcon() {
             'agencyDetailsImage'
         );
 
+    /*
+     * Recover from a missing uploaded image without entering an error loop
+     * if the bundled placeholder itself ever fails to load.
+     */
+    if (agencyDetailsImage) {
+        agencyDetailsImage.addEventListener('error', () => {
+            const placeholderUrl = '/images/admin/placeholder.jpg';
+
+            if (!agencyDetailsImage.src.endsWith(placeholderUrl)) {
+                agencyDetailsImage.src = placeholderUrl;
+            } else {
+                agencyDetailsImage.style.visibility = 'hidden';
+            }
+        });
+
+        agencyDetailsImage.addEventListener('load', () => {
+            agencyDetailsImage.style.visibility = '';
+        });
+    }
+
         // =========================================================
 // IMAGE PREVIEW MODAL
 // =========================================================
@@ -2009,7 +2029,7 @@ marker.setIcon(
         const image =
             agency.agency_image
                 ? `/storage/${agency.agency_image}`
-                : '/images/default-agency.png';
+                : '/images/admin/placeholder.jpg';
 
 
         agencyDetailsImage.src =
@@ -2480,7 +2500,32 @@ function closeAgencyDetails() {
 
 
     /*
-     * Hide the agency details panel.
+     * Move keyboard focus out of the panel BEFORE hiding it.
+     *
+     * Otherwise, closing the panel while its close button has focus
+     * leaves focus inside an aria-hidden subtree and triggers a browser
+     * accessibility warning. Returning focus to the map avoids opening
+     * the mobile keyboard and preserves the user's map context.
+     */
+    if (agencyDetails.contains(document.activeElement)) {
+        const mapContainer = map.getContainer();
+
+        if (mapContainer && typeof mapContainer.focus === 'function') {
+            if (!mapContainer.hasAttribute('tabindex')) {
+                mapContainer.setAttribute('tabindex', '-1');
+            }
+
+            try {
+                mapContainer.focus({ preventScroll: true });
+            } catch (error) {
+                mapContainer.focus();
+            }
+        }
+    }
+
+
+    /*
+     * Hide the agency details panel after focus has left it.
      */
     agencyDetails.classList.remove(
         'active'
@@ -2488,10 +2533,7 @@ function closeAgencyDetails() {
 
 
     /*
-     * Update the accessibility state.
-     *
-     * "true" tells assistive technologies that
-     * the panel is currently hidden.
+     * Keep the accessibility state synchronized with the visual state.
      */
     agencyDetails.setAttribute(
         'aria-hidden',
@@ -2634,42 +2676,93 @@ function closeAgencyDetails() {
 
 
     // =========================================================
+    // COMPACT COLLAPSIBLE MAP KEY
+    // =========================================================
+
+    const mapLegend = document.getElementById('mapLegend');
+    const mapLegendToggle = document.getElementById('mapLegendToggle');
+    const mapLegendContent = document.getElementById('mapLegendContent');
+    const mapLegendChevron = document.getElementById('mapLegendChevron');
+
+    function setMapLegendExpanded(expanded) {
+        if (!mapLegendToggle || !mapLegendContent) return;
+
+        mapLegendToggle.setAttribute('aria-expanded', String(expanded));
+        mapLegendContent.hidden = !expanded;
+
+        if (mapLegend) {
+            mapLegend.classList.toggle('is-collapsed', !expanded);
+        }
+
+        if (mapLegendChevron) {
+            mapLegendChevron.classList.toggle('ph-caret-up', expanded);
+            mapLegendChevron.classList.toggle('ph-caret-down', !expanded);
+        }
+    }
+
+    if (mapLegendToggle && mapLegendContent) {
+        // Start compact on every screen so the map remains the main focus.
+        setMapLegendExpanded(false);
+
+        mapLegendToggle.addEventListener('click', () => {
+            const expanded = mapLegendToggle.getAttribute('aria-expanded') === 'true';
+            setMapLegendExpanded(!expanded);
+        });
+
+        // Dismiss the legend when the user interacts elsewhere on the map.
+        // pointerdown works for mouse, touch, and pen without adding polling.
+        document.addEventListener('pointerdown', event => {
+            if (
+                mapLegendToggle.getAttribute('aria-expanded') === 'true' &&
+                !event.target.closest('#mapLegend')
+            ) {
+                setMapLegendExpanded(false);
+            }
+        });
+
+        // Escape also dismisses the open legend for keyboard users.
+        document.addEventListener('keydown', event => {
+            if (
+                event.key === 'Escape' &&
+                mapLegendToggle.getAttribute('aria-expanded') === 'true'
+            ) {
+                setMapLegendExpanded(false);
+                mapLegendToggle.focus({ preventScroll: true });
+            }
+        });
+    }
+
+
+    // =========================================================
     // CATEGORY HORIZONTAL SCROLL
     // =========================================================
 
     if (categoryFilters) {
-
         categoryFilters.addEventListener(
             'wheel',
             event => {
-
                 /*
-                 * Prevent the page itself from scrolling
-                 * while the category list is being used.
+                 * Trackpads commonly send horizontal movement in deltaX,
+                 * while a traditional mouse wheel usually sends deltaY.
+                 * Use whichever axis has the stronger intent. Vertical
+                 * wheel movement is mapped to the horizontal chip row.
                  */
+                const horizontalIntent =
+                    Math.abs(event.deltaX) > Math.abs(event.deltaY)
+                        ? event.deltaX
+                        : event.deltaY;
+
+                if (!horizontalIntent) {
+                    return;
+                }
+
                 event.preventDefault();
-
-
-                /*
-                 * Keep the wheel interaction inside
-                 * the category container.
-                 */
                 event.stopPropagation();
 
-
-                /*
-                 * Translate vertical wheel movement
-                 * into horizontal scrolling.
-                 */
-                categoryFilters.scrollLeft +=
-                    event.deltaY;
-
+                categoryFilters.scrollLeft += horizontalIntent;
             },
-            {
-                passive: false
-            }
+            { passive: false }
         );
-
     }
 
 
@@ -2695,7 +2788,7 @@ function closeAgencyDetails() {
                  */
                 if (
                     event.target.closest(
-                        '#categoryFilters'
+                        '#categoryFilters, #searchResults'
                     )
                 ) {
 
@@ -2900,19 +2993,19 @@ function refreshAgencyLabels() {
 
 
                 /*
-                 * Store the category only once.
+                 * Keep one entry per category and count actual agency
+                 * records returned by the existing public agencies API.
+                 * This count is independent of map zoom and clustering.
                  */
-                if (
-                    !categories.has(
-                        category.id
-                    )
-                ) {
+                const categoryKey = String(category.id);
 
-                    categories.set(
-                        category.id,
-                        category
-                    );
-
+                if (!categories.has(categoryKey)) {
+                    categories.set(categoryKey, {
+                        category,
+                        count: 1
+                    });
+                } else {
+                    categories.get(categoryKey).count += 1;
                 }
 
             }
@@ -2948,8 +3041,16 @@ function refreshAgencyLabels() {
             'all';
 
 
-        allButton.textContent =
-            'All';
+        const allLabel = document.createElement('span');
+        allLabel.className = 'category-filter-label';
+        allLabel.textContent = 'All';
+
+        const allCount = document.createElement('span');
+        allCount.className = 'category-filter-count';
+        allCount.textContent = String(data.length);
+        allCount.setAttribute('aria-label', `${data.length} agencies`);
+
+        allButton.append(allLabel, allCount);
 
 
         /*
@@ -2977,7 +3078,7 @@ function refreshAgencyLabels() {
         // -----------------------------------------------------
 
         categories.forEach(
-            category => {
+            ({ category, count }) => {
 
                 /*
                  * Create the category button.
@@ -3047,8 +3148,19 @@ function refreshAgencyLabels() {
                 );
 
 
-                button.appendChild(
-                    categoryName
+                categoryName.className = 'category-filter-label';
+
+                const categoryCount = document.createElement('span');
+                categoryCount.className = 'category-filter-count';
+                categoryCount.textContent = String(count);
+                categoryCount.setAttribute(
+                    'aria-label',
+                    `${count} ${count === 1 ? 'agency' : 'agencies'}`
+                );
+
+                button.append(
+                    categoryName,
+                    categoryCount
                 );
 
 
@@ -3294,11 +3406,11 @@ function refreshAgencyLabels() {
                     button.dataset.categoryId;
 
 
-                button.classList.toggle(
-                    'active',
-                    buttonCategoryId ===
-                        activeCategoryId
-                );
+                const isActive =
+                    buttonCategoryId === activeCategoryId;
+
+                button.classList.toggle('active', isActive);
+                button.setAttribute('aria-pressed', String(isActive));
 
             }
         );
@@ -3309,6 +3421,27 @@ function refreshAgencyLabels() {
     // =========================================================
     // LOAD AGENCIES
     // =========================================================
+
+    /*
+     * Give users lightweight feedback while the API request and marker
+     * creation are in progress. This status never blocks map interaction.
+     */
+    const agencyMapStatus = document.getElementById('agencyMapLoading');
+
+    function setAgencyMapStatus(state, message = '') {
+        if (!agencyMapStatus) return;
+
+        agencyMapStatus.classList.remove('is-loading', 'is-error');
+        agencyMapStatus.classList.add(state === 'error' ? 'is-error' : 'is-loading');
+
+        const copy = agencyMapStatus.querySelector('.agency-map-status-copy');
+        if (copy && message) copy.textContent = message;
+
+        agencyMapStatus.hidden = state === 'hidden';
+        agencyMapStatus.setAttribute('aria-live', state === 'error' ? 'assertive' : 'polite');
+    }
+
+    setAgencyMapStatus('loading', 'Finding local agencies…');
 
     /*
      * Retrieve agency records from Laravel.
@@ -3658,6 +3791,7 @@ allAgencyMarkers.push(
                  * At the default zoom of 14, labels remain hidden.
                  */
                 updateAgencyLabels();
+                setAgencyMapStatus('hidden');
 
             }
         )
@@ -3673,6 +3807,11 @@ allAgencyMarkers.push(
                 console.error(
                     'Unable to load agencies:',
                     error
+                );
+
+                setAgencyMapStatus(
+                    'error',
+                    'Agencies couldn’t load. Refresh to try again.'
                 );
 
             }
@@ -3779,6 +3918,22 @@ markerClusterGroup.on(
         document.getElementById(
             'searchBtn'
         );
+
+    const searchClearBtn =
+        document.getElementById('searchClearBtn');
+
+    /*
+     * Keep the clear affordance synchronized with the query.
+     * The native browser search-field X is disabled in CSS so this
+     * control stays visually consistent across browsers and devices.
+     */
+    function syncSearchClearButton() {
+        if (!searchClearBtn || !searchInput) {
+            return;
+        }
+
+        searchClearBtn.hidden = searchInput.value.length === 0;
+    }
 
 
     // =========================================================
@@ -3960,7 +4115,7 @@ markerClusterGroup.on(
             if (resultsContainer) {
 
                 resultsContainer.innerHTML =
-                    '<div class="search-item">No results</div>';
+                    '<div class="search-empty" role="status"><i class="ph-light ph-magnifying-glass" aria-hidden="true"></i><strong>No agencies found</strong><span>Try another name or abbreviation.</span></div>';
 
             }
 
@@ -4545,9 +4700,15 @@ map.flyTo(
         /*
          * Clear old results.
          */
-        resultsContainer.innerHTML =
-            '';
+        resultsContainer.innerHTML = '';
 
+        const resultsHeading = document.createElement('div');
+        resultsHeading.className = 'search-results-heading';
+        resultsHeading.innerHTML = `
+            <span>AGENCIES</span>
+            <span class="search-results-count">${matches.length} ${matches.length === 1 ? 'result' : 'results'}</span>
+        `;
+        resultsContainer.appendChild(resultsHeading);
 
         /*
          * Generate one result for each match.
@@ -4573,20 +4734,28 @@ map.flyTo(
                  * Escape the agency name before
                  * placing it inside generated HTML.
                  */
+                const agencyData = marker.agencyData || {};
+                const abbreviation = agencyData.agency_abbreviation || '';
+                const categoryName = agencyData.category?.category_name
+                    || agencyData.category?.name
+                    || '';
+
+                item.setAttribute('role', 'option');
+                item.setAttribute('tabindex', '0');
                 item.innerHTML = `
-                    <div class="search-content">
-
-                        <div class="search-top">
-
-                            <i class="ph-light ph-buildings"></i>
-
-                            <span class="search-name">
-                                ${escapeHtml(name)}
-                            </span>
-
-                        </div>
-
-                    </div>
+                    <span class="search-result-icon" aria-hidden="true">
+                        <i class="ph-light ph-buildings"></i>
+                    </span>
+                    <span class="search-content">
+                        <span class="search-top">
+                            <span class="search-name">${escapeHtml(name)}</span>
+                            ${abbreviation ? `<span class="search-abbr">${escapeHtml(abbreviation)}</span>` : ''}
+                        </span>
+                        ${categoryName ? `<span class="search-type">${escapeHtml(categoryName)}</span>` : '<span class="search-type">Government service</span>'}
+                    </span>
+                    <span class="search-result-arrow" aria-hidden="true">
+                        <i class="ph-light ph-arrow-up-right"></i>
+                    </span>
                 `;
 
 
@@ -4594,6 +4763,13 @@ map.flyTo(
                  * Select the agency when the
                  * search result is clicked.
                  */
+                item.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        item.click();
+                    }
+                });
+
                 item.addEventListener(
                     'click',
                     event => {
@@ -4664,6 +4840,15 @@ map.flyTo(
 
     }
 
+    if (searchClearBtn && searchInput) {
+        searchClearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            syncSearchClearButton();
+            handleSearch(false);
+            searchInput.focus({ preventScroll: true });
+        });
+    }
+
 
     // =========================================================
     // SEARCH INPUT
@@ -4678,12 +4863,16 @@ map.flyTo(
             'input',
             () => {
 
+                syncSearchClearButton();
+
                 handleSearch(
                     false
                 );
 
             }
         );
+
+        syncSearchClearButton();
 
 
         /*

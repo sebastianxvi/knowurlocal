@@ -16,10 +16,14 @@
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/agency-info.css') }}">
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
 <body>
+
+@include('components.modal')
+<script src="{{ asset('jsfiles/components/modal-system.js') }}"></script>
 
 <div class="back-floating">
     <button onclick="history.back()">
@@ -196,10 +200,10 @@
             function copyText(text) {
                 navigator.clipboard.writeText(text)
                     .then(() => {
-                        alert("Copied!");
+                        window.notifyUser('The agency contact information has been copied.', { title: 'Copied to clipboard', variant: 'success', icon: 'fa-solid fa-check' });
                     })
                     .catch(() => {
-                        alert("Failed to copy");
+                        window.notifyUser('The contact information could not be copied. You can select and copy it manually.', { title: 'Could not copy', variant: 'danger', icon: 'fa-solid fa-circle-exclamation' });
                     });
             }
 
@@ -211,7 +215,7 @@ let watchId;
 function startNavigation() {
 
     if (!navigator.geolocation) {
-        alert("GPS not supported");
+        window.notifyUser('This browser or device does not provide location access. You can still view the agency address on the map.', { title: 'Location is unavailable', variant: 'warning', icon: 'fa-solid fa-location-crosshairs' });
         return;
     }
 
@@ -250,7 +254,7 @@ function startNavigation() {
         });
 
     }, function() {
-        alert("Please enable GPS");
+        window.notifyUser('Allow location access in your browser to get directions from your current position.', { title: 'Location permission needed', variant: 'warning', icon: 'fa-solid fa-location-crosshairs' });
     });
 }
     </script>

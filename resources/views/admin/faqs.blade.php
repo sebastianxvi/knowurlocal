@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/faqs.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/faq-response-builder.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/faq-feedback-modal.css') }}?v={{ filemtime(public_path('cssfiles/admin/faq-feedback-modal.css')) }}">
 @endpush
 
 @section('title', 'KNOWURLOCAL | ' . ucfirst(auth()->user()->role) . ' Module')
@@ -102,12 +103,21 @@
                 </select>
             </div>
 
+            <div class="support-filter-field faq-feedback-filter-field">
+                <label for="faq-feedback-filter" class="sr-only">Filter FAQs by feedback</label>
+                <i class="ph-light ph-thumbs-down" aria-hidden="true"></i>
+                <select name="feedback" id="faq-feedback-filter">
+                    <option value="" {{ request('feedback') !== 'needs_review' ? 'selected' : '' }}>All feedback</option>
+                    <option value="needs_review" {{ request('feedback') === 'needs_review' ? 'selected' : '' }}>Needs review</option>
+                </select>
+            </div>
+
             <button type="submit" class="support-filter-submit admin-icon-button" aria-label="Apply filters" title="Apply filters">
                 <i class="ph-light ph-sliders-horizontal" aria-hidden="true"></i>
                 <span class="sr-only">Filter</span>
             </button>
 
-            @if(request()->has('search') || request()->has('agency') || request()->has('date') || request('sort', 'latest') !== 'latest')
+            @if(request()->has('search') || request()->has('agency') || request()->has('date') || request()->has('feedback') || request('sort', 'latest') !== 'latest')
                 <a href="{{ route('faqs.index', ['status' => $status]) }}" class="support-filter-clear admin-icon-button" aria-label="Clear filters" title="Clear filters">
                     <i class="ph-light ph-x" aria-hidden="true"></i>
                     <span>Clear</span>
@@ -120,6 +130,7 @@
                     <span class="sr-only">Add FAQ</span>
                 </button>
             @endif
+
         </form>
     </section>
 </div>
@@ -135,11 +146,10 @@
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Agency</th>
                     <th>Question</th>
-                    <th>Answer</th>
-                    <th>Date</th>
-                    <th>Action</th>
+                    <th>Feedback</th>
+                    <th>Date updated</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
 
@@ -163,48 +173,39 @@
 
                     <td>{{ $faq->id }}</td>
 
-                    <td>
-                        <div class="actor-cell">
+                    <td class="faq-question-column">
+                        <span class="faq-table-text faq-question-text">{{ $faq->question }}</span>
+                        <span class="faq-agency-subline">{{ $faq->agency->agency_name ?? 'Agency unavailable' }}</span>
+                    </td>
 
-                            <span class="actor-name">
-                                {{ $faq->agency->agency_name ?? '—' }}
-
-                                @if($faq->agency && $faq->agency->agency_abbreviation)
-                                    <span class="abbr">
-                                        ({{ $faq->agency->agency_abbreviation }})
-                                    </span>
-                                @endif
-                            </span>
-
-                            @if($faq->agency && $faq->agency->type)
-                                <span class="type-badge {{ strtolower($faq->agency->type->name) }}">
-                                    {{ $faq->agency->type->name }}
-                                </span>
-                            @endif
-
+                    <td class="faq-feedback-summary-cell">
+                        @php
+                            $faqLikes = (int) ($faq->feedback_likes_count ?? 0);
+                            $faqDislikes = (int) ($faq->feedback_dislikes_count ?? 0);
+                            $faqRatingTotal = $faqLikes + $faqDislikes;
+                            $minimumRatings = (int) config('faq_feedback.minimum_ratings_for_review', 5);
+                            $priorityMinimum = (int) config('faq_feedback.priority_minimum_ratings', 10);
+                            $negativeRate = $faqRatingTotal > 0 ? $faqDislikes / $faqRatingTotal : 0;
+                            $faqNeedsReview = $faqRatingTotal >= $minimumRatings && $faqDislikes > $faqLikes;
+                            $faqPriorityReview = $faqRatingTotal >= $priorityMinimum && $negativeRate >= (float) config('faq_feedback.priority_negative_rate', 0.60);
+                        @endphp
+                        <div class="faq-feedback-counts" aria-label="{{ $faqLikes }} likes and {{ $faqDislikes }} dislikes">
+                            <span class="faq-feedback-count is-like"><i class="ph-light ph-thumbs-up" aria-hidden="true"></i>{{ number_format($faqLikes) }}</span>
+                            <span class="faq-feedback-count is-dislike"><i class="ph-light ph-thumbs-down" aria-hidden="true"></i>{{ number_format($faqDislikes) }}</span>
                         </div>
-                    </td>
-
-                    <td>
-                        <span class="faq-table-text faq-question-text">
-                            {{ $faq->question }}
-                        </span>
-                    </td>
-
-                    <td>
-                        <span class="faq-table-text faq-answer-text">
-                            {{ Str::limit($faq->answer, 80) }}
-                        </span>
+                        @if($faqPriorityReview)
+                            <span class="faq-review-badge is-priority">Priority review</span>
+                        @elseif($faqNeedsReview)
+                            <span class="faq-review-badge">Needs review</span>
+                        @elseif($faqRatingTotal < $minimumRatings)
+                            <span class="faq-review-badge is-muted">Collecting feedback</span>
+                        @endif
                     </td>
                     <td>
                         @if($status === 'trashed')
-
                             {{ $faq->deleted_at?->format('M d, Y') ?? '—' }}
-
                         @else
-
-                            {{ $faq->created_at?->format('M d, Y') ?? '—' }}
-
+                            {{ $faq->updated_at?->format('M d, Y') ?? '—' }}
                         @endif
                     </td>
 
@@ -219,6 +220,13 @@
              ================================================= --}}
 
         @if($status === 'active')
+
+            <button type="button" class="admin-table-icon-action faq-feedback-open"
+                data-feedback-url="{{ route('admin.faqs.feedback', $faq->id) }}"
+                data-faq-question="{{ $faq->question }}"
+                aria-label="View feedback for FAQ {{ $faq->id }}" title="View feedback">
+                <i class="ph-light ph-chat-circle-text" aria-hidden="true"></i>
+            </button>
 
             {{-- EDIT --}}
             <button
@@ -334,7 +342,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="empty">
+                    <td colspan="5" class="empty">
                         @if($status === 'trashed')
                             No deleted FAQs found.
                         @else
@@ -697,6 +705,31 @@
     </div>
 </div>
 
+<div class="faq-feedback-modal-backdrop" id="faqFeedbackModal" aria-hidden="true">
+    <section class="faq-feedback-modal" role="dialog" aria-modal="true" aria-labelledby="faqFeedbackModalTitle" tabindex="-1">
+        <header class="faq-feedback-modal-header">
+            <div><span class="faq-feedback-modal-eyebrow">Answer quality</span><h2 id="faqFeedbackModalTitle">FAQ feedback</h2><p id="faqFeedbackModalQuestion"></p><span id="faqFeedbackModalAgency" class="faq-feedback-modal-agency"></span></div>
+            <button type="button" class="faq-feedback-modal-close" data-faq-feedback-close aria-label="Close feedback"><i class="ph-light ph-x" aria-hidden="true"></i></button>
+        </header>
+        <div class="faq-feedback-modal-body">
+            <div class="faq-feedback-modal-stats">
+                <div><span>Total ratings</span><strong id="faqFeedbackTotal">0</strong></div>
+                <div class="is-like"><span><i class="ph-light ph-thumbs-up" aria-hidden="true"></i> Likes</span><strong id="faqFeedbackLikes">0</strong></div>
+                <div class="is-dislike"><span><i class="ph-light ph-thumbs-down" aria-hidden="true"></i> Dislikes</span><strong id="faqFeedbackDislikes">0</strong></div>
+            </div>
+            <div class="faq-feedback-negative-track" aria-hidden="true"><span id="faqFeedbackNegativeBar"></span></div>
+            <div class="faq-feedback-modal-status" id="faqFeedbackModalStatus"></div>
+            <div class="faq-feedback-modal-tabs" role="group" aria-label="Filter feedback">
+                <button type="button" class="is-active" data-feedback-rating="all">All</button>
+                <button type="button" data-feedback-rating="not_helpful">Dislikes</button>
+                <button type="button" data-feedback-rating="helpful">Likes</button>
+            </div>
+            <div id="faqFeedbackList" class="faq-feedback-list" aria-live="polite"><div class="faq-feedback-loading">Loading feedback…</div></div>
+            <footer class="faq-feedback-modal-footer"><span id="faqFeedbackPaginationInfo"></span><div><button type="button" id="faqFeedbackPrev" disabled>Previous</button><button type="button" id="faqFeedbackNext" disabled>Next</button></div></footer>
+        </div>
+    </section>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -705,7 +738,7 @@
 <script src="{{ asset('jsfiles/components/form-system.js') }}"></script>
 
 <!-- 🔥 ALERT MODAL SYSTEM (REUSABLE) -->
-<script src="{{ asset('jsfiles/components/modal-system.js') }}"></script>
+
 
 <script>
     /*
@@ -747,6 +780,7 @@ window.SUPPORT_FAQ_PREPARE_URL =
 
 <script src="{{ asset('jsfiles/admin/faq-response-builder.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/faqs.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/faq-feedback-modal.js') }}?v={{ filemtime(public_path('jsfiles/admin/faq-feedback-modal.js')) }}"></script>
 
 <!-- 🔥 SUCCESS HANDLER (same pattern as NGA) -->
 @if(session('success'))

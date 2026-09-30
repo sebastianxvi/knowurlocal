@@ -23,11 +23,11 @@
 >   
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css')}}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navbar.css')) }}">
 
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/map.css') }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/map.css') }}?v={{ filemtime(public_path('cssfiles/public_user/map.css')) }}">
 
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}?v={{ filemtime(public_path('cssfiles/public_user/chatbot.css')) }}">
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="user-id" content="{{ auth()->id() }}">
@@ -40,6 +40,18 @@
 
     <!-- Map Container (fills entire page) -->
     <div id="map"></div>
+
+    <!-- Non-blocking feedback while agency data and markers are prepared. -->
+    <div
+        id="agencyMapLoading"
+        class="agency-map-status is-loading"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+    >
+        <span class="agency-map-status-spinner" aria-hidden="true"></span>
+        <span class="agency-map-status-copy">Finding local agencies…</span>
+    </div>
 
     <!-- ================= AGENCY DETAILS ================= -->
 
@@ -96,7 +108,7 @@
 
             <img
                 id="agencyDetailsImage"
-                src="{{ asset('images/default-agency.png') }}"
+                src="{{ asset('images/admin/placeholder.jpg') }}"
                 alt=""
             >
 
@@ -264,6 +276,39 @@
 </aside>
 
 
+<!-- Compact map key: category colors are already explained by the filter chips. -->
+<aside id="mapLegend" class="map-legend is-collapsed" aria-label="Map marker key">
+    <button
+        type="button"
+        id="mapLegendToggle"
+        class="map-legend-toggle"
+        aria-expanded="false"
+        aria-controls="mapLegendContent"
+    >
+        <span class="map-legend-heading-icon" aria-hidden="true">
+            <i class="ph-light ph-map-trifold"></i>
+        </span>
+        <span class="map-legend-heading-copy">
+            <strong>Map legend</strong>
+            <small>Markers &amp; clusters</small>
+        </span>
+        <i id="mapLegendChevron" class="ph-light ph-caret-down map-legend-chevron" aria-hidden="true"></i>
+    </button>
+
+    <div id="mapLegendContent" class="map-legend-content" hidden>
+        <div class="map-legend-item">
+            <span class="map-legend-agency-dot" aria-hidden="true"></span>
+            <span><strong>Single marker</strong><small> One agency location</small></span>
+        </div>
+        <div class="map-legend-item">
+            <span class="map-legend-cluster" aria-hidden="true">12</span>
+            <span><strong>Numbered circle</strong><small> Multiple nearby agencies</small></span>
+        </div>
+        <p class="map-legend-tip">Select a marker to view agency details.</p>
+    </div>
+</aside>
+
+
     <!-- =========================================================
      KNOWURLOCAL CHATBOT
      ========================================================= -->
@@ -381,30 +426,48 @@
 
         <div id="chatbox">
 
-            <!-- Initial assistant message -->
-
-            <div class="message bot chatbot-welcome">
-
-                <div class="chat-message-content">
-
-                    <span class="chat-message-label">
-                        KNOWURLOCAL
+            <!-- Personalized first-visit welcome; hidden after the first question -->
+            <section
+                id="chat-welcome"
+                class="chatbot-welcome"
+                aria-labelledby="chat-welcome-title"
+            >
+                <div class="chatbot-welcome-kicker">
+                    <span class="chatbot-welcome-mark" aria-hidden="true">
+                        <i class="ph-light ph-sparkle"></i>
                     </span>
-
-                    <div class="bubble">
-                        You can search for the organization first,
-                        then view its services and available contact
-                        information.
-                    </div>
-
+                    <span>YOUR LOCAL SERVICE GUIDE</span>
                 </div>
 
-            </div>
+                <h3 id="chat-welcome-title">
+                    @if(auth()->check() && filled(auth()->user()->first_name))
+                        Hello, {{ auth()->user()->first_name }}!
+                    @else
+                        Hello there!
+                    @endif
+                </h3>
 
+                <p class="chatbot-welcome-prompt">What can we help you with today?</p>
+                <p class="chatbot-welcome-description">
+                    Ask about government services, application requirements, documents, or where to apply.
+                    We’ll help you find the relevant information from our FAQ library.
+                </p>
 
-            <!-- Dynamic FAQ suggestions -->
+                <div class="chat-suggestion-section" id="chat-suggestion-section">
+                    <div class="chat-suggestion-heading">
+                        <span>Popular questions to get started</span>
+                        <span class="chat-suggestion-caption">Choose a question</span>
+                    </div>
+                    <div id="chat-suggestions" aria-label="Suggested FAQ questions">
+                        <div class="chat-suggestions-loading" role="status">Finding popular questions…</div>
+                    </div>
+                </div>
 
-            <div id="chat-suggestions"></div>
+                <p class="chatbot-welcome-note">
+                    <i class="ph-light ph-lightbulb" aria-hidden="true"></i>
+                    You can also type your own question below.
+                </p>
+            </section>
 
         </div>
 
@@ -439,15 +502,15 @@
 
         <div id="inputArea">
 
-            <input
-                type="text"
+            <textarea
                 id="message"
                 class="chatbot-input"
+                rows="1"
                 placeholder="Ask a question..."
                 autocomplete="off"
                 maxlength="1000"
                 aria-label="Ask KNOWURLOCAL a question"
-            >
+            ></textarea>
 
             <button
                 type="button"
@@ -517,8 +580,8 @@
     @vite('resources/js/echo.js')
 <script src="{{ asset('jsfiles/public_user/navbar.js') }}" defer></script>
 <script type="module" src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}"></script>
-<script src="{{ asset('jsfiles/public_user/map.js') }}" defer></script>
-<script src="{{ asset('jsfiles/public_user/chatbot.js') }}" defer></script>
+<script src="{{ asset('jsfiles/public_user/map.js') }}?v={{ filemtime(public_path('jsfiles/public_user/map.js')) }}" defer></script>
+<script src="{{ asset('jsfiles/public_user/chatbot.js') }}?v={{ filemtime(public_path('jsfiles/public_user/chatbot.js')) }}" defer></script>
 
     
 

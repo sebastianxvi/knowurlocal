@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Faq extends Model
 {
@@ -32,5 +33,10 @@ class Faq extends Model
     public function agency()
 {
     return $this->belongsTo(Agency::class);
+}
+
+public function feedback(): HasMany
+{
+    return $this->hasMany(FaqFeedback::class);
 }
 }

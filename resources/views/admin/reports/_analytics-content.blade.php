@@ -77,6 +77,17 @@
 </section>
 
 <section class="section">
+    <h2 class="section-title">FAQ answer feedback</h2>
+    <p class="section-subtitle">Ratings are summarized per FAQ so repeated feedback on one answer does not become separate admin tasks.</p>
+    <table class="metric-table"><tr>
+        <td class="metric-cell"><div class="metric-label">FAQs needing review</div><div class="metric-value amber">{{ number_format($faqFeedbackNeedsReview) }}</div><div class="metric-note">Minimum rating threshold met and dislikes exceed likes</div></td>
+        <td class="metric-cell"><div class="metric-label">Total likes</div><div class="metric-value green">{{ number_format($faqFeedbackHelpful) }}</div><div class="metric-note">Helpful ratings across all FAQs</div></td>
+        <td class="metric-cell"><div class="metric-label">Total dislikes</div><div class="metric-value blue">{{ number_format($faqFeedbackNotHelpful) }}</div><div class="metric-note">Negative ratings across all FAQs</div></td>
+        <td class="metric-cell"><div class="metric-label">Total ratings</div><div class="metric-value purple">{{ number_format($faqFeedbackTotal) }}</div><div class="metric-note">All submitted ratings</div></td>
+    </tr></table>
+</section>
+
+<section class="section">
     <h2 class="section-title">Data quality and team workload</h2>
     <table class="metric-table"><tr>
         <td class="metric-cell"><div class="metric-label">Agency profiles complete</div><div class="metric-value blue">{{ number_format($completeAgencies) }} / {{ number_format($totalAgencies) }}</div><div class="metric-note">{{ $totalAgencies ? round(($completeAgencies / $totalAgencies) * 100) : 0 }}% have required public information</div></td>

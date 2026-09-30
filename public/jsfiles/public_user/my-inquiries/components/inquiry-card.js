@@ -173,140 +173,71 @@ function createResponseComponent(component) {
     }
 
     /**
-     * File response.
+     * File response: render as a simple inline download link, matching the chatbot.
      */
     if (type === 'file') {
-        if (!component.attachment_url) {
-            return null;
-        }
-
-        const wrapper = createElement(
-            'div',
-            'response-component response-component-file'
-        );
-
-        wrapper.appendChild(
-            createIcon('ph-file')
-        );
-
-        const info = createElement(
-            'div',
-            'response-file-info'
-        );
-
-        if (label) {
-            const labelElement = createElement(
-                'span',
-                'response-component-label'
-            );
-
-            labelElement.textContent = label;
-
-            info.appendChild(labelElement);
-        }
+        if (!component.attachment_url) return null;
 
         const link = document.createElement('a');
-
+        link.className = 'response-attachment-link response-file-link';
         link.href = component.attachment_url;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.textContent = 'View document';
+        link.setAttribute('download', '');
 
-        info.appendChild(link);
-        wrapper.appendChild(info);
+        const icon = createIcon('ph-file-arrow-down');
+        const text = document.createElement('span');
+        text.textContent = label || 'Download file';
+        const trailing = createIcon('ph-download-simple');
+        trailing.classList.add('response-attachment-trailing');
 
-        return wrapper;
+        link.append(icon, text, trailing);
+        return link;
     }
 
     /**
-     * Normal external link response.
+     * External link response: plain text link without a card/container.
      */
     if (type === 'link') {
-        if (!content) {
-            return null;
-        }
-
-        const wrapper = createElement(
-            'div',
-            'response-component response-component-link'
-        );
-
-        wrapper.appendChild(
-            createIcon('ph-link')
-        );
-
-        const info = createElement(
-            'div',
-            'response-link-info'
-        );
-
-        if (label) {
-            const labelElement = createElement(
-                'span',
-                'response-component-label'
-            );
-
-            labelElement.textContent = label;
-
-            info.appendChild(labelElement);
-        }
+        if (!isSafeHttpUrl(content)) return null;
 
         const link = document.createElement('a');
-
+        link.className = 'response-attachment-link response-plain-link';
         link.href = content;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
-        link.textContent = content;
 
-        info.appendChild(link);
-        wrapper.appendChild(info);
-
-        return wrapper;
+        const text = document.createElement('span');
+        text.textContent = label || content;
+        link.append(text, createIcon('ph-arrow-up-right'));
+        return link;
     }
 
     /**
-     * QR destination response.
+     * QR response: local QR matrix rendered as an SVG, with a normal destination link.
      */
     if (type === 'qr_code') {
-        if (!content) {
-            return null;
-        }
+        if (!isSafeHttpUrl(content)) return null;
 
-        const wrapper = createElement(
-            'div',
-            'response-component response-component-qr'
-        );
+        const wrapper = createElement('div', 'response-component response-component-qr');
+        const heading = createElement('div', 'response-qr-heading');
+        heading.appendChild(createIcon('ph-qr-code'));
 
-        wrapper.appendChild(
-            createIcon('ph-qr-code')
-        );
+        const headingText = document.createElement('span');
+        headingText.textContent = label || 'QR code';
+        heading.appendChild(headingText);
 
-        const info = createElement(
-            'div',
-            'response-qr-info'
-        );
-
-        if (label) {
-            const labelElement = createElement(
-                'span',
-                'response-component-label'
-            );
-
-            labelElement.textContent = label;
-
-            info.appendChild(labelElement);
-        }
+        const qr = createElement('div', 'response-qr-code');
+        qr.dataset.qrValue = content;
+        qr.setAttribute('role', 'img');
+        qr.setAttribute('aria-label', `${label || 'Scannable'} QR code`);
 
         const link = document.createElement('a');
-
+        link.className = 'response-qr-open';
         link.href = content;
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
-        link.textContent = 'Open QR destination';
+        link.append(document.createTextNode('Open destination '), createIcon('ph-arrow-up-right'));
 
-        info.appendChild(link);
-        wrapper.appendChild(info);
-
+        wrapper.append(heading, qr, link);
         return wrapper;
     }
 
@@ -317,6 +248,100 @@ function createResponseComponent(component) {
      * markup into the page.
      */
     return null;
+}
+
+/** Only HTTP(S) destinations are valid for external links and QR codes. */
+function isSafeHttpUrl(value) {
+    try {
+        const url = new URL(value, window.location.origin);
+        return ['http:', 'https:'].includes(url.protocol);
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Generate QR SVGs with the bundled QR engine. This is intentionally local,
+ * so the inquiry page does not depend on a remote QR image service.
+ */
+export function renderInquiryQRCodes(root = document) {
+    const QRCore = window.QRCodeCore;
+    root.querySelectorAll('.response-qr-code[data-qr-value]').forEach((container) => {
+        if (container.dataset.qrRendered === '1') return;
+
+        const value = container.dataset.qrValue;
+        if (!isSafeHttpUrl(value)) return;
+
+        if (typeof QRCore !== 'function') {
+            showQrFallback(container, value);
+            return;
+        }
+
+        try {
+            let qr = null;
+            let lastError = null;
+
+            for (const level of [QRCore.CorrectLevel?.M, QRCore.CorrectLevel?.L]) {
+                if (level === undefined) continue;
+                try {
+                    const candidate = new QRCore(0, level);
+                    candidate.addData(value);
+                    candidate.make();
+                    qr = candidate;
+                    break;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            if (!qr) throw lastError || new Error('Unable to encode QR destination.');
+
+            const count = qr.getModuleCount();
+            const quietZone = 4;
+            const size = count + quietZone * 2;
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+            svg.setAttribute('role', 'img');
+            svg.setAttribute('aria-label', container.getAttribute('aria-label') || 'Scannable QR code');
+            svg.setAttribute('shape-rendering', 'crispEdges');
+            svg.classList.add('response-qr-svg');
+
+            const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            background.setAttribute('width', String(size));
+            background.setAttribute('height', String(size));
+            background.setAttribute('fill', '#ffffff');
+            svg.appendChild(background);
+
+            for (let row = 0; row < count; row++) {
+                for (let col = 0; col < count; col++) {
+                    if (!qr.isDark(row, col)) continue;
+                    const module = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    module.setAttribute('x', String(col + quietZone));
+                    module.setAttribute('y', String(row + quietZone));
+                    module.setAttribute('width', '1');
+                    module.setAttribute('height', '1');
+                    module.setAttribute('fill', '#111827');
+                    svg.appendChild(module);
+                }
+            }
+
+            container.replaceChildren(svg);
+            container.dataset.qrRendered = '1';
+        } catch (error) {
+            console.error('Unable to render inquiry QR code:', error);
+            showQrFallback(container, value);
+        }
+    });
+}
+
+function showQrFallback(container, value) {
+    const link = document.createElement('a');
+    link.href = value;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.className = 'response-qr-open';
+    link.textContent = 'Open destination';
+    container.replaceChildren(link);
 }
 
 /**
@@ -442,14 +467,21 @@ function renderOfficialResponse(card, inquiry) {
             ? response.components
             : [];
 
-    components.forEach((component) => {
-        const element =
-            createResponseComponent(component);
+    const renderOrder = ['image', 'text', 'file', 'link', 'qr_code'];
+    components
+        .map((component, index) => ({ component, index }))
+        .sort((a, b) => {
+            const aOrder = renderOrder.indexOf(a.component?.type);
+            const bOrder = renderOrder.indexOf(b.component?.type);
+            return (aOrder < 0 ? renderOrder.length : aOrder) -
+                (bOrder < 0 ? renderOrder.length : bOrder) || a.index - b.index;
+        })
+        .forEach(({ component }) => {
+            const element = createResponseComponent(component);
+            if (element) componentsContainer.appendChild(element);
+        });
 
-        if (element) {
-            componentsContainer.appendChild(element);
-        }
-    });
+    renderInquiryQRCodes(componentsContainer);
 
     /**
      * Insert the response section into the card if it

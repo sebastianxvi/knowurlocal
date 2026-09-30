@@ -108,9 +108,9 @@ class ChatbotController extends Controller
         ?int $agencyId = null,
         ?int $faqId = null,
         ?int $score = null
-    ): void {
+    ): ?int {
         try {
-            ChatbotLog::create([
+            $log = ChatbotLog::create([
                 'user_id' => auth()->id(),
                 'question' => $question,
                 'answer' => $answer,
@@ -121,10 +121,14 @@ class ChatbotController extends Controller
                 'score' => $score,
                 'ip_address' => request()->ip(),
             ]);
+
+            return (int) $log->id;
         } catch (\Throwable $e) {
             Log::warning('KNOWURLOCAL chatbot interaction logging failed.', [
                 'error' => $e->getMessage(),
             ]);
+
+            return null;
         }
     }
 
@@ -311,7 +315,7 @@ class ChatbotController extends Controller
                     || $payload['attachments'] !== []
                     || $payload['image'] !== null
                 ) {
-                    $this->logChat(
+                    $chatLogId = $this->logChat(
                         $question,
                         $payload['content'],
                         'answered',
@@ -322,6 +326,7 @@ class ChatbotController extends Controller
                     );
 
                     return response()->json([
+                        'feedback_log_id' => $chatLogId,
                         'choices' => [[
                             'message' => [
                                 'content' => $payload['content'],

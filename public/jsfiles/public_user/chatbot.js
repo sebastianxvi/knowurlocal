@@ -3,6 +3,54 @@ const csrfToken =
         .querySelector('meta[name="csrf-token"]')
         ?.getAttribute('content') || "";
 
+const chatbotFeedbackUrl =
+    document.querySelector('meta[name="chatbot-feedback-url"]')
+        ?.getAttribute('content') || '/chat/feedback';
+
+function renderFaqFeedback(logId) {
+    const id = Number(logId);
+    if (!Number.isInteger(id) || id < 1) return '';
+
+    return `
+        <section class="chat-feedback" data-feedback-log-id="${id}" aria-label="Rate this FAQ answer">
+            <div class="chat-feedback-prompt">Was this answer helpful?</div>
+            <div class="chat-feedback-actions">
+                <button type="button" class="chat-feedback-vote" data-rating="helpful" aria-label="This answer was helpful">
+                    <i class="ph-light ph-thumbs-up" aria-hidden="true"></i>
+                    <span>Helpful</span>
+                </button>
+                <button type="button" class="chat-feedback-vote" data-rating="not_helpful" aria-label="This answer was not helpful">
+                    <i class="ph-light ph-thumbs-down" aria-hidden="true"></i>
+                    <span>Needs work</span>
+                </button>
+            </div>
+            <form class="chat-feedback-form" hidden>
+                <label class="chat-feedback-label">
+                    What could be improved? <span>(optional)</span>
+                    <select name="reason">
+                        <option value="">Choose a reason</option>
+                        <option value="incorrect">Information seems incorrect</option>
+                        <option value="incomplete">Answer is incomplete</option>
+                        <option value="outdated">Information may be outdated</option>
+                        <option value="unclear">Answer is confusing</option>
+                        <option value="attachments">Links or attachments do not work</option>
+                        <option value="other">Other</option>
+                    </select>
+                </label>
+                <label class="chat-feedback-label">
+                    Additional details <span>(optional)</span>
+                    <textarea name="comment" rows="2" maxlength="1000" placeholder="Tell us what needs attention…"></textarea>
+                </label>
+                <div class="chat-feedback-form-actions">
+                    <button type="button" class="chat-feedback-cancel">Cancel</button>
+                    <button type="submit" class="chat-feedback-submit">Send feedback</button>
+                </div>
+            </form>
+            <div class="chat-feedback-status" role="status" aria-live="polite" hidden></div>
+        </section>
+    `;
+}
+
 
 let greeted = false;
 
@@ -38,29 +86,31 @@ const messageInput =
     document.getElementById("message");
 
 
+/*
+ * Auto-grow the composer while preserving a compact one-line default.
+ * Shift+Enter inserts a newline; Enter sends the message.
+ */
+function resizeMessageInput() {
+    if (!messageInput) return;
+
+    messageInput.style.height = "auto";
+    const maxHeight = 120;
+    messageInput.style.height = `${Math.min(messageInput.scrollHeight, maxHeight)}px`;
+    messageInput.style.overflowY = messageInput.scrollHeight > maxHeight ? "auto" : "hidden";
+}
+
 if (messageInput) {
-
-    messageInput.addEventListener(
-        "keydown",
-        function (e) {
-
-            /*
-             * Only submit when the Enter key is pressed.
-             */
-            if (e.key !== "Enter") {
-                return;
-            }
-
-            /*
-             * Prevent the browser from inserting a newline.
-             */
-            e.preventDefault();
-
-            sendMessage();
-
+    messageInput.addEventListener("input", resizeMessageInput);
+    messageInput.addEventListener("keydown", function (e) {
+        if (e.key !== "Enter" || e.shiftKey || e.isComposing) {
+            return;
         }
-    );
 
+        e.preventDefault();
+        sendMessage();
+    });
+
+    resizeMessageInput();
 }
 
 
@@ -200,6 +250,9 @@ async function loadSuggestions(){
             "Suggestion error:",
             err
         );
+
+        const section = document.getElementById('chat-suggestion-section');
+        if (section) section.hidden = true;
 
     }
 
@@ -468,114 +521,77 @@ function renderFaqQRCodes(root = document) {
     });
 }
 
-function renderSuggestions(questions){
+function dismissChatWelcome() {
+    const welcome = document.getElementById('chat-welcome');
+    if (!welcome || welcome.classList.contains('is-dismissed')) return;
 
-    const container =
-        document.getElementById(
-            "chat-suggestions"
-        );
+    welcome.classList.add('is-dismissed');
+    welcome.setAttribute('aria-hidden', 'true');
+}
 
-    if (!container) {
+function renderSuggestions(questions) {
+    const container = document.getElementById('chat-suggestions');
+    const section = document.getElementById('chat-suggestion-section');
+
+    if (!container || !section) return;
+
+    container.replaceChildren();
+
+    if (!Array.isArray(questions)) {
+        section.hidden = true;
         return;
     }
 
-    container.innerHTML = "";
+    // The endpoint already orders answered/popular FAQs first, followed by recent FAQs.
+    // Only show three distinct database questions in the welcome state.
+    const seen = new Set();
+    const curatedQuestions = questions.filter((item) => {
+        const question = typeof item?.question === 'string' ? item.question.trim() : '';
+        const key = question.toLocaleLowerCase();
+        if (!question || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    }).slice(0, 3);
 
-    if(!Array.isArray(questions)) {
+    if (curatedQuestions.length === 0) {
+        section.hidden = true;
         return;
     }
 
-    const rows = [
-        questions.slice(0, 5),
-        questions.slice(5, 10),
-        questions.slice(10, 15)
-    ];
+    const icons = ['ph-file-text', 'ph-buildings', 'ph-clipboard-text'];
 
-    rows.forEach(rowQuestions => {
+    curatedQuestions.forEach((item, index) => {
+        const question = item.question.trim();
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'suggestion';
+        button.setAttribute('aria-label', `Ask: ${question}`);
 
-        if(rowQuestions.length === 0) {
-            return;
-        }
+        const icon = document.createElement('i');
+        icon.className = `ph-light ${icons[index] || 'ph-chat-circle-text'} suggestion-icon`;
+        icon.setAttribute('aria-hidden', 'true');
 
-        let row =
-            document.createElement("div");
+        const label = document.createElement('span');
+        label.className = 'suggestion-label';
+        label.textContent = question;
 
-        row.classList.add(
-            "suggestion-row"
-        );
+        const arrow = document.createElement('i');
+        arrow.className = 'ph-light ph-arrow-up-right suggestion-arrow';
+        arrow.setAttribute('aria-hidden', 'true');
 
-        let track =
-            document.createElement("div");
+        button.append(icon, label, arrow);
+        button.addEventListener('click', () => {
+            const input = document.getElementById('message');
+            if (!input || input.disabled) return;
 
-        track.classList.add(
-            "suggestion-track"
-        );
-
-        /*
-         * Controlled duplication keeps the scrolling
-         * suggestion track visually continuous.
-         */
-        let fullList = [
-            ...rowQuestions,
-            ...rowQuestions.slice(0, 3)
-        ];
-
-        fullList.forEach(q => {
-
-            if(!q.question) {
-                return;
-            }
-
-            let pill =
-                document.createElement("button");
-
-            pill.type = "button";
-
-            pill.classList.add(
-                "suggestion"
-            );
-
-            /*
-             * textContent is intentionally used instead
-             * of innerHTML because the FAQ question
-             * originates from database content.
-             */
-            pill.textContent =
-                q.question;
-
-            pill.addEventListener(
-                "click",
-                () => {
-
-                    const input =
-                        document.getElementById(
-                            "message"
-                        );
-
-                    if (!input) {
-                        return;
-                    }
-
-                    input.value =
-                        q.question;
-
-                    input.focus();
-
-                    sendMessage();
-
-                }
-            );
-
-            track.appendChild(pill);
-
+            input.value = question;
+            if (typeof resizeMessageInput === 'function') resizeMessageInput();
+            dismissChatWelcome();
+            sendMessage();
         });
 
-        row.appendChild(track);
-
-        container.appendChild(row);
-
+        container.appendChild(button);
     });
-
 }
 
 
@@ -679,14 +695,11 @@ async function sendToHuman(question){
                 }
             );
 
-        if(res.status === 429){
-
-            addMessage(
-                "You're sending too fast. Please wait a moment.",
-                "bot"
-            );
-
-            return null;
+        if (res.status === 429) {
+            return {
+                success: false,
+                message: "You're sending too fast. Please wait a moment."
+            };
         }
 
         const data =
@@ -705,6 +718,90 @@ async function sendToHuman(question){
 
     }
 
+}
+
+
+/*
+ * All ticket entry points share one in-flight guard. This prevents duplicate
+ * requests even if the header, mobile, and fallback actions are clicked quickly.
+ */
+let ticketSubmissionInProgress = false;
+
+function setTicketButtonsLoading(isLoading) {
+    const buttons = document.querySelectorAll(
+        "#ask-human-btn, #ask-human-mobile, .fallback-human-btn"
+    );
+
+    buttons.forEach((button) => {
+        if (isLoading) {
+            if (!button.dataset.idleHtml) {
+                button.dataset.idleHtml = button.innerHTML;
+            }
+
+            button.disabled = true;
+            button.classList.add("is-loading");
+            button.setAttribute("aria-busy", "true");
+            button.innerHTML = `
+                <span class="ticket-loading-spinner" aria-hidden="true"></span>
+                <span>Sending...</span>
+            `;
+        } else {
+            button.disabled = false;
+            button.classList.remove("is-loading");
+            button.removeAttribute("aria-busy");
+
+            if (button.dataset.idleHtml) {
+                button.innerHTML = button.dataset.idleHtml;
+                delete button.dataset.idleHtml;
+            }
+        }
+    });
+}
+
+async function submitTicket(question = "", sourceButton = null) {
+    if (ticketSubmissionInProgress) return;
+
+    const input = document.getElementById("message");
+    const resolvedQuestion = String(
+        question || input?.value?.trim() || lastUserMessage || ""
+    ).trim();
+
+    if (!resolvedQuestion) {
+        addMessage("Please type your question first.", "bot");
+        input?.focus();
+        return;
+    }
+
+    ticketSubmissionInProgress = true;
+    setTicketButtonsLoading(true);
+
+    try {
+        const data = await sendToHuman(resolvedQuestion);
+
+        if (data?.success) {
+            addMessage(
+                data.message || "Your question has been sent to a human assistant.",
+                "bot"
+            );
+
+            if (input) {
+                input.value = "";
+                resizeMessageInput();
+            }
+        } else {
+            addMessage(
+                data?.message || "We couldn't send your ticket. Please try again.",
+                "bot"
+            );
+        }
+    } catch (error) {
+        console.error("Ticket submission failed:", error);
+        addMessage("We couldn't send your ticket. Please try again.", "bot");
+    } finally {
+        ticketSubmissionInProgress = false;
+        setTicketButtonsLoading(false);
+        sourceButton?.focus?.();
+    }
 }
 
 
@@ -735,6 +832,9 @@ function sendMessage(){
         return;
     }
 
+    // Once a real question is submitted, let the conversation take over the welcome state.
+    dismissChatWelcome();
+
     /*
      * Display the user's message immediately.
      */
@@ -747,6 +847,7 @@ function sendMessage(){
      * Clear the input field.
      */
     input.value = "";
+    resizeMessageInput();
 
     /*
      * Prevent duplicate submissions while the
@@ -760,10 +861,13 @@ function sendMessage(){
     let typingMessage =
         addMessage(
             `
-            <div class="typing">
-                <span></span>
-                <span></span>
-                <span></span>
+            <div class="typing-status" role="status" aria-live="polite">
+                <span class="typing-status-label">Checking the FAQ library</span>
+                <span class="typing" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
             </div>
             `,
             "bot",
@@ -897,6 +1001,9 @@ function sendMessage(){
         html += `<div class="chat-faq-file-link-list">${renderFaqFilesAndLinks(attachments)}</div>`;
         html += renderFaqQRAttachments(attachments);
 
+        if (data.feedback_log_id) {
+            html += renderFaqFeedback(data.feedback_log_id);
+        }
 
         /*
          * Show the human-support option when the
@@ -992,75 +1099,123 @@ function sendMessage(){
  *
  * This works for dynamically-created fallback buttons.
  */
-document.addEventListener(
-    "click",
-    async function(e){
+document.addEventListener("click", function (e) {
+    const button = e.target.closest(".fallback-human-btn");
+    if (!button) return;
 
-        if(
-            !e.target.classList.contains(
-                "fallback-human-btn"
-            )
-        ){
+    e.preventDefault();
+    submitTicket(lastUserMessage, button);
+});
+
+
+/*
+ * FAQ feedback uses delegated handlers because response bubbles are rendered
+ * dynamically. Only the current authenticated user's exact answered log ID
+ * is submitted; the server independently verifies ownership and FAQ linkage.
+ */
+document.addEventListener('click', async function (event) {
+    const voteButton = event.target.closest('.chat-feedback-vote');
+    if (voteButton) {
+        const section = voteButton.closest('.chat-feedback');
+        if (!section || section.dataset.submitting === '1') return;
+
+        const rating = voteButton.dataset.rating;
+        if (rating === 'not_helpful') {
+            const form = section.querySelector('.chat-feedback-form');
+            if (form) {
+                form.hidden = false;
+                form.querySelector('select')?.focus({ preventScroll: true });
+            }
+            section.querySelectorAll('.chat-feedback-vote').forEach((button) => {
+                button.disabled = true;
+            });
             return;
         }
 
-        let btn =
-            e.target;
-
-        /*
-         * Prevent duplicate support submissions.
-         */
-        if(btn.disabled){
-            return;
-        }
-
-        btn.disabled =
-            true;
-
-        let question =
-            lastUserMessage;
-
-        if(!question){
-
-            addMessage(
-                "Please type your question first.",
-                "bot"
-            );
-
-            btn.disabled =
-                false;
-
-            return;
-        }
-
-        let data =
-            await sendToHuman(
-                question
-            );
-
-        if (data?.success) {
-
-            addMessage(
-                "Your ticket has been sent successfully.",
-                "bot"
-            );
-
-            input.value = "";
-
-        } else {
-
-            addMessage(
-                "Failed to send your ticket. Please try again.",
-                "bot"
-            );
-
-        }
-
-        btn.disabled =
-            false;
-
+        await submitFaqFeedback(section, 'helpful');
+        return;
     }
-);
+
+    const cancelButton = event.target.closest('.chat-feedback-cancel');
+    if (cancelButton) {
+        const section = cancelButton.closest('.chat-feedback');
+        if (!section) return;
+        section.querySelector('.chat-feedback-form').hidden = true;
+        section.querySelectorAll('.chat-feedback-vote').forEach((button) => {
+            button.disabled = false;
+        });
+    }
+});
+
+document.addEventListener('submit', async function (event) {
+    const form = event.target.closest('.chat-feedback-form');
+    if (!form) return;
+    event.preventDefault();
+
+    const section = form.closest('.chat-feedback');
+    if (!section) return;
+
+    const submitButton = form.querySelector('.chat-feedback-submit');
+    const reason = form.querySelector('[name="reason"]')?.value || '';
+    const comment = form.querySelector('[name="comment"]')?.value || '';
+    await submitFaqFeedback(section, 'not_helpful', { reason, comment }, submitButton);
+});
+
+async function submitFaqFeedback(section, rating, extra = {}, submitButton = null) {
+    if (!section || section.dataset.submitting === '1') return;
+    const logId = Number(section.dataset.feedbackLogId);
+    if (!Number.isInteger(logId) || logId < 1) return;
+
+    section.dataset.submitting = '1';
+    const buttons = [...section.querySelectorAll('button')];
+    buttons.forEach((button) => { button.disabled = true; });
+
+    const originalText = submitButton?.textContent;
+    if (submitButton) submitButton.textContent = 'Sending…';
+
+    const status = section.querySelector('.chat-feedback-status');
+    try {
+        const response = await fetch(chatbotFeedbackUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({
+                chatbot_log_id: logId,
+                rating,
+                reason: extra.reason || null,
+                comment: extra.comment || null
+            })
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Feedback could not be saved. Please try again.');
+        }
+
+        section.querySelector('.chat-feedback-prompt').textContent = 'Thanks for helping us improve.';
+        section.querySelector('.chat-feedback-actions')?.remove();
+        section.querySelector('.chat-feedback-form')?.remove();
+        if (status) {
+            status.hidden = false;
+            status.textContent = rating === 'helpful'
+                ? 'Your positive feedback has been recorded.'
+                : 'Your feedback has been sent to the FAQ team for review.';
+        }
+        section.dataset.submitting = '0';
+        section.dataset.submitted = '1';
+    } catch (error) {
+        if (status) {
+            status.hidden = false;
+            status.textContent = error.message || 'Feedback could not be saved. Please try again.';
+        }
+        buttons.forEach((button) => { button.disabled = false; });
+        if (submitButton && originalText) submitButton.textContent = originalText;
+        section.dataset.submitting = '0';
+    }
+}
 
 
 /*
@@ -1589,75 +1744,12 @@ const askBtn =
     );
 
 
-if(askBtn){
-
-    askBtn.addEventListener(
-        "click",
-        async () => {
-
-            /*
-             * Prevent repeated clicks.
-             */
-            if(askBtn.disabled){
-                return;
-            }
-
-            askBtn.disabled =
-                true;
-
-            let input =
-                document.getElementById(
-                    "message"
-                );
-
-            let question =
-                input.value.trim() ||
-                lastUserMessage;
-
-            if(!question){
-
-                addMessage(
-                    "Please type your question first.",
-                    "bot"
-                );
-
-                askBtn.disabled =
-                    false;
-
-                return;
-            }
-
-            let data =
-                await sendToHuman(
-                    question
-                );
-
-            if(data?.success){
-
-                addMessage(
-                    "Your question has been sent to a human assistant.",
-                    "bot"
-                );
-
-                input.value =
-                    "";
-
-            }else{
-
-                addMessage(
-                    "Failed to send your request.",
-                    "bot"
-                );
-
-            }
-
-            askBtn.disabled =
-                false;
-
-        }
-    );
-
+if (askBtn) {
+    askBtn.addEventListener("click", () => {
+        submitTicket(messageInput?.value?.trim() || lastUserMessage, askBtn);
+    });
 }
+
 
 /*
  * =========================================================
@@ -1674,15 +1766,8 @@ const mobileAskBtn =
     document.getElementById("ask-human-mobile");
 
 
-if (mobileAskBtn && askBtn) {
-
-    mobileAskBtn.addEventListener(
-        "click",
-        () => {
-
-            askBtn.click();
-
-        }
-    );
-
+if (mobileAskBtn) {
+    mobileAskBtn.addEventListener("click", () => {
+        submitTicket(messageInput?.value?.trim() || lastUserMessage, mobileAskBtn);
+    });
 }

@@ -595,11 +595,8 @@ window.__FLASH_ERROR__ = @json(session('error'));
 
 
 
-<script src="{{ asset('jsfiles/components/modal-system.js') }}"></script>
+
 <script src="{{ asset('jsfiles/admin/category-management.js') }}"></script>
-<script>
-console.log("FLASH:", window.__FLASH_SUCCESS__);
-</script>
 
 
 @endpush

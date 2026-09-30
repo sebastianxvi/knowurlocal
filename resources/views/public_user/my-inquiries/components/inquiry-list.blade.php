@@ -99,10 +99,10 @@
     <div class="inquiries-section-heading">
 
         <div>
-            <span class="inquiries-section-eyebrow">Your activity</span>
+            <span class="inquiries-section-eyebrow">All submissions</span>
 
             <h2 id="inquiries-section-title">
-                Inquiry history
+                Your inquiries
             </h2>
         </div>
 
@@ -111,8 +111,7 @@
             data-inquiry-result-meta
             aria-live="polite"
         >
-            {{ $requests->count() }}
-            {{ Str::plural('inquiry', $requests->count()) }}
+            {{ $requests->count() }} {{ Str::plural('inquiry', $requests->count()) }}
         </div>
 
     </div>

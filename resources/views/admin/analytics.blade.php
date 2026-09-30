@@ -306,6 +306,40 @@
         </div>
     </section>
 
+    {{-- ==================== FAQ ANSWER FEEDBACK ==================== --}}
+    <section class="analytics-section">
+        <div class="analytics-section-heading">
+            <div>
+                <span class="eyebrow">Continuous improvement</span>
+                <h2>FAQ answer feedback</h2>
+                <p>Ratings are aggregated per FAQ. Review a question from FAQ Management to inspect individual responses.</p>
+            </div>
+            <a class="analytics-export-button" href="{{ route('faqs.index') }}">
+                <i class="ph-light ph-arrow-square-out" aria-hidden="true"></i>
+                Manage FAQs
+            </a>
+        </div>
+
+        <div class="analytics-metrics analytics-metrics-six">
+            <article class="analytics-metric metric-success">
+                <div class="analytics-metric-icon"><i class="ph-light ph-thumbs-up"></i></div>
+                <div class="analytics-metric-content"><span>Total likes</span><strong data-metric="faq_feedback_helpful">{{ number_format($faqFeedbackHelpful) }}</strong><small>Helpful ratings across all FAQs</small></div>
+            </article>
+            <article class="analytics-metric metric-attention">
+                <div class="analytics-metric-icon"><i class="ph-light ph-thumbs-down"></i></div>
+                <div class="analytics-metric-content"><span>Total dislikes</span><strong data-metric="faq_feedback_not_helpful">{{ number_format($faqFeedbackNotHelpful) }}</strong><small>Negative ratings across all FAQs</small></div>
+            </article>
+            <a class="analytics-metric metric-attention" href="{{ route('faqs.index', ['feedback' => 'needs_review']) }}">
+                <div class="analytics-metric-icon"><i class="ph-light ph-warning-circle"></i></div>
+                <div class="analytics-metric-content"><span>FAQs needing review</span><strong data-metric="faq_feedback_needs_review">{{ number_format($faqFeedbackNeedsReview) }}</strong><small>Enough ratings and dislikes exceed likes</small></div>
+            </a>
+            <article class="analytics-metric">
+                <div class="analytics-metric-icon"><i class="ph-light ph-chat-circle-dots"></i></div>
+                <div class="analytics-metric-content"><span>Total ratings</span><strong data-metric="faq_feedback_total">{{ number_format($faqFeedbackTotal) }}</strong><small>All feedback responses recorded</small></div>
+            </article>
+        </div>
+    </section>
+
     {{-- ==================== TEAM + DATA HEALTH ==================== --}}
     <section class="analytics-section analytics-section-last">
         <div class="analytics-section-heading">

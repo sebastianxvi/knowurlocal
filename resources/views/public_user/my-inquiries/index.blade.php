@@ -39,7 +39,7 @@
     <!-- My Inquiries styles -->
     <link
         rel="stylesheet"
-        href="{{ asset('cssfiles/public_user/my-inquiries/index.css') }}"
+        href="{{ asset('cssfiles/public_user/my-inquiries/index.css') }}?v={{ filemtime(public_path('cssfiles/public_user/my-inquiries/index.css')) }}"
     >
 
 </head>
@@ -66,10 +66,13 @@
 <!-- Laravel Echo / Reverb -->
 @vite('resources/js/echo.js')
 
+<!-- Local QR generator shared with the chatbot attachment renderer -->
+<script src="{{ asset('jsfiles/public_user/qrcode-core.js') }}?v={{ filemtime(public_path('jsfiles/public_user/qrcode-core.js')) }}"></script>
+
 <!-- Page JavaScript -->
 <script
     type="module"
-    src="{{ asset('jsfiles/public_user/my-inquiries/index.js') }}"
+    src="{{ asset('jsfiles/public_user/my-inquiries/index.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/index.js')) }}"
 ></script>
 
 </body>

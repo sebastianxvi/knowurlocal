@@ -464,7 +464,7 @@
 
 @push('scripts')
 
-    <script src="{{ asset('jsfiles/components/modal-system.js') }}"></script>
+    
 
     <script>
         window.__FLASH_SUCCESS__ = @json(session('success'));

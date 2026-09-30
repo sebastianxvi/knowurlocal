@@ -24,6 +24,17 @@
 </section>
 
 <section class="section">
+    <h2 class="section-title">FAQ answer feedback</h2>
+    <p class="section-subtitle">Ratings are aggregated per FAQ, with review priority based on the combined feedback.</p>
+    <table class="metric-table"><tr>
+        <td class="metric-cell"><div class="metric-label">FAQs needing review</div><div class="metric-value amber">{{ number_format($faqFeedbackNeedsReview) }}</div><div class="metric-note">Minimum ratings met; dislikes exceed likes</div></td>
+        <td class="metric-cell"><div class="metric-label">Total likes</div><div class="metric-value green">{{ number_format($faqFeedbackHelpful) }}</div><div class="metric-note">Helpful ratings</div></td>
+        <td class="metric-cell"><div class="metric-label">Total dislikes</div><div class="metric-value blue">{{ number_format($faqFeedbackNotHelpful) }}</div><div class="metric-note">Negative ratings</div></td>
+        <td class="metric-cell"><div class="metric-label">Total ratings</div><div class="metric-value purple">{{ number_format($faqFeedbackTotal) }}</div><div class="metric-note">All resident ratings</div></td>
+    </tr></table>
+</section>
+
+<section class="section">
     <h2 class="section-title">Team collaboration</h2>
     <p class="section-subtitle">Explicit administrator-to-administrator work, not general system activity.</p>
     <table class="metric-table"><tr>

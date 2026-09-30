@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="chatbot-feedback-url" content="{{ route('chatbot.feedback.store') }}">
 </head>
 <body>
     

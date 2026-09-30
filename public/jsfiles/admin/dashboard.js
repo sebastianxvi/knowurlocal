@@ -206,7 +206,7 @@
 
                     window.location.reload();
                 } catch (error) {
-                    window.alert(error.message || 'Unable to update the task.');
+                    window.notifyUser(error.message || 'Unable to update the task. Your change was not confirmed; please try again.', { title: 'Task was not updated', variant: 'danger', icon: 'fa-solid fa-circle-exclamation' });
                     select.disabled = false;
                 }
             });

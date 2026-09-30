@@ -1783,8 +1783,9 @@ const addComponent = (type) => {
     */
     if (getComponentCount() >= MAX_COMPONENTS) {
 
-        window.alert(
-            `A response can contain a maximum of ${MAX_COMPONENTS} components.`
+        window.notifyUser(
+            `A response can contain a maximum of ${MAX_COMPONENTS} components. Remove an existing item before adding another.`,
+            { title: 'Response limit reached', variant: 'warning', icon: 'fa-solid fa-triangle-exclamation' }
         );
 
         return;
@@ -1994,8 +1995,9 @@ const validateFile = (input) => {
 
     if (file.size > MAX_FILE_SIZE) {
 
-        window.alert(
-            'The selected file is larger than 5 MB.'
+        window.notifyUser(
+            'The selected file is larger than 5 MB. Choose a smaller file and try again.',
+            { title: 'File is too large', variant: 'warning', icon: 'fa-solid fa-file-circle-exclamation' }
         );
 
 
@@ -2020,8 +2022,9 @@ const validateFile = (input) => {
 
     if (!allowedTypes.includes(file.type)) {
 
-        window.alert(
-            'The selected file type is not allowed.'
+        window.notifyUser(
+            'This file type is not supported for this response. Choose an allowed image or document format.',
+            { title: 'Unsupported file type', variant: 'warning', icon: 'fa-solid fa-file-circle-exclamation' }
         );
 
 

@@ -209,6 +209,22 @@
             @endif
 
 
+            @if($faqFeedbackOutstanding > 0)
+                <a
+                    href="{{ route('faqs.index', ['feedback' => 'needs_review']) }}"
+                    class="dashboard-attention-item is-warning"
+                >
+                    <span class="dashboard-attention-icon">
+                        <i class="ph-light ph-thumbs-down" aria-hidden="true"></i>
+                    </span>
+                    <span class="dashboard-attention-copy">
+                        <strong>{{ number_format($faqFeedbackOutstanding) }} {{ $faqFeedbackOutstanding === 1 ? 'FAQ needs' : 'FAQs need' }} review</strong>
+                        <small>Ratings are aggregated per FAQ; individual ratings do not create separate tasks.</small>
+                    </span>
+                    <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
+                </a>
+            @endif
+
             @if($incompleteFaqs > 0)
                 <a
                     href="{{ route('faqs.index', ['filter' => 'missing_translation']) }}"
@@ -246,6 +262,15 @@
             @endif
 
         </div>
+
+        <a href="{{ route('faqs.index') }}" class="dashboard-feedback-summary">
+            <span class="dashboard-feedback-summary-icon"><i class="ph-light ph-chat-centered-text" aria-hidden="true"></i></span>
+            <span class="dashboard-feedback-summary-copy">
+                <strong>FAQ answer feedback</strong>
+                <small>{{ number_format($faqFeedbackHelpful) }} likes · {{ number_format($faqFeedbackNotHelpful) }} dislikes · {{ number_format($faqFeedbackNeedsReview) }} FAQs need review</small>
+            </span>
+            <span class="dashboard-feedback-summary-action">Manage FAQs <i class="ph-light ph-arrow-right" aria-hidden="true"></i></span>
+        </a>
     </section>
 
 

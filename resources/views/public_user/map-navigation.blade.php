@@ -31,7 +31,7 @@
 <!-- KNOWURLOCAL navigation styles -->
 <link
     rel="stylesheet"
-    href="{{ asset('cssfiles/public_user/navigation.css') }}"
+    href="{{ asset('cssfiles/public_user/navigation.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navigation.css')) }}"
 >
 
 </head>
@@ -359,7 +359,7 @@
 <!-- ================= NAVIGATION SCRIPT ================= -->
 
 <script
-    src="{{ asset('jsfiles/public_user/navigation.js') }}"
+    src="{{ asset('jsfiles/public_user/navigation.js') }}?v={{ filemtime(public_path('jsfiles/public_user/navigation.js')) }}"
     defer
 ></script>
 

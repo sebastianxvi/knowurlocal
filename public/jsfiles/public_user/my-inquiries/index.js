@@ -1,3 +1,4 @@
+import { renderInquiryQRCodes } from './components/inquiry-card.js';
 import {
     initializeAccordion,
 } from './components/accordion.js';
@@ -40,3 +41,6 @@ initializeConfirmation();
 initializeLightbox();
 
 initializeRealtime();
+
+// Render QR codes already present in the server-rendered inquiry cards.
+renderInquiryQRCodes(document);

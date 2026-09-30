@@ -574,7 +574,7 @@ public function index(Request $request)
         } else {
 
             $query->whereDate(
-                'created_at',
+                'updated_at',
                 $request->input('date')
             );
         }
@@ -617,7 +617,7 @@ public function index(Request $request)
          * when they were created.
          */
         $query->orderBy(
-            'created_at',
+            'updated_at',
             $sortDirection
         );
     }
@@ -665,6 +665,28 @@ public function index(Request $request)
      * Pagination keeps the page efficient as the
      * database grows.
      */
+    // Keep the table focused on FAQ-level feedback aggregates instead of
+    // loading every individual rating into the main list.
+    $query->withCount([
+        'feedback as feedback_likes_count' => fn ($feedbackQuery) =>
+            $feedbackQuery->where('rating', 'helpful'),
+        'feedback as feedback_dislikes_count' => fn ($feedbackQuery) =>
+            $feedbackQuery->where('rating', 'not_helpful'),
+    ]);
+
+    if ($status === 'active' && $request->query('feedback') === 'needs_review') {
+        $minimumRatings = (int) config('faq_feedback.minimum_ratings_for_review', 5);
+        $needsReviewFaqIds = \App\Models\FaqFeedback::query()
+            ->select('faq_id')
+            ->whereNotNull('faq_id')
+            ->groupBy('faq_id')
+            ->havingRaw('COUNT(*) >= ?', [$minimumRatings])
+            ->havingRaw(
+                "SUM(CASE WHEN rating = 'not_helpful' THEN 1 ELSE 0 END) > SUM(CASE WHEN rating = 'helpful' THEN 1 ELSE 0 END)"
+            );
+        $query->whereIn('id', $needsReviewFaqIds);
+    }
+
     $faqs = $query
         ->paginate(10)
         ->withQueryString();
@@ -676,7 +698,7 @@ public function index(Request $request)
  * =========================================================
  *
  * Active FAQs:
- *     created_at
+ *     updated_at
  *
  * Trashed FAQs:
  *     deleted_at
@@ -696,7 +718,7 @@ if ($status === 'trashed') {
 
 } else {
 
-    $availableDates = Faq::selectRaw('DATE(created_at) as date')
+    $availableDates = Faq::selectRaw('DATE(updated_at) as date')
         ->distinct()
         ->orderBy('date', 'desc')
         ->limit(15)

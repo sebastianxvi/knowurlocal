@@ -2162,16 +2162,14 @@ resetTextareaHeights();
 
 
             /*
-             * Do not open View mode when the administrator
-             * clicked an action button or form.
+             * FAQ rows open View mode only when the row's non-action area
+             * is clicked. Never let action controls (especially the separate
+             * feedback dialog trigger) also open the FAQ information modal.
              */
             if (
-                e.target.closest("button") ||
-                e.target.closest("form")
+                e.target.closest("button, form, a, input, select, textarea, label, .faq-feedback-open, .edit-btn")
             ) {
-
                 return;
-
             }
 
 

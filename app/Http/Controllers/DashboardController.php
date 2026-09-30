@@ -6,6 +6,7 @@ use App\Models\Agency;
 use App\Models\ChatbotLog;
 use App\Models\CollaborationTask;
 use App\Models\Faq;
+use App\Models\FaqFeedback;
 use App\Models\SupportRequest;
 use App\Models\User;
 use App\Models\UserLog;
@@ -113,6 +114,15 @@ class DashboardController extends Controller
 
         $totalFaqs = Faq::count();
 
+        $faqFeedbackSummary = $this->faqFeedbackSummary();
+        $faqFeedbackHelpful = $faqFeedbackSummary['helpful'];
+        $faqFeedbackNotHelpful = $faqFeedbackSummary['not_helpful'];
+        $faqFeedbackNeedsReview = $faqFeedbackSummary['needs_review'];
+        $faqFeedbackReviewedOpen = $faqFeedbackSummary['reviewed_open'];
+        $faqFeedbackOutstanding = $faqFeedbackNeedsReview + $faqFeedbackReviewedOpen;
+        $faqFeedbackResolved = $faqFeedbackSummary['resolved'];
+        $faqFeedbackTotal = $faqFeedbackSummary['total'];
+
         /*
          * Contributor ranking is report-only data. Avoid the extra grouped
          * queries on the normal dashboard request.
@@ -209,7 +219,8 @@ class DashboardController extends Controller
         $totalNeedsAttention =
             $pendingInquiries +
             $incompleteAgencies +
-            $incompleteFaqs;
+            $incompleteFaqs +
+            $faqFeedbackOutstanding;
 
         /*
          * Collaboration is based on explicit work handoffs/review requests,
@@ -268,6 +279,13 @@ class DashboardController extends Controller
             'totalNGA',
             'totalNGO',
             'totalFaqs',
+            'faqFeedbackHelpful',
+            'faqFeedbackNotHelpful',
+            'faqFeedbackNeedsReview',
+            'faqFeedbackReviewedOpen',
+            'faqFeedbackOutstanding',
+            'faqFeedbackResolved',
+            'faqFeedbackTotal',
             'topFaqCount',
             'topFaqContributorTieCount',
             'topFaqContributors',
@@ -422,6 +440,15 @@ class DashboardController extends Controller
         $completeAgencies = max(0, $totalAgencies - $incompleteAgencies);
 
         $totalFaqs = Faq::count();
+        $faqFeedbackSummary = $this->faqFeedbackSummary();
+        $faqFeedbackHelpful = $faqFeedbackSummary['helpful'];
+        $faqFeedbackNotHelpful = $faqFeedbackSummary['not_helpful'];
+        $faqFeedbackNeedsReview = $faqFeedbackSummary['needs_review'];
+        $faqFeedbackReviewedOpen = $faqFeedbackSummary['reviewed_open'];
+        $faqFeedbackOutstanding = $faqFeedbackNeedsReview + $faqFeedbackReviewedOpen;
+        $faqFeedbackResolved = $faqFeedbackSummary['resolved'];
+        $faqFeedbackTotal = $faqFeedbackSummary['total'];
+
         $incompleteFaqs = Faq::query()
             ->where(function ($query) {
                 $query
@@ -554,6 +581,13 @@ class DashboardController extends Controller
             'totalFaqs',
             'completeFaqs',
             'incompleteFaqs',
+            'faqFeedbackHelpful',
+            'faqFeedbackNotHelpful',
+            'faqFeedbackNeedsReview',
+            'faqFeedbackReviewedOpen',
+            'faqFeedbackOutstanding',
+            'faqFeedbackResolved',
+            'faqFeedbackTotal',
             'topSupportAgencies',
             'totalChatbotInteractions',
             'knowledgeQuestions',
@@ -609,7 +643,13 @@ class DashboardController extends Controller
                 'total_faqs' => $data['totalFaqs'],
                 'complete_faqs' => $data['completeFaqs'],
                 'incomplete_faqs' => $data['incompleteFaqs'],
-                'chatbot_interactions' => $data['totalChatbotInteractions'],
+                'faq_feedback_helpful' => $data['faqFeedbackHelpful'],
+                'faq_feedback_not_helpful' => $data['faqFeedbackNotHelpful'],
+                'faq_feedback_needs_review' => $data['faqFeedbackNeedsReview'],
+                'faq_feedback_reviewed_open' => $data['faqFeedbackReviewedOpen'],
+                'faq_feedback_resolved' => $data['faqFeedbackResolved'],
+                'faq_feedback_total' => $data['faqFeedbackTotal'],
+                'chatbot_interactions'  => $data['totalChatbotInteractions'],
                 'knowledge_questions' => $data['knowledgeQuestions'],
                 'faq_answered' => $data['faqAnswered'],
                 'faq_answer_rate' => $data['faqAnswerRate'],
@@ -643,6 +683,41 @@ class DashboardController extends Controller
                 'count' => (int) $item->interaction_count,
             ])->values(),
         ]);
+    }
+
+    /**
+     * Aggregate ratings globally while counting review work once per FAQ.
+     * Individual dislike records are evidence, not separate admin tasks.
+     */
+    private function faqFeedbackSummary(): array
+    {
+        $summary = FaqFeedback::query()
+            ->selectRaw("
+                COUNT(*) AS total,
+                SUM(CASE WHEN rating = 'helpful' THEN 1 ELSE 0 END) AS helpful,
+                SUM(CASE WHEN rating = 'not_helpful' THEN 1 ELSE 0 END) AS not_helpful
+            ")
+            ->first();
+
+        $minimumRatings = (int) config('faq_feedback.minimum_ratings_for_review', 5);
+        $needsReview = FaqFeedback::query()
+            ->select('faq_id')
+            ->whereNotNull('faq_id')
+            ->groupBy('faq_id')
+            ->havingRaw('COUNT(*) >= ?', [$minimumRatings])
+            ->havingRaw("SUM(CASE WHEN rating = 'not_helpful' THEN 1 ELSE 0 END) > SUM(CASE WHEN rating = 'helpful' THEN 1 ELSE 0 END)")
+            ->get()
+            ->count();
+
+        return [
+            'total' => (int) ($summary->total ?? 0),
+            'helpful' => (int) ($summary->helpful ?? 0),
+            'not_helpful' => (int) ($summary->not_helpful ?? 0),
+            'needs_review' => $needsReview,
+            // Kept as zero-valued compatibility fields for existing report data bindings.
+            'reviewed_open' => 0,
+            'resolved' => 0,
+        ];
     }
 
     /**

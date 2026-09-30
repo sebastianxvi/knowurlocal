@@ -130,3 +130,8 @@
     .analytics-report-header .analytics-export-menu{align-self:flex-end}
     .analytics-export-dropdown{left:auto;right:0}
 }
+
+
+/* FAQ feedback metric cards are navigable and provide a light interaction cue. */
+.analytics-metrics-six > a.analytics-metric { color:inherit; text-decoration:none; transition:transform 140ms ease,border-color 140ms ease,box-shadow 140ms ease; }
+.analytics-metrics-six > a.analytics-metric:hover { transform:translateY(-2px); border-color:#c4d1f5; box-shadow:0 8px 22px rgba(35,55,95,.07); }

@@ -177,8 +177,9 @@ body{
         class="card-thumb"
         src="{{ $agency->agency_image 
             ? asset('storage/'.$agency->agency_image) 
-            : asset('images/default-agency.png') }}"
+            : asset('images/admin/placeholder.jpg') }}"
         alt="{{ e($agency->agency_name) }}"
+        onerror="this.onerror=null;this.src='{{ asset('images/admin/placeholder.jpg') }}';"
     >
 
     <!-- TEXT -->
