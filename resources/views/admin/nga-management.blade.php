@@ -181,6 +181,7 @@
     data-lat="{{ $agency->lat }}"
     data-lng="{{ $agency->lng }}"
     data-image="{{ $agency->agency_image }}"
+    data-image-url="{{ $agency->agency_image ? Storage::disk('public')->url($agency->agency_image) : '' }}" 
 
     data-contacts="{{ $agencyContacts->toJson() }}"
 >
@@ -287,6 +288,7 @@
                 data-lat="{{ $agency->lat }}"
                 data-lng="{{ $agency->lng }}"
                 data-image="{{ $agency->agency_image }}"
+    data-image-url="{{ $agency->agency_image ? Storage::disk('public')->url($agency->agency_image) : '' }}" 
                 data-contacts="{{ $agencyContacts->toJson() }}"
             >
             <i class="ph-light ph-pencil-simple"></i>

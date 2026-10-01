@@ -2642,7 +2642,7 @@ document.addEventListener("DOMContentLoaded", function () {
             ) {
 
                 previewImg.src =
-                    `/storage/${data.image}`;
+                    data.imageUrl || "https://via.placeholder.com/150";
 
 
                 previewImg.style.display =
@@ -2703,7 +2703,7 @@ document.addEventListener("DOMContentLoaded", function () {
             ) {
 
                 previewImg.src =
-                    `/storage/${data.image}`;
+                    data.imageUrl || "https://via.placeholder.com/150";
 
 
                 previewImg.style.display =
@@ -2842,7 +2842,10 @@ document.addEventListener("DOMContentLoaded", function () {
                         row.dataset.lng,
 
                     image:
-                        row.dataset.image
+                        row.dataset.image,
+
+                    imageUrl:
+                        row.dataset.imageUrl
 
                 }
             );
@@ -3564,7 +3567,10 @@ document.addEventListener("DOMContentLoaded", function () {
                         btn.dataset.lng,
 
                     image:
-                        btn.dataset.image
+                        btn.dataset.image,
+
+                    imageUrl:
+                        btn.dataset.imageUrl
 
                 }
             );

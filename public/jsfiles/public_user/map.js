@@ -2027,9 +2027,8 @@ marker.setIcon(
          * Use the uploaded agency image when available.
          */
         const image =
-            agency.agency_image
-                ? `/storage/${agency.agency_image}`
-                : '/images/admin/placeholder.jpg';
+            agency.agency_image_url ||
+            '/images/admin/placeholder.jpg';
 
 
         agencyDetailsImage.src =

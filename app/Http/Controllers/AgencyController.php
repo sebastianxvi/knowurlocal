@@ -319,7 +319,21 @@ public function getAll()
 
     /*
      * Return the selected agency data as JSON.
+     *
+     * Keep `agency_image` as the stored object path for compatibility,
+     * and expose a separate public URL for browser rendering. This avoids
+     * assuming that cloud objects are served from Laravel's local
+     * /storage symlink.
      */
+    $agencies->each(function ($agency) {
+        $agency->setAttribute(
+            'agency_image_url',
+            $agency->agency_image
+                ? Storage::disk('public')->url($agency->agency_image)
+                : null
+        );
+    });
+
     return response()->json($agencies);
 }
 
