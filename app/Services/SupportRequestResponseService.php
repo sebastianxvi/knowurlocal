@@ -6,7 +6,9 @@ use App\Models\SupportRequest;
 use App\Models\SupportRequestResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Support\PrivateStorageDiagnostics;
 
 class SupportRequestResponseService
 {
@@ -66,10 +68,26 @@ class SupportRequestResponseService
                         && isset($component['file'])
                         && $component['file'] instanceof UploadedFile
                     ) {
-                        $content = $component['file']->store(
-                            'support-responses',
-                            'private'
-                        );
+                        $upload = $component['file'];
+                        $diagnostic = PrivateStorageDiagnostics::context() + [
+                            'feature' => 'support_response_attachment',
+                            'component_index' => $index,
+                            'file_size_bytes' => $upload->getSize(),
+                            'file_mime_type' => $upload->getMimeType(),
+                        ];
+
+                        Log::info('Private storage upload starting.', $diagnostic);
+
+                        try {
+                            $content = $upload->store('support-responses', 'private');
+                        } catch (\Throwable $exception) {
+                            Log::error('Private storage upload failed.', $diagnostic + [
+                                'exception_class' => get_class($exception),
+                                'exception_message' => mb_substr($exception->getMessage(), 0, 700),
+                            ]);
+
+                            throw $exception;
+                        }
 
                         if (is_string($content) && $content !== '') {
                             $storedFilePaths[] = $content;

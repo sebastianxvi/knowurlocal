@@ -10,7 +10,9 @@ use App\Models\SupportRequest;
 use App\Models\SupportResponseComponent;
 use App\Services\FaqTranslationService;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Support\PrivateStorageDiagnostics;
 
 
 class FaqController extends Controller
@@ -1626,7 +1628,25 @@ public function forceDestroy($id)
                 $uploaded = request()->file("response_components.$index.file");
 
                 if ($uploaded && $uploaded->isValid()) {
-                    $storedPath = $uploaded->store('faqs/responses', 'private');
+                    $diagnostic = PrivateStorageDiagnostics::context() + [
+                        'feature' => 'faq_response_attachment',
+                        'component_index' => $index,
+                        'file_size_bytes' => $uploaded->getSize(),
+                        'file_mime_type' => $uploaded->getMimeType(),
+                    ];
+
+                    Log::info('Private storage upload starting.', $diagnostic);
+
+                    try {
+                        $storedPath = $uploaded->store('faqs/responses', 'private');
+                    } catch (\Throwable $exception) {
+                        Log::error('Private storage upload failed.', $diagnostic + [
+                            'exception_class' => get_class($exception),
+                            'exception_message' => mb_substr($exception->getMessage(), 0, 700),
+                        ]);
+
+                        throw $exception;
+                    }
 
                     if (!$storedPath) {
                         continue;
