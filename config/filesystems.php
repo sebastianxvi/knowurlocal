@@ -41,8 +41,8 @@ return [
         'public' => env('PUBLIC_STORAGE_DRIVER', 'local') === 's3'
             ? [
                 'driver' => 's3',
-                'key' => env('AWS_ACCESS_KEY_ID'),
-                'secret' => env('AWS_SECRET_ACCESS_KEY'),
+                'key' => env('SUPABASE_STORAGE_ACCESS_KEY_ID'),
+'secret' => env('SUPABASE_STORAGE_SECRET_ACCESS_KEY'),
                 'region' => env('AWS_DEFAULT_REGION'),
                 'bucket' => env('AWS_PUBLIC_BUCKET', env('AWS_BUCKET')),
                 // Separate Supabase buckets store objects at their bucket root by default.
@@ -68,8 +68,8 @@ return [
         'private' => env('PRIVATE_STORAGE_DRIVER', 'local') === 's3'
             ? [
                 'driver' => 's3',
-                'key' => env('AWS_ACCESS_KEY_ID'),
-                'secret' => env('AWS_SECRET_ACCESS_KEY'),
+                'key' => env('SUPABASE_STORAGE_ACCESS_KEY_ID'),
+'secret' => env('SUPABASE_STORAGE_SECRET_ACCESS_KEY'),
                 'region' => env('AWS_DEFAULT_REGION'),
                 'bucket' => env('AWS_PRIVATE_BUCKET', env('AWS_BUCKET')),
                 // Separate Supabase buckets store objects at their bucket root by default.
