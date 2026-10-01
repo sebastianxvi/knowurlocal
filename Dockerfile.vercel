@@ -33,6 +33,12 @@ RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
         xml \
         zip
 
+# Match the application's 5 MiB image validation limit. The base image's
+# production defaults allow only 2 MiB per uploaded file, which causes
+# Laravel to report "The agency image failed to upload" for larger files.
+RUN printf "upload_max_filesize=5M\npost_max_size=8M\nmax_file_uploads=20\n" \
+    > "$PHP_INI_DIR/conf.d/uploads.ini"
+
 WORKDIR /app
 
 
