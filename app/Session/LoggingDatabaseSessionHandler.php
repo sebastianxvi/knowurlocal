@@ -32,7 +32,12 @@ class LoggingDatabaseSessionHandler extends DatabaseSessionHandler
          * session behavior handle it.
          */
         if (!$session) {
-            return parent::read($sessionId);
+            // Match Laravel's missing-session behavior without issuing
+            // a second SELECT through parent::read(). This handler can
+            // be reused by long-lived workers, so reset this flag.
+            $this->exists = false;
+
+            return '';
         }
 
         /*
@@ -42,11 +47,12 @@ class LoggingDatabaseSessionHandler extends DatabaseSessionHandler
          * expiration calculation.
          */
         if (!$this->expired($session)) {
-            /*
-             * The session is still valid, so use Laravel's
-             * normal session-reading behavior.
-             */
-            return parent::read($sessionId);
+            // DatabaseSessionHandler::read() would fetch this same row
+            // again. Decode the payload from the row already retrieved.
+            $this->exists = true;
+            $payload = base64_decode((string) $session->payload, true);
+
+            return is_string($payload) ? $payload : '';
         }
 
         /*
@@ -122,12 +128,13 @@ class LoggingDatabaseSessionHandler extends DatabaseSessionHandler
         }
 
         /*
-         * Let Laravel continue handling the expired session normally.
-         *
-         * The parent implementation returns an empty string for
-         * expired sessions, which causes Laravel to start an
-         * unauthenticated session.
+         * Laravel's parent implementation returns an empty payload
+         * for an expired session. The row is already loaded, so avoid
+         * querying it a second time. Preserve the existing-row flag so
+         * the normal session write updates this record as expected.
          */
-        return parent::read($sessionId);
+        $this->exists = true;
+
+        return '';
     }
 }

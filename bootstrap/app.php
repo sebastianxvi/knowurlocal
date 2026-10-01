@@ -37,6 +37,9 @@ return Application::configure(
 
     ->withMiddleware(function (Middleware $middleware) {
 
+        // Log aggregate server/database timings for slow HTTP requests.
+        $middleware->append(\App\Http\Middleware\RequestPerformance::class);
+
         /*
         |--------------------------------------------------------------------------
         | Middleware Aliases

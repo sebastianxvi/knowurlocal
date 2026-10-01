@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Models\SupportRequest;
 use App\Models\CollaborationTask;
 use App\Session\LoggingDatabaseSessionHandler;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
@@ -27,6 +29,34 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        /*
+         * Collect per-request database query metrics for slow-request
+         * diagnostics. Query text and bindings are deliberately omitted
+         * so logs do not expose user data or credentials.
+         */
+        DB::listen(function (QueryExecuted $query): void {
+            if (!app()->bound('request')) {
+                return;
+            }
+
+            $request = app('request');
+
+            if (!$request instanceof \Illuminate\Http\Request
+                || !$request->attributes->has('_performance_db_queries')) {
+                return;
+            }
+
+            $request->attributes->set(
+                '_performance_db_queries',
+                (int) $request->attributes->get('_performance_db_queries', 0) + 1
+            );
+
+            $request->attributes->set(
+                '_performance_db_ms',
+                (float) $request->attributes->get('_performance_db_ms', 0) + $query->time
+            );
+        });
+
         /*
          * Replace Laravel's default database session handler
          * with KNOWURLOCAL's auditing version.
