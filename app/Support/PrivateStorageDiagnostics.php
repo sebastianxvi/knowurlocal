@@ -42,14 +42,20 @@ final class PrivateStorageDiagnostics
             'secret_key_present' => self::hasValue($secret),
 
             // Actual process environment.
-            'process_access_key_present' =>
-                self::processEnvironmentVariablePresent(
-                    'AWS_ACCESS_KEY_ID'
-                ),
-            'process_secret_key_present' =>
-                self::processEnvironmentVariablePresent(
-                    'AWS_SECRET_ACCESS_KEY'
-                ),
+'process_access_key_present' =>
+    self::processEnvironmentVariablePresent(
+        'AWS_ACCESS_KEY_ID'
+    ),
+'process_secret_key_present' =>
+    self::processEnvironmentVariablePresent(
+        'AWS_SECRET_ACCESS_KEY'
+    ),
+
+// Temporary runtime environment diagnostic.
+'runtime_marker_present' =>
+    self::processEnvironmentVariablePresent(
+        'KNOWURLOCAL_RUNTIME_ENV_CHECK'
+    ),
 
             // Laravel environment helper.
             'laravel_env_access_key_present' =>
