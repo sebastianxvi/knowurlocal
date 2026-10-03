@@ -112,6 +112,16 @@ Route::get('/otp', function (Request $request) {
 
 })->name('otp.page');
 
+// Keep the anonymous OTP session alive while the verification page is open.
+// The OTP itself still expires independently in the EmailVerification record.
+Route::get('/otp/session', function (Request $request) {
+    return response()
+        ->json([
+            'csrf_token' => $request->session()->token(),
+        ])
+        ->header('Cache-Control', 'no-store, private');
+})->middleware('throttle:60,1')->name('otp.session');
+
 Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])
     ->name('otp.verify');
 

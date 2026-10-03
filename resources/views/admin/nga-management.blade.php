@@ -550,7 +550,7 @@
                     <div class="upload-content" id="agency-upload-placeholder">
                         <i class="ph-light ph-image"></i>
                         <p>Click to upload image</p>
-                        <span>PNG, JPG, WebP up to 5MB (larger images are optimized automatically)</span>
+                        <span>PNG, JPG, WebP up to 5MB</span>
                     </div>
 
                     <!-- PREVIEW -->

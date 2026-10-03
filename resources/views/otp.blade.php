@@ -616,6 +616,60 @@ startResendCountdown(serverResendSeconds);
 
     /*
      * =====================================================
+     * OTP SESSION KEEP-ALIVE
+     * =====================================================
+     *
+     * The OTP itself is stored in the database and expires
+     * independently. The browser session is only needed here
+     * for Laravel's CSRF protection. Keep that anonymous session
+     * active while the user is away checking their email so a
+     * normal delay does not turn into a confusing 419 page.
+     */
+    const csrfInput =
+        form.querySelector('input[name="_token"]');
+
+    async function refreshOtpSession() {
+
+        try {
+
+            const response = await fetch(
+                "{{ route('otp.session') }}",
+                {
+                    method: "GET",
+                    headers: {
+                        "Accept": "application/json",
+                        "Cache-Control": "no-cache"
+                    },
+                    credentials: "same-origin",
+                    cache: "no-store"
+                }
+            );
+
+            if (!response.ok) {
+                return false;
+            }
+
+            const data = await response.json();
+
+            if (data.csrf_token) {
+                csrfInput.value = data.csrf_token;
+                return true;
+            }
+        } catch (error) {
+            // A temporary network failure should not interrupt the user.
+        }
+
+        return false;
+    }
+
+    const otpSessionHeartbeat =
+        window.setInterval(refreshOtpSession, 60 * 1000);
+
+    refreshOtpSession();
+
+
+    /*
+     * =====================================================
      * OTP INPUT BEHAVIOR
      * =====================================================
      */
@@ -743,7 +797,7 @@ startResendCountdown(serverResendSeconds);
 
     form.addEventListener(
         "submit",
-        function (event) {
+        async function (event) {
 
             let otp = "";
 
@@ -764,6 +818,33 @@ startResendCountdown(serverResendSeconds);
              * that Laravel receives.
              */
             hiddenInput.value = otp;
+
+
+            /*
+             * Refresh the CSRF token immediately before the
+             * verification request. If the user spent time
+             * checking email, this prevents a stale-token 419.
+             */
+            if (otp.length === 6) {
+                event.preventDefault();
+
+                const refreshed = await refreshOtpSession();
+
+                if (!refreshed) {
+                    showAlertModal({
+                        title: "Connection issue",
+                        text: "We could not refresh the verification session. Please check your connection and try again.",
+                        icon: "!",
+                        variant: "danger",
+                        confirmText: "OK",
+                        showCancel: false
+                    });
+                    return;
+                }
+
+                form.submit();
+                return;
+            }
 
 
             /*
@@ -872,6 +953,18 @@ startResendCountdown(serverResendSeconds);
             try {
 
                 /*
+                 * Refresh the session immediately before resend so
+                 * a stale OTP-page token does not produce a 419.
+                 */
+                const refreshed = await refreshOtpSession();
+
+                if (!refreshed) {
+                    throw new Error(
+                        "We could not refresh the verification session. Please check your connection and try again."
+                    );
+                }
+
+                /*
                  * Send the email to Laravel.
                  *
                  * Laravel generates the new OTP and sends
@@ -893,7 +986,7 @@ startResendCountdown(serverResendSeconds);
                                     "application/json",
 
                                 "X-CSRF-TOKEN":
-                                    "{{ csrf_token() }}"
+                                    csrfInput.value
 
                             },
 
@@ -1047,6 +1140,10 @@ startResendCountdown(serverResendSeconds);
 
         }
     );
+
+    window.addEventListener("pagehide", function () {
+        window.clearInterval(otpSessionHeartbeat);
+    });
 
 });
 
