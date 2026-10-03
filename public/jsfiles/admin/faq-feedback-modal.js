@@ -17,6 +17,11 @@ function initFaqFeedbackModal() {
     const dislikesEl = document.getElementById('faqFeedbackDislikes');
     const negativeBar = document.getElementById('faqFeedbackNegativeBar');
     const statusEl = document.getElementById('faqFeedbackModalStatus');
+    const versionTitleEl = document.getElementById('faqFeedbackVersionTitle');
+    const versionStateEl = document.getElementById('faqFeedbackVersionState');
+    const versionMetaEl = document.getElementById('faqFeedbackVersionMeta');
+    const versionAnswerEl = document.getElementById('faqFeedbackVersionAnswer');
+    const historyListEl = document.getElementById('faqFeedbackHistoryList');
     const listEl = document.getElementById('faqFeedbackList');
     const paginationInfo = document.getElementById('faqFeedbackPaginationInfo');
     const previousButton = document.getElementById('faqFeedbackPrev');
@@ -28,7 +33,7 @@ function initFaqFeedbackModal() {
         incorrect: 'Incorrect information', incomplete: 'Incomplete answer', outdated: 'Outdated information',
         unclear: 'Unclear instructions', attachments: 'Attachment or link issue', other: 'Other reason'
     };
-    const state = { url: null, rating: 'all', page: 1, lastPage: 1, loading: false, previousFocus: null, abortController: null };
+    const state = { url: null, rating: 'all', page: 1, lastPage: 1, versionId: null, loading: false, previousFocus: null, abortController: null };
 
     const setText = (element, value) => { if (element) element.textContent = value ?? ''; };
 
@@ -36,6 +41,7 @@ function initFaqFeedbackModal() {
         state.url = button.dataset.feedbackUrl;
         state.rating = 'all';
         state.page = 1;
+        state.versionId = null;
         state.previousFocus = document.activeElement;
         tabButtons.forEach(tab => tab.classList.toggle('is-active', tab.dataset.feedbackRating === 'all'));
         backdrop.classList.add('is-open');
@@ -96,6 +102,57 @@ function initFaqFeedbackModal() {
         });
     }
 
+    function renderVersionHistory(versions, currentVersionId) {
+        historyListEl.replaceChildren();
+
+        if (!Array.isArray(versions) || versions.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'faq-feedback-history-empty';
+            empty.textContent = 'No response history is available.';
+            historyListEl.appendChild(empty);
+            return;
+        }
+
+        versions.forEach(version => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'faq-feedback-history-item';
+            if (Number(version.id) === Number(state.versionId || currentVersionId)) {
+                button.classList.add('is-selected');
+            }
+
+            const top = document.createElement('div');
+            top.className = 'faq-feedback-history-item-top';
+
+            const title = document.createElement('strong');
+            title.textContent = `Version ${version.version_number}`;
+            top.appendChild(title);
+
+            const stateBadge = document.createElement('span');
+            stateBadge.className = `faq-feedback-history-badge ${version.is_current ? 'is-current' : ''}`;
+            stateBadge.textContent = version.is_current ? 'Current' : 'Archived';
+            top.appendChild(stateBadge);
+
+            const meta = document.createElement('span');
+            meta.className = 'faq-feedback-history-item-meta';
+            const total = Number(version.total || 0);
+            meta.textContent = `${version.published_at || 'Date unavailable'} · ${total} rating${total === 1 ? '' : 's'} · ${Number(version.likes || 0)} likes · ${Number(version.dislikes || 0)} dislikes`;
+
+            const preview = document.createElement('p');
+            preview.className = 'faq-feedback-history-item-preview';
+            preview.textContent = version.response_preview || 'No written response.';
+
+            button.append(top, meta, preview);
+            button.addEventListener('click', () => {
+                if (Number(state.versionId || currentVersionId) === Number(version.id)) return;
+                state.versionId = Number(version.id);
+                state.page = 1;
+                loadFeedback();
+            });
+            historyListEl.appendChild(button);
+        });
+    }
+
     async function loadFeedback() {
         if (!state.url) return;
         if (state.abortController) state.abortController.abort();
@@ -114,6 +171,11 @@ function initFaqFeedbackModal() {
             const url = new URL(state.url, window.location.origin);
             url.searchParams.set('rating', state.rating);
             url.searchParams.set('page', String(state.page));
+            if (state.versionId) {
+                url.searchParams.set('version_id', String(state.versionId));
+            } else {
+                url.searchParams.delete('version_id');
+            }
             const response = await fetch(url, {
                 headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 credentials: 'same-origin',
@@ -124,25 +186,40 @@ function initFaqFeedbackModal() {
             if (!backdrop.classList.contains('is-open')) return;
 
             const faq = payload.faq || {};
+            const version = payload.version || {};
             const feedback = payload.feedback || {};
-            setText(questionEl, faq.question || 'FAQ question unavailable');
+            const stats = payload.stats || {};
+            const currentVersionId = Number(payload.current_version_id || 0);
+            setText(questionEl, version.question || faq.question || 'FAQ question unavailable');
             setText(agencyEl, faq.agency || 'Agency unavailable');
-            setText(totalEl, Number(faq.total || 0).toLocaleString());
-            setText(likesEl, Number(faq.likes || 0).toLocaleString());
-            setText(dislikesEl, Number(faq.dislikes || 0).toLocaleString());
-            negativeBar.style.width = `${Math.max(0, Math.min(100, Number(faq.negative_rate || 0)))}%`;
+            setText(totalEl, Number(stats.total || 0).toLocaleString());
+            setText(likesEl, Number(stats.likes || 0).toLocaleString());
+            setText(dislikesEl, Number(stats.dislikes || 0).toLocaleString());
+            negativeBar.style.width = `${Math.max(0, Math.min(100, Number(stats.negative_rate || 0)))}%`;
+
+            setText(versionTitleEl, `Version ${Number(version.version_number || 1)}`);
+            setText(versionStateEl, version.is_current ? 'Current' : 'Archived · Read only');
+            versionStateEl.classList.toggle('is-archived', !version.is_current);
+            const versionTiming = version.is_current
+                ? `Published ${version.published_at || 'date unavailable'}`
+                : `Published ${version.published_at || 'date unavailable'}${version.superseded_at ? ` · Archived ${version.superseded_at}` : ''}`;
+            setText(versionMetaEl, version.changed_by
+                ? `${versionTiming} · Updated by ${version.changed_by}`
+                : versionTiming);
+            setText(versionAnswerEl, version.answer || 'No written response.');
+            renderVersionHistory(payload.versions || [], currentVersionId);
 
             statusEl.replaceChildren();
             const status = document.createElement('span');
             status.className = 'status-pill';
-            if (faq.priority_review) {
+            if (stats.priority_review) {
                 status.classList.add('priority');
                 status.textContent = 'Priority review';
-            } else if (faq.needs_review) {
+            } else if (stats.needs_review) {
                 status.textContent = 'Needs review';
-            } else if (Number(faq.total || 0) < Number(faq.minimum_ratings || 5)) {
+            } else if (Number(stats.total || 0) < Number(stats.minimum_ratings || 5)) {
                 status.classList.add('collecting');
-                status.textContent = `Collecting feedback · ${Number(faq.minimum_ratings || 5)} ratings needed before review`;
+                status.textContent = `Collecting feedback · ${Number(stats.minimum_ratings || 5)} ratings needed before review`;
             } else {
                 status.classList.add('collecting');
                 status.textContent = 'No aggregate review flag';

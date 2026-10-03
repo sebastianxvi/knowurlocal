@@ -54,3 +54,32 @@
 @media(prefers-reduced-motion:reduce){.faq-feedback-negative-track span{transition:none;}}
 
 body.faq-feedback-modal-open{overflow:hidden;}
+
+.faq-feedback-version-card{margin-top:14px;padding:14px;border:1px solid #dfe7f2;border-radius:12px;background:#f8fafc;}
+.faq-feedback-version-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.faq-feedback-version-eyebrow{display:block;margin-bottom:3px;color:#7a879c;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;}
+.faq-feedback-version-head strong{color:#17233b;font-size:13px;}
+.faq-feedback-version-state{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:10px;font-weight:750;white-space:nowrap;}
+.faq-feedback-version-state.is-archived{background:#eef2f7;color:#64748b;}
+.faq-feedback-version-meta{margin-top:7px;color:#8491a5;font-size:10px;}
+.faq-feedback-version-card p{margin:9px 0 0;color:#334155;font-size:12px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;max-height:130px;overflow:auto;}
+.faq-feedback-history{margin-top:14px;padding:14px;border:1px solid #e7ecf4;border-radius:12px;background:#fff;}
+.faq-feedback-history-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:9px;}
+.faq-feedback-history-head strong{display:block;color:#17233b;font-size:12px;}
+.faq-feedback-history-head span{display:block;margin-top:3px;color:#8a96a9;font-size:10px;}
+.faq-feedback-history-list{display:grid;gap:7px;}
+.faq-feedback-history-item{display:block;width:100%;padding:10px 11px;border:1px solid #e5eaf2;border-radius:10px;background:#fff;color:inherit;text-align:left;cursor:pointer;transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;}
+.faq-feedback-history-item:hover{background:#f8fafc;border-color:#cfd9e8;}
+.faq-feedback-history-item.is-selected{background:#f7faff;border-color:#b9caf0;box-shadow:0 0 0 2px rgba(37,99,235,.06);}
+.faq-feedback-history-item-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.faq-feedback-history-item-top strong{color:#26344d;font-size:11px;}
+.faq-feedback-history-badge{display:inline-flex;padding:3px 6px;border-radius:999px;background:#eef2f7;color:#64748b;font-size:9px;font-weight:750;}
+.faq-feedback-history-badge.is-current{background:#dcfce7;color:#15803d;}
+.faq-feedback-history-item-meta{display:block;margin-top:4px;color:#94a3b8;font-size:9px;}
+.faq-feedback-history-item-preview{display:-webkit-box;margin:6px 0 0;color:#475569;font-size:10px;line-height:1.45;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;}
+.faq-feedback-history-empty{padding:10px;color:#94a3b8;font-size:10px;text-align:center;}
+@media(max-width:640px){
+    .faq-feedback-version-card,.faq-feedback-history{padding:12px;}
+    .faq-feedback-version-head{align-items:flex-start;}
+    .faq-feedback-history-item-meta{line-height:1.45;}
+}

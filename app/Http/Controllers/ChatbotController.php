@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\SupportRequestCreated;
 use App\Models\ChatbotLog;
 use App\Models\Faq;
+use App\Models\FaqVersion;
 use App\Models\SupportRequest;
 use App\Services\FaqChatbotService;
 use Illuminate\Http\Request;
@@ -24,11 +25,11 @@ class ChatbotController extends Controller
      * The AI never supplies answer text. It only selects an existing FAQ
      * and a stored language variant. All response content comes from the configured PostgreSQL database.
      */
-    private function faqResponsePayload(Faq $faq, string $language): array
+    private function faqResponsePayload(Faq $faq, FaqVersion $version, string $language): array
     {
         $selectedLanguage = $language === 'fil' ? 'fil' : 'en';
-        $components = is_array($faq->response_components)
-            ? $faq->response_components
+        $components = is_array($version->response_components)
+            ? $version->response_components
             : [];
 
         $texts = collect($components)
@@ -44,8 +45,8 @@ class ChatbotController extends Controller
 
         if ($texts === []) {
             $fallback = $selectedLanguage === 'fil'
-                ? $faq->answer_fil
-                : $faq->answer;
+                ? $version->answer_fil
+                : $version->answer;
 
             if (filled($fallback)) {
                 $texts = [(string) $fallback];
@@ -53,8 +54,8 @@ class ChatbotController extends Controller
                 // If the requested stored language does not exist, use the
                 // other already-approved database variant without rewriting it.
                 $other = $selectedLanguage === 'fil'
-                    ? $faq->answer
-                    : $faq->answer_fil;
+                    ? $version->answer
+                    : $version->answer_fil;
 
                 if (filled($other)) {
                     $texts = [(string) $other];
@@ -69,8 +70,9 @@ class ChatbotController extends Controller
                 $type = $component['type'];
 
                 if (in_array($type, ['image', 'file'], true)) {
-                    $url = route('chatbot.faq-attachment', [
+                    $url = route('chatbot.faq-version-attachment', [
                         'faqId' => $faq->id,
+                        'versionId' => $version->id,
                         'componentIndex' => $index,
                     ]);
                 } else {
@@ -91,8 +93,8 @@ class ChatbotController extends Controller
         return [
             'content' => implode("\n\n", $texts),
             'attachments' => $attachments,
-            'image' => filled($faq->image)
-                ? Storage::disk('public')->url(ltrim((string) $faq->image, '/'))
+            'image' => filled($version->image)
+                ? Storage::disk('public')->url(ltrim((string) $version->image, '/'))
                 : null,
         ];
     }
@@ -107,6 +109,7 @@ class ChatbotController extends Controller
         ?string $matchMethod = null,
         ?int $agencyId = null,
         ?int $faqId = null,
+        ?int $faqVersionId = null,
         ?int $score = null
     ): ?int {
         try {
@@ -116,6 +119,7 @@ class ChatbotController extends Controller
                 'answer' => $answer,
                 'agency_id' => $agencyId,
                 'faq_id' => $faqId,
+                'faq_version_id' => $faqVersionId,
                 'outcome' => $outcome,
                 'match_method' => $matchMethod,
                 'score' => $score,
@@ -133,13 +137,64 @@ class ChatbotController extends Controller
     }
 
     /**
+     * Serve an attachment belonging to the exact FAQ response version that
+     * was shown to a chatbot user.
+     */
+    public function faqVersionAttachment(int $faqId, int $versionId, int $componentIndex)
+    {
+        $faq = Faq::findOrFail($faqId);
+        $version = FaqVersion::query()
+            ->whereKey($versionId)
+            ->where('faq_id', $faq->id)
+            ->firstOrFail();
+
+        $components = is_array($version->response_components)
+            ? $version->response_components
+            : [];
+        $component = $components[$componentIndex] ?? null;
+
+        abort_unless(
+            is_array($component)
+                && in_array(($component['type'] ?? null), ['image', 'file'], true),
+            404
+        );
+
+        $path = $component['content'] ?? null;
+
+        abort_unless(
+            is_string($path) && str_starts_with($path, 'faqs/responses/'),
+            404
+        );
+
+        $disk = Storage::disk('private');
+        abort_unless($disk->exists($path), 404);
+
+        $filename = basename($path);
+        $disposition = $component['type'] === 'file' ? 'attachment' : 'inline';
+
+        return $disk->response(
+            $path,
+            $filename,
+            [
+                'Content-Disposition' => $disposition . '; filename="' . addslashes($filename) . '"',
+                'X-Content-Type-Options' => 'nosniff',
+                'Cache-Control' => 'private, no-store',
+            ]
+        );
+    }
+
+    /**
      * Serve a private FAQ attachment through an application-controlled URL.
      */
     public function faqAttachment(int $faqId, int $componentIndex)
     {
         $faq = Faq::findOrFail($faqId);
-        $components = is_array($faq->response_components)
-            ? $faq->response_components
+        $version = $faq->currentVersion;
+
+        abort_unless($version, 404);
+
+        $components = is_array($version->response_components)
+            ? $version->response_components
             : [];
         $component = $components[$componentIndex] ?? null;
 
@@ -314,8 +369,20 @@ class ChatbotController extends Controller
             if ($match !== null) {
                 /** @var Faq $faq */
                 $faq = $match['faq'];
+                // Capture the exact published response generation before
+                // rendering/logging it. This prevents an admin edit occurring
+                // between payload creation and log creation from assigning
+                // feedback to the wrong version.
+                $faqVersionId = (int) $faq->current_version_id;
+                $faqVersion = $faq->currentVersion;
+
+                if (!$faqVersion || (int) $faqVersion->id !== $faqVersionId) {
+                    throw new \RuntimeException('The selected FAQ has no valid published response version.');
+                }
+
                 $payload = $this->faqResponsePayload(
                     $faq,
+                    $faqVersion,
                     $match['language'] ?? 'en'
                 );
 
@@ -328,9 +395,10 @@ class ChatbotController extends Controller
                         $question,
                         $payload['content'],
                         'answered',
-                        'ai',
+                        $match['method'] ?? 'ai',
                         $faq->agency_id,
                         $faq->id,
+                        $faqVersionId,
                         (int) round(((float) $match['confidence']) * 100)
                     );
 

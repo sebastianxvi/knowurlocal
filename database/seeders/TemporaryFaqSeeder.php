@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Agency;
 use App\Models\Faq;
+use App\Models\FaqVersion;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -1078,7 +1079,8 @@ DB::transaction(function () use (
          */
         if (!$existingFaq) {
 
-            Faq::create($faqData);
+            $faq = Faq::create($faqData);
+            $this->ensureCurrentVersion($faq);
 
             $inserted++;
 
@@ -1118,11 +1120,22 @@ DB::transaction(function () use (
         if ($hasChanges) {
 
             $existingFaq->update($faqData);
+            $existingFaq->refresh();
+
+            // Seeded FAQ content is user-facing content too, so an update
+            // must publish a new immutable response version rather than
+            // leaving current_version_id pointing at an older answer.
+            $this->publishSeededVersion($existingFaq);
 
             $updated++;
 
             continue;
         }
+
+        // Older test databases may contain FAQs created before versioning
+        // was introduced. Repair those rows while keeping the seeder
+        // idempotent when a valid current version already exists.
+        $this->ensureCurrentVersion($existingFaq);
 
         /*
          * Nothing changed, so no database update is necessary.
@@ -1154,5 +1167,85 @@ $this->command->info(
 $this->command->info(
     "Unchanged: {$unchanged}"
 );
+    }
+
+    /**
+     * Guarantee that an FAQ has a valid published response version.
+     *
+     * Fresh databases run migrations before seeders, so the version migration
+     * cannot see FAQs that are created later by this seeder. Without this
+     * repair step current_version_id remains NULL and the public chatbot
+     * correctly refuses to serve an unversioned response.
+     */
+    private function ensureCurrentVersion(Faq $faq): void
+    {
+        if ($faq->current_version_id) {
+            $currentExists = FaqVersion::query()
+                ->whereKey($faq->current_version_id)
+                ->where('faq_id', $faq->id)
+                ->exists();
+
+            if ($currentExists) {
+                return;
+            }
+        }
+
+        $latest = FaqVersion::query()
+            ->where('faq_id', $faq->id)
+            ->orderByDesc('version_number')
+            ->first();
+
+        if ($latest) {
+            $faq->forceFill(['current_version_id' => $latest->id])->save();
+            return;
+        }
+
+        $this->createSeededVersion($faq, 1);
+    }
+
+    /**
+     * Publish the current seeded FAQ fields as a new immutable version.
+     */
+    private function publishSeededVersion(Faq $faq): void
+    {
+        $current = $faq->current_version_id
+            ? FaqVersion::query()
+                ->whereKey($faq->current_version_id)
+                ->where('faq_id', $faq->id)
+                ->first()
+            : null;
+
+        if ($current) {
+            $current->update(['superseded_at' => now()]);
+        }
+
+        $nextNumber = ((int) FaqVersion::query()
+            ->where('faq_id', $faq->id)
+            ->max('version_number')) + 1;
+
+        $this->createSeededVersion($faq, $nextNumber);
+    }
+
+    /**
+     * Create and publish one immutable snapshot of the FAQ's current fields.
+     */
+    private function createSeededVersion(Faq $faq, int $versionNumber): void
+    {
+        $version = FaqVersion::create([
+            'faq_id' => $faq->id,
+            'version_number' => $versionNumber,
+            'agency_id' => $faq->agency_id,
+            'question' => $faq->question,
+            'answer' => $faq->answer,
+            'question_fil' => $faq->question_fil,
+            'answer_fil' => $faq->answer_fil,
+            'keywords' => $faq->keywords,
+            'image' => $faq->image,
+            'response_components' => $faq->response_components ?? [],
+            'changed_by' => null,
+            'superseded_at' => null,
+        ]);
+
+        $faq->forceFill(['current_version_id' => $version->id])->save();
     }
 }

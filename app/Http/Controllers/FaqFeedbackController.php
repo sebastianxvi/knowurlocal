@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ChatbotLog;
 use App\Models\Faq;
 use App\Models\FaqFeedback;
+use App\Models\FaqVersion;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -25,6 +26,8 @@ class FaqFeedbackController extends Controller
             ->where('user_id', $request->user()->id)
             ->where('outcome', 'answered')
             ->whereNotNull('faq_id')
+            ->whereNotNull('faq_version_id')
+            ->whereHas('faqVersion')
             ->firstOrFail();
 
         $feedback = FaqFeedback::query()->updateOrCreate(
@@ -34,6 +37,7 @@ class FaqFeedbackController extends Controller
             ],
             [
                 'faq_id' => $log->faq_id,
+                'faq_version_id' => $log->faq_version_id,
                 'rating' => $validated['rating'],
                 'reason' => $validated['rating'] === 'not_helpful' ? ($validated['reason'] ?? null) : null,
                 'comment' => $validated['rating'] === 'not_helpful'
@@ -49,22 +53,52 @@ class FaqFeedbackController extends Controller
         ]);
     }
 
-    /** Return a paginated, FAQ-level view of individual ratings for the admin modal. */
+    /**
+     * Return current feedback plus immutable response-version history.
+     *
+     * `version_id` may be supplied by the admin UI to inspect an older
+     * response generation. No mutation endpoint exists for versions or
+     * historical feedback.
+     */
     public function forFaq(Request $request, Faq $faq)
     {
         $validated = $request->validate([
             'rating' => ['nullable', Rule::in(['all', 'helpful', 'not_helpful'])],
             'page' => ['nullable', 'integer', 'min:1'],
+            'version_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $counts = FaqFeedback::query()
+        $versions = FaqVersion::query()
             ->where('faq_id', $faq->id)
-            ->selectRaw("COUNT(*) AS total, SUM(CASE WHEN rating = 'helpful' THEN 1 ELSE 0 END) AS likes, SUM(CASE WHEN rating = 'not_helpful' THEN 1 ELSE 0 END) AS dislikes")
-            ->first();
+            ->with('changedBy:id,first_name,last_name')
+            ->withCount([
+                'feedback as likes_count' => fn ($query) =>
+                    $query->where('rating', 'helpful'),
+                'feedback as dislikes_count' => fn ($query) =>
+                    $query->where('rating', 'not_helpful'),
+            ])
+            ->orderByDesc('version_number')
+            ->get();
 
-        $total = (int) ($counts->total ?? 0);
-        $likes = (int) ($counts->likes ?? 0);
-        $dislikes = (int) ($counts->dislikes ?? 0);
+        $currentVersion = $faq->currentVersion;
+
+        abort_unless($currentVersion, 404, 'This FAQ does not have a response version.');
+
+        $selectedVersion = $currentVersion;
+
+        if (!empty($validated['version_id'])) {
+            $selectedVersion = $versions->firstWhere('id', (int) $validated['version_id']);
+            abort_unless($selectedVersion, 404, 'The requested FAQ response version does not exist.');
+        }
+
+        $total = (int) $selectedVersion->feedback()->count();
+        $likes = (int) $selectedVersion->feedback()
+            ->where('rating', 'helpful')
+            ->count();
+        $dislikes = (int) $selectedVersion->feedback()
+            ->where('rating', 'not_helpful')
+            ->count();
+
         $minimumRatings = (int) config('faq_feedback.minimum_ratings_for_review', 5);
         $priorityMinimum = (int) config('faq_feedback.priority_minimum_ratings', 10);
         $negativeRate = $total > 0 ? $dislikes / $total : 0;
@@ -74,7 +108,7 @@ class FaqFeedbackController extends Controller
 
         $rating = $validated['rating'] ?? 'all';
         $feedbackQuery = FaqFeedback::query()
-            ->where('faq_id', $faq->id)
+            ->where('faq_version_id', $selectedVersion->id)
             ->select(['id', 'rating', 'reason', 'comment', 'created_at']);
 
         if ($rating !== 'all') {
@@ -91,14 +125,36 @@ class FaqFeedbackController extends Controller
                 'id' => $faq->id,
                 'question' => $faq->question,
                 'agency' => $faq->agency?->agency_name,
-                'likes' => $likes,
-                'dislikes' => $dislikes,
-                'total' => $total,
-                'negative_rate' => round($negativeRate * 100, 1),
-                'needs_review' => $needsReview,
-                'priority_review' => $priorityReview,
-                'minimum_ratings' => $minimumRatings,
             ],
+            'current_version_id' => $currentVersion->id,
+            'version' => [
+                'id' => $selectedVersion->id,
+                'version_number' => (int) $selectedVersion->version_number,
+                'is_current' => (int) $selectedVersion->id === (int) $currentVersion->id,
+                'question' => $selectedVersion->question,
+                'answer' => $selectedVersion->answer,
+                'question_fil' => $selectedVersion->question_fil,
+                'answer_fil' => $selectedVersion->answer_fil,
+                'published_at' => $selectedVersion->created_at?->format('M j, Y · g:i A'),
+                'superseded_at' => $selectedVersion->superseded_at?->format('M j, Y · g:i A'),
+                'changed_by' => $selectedVersion->changedBy
+                    ? trim($selectedVersion->changedBy->first_name . ' ' . $selectedVersion->changedBy->last_name)
+                    : null,
+            ],
+            'versions' => $versions->map(fn (FaqVersion $version) => [
+                'id' => $version->id,
+                'version_number' => (int) $version->version_number,
+                'is_current' => (int) $version->id === (int) $currentVersion->id,
+                'published_at' => $version->created_at?->format('M j, Y · g:i A'),
+                'superseded_at' => $version->superseded_at?->format('M j, Y · g:i A'),
+                'changed_by' => $version->changedBy
+                    ? trim($version->changedBy->first_name . ' ' . $version->changedBy->last_name)
+                    : null,
+                'likes' => (int) $version->likes_count,
+                'dislikes' => (int) $version->dislikes_count,
+                'total' => (int) $version->likes_count + (int) $version->dislikes_count,
+                'response_preview' => trim((string) $version->answer),
+            ])->values(),
             'feedback' => [
                 'data' => $feedback->getCollection()->map(fn (FaqFeedback $item) => [
                     'id' => $item->id,
@@ -110,6 +166,15 @@ class FaqFeedbackController extends Controller
                 'current_page' => $feedback->currentPage(),
                 'last_page' => $feedback->lastPage(),
                 'total' => $feedback->total(),
+            ],
+            'stats' => [
+                'likes' => $likes,
+                'dislikes' => $dislikes,
+                'total' => $total,
+                'negative_rate' => round($negativeRate * 100, 1),
+                'needs_review' => $needsReview,
+                'priority_review' => $priorityReview,
+                'minimum_ratings' => $minimumRatings,
             ],
         ]);
     }

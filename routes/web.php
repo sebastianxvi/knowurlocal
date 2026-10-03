@@ -218,7 +218,12 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
         ->middleware('throttle:30,1')
         ->name('chatbot.feedback.store');
 
+    Route::get('/chat/faqs/{faqId}/versions/{versionId}/attachments/{componentIndex}', [ChatbotController::class, 'faqVersionAttachment'])
+        ->whereNumber(['faqId', 'versionId', 'componentIndex'])
+        ->name('chatbot.faq-version-attachment');
+
     Route::get('/chat/faqs/{faqId}/attachments/{componentIndex}', [ChatbotController::class, 'faqAttachment'])
+        ->whereNumber(['faqId', 'componentIndex'])
         ->name('chatbot.faq-attachment');
         
     Route::post(

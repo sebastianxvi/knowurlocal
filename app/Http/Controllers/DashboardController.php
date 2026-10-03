@@ -701,11 +701,14 @@ class DashboardController extends Controller
 
         $minimumRatings = (int) config('faq_feedback.minimum_ratings_for_review', 5);
         $needsReview = FaqFeedback::query()
-            ->select('faq_id')
-            ->whereNotNull('faq_id')
-            ->groupBy('faq_id')
+            ->join('faqs', 'faqs.id', '=', 'faq_feedback.faq_id')
+            ->whereNull('faqs.deleted_at')
+            ->whereColumn('faq_feedback.faq_version_id', 'faqs.current_version_id')
+            ->whereNotNull('faq_feedback.faq_id')
+            ->select('faq_feedback.faq_id')
+            ->groupBy('faq_feedback.faq_id')
             ->havingRaw('COUNT(*) >= ?', [$minimumRatings])
-            ->havingRaw("SUM(CASE WHEN rating = 'not_helpful' THEN 1 ELSE 0 END) > SUM(CASE WHEN rating = 'helpful' THEN 1 ELSE 0 END)")
+            ->havingRaw("SUM(CASE WHEN faq_feedback.rating = 'not_helpful' THEN 1 ELSE 0 END) > SUM(CASE WHEN faq_feedback.rating = 'helpful' THEN 1 ELSE 0 END)")
             ->get()
             ->count();
 

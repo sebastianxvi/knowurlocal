@@ -719,6 +719,29 @@
             </div>
             <div class="faq-feedback-negative-track" aria-hidden="true"><span id="faqFeedbackNegativeBar"></span></div>
             <div class="faq-feedback-modal-status" id="faqFeedbackModalStatus"></div>
+
+            <section class="faq-feedback-version-card" aria-labelledby="faqFeedbackVersionTitle">
+                <div class="faq-feedback-version-head">
+                    <div>
+                        <span class="faq-feedback-version-eyebrow">Response version</span>
+                        <strong id="faqFeedbackVersionTitle">Version 1</strong>
+                    </div>
+                    <span id="faqFeedbackVersionState" class="faq-feedback-version-state">Current</span>
+                </div>
+                <div id="faqFeedbackVersionMeta" class="faq-feedback-version-meta"></div>
+                <p id="faqFeedbackVersionAnswer">Loading response…</p>
+            </section>
+
+            <section class="faq-feedback-history" aria-labelledby="faqFeedbackHistoryTitle">
+                <div class="faq-feedback-history-head">
+                    <div>
+                        <strong id="faqFeedbackHistoryTitle">Response history</strong>
+                        <span>Older response versions are read-only.</span>
+                    </div>
+                </div>
+                <div id="faqFeedbackHistoryList" class="faq-feedback-history-list"></div>
+            </section>
+
             <div class="faq-feedback-modal-tabs" role="group" aria-label="Filter feedback">
                 <button type="button" class="is-active" data-feedback-rating="all">All</button>
                 <button type="button" data-feedback-rating="not_helpful">Dislikes</button>

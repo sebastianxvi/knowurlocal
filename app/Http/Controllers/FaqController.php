@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Faq;
+use App\Models\FaqVersion;
 use App\Models\Agency;
 use App\Models\UserLog;
 use App\Models\SupportRequest;
@@ -11,6 +12,7 @@ use App\Models\SupportResponseComponent;
 use App\Services\FaqTranslationService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Support\PrivateStorageDiagnostics;
 
@@ -669,10 +671,14 @@ public function index(Request $request)
      */
     // Keep the table focused on FAQ-level feedback aggregates instead of
     // loading every individual rating into the main list.
+    // The main FAQ list represents the currently published response only.
+    // Historical versions remain available from the feedback workspace but
+    // must never make a newly published answer look like it already has
+    // ratings.
     $query->withCount([
-        'feedback as feedback_likes_count' => fn ($feedbackQuery) =>
+        'currentFeedback as feedback_likes_count' => fn ($feedbackQuery) =>
             $feedbackQuery->where('rating', 'helpful'),
-        'feedback as feedback_dislikes_count' => fn ($feedbackQuery) =>
+        'currentFeedback as feedback_dislikes_count' => fn ($feedbackQuery) =>
             $feedbackQuery->where('rating', 'not_helpful'),
     ]);
 
@@ -680,6 +686,7 @@ public function index(Request $request)
         $minimumRatings = (int) config('faq_feedback.minimum_ratings_for_review', 5);
         $needsReviewFaqIds = \App\Models\FaqFeedback::query()
             ->select('faq_id')
+            ->whereColumn('faq_version_id', 'faqs.current_version_id')
             ->whereNotNull('faq_id')
             ->groupBy('faq_id')
             ->havingRaw('COUNT(*) >= ?', [$minimumRatings])
@@ -1094,6 +1101,10 @@ $faq = Faq::create([
 
     $faq->save();
 
+    // Every FAQ starts with an immutable Version 1 snapshot. Feedback is
+    // always attached to a version rather than directly to the mutable FAQ.
+    $this->createFaqVersion($faq, auth()->id());
+
         $this->logAction(
             auth()->user()->role ?? 'admin',
             auth()->id(),
@@ -1133,27 +1144,19 @@ $faq->id
         $this->mergeResponseAnswersIntoRequest($request);
 
         $request->validate([
-            'agency_id'    => 'required|exists:agencies,id',
-
-            // English is required.
-            'question'     => 'required|string|max:255',
-            'answer'       => 'required|string',
-
-            // Filipino / Taglish is optional.
+            'agency_id' => 'required|exists:agencies,id',
+            'question' => 'required|string|max:255',
+            'answer' => 'required|string',
             'question_fil' => 'nullable|string|max:255',
-            'answer_fil'   => 'nullable|string',
-
-            // Search keywords are optional.
-            'keywords'     => 'nullable|string|max:1000',
+            'answer_fil' => 'nullable|string',
+            'keywords' => 'nullable|string|max:1000',
             'image' => [
-    'nullable',
-    'image',
-    'mimes:jpg,jpeg,png,webp',
-    'max:5120',
-],
-
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
             'remove_image' => ['nullable', 'boolean'],
-
             'response_components' => ['nullable', 'array', 'max:10'],
             'response_components.*.type' => ['required_with:response_components', 'in:text,image,file,link,qr_code'],
             'response_components.*.language' => ['nullable', 'string', 'in:en,fil,attachment'],
@@ -1173,143 +1176,105 @@ $faq->id
             ],
         ]);
 
-        /**
-         * Capture the existing values before updating.
-         * This gives the audit log an accurate before/after record.
-         */
         $oldData = [
-    'agency_id'    => $faq->agency_id,
-    'question'     => $faq->question,
-    'answer'       => $faq->answer,
-    'question_fil' => $faq->question_fil,
-    'answer_fil'   => $faq->answer_fil,
-    'keywords'     => $faq->keywords,
-    'image'        => $faq->image,
-    'response_components' => $faq->response_components,
-];
-
+            'agency_id' => $faq->agency_id,
+            'question' => $faq->question,
+            'answer' => $faq->answer,
+            'question_fil' => $faq->question_fil,
+            'answer_fil' => $faq->answer_fil,
+            'keywords' => $faq->keywords,
+            'image' => $faq->image,
+            'response_components' => $faq->response_components,
+        ];
 
         $imageChanged = $request->hasFile('image');
+        $removeImage = $request->boolean('remove_image');
+        $imagePath = $faq->image;
 
-$removeImage = $request->boolean('remove_image');
+        if ($removeImage && $faq->image) {
+            // Keep the old file because the previous response version may
+            // still reference it. Permanent FAQ deletion cleans it up later.
+            $imagePath = null;
+        }
 
-$imagePath = $faq->image;
-
-/*
- * CASE 1:
- * The administrator clicked X and removed the existing image.
- */
-if ($removeImage && $faq->image) {
-
-    Storage::disk('public')->delete(
-        $faq->image
-    );
-
-    $imagePath = null;
-}
-
-/*
- * CASE 2:
- * The administrator uploaded a replacement image.
- *
- * The replacement takes priority over remove_image.
- */
-if ($imageChanged) {
-
-    /*
-     * Delete the previous image from storage.
-     */
-    if ($faq->image) {
-
-        Storage::disk('public')->delete(
-            $faq->image
-        );
-    }
-
-    /*
-     * Store the new image.
-     */
-    $imagePath = $request->file('image')->store(
-        'faqs',
-        'public'
-    );
-}
-        
+        if ($imageChanged) {
+            // The replacement is stored alongside the historical file. The
+            // old path remains part of the previous immutable version.
+            $imagePath = $request->file('image')->store('faqs', 'public');
+        }
 
         $oldResponseComponents = $faq->response_components ?? [];
-
         $newResponseComponents = $this->storeResponseComponents(
             $request->input('response_components', []),
             $request->file('response_components', []),
             $oldResponseComponents
         );
 
-        /*
-         * Remove private files that the administrator deleted or
-         * replaced. Files still referenced by the new component
-         * array are preserved.
-         */
-        $this->deleteRemovedResponseComponentFiles(
-            $oldResponseComponents,
-            $newResponseComponents
-        );
+        $newData = [
+            'agency_id' => $request->agency_id,
+            'question' => $request->question,
+            'answer' => $request->answer,
+            'question_fil' => $request->question_fil,
+            'answer_fil' => $request->answer_fil,
+            'keywords' => $this->normalizeKeywords($request->keywords),
+            'image' => $imagePath,
+            'response_components' => $newResponseComponents,
+        ];
 
-        $faq->update([
-    'agency_id'    => $request->agency_id,
+        $changes = $this->getChangedValues($oldData, $newData);
 
-    'question'     => $request->question,
-    'answer'       => $request->answer,
+        if (empty($changes['old']) && empty($changes['new'])) {
+            return redirect()
+                ->back()
+                ->with('success', 'No changes were made.');
+        }
 
-    'question_fil' => $request->question_fil,
-    'answer_fil'   => $request->answer_fil,
+        // A new version is created only when the user-facing FAQ response or
+        // its context changes. Keyword-only/admin metadata edits do not wipe
+        // out useful feedback.
+        $responseChanged = $this->faqResponseChanged($oldData, $newData);
 
-    'keywords'     => $this->normalizeKeywords($request->keywords),
+        DB::transaction(function () use (
+            $faq,
+            $newData,
+            $responseChanged,
+            $changes
+        ) {
+            /** @var Faq $lockedFaq */
+            $lockedFaq = Faq::query()
+                ->whereKey($faq->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-    'image'        => $imagePath,
+            $lockedFaq->update($newData);
 
-    'response_components' => $newResponseComponents,
-]);
+            if ($responseChanged) {
+                $this->createNextFaqVersion(
+                    $lockedFaq,
+                    $newData,
+                    auth()->id()
+                );
+            }
 
-$newData = [
-    'agency_id'    => $faq->agency_id,
-    'question'     => $faq->question,
-    'answer'       => $faq->answer,
-    'question_fil' => $faq->question_fil,
-    'answer_fil'   => $faq->answer_fil,
-    'keywords'     => $faq->keywords,
-    'image'        => $faq->image,
-    'response_components' => $faq->response_components,
-];
-
-$changes = $this->getChangedValues(
-    $oldData,
-    $newData
-);
-
-if (empty($changes['old']) && empty($changes['new'])) {
-    return redirect()
-        ->back()
-        ->with('success', 'No changes were made.');
-}
-
-$this->logAction(
-    auth()->user()->role ?? 'admin',
-    auth()->id(),
-    $faq->agency_id,
-    'update_faq',
-    'admin_faq',
-    $changes['old'],
-    $changes['new'],
-    'Updated FAQ: ' . $faq->question,
-    null,
-    $faq->id
-);
-
-        
+            $this->logAction(
+                auth()->user()->role ?? 'admin',
+                auth()->id(),
+                $lockedFaq->agency_id,
+                'update_faq',
+                'admin_faq',
+                $changes['old'],
+                $changes['new'],
+                'Updated FAQ: ' . $lockedFaq->question,
+                null,
+                $lockedFaq->id
+            );
+        });
 
         return redirect()
             ->back()
-            ->with('success', 'FAQ updated successfully.');
+            ->with('success', $responseChanged
+                ? 'FAQ updated successfully. A new response version is now collecting fresh feedback.'
+                : 'FAQ updated successfully.');
     }
 
     /**
@@ -1462,21 +1427,36 @@ public function forceDestroy($id)
 
 
     /*
-     * Delete the uploaded image.
-     *
-     * The path comes from the trusted database record,
-     * not directly from browser input.
+     * Delete files owned by every response version, not just the current FAQ
+     * row. Historical snapshots intentionally keep their old attachment paths
+     * alive while the FAQ exists. Permanent deletion is the lifecycle point
+     * where all of those files can safely be removed.
      */
-    if ($faq->image) {
+    $versions = $faq->versions()->get();
+    $publicImagePaths = collect([$faq->image])
+        ->merge($versions->pluck('image'))
+        ->filter()
+        ->unique()
+        ->values();
 
-        Storage::disk('public')->delete(
-            $faq->image
-        );
+    foreach ($publicImagePaths as $imagePath) {
+        Storage::disk('public')->delete($imagePath);
     }
 
-    $this->deleteResponseComponentFiles(
-        $faq->response_components ?? []
-    );
+    $privateComponentPaths = $versions
+        ->pluck('response_components')
+        ->push($faq->response_components)
+        ->filter(fn ($components) => is_array($components))
+        ->flatMap(fn (array $components) => collect($components)->map(
+            fn ($component) => is_array($component) ? ($component['content'] ?? null) : null
+        ))
+        ->filter(fn ($path) => is_string($path) && str_starts_with($path, 'faqs/responses/'))
+        ->unique()
+        ->values();
+
+    foreach ($privateComponentPaths as $path) {
+        Storage::disk('private')->delete($path);
+    }
 
 
     /*
@@ -1518,6 +1498,114 @@ public function forceDestroy($id)
             'FAQ permanently deleted.'
         );
 }
+
+    /**
+     * Build the immutable response snapshot that should be associated with a
+     * feedback generation.
+     */
+    private function responseSnapshot(array|Faq $source): array
+    {
+        if ($source instanceof Faq) {
+            return [
+                'agency_id' => $source->agency_id,
+                'question' => $source->question,
+                'answer' => $source->answer,
+                'question_fil' => $source->question_fil,
+                'answer_fil' => $source->answer_fil,
+                'image' => $source->image,
+                'response_components' => $source->response_components ?? [],
+            ];
+        }
+
+        return [
+            'agency_id' => $source['agency_id'] ?? null,
+            'question' => $source['question'] ?? '',
+            'answer' => $source['answer'] ?? '',
+            'question_fil' => $source['question_fil'] ?? null,
+            'answer_fil' => $source['answer_fil'] ?? null,
+            'image' => $source['image'] ?? null,
+            'response_components' => $source['response_components'] ?? [],
+        ];
+    }
+
+    /**
+     * Determine whether an FAQ edit represents a new user-facing response.
+     * Keyword-only changes deliberately do not reset feedback.
+     */
+    private function faqResponseChanged(array $oldData, array $newData): bool
+    {
+        $old = $this->responseSnapshot($oldData);
+        $new = $this->responseSnapshot($newData);
+
+        return json_encode($old, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            !== json_encode($new, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * Create Version 1 for a newly created FAQ.
+     */
+    private function createFaqVersion(Faq $faq, ?int $changedBy): FaqVersion
+    {
+        $version = FaqVersion::create([
+            'faq_id' => $faq->id,
+            'version_number' => 1,
+            'agency_id' => $faq->agency_id,
+            'question' => $faq->question,
+            'answer' => $faq->answer,
+            'question_fil' => $faq->question_fil,
+            'answer_fil' => $faq->answer_fil,
+            'keywords' => $faq->keywords,
+            'image' => $faq->image,
+            'response_components' => $faq->response_components ?? [],
+            'changed_by' => $changedBy,
+        ]);
+
+        $faq->forceFill(['current_version_id' => $version->id])->save();
+
+        return $version;
+    }
+
+    /**
+     * Publish a new immutable response version while the FAQ row is locked.
+     */
+    private function createNextFaqVersion(
+        Faq $faq,
+        array $snapshot,
+        ?int $changedBy
+    ): FaqVersion {
+        $current = $faq->current_version_id
+            ? FaqVersion::query()
+                ->whereKey($faq->current_version_id)
+                ->lockForUpdate()
+                ->first()
+            : null;
+
+        if ($current) {
+            $current->update(['superseded_at' => now()]);
+        }
+
+        $nextNumber = ((int) FaqVersion::query()
+            ->where('faq_id', $faq->id)
+            ->max('version_number')) + 1;
+
+        $version = FaqVersion::create([
+            'faq_id' => $faq->id,
+            'version_number' => $nextNumber,
+            'agency_id' => $snapshot['agency_id'] ?? null,
+            'question' => $snapshot['question'] ?? '',
+            'answer' => $snapshot['answer'] ?? '',
+            'question_fil' => $snapshot['question_fil'] ?? null,
+            'answer_fil' => $snapshot['answer_fil'] ?? null,
+            'keywords' => $faq->keywords,
+            'image' => $snapshot['image'] ?? null,
+            'response_components' => $snapshot['response_components'] ?? [],
+            'changed_by' => $changedBy,
+        ]);
+
+        $faq->forceFill(['current_version_id' => $version->id])->save();
+
+        return $version;
+    }
 
     /**
      * Keep the legacy FAQ answer columns synchronized with the new
@@ -1830,54 +1918,6 @@ public function forceDestroy($id)
         }
 
         return implode(', ', $normalized);
-    }
-
-    private function deleteRemovedResponseComponentFiles(
-        array $oldComponents,
-        array $newComponents
-    ): void {
-        $retainedPaths = [];
-
-        foreach ($newComponents as $component) {
-            if (
-                in_array($component['type'] ?? null, ['image', 'file'], true)
-                && !empty($component['content'])
-                && is_string($component['content'])
-            ) {
-                $retainedPaths[$component['content']] = true;
-            }
-        }
-
-        foreach ($oldComponents as $component) {
-            $path = $component['content'] ?? null;
-
-            if (
-                !in_array($component['type'] ?? null, ['image', 'file'], true)
-                || !is_string($path)
-                || !str_starts_with($path, 'faqs/responses/')
-                || isset($retainedPaths[$path])
-            ) {
-                continue;
-            }
-
-            Storage::disk('private')->delete($path);
-        }
-    }
-
-    /**
-     * Remove private files belonging to FAQ response components.
-     */
-    private function deleteResponseComponentFiles(array $components): void
-    {
-        foreach ($components as $component) {
-            if (
-                in_array($component['type'] ?? null, ['image', 'file'], true)
-                && !empty($component['content'])
-                && is_string($component['content'])
-            ) {
-                Storage::disk('private')->delete($component['content']);
-            }
-        }
     }
 
     /**

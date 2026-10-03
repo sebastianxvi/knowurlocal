@@ -12,6 +12,7 @@ class FaqFeedback extends Model
     protected $fillable = [
         'chatbot_log_id',
         'faq_id',
+        'faq_version_id',
         'user_id',
         'rating',
         'reason',
@@ -21,6 +22,11 @@ class FaqFeedback extends Model
     public function chatbotLog(): BelongsTo
     {
         return $this->belongsTo(ChatbotLog::class);
+    }
+
+    public function faqVersion(): BelongsTo
+    {
+        return $this->belongsTo(FaqVersion::class, 'faq_version_id');
     }
 
     public function faq(): BelongsTo

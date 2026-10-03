@@ -19,6 +19,7 @@ class ChatbotLog extends Model
         'answer',
         'agency_id',
         'faq_id',
+        'faq_version_id',
         'outcome',
         'match_method',
         'score',
@@ -49,6 +50,16 @@ class ChatbotLog extends Model
      *
      * The relationship may return null if the FAQ was later
      * deleted or if the interaction did not use an FAQ.
+     */
+    public function faqVersion()
+    {
+        return $this->belongsTo(FaqVersion::class, 'faq_version_id');
+    }
+
+    /**
+     * CHATBOT LOG → FAQ
+     *
+     * The FAQ that ultimately provided the chatbot answer.
      */
     public function faq()
     {
