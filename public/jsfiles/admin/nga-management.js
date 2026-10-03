@@ -37,6 +37,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let contactIndex = 0;
 
+    /*
+     * Vercel rejects request bodies larger than 4.5 MB before Laravel
+     * can process the multipart upload. Keep agency images comfortably
+     * below that platform limit so the existing multipart form remains
+     * compatible with the deployment.
+     */
+    const AGENCY_IMAGE_UPLOAD_TARGET_BYTES =
+        4 * 1024 * 1024;
+
+    let agencyImageProcessing = false;
+
+
         // =====================================================
     // AUTO-GROWING AGENCY TEXTAREAS
     // =====================================================
@@ -1752,7 +1764,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         form.addEventListener(
             "submit",
-            function (e) {
+            async function (e) {
 
                 /*
                  * View mode must never submit.
@@ -1871,6 +1883,39 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 /*
+                 * Prepare the image before the request is allowed
+                 * to leave the browser. This keeps the multipart
+                 * request below Vercel's 4.5 MB platform limit.
+                 */
+                if (
+                    fileInput &&
+                    fileInput.files &&
+                    fileInput.files[0] &&
+                    fileInput.files[0].size >
+                        AGENCY_IMAGE_UPLOAD_TARGET_BYTES
+                ) {
+
+                    e.preventDefault();
+
+                    const prepared =
+                        await prepareAgencyImageForUpload();
+
+                    if (!prepared) {
+                        return;
+                    }
+
+                    /*
+                     * Re-run submission after the file has been
+                     * replaced with the compressed version.
+                     */
+                    form.requestSubmit();
+
+                    return;
+
+                }
+
+
+                /*
                  * Existing edit operations require
                  * confirmation.
                  *
@@ -1918,6 +1963,397 @@ document.addEventListener("DOMContentLoaded", function () {
 
             }
         );
+
+    }
+
+
+    // =====================================================
+    // IMAGE COMPRESSION FOR VERCEL
+    // =====================================================
+
+    /*
+     * Vercel applies a 4.5 MB request-body limit before the Laravel
+     * application receives the request. Laravel's own 5 MB validation
+     * therefore cannot protect this upload path by itself.
+     *
+     * Images that are already below the safe target are left untouched.
+     * Larger images are converted to WebP and resized/compressed until
+     * they fit below the target.
+     */
+    function loadImageForCompression(file) {
+
+        return new Promise((resolve, reject) => {
+
+            const objectUrl =
+                URL.createObjectURL(file);
+
+            const image =
+                new Image();
+
+            image.onload =
+                () => {
+
+                    URL.revokeObjectURL(objectUrl);
+
+                    resolve(image);
+
+                };
+
+            image.onerror =
+                () => {
+
+                    URL.revokeObjectURL(objectUrl);
+
+                    reject(
+                        new Error(
+                            "The selected image could not be processed."
+                        )
+                    );
+
+                };
+
+            image.src =
+                objectUrl;
+
+        });
+
+    }
+
+
+    function canvasToBlob(
+        canvas,
+        type,
+        quality
+    ) {
+
+        return new Promise((resolve, reject) => {
+
+            canvas.toBlob(
+                blob => {
+
+                    if (!blob) {
+
+                        reject(
+                            new Error(
+                                "The browser could not compress the image."
+                            )
+                        );
+
+                        return;
+
+                    }
+
+                    resolve(blob);
+
+                },
+                type,
+                quality
+            );
+
+        });
+
+    }
+
+
+    async function compressAgencyImage(file) {
+
+        if (
+            !file ||
+            file.size <=
+                AGENCY_IMAGE_UPLOAD_TARGET_BYTES
+        ) {
+
+            return file;
+
+        }
+
+
+        const image =
+            await loadImageForCompression(
+                file
+            );
+
+
+        /*
+         * Start with a sensible maximum dimension so very large
+         * photographs do not create unnecessarily large canvases.
+         */
+        const dimensionSteps = [
+            2400,
+            2000,
+            1600,
+            1400
+        ];
+
+        const qualitySteps = [
+            0.86,
+            0.80,
+            0.74,
+            0.68,
+            0.62,
+            0.56
+        ];
+
+
+        for (
+            const maxDimension of dimensionSteps
+        ) {
+
+            const scale =
+                Math.min(
+                    1,
+                    maxDimension /
+                        Math.max(
+                            image.naturalWidth,
+                            image.naturalHeight
+                        )
+                );
+
+
+            const width =
+                Math.max(
+                    1,
+                    Math.round(
+                        image.naturalWidth *
+                            scale
+                    )
+                );
+
+
+            const height =
+                Math.max(
+                    1,
+                    Math.round(
+                        image.naturalHeight *
+                            scale
+                    )
+                );
+
+
+            const canvas =
+                document.createElement(
+                    "canvas"
+                );
+
+
+            canvas.width =
+                width;
+
+            canvas.height =
+                height;
+
+
+            const context =
+                canvas.getContext(
+                    "2d"
+                );
+
+
+            if (!context) {
+
+                throw new Error(
+                    "The browser could not prepare the image for upload."
+                );
+
+            }
+
+
+            context.drawImage(
+                image,
+                0,
+                0,
+                width,
+                height
+            );
+
+
+            for (
+                const quality of qualitySteps
+            ) {
+
+                const blob =
+                    await canvasToBlob(
+                        canvas,
+                        "image/webp",
+                        quality
+                    );
+
+
+                if (
+                    blob.size <=
+                    AGENCY_IMAGE_UPLOAD_TARGET_BYTES
+                ) {
+
+                    return new File(
+                        [blob],
+                        `${
+                            file.name
+                                .replace(
+                                    /\.[^/.]+$/,
+                                    ""
+                                )
+                        }.webp`,
+                        {
+                            type:
+                                "image/webp",
+                            lastModified:
+                                Date.now()
+                        }
+                    );
+
+                }
+
+            }
+
+        }
+
+
+        throw new Error(
+            "This image is too large to upload safely. Please choose a smaller image."
+        );
+
+    }
+
+
+    async function prepareAgencyImageForUpload() {
+
+        if (
+            !fileInput ||
+            !fileInput.files ||
+            !fileInput.files[0]
+        ) {
+
+            return true;
+
+        }
+
+
+        const file =
+            fileInput.files[0];
+
+
+        if (
+            file.size <=
+            AGENCY_IMAGE_UPLOAD_TARGET_BYTES
+        ) {
+
+            return true;
+
+        }
+
+
+        agencyImageProcessing =
+            true;
+
+
+        try {
+
+            const compressedFile =
+                await compressAgencyImage(
+                    file
+                );
+
+
+            const dataTransfer =
+                new DataTransfer();
+
+
+            dataTransfer.items.add(
+                compressedFile
+            );
+
+
+            fileInput.files =
+                dataTransfer.files;
+
+
+            /*
+             * Refresh the preview using the final file that will
+             * actually be submitted.
+             */
+            const reader =
+                new FileReader();
+
+
+            await new Promise(
+                (resolve, reject) => {
+
+                    reader.onload =
+                        event => {
+
+                            previewImg.src =
+                                event.target.result;
+
+                            previewImg.style.display =
+                                "block";
+
+                            placeholder.style.display =
+                                "none";
+
+                            resolve();
+
+                        };
+
+                    reader.onerror =
+                        () => reject(
+                            new Error(
+                                "The compressed image preview could not be created."
+                            )
+                        );
+
+                    reader.readAsDataURL(
+                        compressedFile
+                    );
+
+                }
+            );
+
+
+            return true;
+
+        }
+        catch (error) {
+
+            showAlertModal({
+
+                title:
+                    "Image Could Not Be Prepared",
+
+                text:
+                    error?.message ||
+                    "The selected image could not be prepared for upload.",
+
+                icon:
+                    "!",
+
+                variant:
+                    "danger",
+
+                confirmText:
+                    "OK",
+
+                showCancel:
+                    false,
+
+                loading:
+                    false
+
+            });
+
+
+            fileInput.value =
+                "";
+
+
+            return false;
+
+        }
+        finally {
+
+            agencyImageProcessing =
+                false;
+
+        }
 
     }
 
@@ -2002,56 +2438,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 /*
-                * 5 MB client-side limit.
-                *
-                * This improves the user experience by rejecting
-                * oversized files before the form is submitted.
-                *
-                * IMPORTANT:
-                * Laravel must still enforce the same limit
-                * server-side because JavaScript validation can
-                * always be bypassed by a malicious client.
-                */
-                if (
-                    file.size >
-                    5 * 1024 * 1024
-                ) {
-
-                    showAlertModal({
-
-                        title:
-                            "Image Too Large",
-
-                        text:
-                            "The maximum image size is 5 MB.",
-
-                        icon:
-                            "!",
-
-                        variant:
-                            "danger",
-
-                        confirmText:
-                            "OK",
-
-                        showCancel:
-                            false,
-
-                        loading:
-                            false
-
-                    });
-
-
-                    fileInput.value =
-                        "";
-
-
-                    return;
-
-                }
-
-
+                 * Vercel's 4.5 MB request-body limit means a 5 MB
+                 * browser file can never reliably reach Laravel.
+                 *
+                 * Images above the safe target are compressed during
+                 * submission instead of being rejected immediately.
+                 */
                 const reader =
                     new FileReader();
 
