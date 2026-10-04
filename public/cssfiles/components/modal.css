@@ -52,7 +52,7 @@
   color: #45536d;
   text-align: left;
 }
-#alert-modal .message-box p { margin: 1px 0 0; line-height: 1.55; font-size: 14px; overflow-wrap: anywhere; }
+#alert-modal .message-box p { margin: 1px 0 0; line-height: 1.55; font-size: 14px; overflow-wrap: anywhere; max-height: 360px; overflow-y: auto; padding-right: 4px; }
 #alert-modal .icon { display: flex; flex: 0 0 32px; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; background: #e8efff; color: #4d6fd0; font-size: 15px; }
 #alert-modal .message-box.success { border-color: #c9ead9; background: #f1fbf5; color: #315e48; }
 #alert-modal .message-box.success .icon { background: #d9f5e5; color: #16814b; }
@@ -72,6 +72,7 @@
 
 #alert-modal .actions { display: flex; justify-content: flex-end; align-items: center; gap: 9px; margin-top: 20px; }
 #alert-modal .actions[hidden] { display: none !important; }
+#alert-modal .btn[hidden] { display: none !important; }
 #alert-modal .btn { min-height: 40px; padding: 9px 16px; border: 1px solid transparent; border-radius: 10px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 650; transition: background-color .12s ease, border-color .12s ease; }
 #alert-modal .btn:focus-visible { outline: 3px solid rgba(78, 111, 208, .28); outline-offset: 2px; }
 #alert-modal .btn:disabled { cursor: wait; opacity: .68; }

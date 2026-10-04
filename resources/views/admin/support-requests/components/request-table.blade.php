@@ -2,7 +2,7 @@
 
     <div class="support-table-scroll">
 
-        <table class="support-table">
+        <table class="support-table {{ $status === 'trashed' ? 'is-trashed' : '' }}">
 
             <caption class="sr-only">
                 Support requests
@@ -54,6 +54,15 @@
                     >
                         Date
                     </th>
+
+                    @if($status === 'trashed')
+                        <th
+                            scope="col"
+                            class="support-col-trash-reason"
+                        >
+                            Trash Reason
+                        </th>
+                    @endif
 
                     <th
                         scope="col"
@@ -194,6 +203,40 @@
                             </time>
 
                         </td>
+
+
+                        @if($status === 'trashed')
+                            {{-- =================================================
+                                 TRASH REASON
+                                 ================================================= --}}
+                            <td class="support-request-trash-reason">
+                                @if($request->trash_reason)
+                                    <div class="support-trash-reason-content">
+                                        <span
+                                            class="support-trash-reason-text"
+                                            title="{{ $request->trash_reason }}"
+                                        >
+                                            {{ $request->trash_reason }}
+                                        </span>
+
+                                        @if(mb_strlen($request->trash_reason) > 140)
+                                            <button
+                                                type="button"
+                                                class="support-trash-reason-view"
+                                                data-trash-reason="{{ $request->trash_reason }}"
+                                                aria-label="View full trash reason for support request #{{ $request->id }}"
+                                            >
+                                                View full
+                                            </button>
+                                        @endif
+                                    </div>
+                                @else
+                                    <span class="support-trash-reason-empty">
+                                        No reason recorded
+                                    </span>
+                                @endif
+                            </td>
+                        @endif
 
 
                         {{-- =================================================
@@ -350,72 +393,103 @@
 
                                     @if(auth()->user()->role === 'superadmin')
 
-                                        <div class="support-trash-actions">
+                                        {{-- =================================================
+                                             TRASHED REQUEST ACTIONS
+                                             Match the active-row action language:
+                                             primary action + compact overflow menu.
+                                             Manage is intentionally unavailable for trashed
+                                             requests.
+                                             ================================================= --}}
+                                        <form
+                                            method="POST"
+                                            action="{{ route(
+                                                'admin.support.restore',
+                                                $request->id
+                                            ) }}"
+                                            class="support-lifecycle-form"
+                                        >
 
-                                            {{-- RESTORE --}}
-                                            <form
-                                                method="POST"
-                                                action="{{ route(
-                                                    'admin.support.restore',
-                                                    $request->id
-                                                ) }}"
-                                                class="support-lifecycle-form"
+                                            @csrf
+
+                                            @method('PATCH')
+
+                                            <button
+                                                type="submit"
+                                                class="support-action-primary restore-btn"
+                                                aria-label="Restore support request #{{ $request->id }}"
                                             >
 
-                                                @csrf
+                                                <i
+                                                    class="ph-light ph-arrow-counter-clockwise"
+                                                    aria-hidden="true"
+                                                ></i>
 
-                                                @method('PATCH')
+                                                <span>
+                                                    Restore
+                                                </span>
 
-                                                <button
-                                                    type="submit"
-                                                    class="support-action-primary restore-btn"
-                                                >
+                                            </button>
 
-                                                    <i
-                                                        class="ph-light ph-arrow-counter-clockwise"
-                                                        aria-hidden="true"
-                                                    ></i>
-
-                                                    <span>
-                                                        Restore
-                                                    </span>
-
-                                                </button>
-
-                                            </form>
+                                        </form>
 
 
-                                            {{-- PERMANENT DELETE --}}
-                                            <form
-                                                method="POST"
-                                                action="{{ route(
-                                                    'admin.support.forceDelete',
-                                                    $request->id
-                                                ) }}"
-                                                class="support-lifecycle-form"
+                                        {{-- PERMANENT DELETE --}}
+                                        <div class="support-action-menu">
+
+                                            <button
+                                                type="button"
+                                                class="support-action-menu-trigger"
+                                                aria-label="More actions for support request #{{ $request->id }}"
+                                                aria-expanded="false"
+                                                aria-haspopup="menu"
                                             >
 
-                                                @csrf
+                                                <i
+                                                    class="ph-light ph-dots-three-vertical"
+                                                    aria-hidden="true"
+                                                ></i>
 
-                                                @method('DELETE')
+                                            </button>
 
-                                                <button
-                                                    type="submit"
-                                                    class="support-menu-action support-menu-danger permanent-delete-btn"
+
+                                            <div
+                                                class="support-action-menu-content"
+                                                role="menu"
+                                            >
+
+                                                <form
+                                                    method="POST"
+                                                    action="{{ route(
+                                                        'admin.support.forceDelete',
+                                                        $request->id
+                                                    ) }}"
+                                                    class="support-lifecycle-form"
                                                 >
 
-                                                    <i
-                                                        class="ph-light ph-trash-simple"
-                                                        aria-hidden="true"
-                                                    ></i>
+                                                    @csrf
 
-                                                    <span>
-                                                        Delete Permanently
-                                                    </span>
+                                                    @method('DELETE')
 
-                                                </button>
+                                                    <button
+                                                        type="submit"
+                                                        class="support-menu-action support-menu-danger permanent-delete-btn"
+                                                        role="menuitem"
+                                                    >
 
-                                            </form>
+                                                        <i
+                                                            class="ph-light ph-trash-simple"
+                                                            aria-hidden="true"
+                                                        ></i>
+
+                                                        <span>
+                                                            Delete Permanently
+                                                        </span>
+
+                                                    </button>
+
+                                                </form>
+
+                                            </div>
 
                                         </div>
 
@@ -434,7 +508,7 @@
 
                     <tr class="support-empty-row">
 
-                        <td colspan="7">
+                        <td colspan="{{ $status === 'trashed' ? 8 : 7 }}">
 
                             <div class="support-empty-state">
 

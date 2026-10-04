@@ -187,6 +187,13 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     ->middleware('throttle:120,1')
     ->name('user.inquiries.notification-count');
 
+    Route::post(
+        '/my-inquiries/{id}/trash-seen',
+        [SupportRequestController::class, 'markTrashSeen']
+    )
+    ->middleware('throttle:60,1')
+    ->name('user.inquiries.trash-seen');
+
     Route::get(
         '/my-inquiries/{id}',
         [SupportRequestController::class, 'userInquiry']

@@ -1,6 +1,6 @@
 import {
     initializeRequestTable,
-} from './components/request-table.js';
+} from './components/request-table.js?v=202610042330';
 
 import {
     initializeManageModal,
@@ -16,7 +16,7 @@ import {
 
 import {
     initializeRealtime,
-} from './components/realtime.js';
+} from './components/realtime.js?v=202610042330';
 
 
 /*

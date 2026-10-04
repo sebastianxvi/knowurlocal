@@ -328,6 +328,18 @@
                 .listen('.support.request.created', (event) => {
                     if (!event?.id) return;
 
+                    /*
+                     * Relay the authoritative creation payload to page
+                     * features such as the Support Requests table.
+                     * The table deduplicates this against its own Echo
+                     * listener when both receive the same event.
+                     */
+                    window.dispatchEvent(
+                        new CustomEvent('knowurlocal:support-request-created', {
+                            detail: event,
+                        })
+                    );
+
                     const added = prependNotification({
                         kind: 'support',
                         id: event.id,

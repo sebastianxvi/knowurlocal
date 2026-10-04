@@ -32,6 +32,11 @@ const STATUS_CONFIG = {
         label: 'Resolved',
         icon: 'ph-check',
     },
+
+    trashed: {
+        label: 'Trashed by administration',
+        icon: 'ph-trash',
+    },
 };
 
 /**
@@ -515,13 +520,17 @@ function removePendingMessage(card) {
  * authoritative inquiry state.
  */
 function updateUnreadIndicator(card, inquiry) {
-    const status = inquiry?.status;
+    const status = inquiry?.deleted_at ? 'trashed' : inquiry?.status;
+    const isTrashUnread =
+        status === 'trashed' &&
+        !inquiry?.trash_seen_at;
 
     if (inquiry?.answer_seen_at) {
         card.dataset.answerSeen = '1';
     }
 
-    const isUnread =
+    const isResponseUnread =
+        status !== 'trashed' &&
         card?.dataset.answerSeen !== '1' &&
         (
             (
@@ -534,41 +543,51 @@ function updateUnreadIndicator(card, inquiry) {
             )
         );
 
+    const unreadType = isTrashUnread
+        ? 'trash'
+        : isResponseUnread
+            ? 'response'
+            : null;
+
     let indicator =
         card.querySelector('.inquiry-unread-badge');
 
-    if (!isUnread) {
+    if (!unreadType) {
         indicator?.remove();
         return;
     }
 
-    if (indicator) {
+    const label = unreadType === 'trash'
+        ? 'New trashed inquiry'
+        : 'New response';
+
+    if (indicator && indicator.dataset.unreadType === unreadType) {
         return;
     }
 
-    const statusBadge =
-        card.querySelector('.inquiry-status-badge');
+    if (!indicator) {
+        const statusBadge =
+            card.querySelector('.inquiry-status-badge');
 
-    if (!statusBadge) {
-        return;
+        if (!statusBadge) {
+            return;
+        }
+
+        indicator = createElement(
+            'span',
+            'inquiry-unread-badge'
+        );
+
+        statusBadge.insertAdjacentElement(
+            'afterend',
+            indicator
+        );
     }
 
-    indicator = createElement(
-        'span',
-        'inquiry-unread-badge'
-    );
-
-    indicator.title = 'New response';
-    indicator.setAttribute(
-        'aria-label',
-        'New response'
-    );
+    indicator.dataset.unreadType = unreadType;
+    indicator.title = label;
+    indicator.setAttribute('aria-label', label);
     indicator.textContent = 'New';
-
-    statusBadge.insertAdjacentElement(
-        'afterend',
-        indicator
-    );
 }
 
 /**
@@ -910,6 +929,64 @@ function flashRealtimeUpdate(card) {
     }, 2500);
 }
 
+function updateTrashNotice(card, inquiry) {
+    const isTrashed = Boolean(inquiry?.deleted_at);
+    let notice = card.querySelector('[data-trash-notice]');
+
+    if (!isTrashed) {
+        notice?.remove();
+        return;
+    }
+
+    if (!notice) {
+        notice = createElement('section', 'inquiry-trash-notice');
+        notice.dataset.trashNotice = '';
+        notice.innerHTML = `
+            <div class="inquiry-trash-notice-icon" aria-hidden="true">
+                <i class="ph-light ph-trash"></i>
+            </div>
+            <div class="inquiry-trash-notice-content">
+                <strong>This inquiry was moved to the trash</strong>
+                <p>The administration removed this inquiry from the active support queue. Your inquiry remains visible here for your records.</p>
+                <div class="inquiry-trash-reason" data-trash-reason-wrap>
+                    <span>Reason provided by the administration</span>
+                    <p data-trash-reason></p>
+                </div>
+                <time data-trash-date></time>
+            </div>
+        `;
+
+        const detailsInner = card.querySelector('.inquiry-details-inner');
+        detailsInner?.prepend(notice);
+    }
+
+    const reasonWrap = notice.querySelector('[data-trash-reason-wrap]');
+    const reason = notice.querySelector('[data-trash-reason]');
+    if (inquiry.trash_reason) {
+        reason.textContent = inquiry.trash_reason;
+        reasonWrap.hidden = false;
+    } else {
+        reasonWrap.hidden = true;
+    }
+
+    const date = notice.querySelector('[data-trash-date]');
+    if (date) {
+        if (inquiry.deleted_at) {
+            const parsed = new Date(inquiry.deleted_at);
+            date.textContent = Number.isNaN(parsed.getTime())
+                ? ''
+                : parsed.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+            date.hidden = Number.isNaN(parsed.getTime());
+        } else {
+            date.hidden = true;
+        }
+    }
+
+    card.querySelector('.official-response')?.remove();
+    card.querySelector('.response-confirmation')?.remove();
+    card.querySelector('.inquiry-pending-message')?.remove();
+}
+
 /**
  * Updates an existing inquiry card with authoritative
  * data returned from Laravel.
@@ -933,7 +1010,12 @@ export function updateInquiryCard(
      */
     updateStatus(
         card,
-        inquiry.status
+        inquiry.deleted_at ? 'trashed' : inquiry.status
+    );
+
+    updateTrashNotice(
+        card,
+        inquiry
     );
 
     updateUnreadIndicator(
@@ -941,19 +1023,21 @@ export function updateInquiryCard(
         inquiry
     );
 
-    renderOfficialResponse(
-        card,
-        inquiry
-    );
+    if (!inquiry.deleted_at) {
+        renderOfficialResponse(
+            card,
+            inquiry
+        );
 
-    if (inquiry.latest_response) {
-        removePendingMessage(card);
+        if (inquiry.latest_response) {
+            removePendingMessage(card);
+        }
+
+        updateConfirmationState(
+            card,
+            inquiry.status
+        );
     }
-
-    updateConfirmationState(
-        card,
-        inquiry.status
-    );
 
     flashRealtimeUpdate(card);
 
@@ -961,7 +1045,7 @@ export function updateInquiryCard(
     new CustomEvent('inquiry:updated', {
         detail: {
             card,
-            status: inquiry.status,
+            status: inquiry.deleted_at ? 'trashed' : inquiry.status,
         },
     })
 );

@@ -363,10 +363,27 @@ document.addEventListener("click", function (e) {
         text: "This category will be moved to the Trashed records.",
         icon: "!",
         variant: "danger",
-        confirmText: "Delete",
+        confirmText: "Move to Trash",
         showCancel: true,
 
-        onConfirm: () => {
+        input: {
+            label: "Reason for trashing",
+            placeholder: "Explain why this category is being moved to the trash…",
+            required: true,
+            minLength: 3,
+            maxLength: 1000,
+            validationMessage: "Please provide a reason (at least 3 characters)."
+        },
+
+        onConfirm: (reason) => {
+            let reasonInput = form.querySelector('input[name="reason"]');
+            if (!reasonInput) {
+                reasonInput = document.createElement("input");
+                reasonInput.type = "hidden";
+                reasonInput.name = "reason";
+                form.appendChild(reasonInput);
+            }
+            reasonInput.value = reason.trim();
             form.submit();
         }
     });

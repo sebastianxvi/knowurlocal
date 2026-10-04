@@ -594,6 +594,15 @@ function confirmLifecycleAction(button) {
 
             confirmText:
                 "Move to Trash",
+
+            input: {
+                label: "Reason for trashing (max 500 characters)",
+                placeholder: "Explain why this support request is being moved to the trash…",
+                required: true,
+                minLength: 3,
+                maxLength: 500,
+                validationMessage: "Please provide a reason (at least 3 characters)."
+            },
         };
     }
 
@@ -695,7 +704,26 @@ function confirmLifecycleAction(button) {
         showCancel:
             true,
 
-        onConfirm: () => {
+        // Pass the action-specific input configuration to the shared modal.
+        // Without this, the modal never renders the reason textarea and
+        // onConfirm receives undefined, causing the server-side required
+        // reason validation to reject the DELETE request.
+        input:
+            config.input,
+
+        onConfirm: (reason) => {
+            // The shared alert modal validates and returns the reason.
+            // Persist it into the actual form so the server receives it.
+            let reasonInput = form.querySelector('input[name="reason"]');
+
+            if (!reasonInput) {
+                reasonInput = document.createElement("input");
+                reasonInput.type = "hidden";
+                reasonInput.name = "reason";
+                form.appendChild(reasonInput);
+            }
+
+            reasonInput.value = String(reason || "").trim();
             form.submit();
         },
     });
@@ -1580,6 +1608,35 @@ function realtimeRequestMatchesCurrentView(
 
 
 function handleDocumentClick(event) {
+    const reasonButton = event.target.closest(
+        ".support-trash-reason-view"
+    );
+
+    if (reasonButton) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const reason = reasonButton.dataset.trashReason || "";
+
+        if (
+            reason &&
+            typeof window.showAlertModal === "function"
+        ) {
+            window.showAlertModal({
+                title: "Trash Reason",
+                text: reason,
+                icon: "ph-light ph-info",
+                variant: "info",
+                confirmText: "Close",
+                showCancel: false,
+                showConfirm: true,
+                loading: false,
+            });
+        }
+
+        return;
+    }
+
     /*
      * Action menu trigger.
      */

@@ -1541,8 +1541,13 @@ public function getAll()
      *
      * The database record remains available for recovery.
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
 {
+    $request->validate([
+        'reason' => ['required', 'string', 'min:3', 'max:1000'],
+    ]);
+
+    $reason = trim($request->input('reason'));
     /*
      * Only active agencies can be moved to Trash.
      */
@@ -1646,6 +1651,8 @@ public function getAll()
      * SOFT DELETE
      * =====================================================
      */
+    $agency->trash_reason = $reason;
+    $agency->save();
     $agency->delete();
 
 
@@ -1683,7 +1690,7 @@ public function getAll()
         'nga_ngo_management',
         $oldValues,
         $newValues,
-        'Trashed Agency: ' . $agency->agency_name
+        'Trashed Agency: ' . $agency->agency_name . ' | Reason: ' . $reason
     );
 
 

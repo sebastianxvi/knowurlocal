@@ -153,7 +153,7 @@
                         id="support-search"
                         name="search"
                         value="{{ $search ?? '' }}"
-                        placeholder="Search question..."
+                        placeholder="Search questions, users, or agencies..."
                         autocomplete="off"
                     >
 
@@ -314,8 +314,6 @@
                             class="ph-light ph-x"
                             aria-hidden="true"
                         ></i>
-
-                        <span>Clear</span>
                     </a>
 
                 @endif
@@ -472,7 +470,7 @@
 
     <script
         type="module"
-        src="{{ asset('jsfiles/admin/support-requests/index.js') }}"
+        src="{{ asset('jsfiles/admin/support-requests/index.js') }}?v={{ file_exists(public_path('jsfiles/admin/support-requests/index.js')) ? filemtime(public_path('jsfiles/admin/support-requests/index.js')) : time() }}"
     ></script>
 
 @endpush

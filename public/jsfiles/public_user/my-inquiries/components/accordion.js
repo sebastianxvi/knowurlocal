@@ -142,6 +142,82 @@ function initializeAccordion() {
     };
 
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | MARK TRASHED INQUIRY AS SEEN
+    |--------------------------------------------------------------------------
+    */
+
+    const markTrashAsSeen = async (card) => {
+        const requestId = card?.dataset.id;
+
+        if (!requestId || card.dataset.status !== "trashed") {
+            return;
+        }
+
+        const unreadIndicator = card.querySelector(
+            '[data-unread-trash], .inquiry-unread-badge[data-unread-type="trash"]'
+        );
+
+        if (!unreadIndicator) {
+            return;
+        }
+
+        const csrfToken = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content");
+
+        if (!csrfToken) {
+            console.warn("KNOWURLOCAL: CSRF token was not found.");
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `/my-inquiries/${encodeURIComponent(requestId)}/trash-seen`,
+                {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers: {
+                        "X-CSRF-TOKEN": csrfToken,
+                        "Accept": "application/json",
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({}),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `Trash seen request failed with status ${response.status}.`
+                );
+            }
+
+            const data = await response.json();
+
+            if (data?.success !== true) {
+                throw new Error("Invalid trash seen response.");
+            }
+
+            unreadIndicator.remove();
+
+            window.setTrashedInquiryUnreadCount?.(
+                data.trashed_unread_count ?? 0
+            );
+
+            window.dispatchEvent(
+                new CustomEvent("inquiry:notification-changed")
+            );
+        } catch (error) {
+            console.warn(
+                "KNOWURLOCAL: Unable to mark trashed inquiry as seen.",
+                error
+            );
+        }
+    };
+
+
     /*
     |--------------------------------------------------------------------------
     | OPEN INQUIRY
@@ -183,9 +259,16 @@ function initializeAccordion() {
         */
         details.hidden = false;
 
+        if (
+            card.dataset.status === "trashed"
+        ) {
+            markTrashAsSeen(card);
+            return;
+        }
+
         /*
-        | The legacy "seen" endpoint is only relevant once
-        | the inquiry has reached the answered state.
+        | Response notifications are acknowledged only after
+        | the citizen opens the inquiry.
         */
         if (
             card.dataset.status === "awaiting_confirmation" ||

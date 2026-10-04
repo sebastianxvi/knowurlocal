@@ -247,17 +247,26 @@
         });
     }
 
+    /*
+     * Modal dismissal is intentionally explicit.
+     *
+     * Clicking the backdrop or pressing Escape must never silently
+     * discard an admin confirmation/input. The active dialog is closed
+     * only by its visible action button (or by an explicit auto-close
+     * configured by the caller).
+     */
     modal.addEventListener('click', (event) => {
-        if (event.target === modal && activeConfig.closeOnBackdrop !== false) {
-            closeAlertModal();
+        if (event.target === modal) {
+            event.preventDefault();
+            event.stopPropagation();
         }
     });
 
     document.addEventListener('keydown', (event) => {
         if (modal.classList.contains('hidden') || !modal.classList.contains('show')) return;
-        if (event.key === 'Escape' && activeConfig.closeOnEscape !== false) {
-            if (activeConfig.showCancel && activeConfig.closeOnBackdrop === false) return;
-            closeAlertModal();
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
         }
     });
 

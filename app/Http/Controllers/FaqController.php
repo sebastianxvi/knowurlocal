@@ -1286,8 +1286,13 @@ $faq->id
     /**
      * ❌ DELETE FAQ
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
+        $request->validate([
+            'reason' => ['required', 'string', 'min:3', 'max:1000'],
+        ]);
+
+        $reason = trim($request->input('reason'));
         $faq = Faq::findOrFail($id);
 
         /**
@@ -1305,6 +1310,8 @@ $faq->id
         $agencyId = $faq->agency_id;
         
 
+        $faq->trash_reason = $reason;
+        $faq->save();
         $faq->delete();
 
         /**
@@ -1317,8 +1324,8 @@ $faq->id
             'delete_faq',
             'admin_faq',
             $oldData,
-            null,
-            'Deleted FAQ: ' . $oldData['question'],
+            ['trash_reason' => $reason],
+            'Moved FAQ to Trash: ' . $oldData['question'] . ' | Reason: ' . $reason,
 null,
 $faq->id
 );

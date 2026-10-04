@@ -145,7 +145,7 @@
 
 {{-- MODAL SYSTEM --}}
 
-<script src="{{ asset('jsfiles/components/modal-system.js') }}"></script>
+<script src="{{ asset('jsfiles/components/modal-system.js') }}?v={{ file_exists(public_path('jsfiles/components/modal-system.js')) ? filemtime(public_path('jsfiles/components/modal-system.js')) : time() }}"></script>
 <script>
     // Shared feedback for every admin route; the modal system consumes each message once.
     window.__FLASH_SUCCESS__ = @json(session('success'));
@@ -155,7 +155,7 @@
 </script>
 
 <script src="{{ asset('jsfiles/admin/admin-shell.js') }}"></script>
-<script src="{{ asset('jsfiles/admin/admin-notifications.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/admin-notifications.js') }}?v={{ file_exists(public_path('jsfiles/admin/admin-notifications.js')) ? filemtime(public_path('jsfiles/admin/admin-notifications.js')) : time() }}"></script>
 
 
 

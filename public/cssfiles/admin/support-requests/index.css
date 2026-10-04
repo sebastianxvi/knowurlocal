@@ -167,12 +167,12 @@
 .support-filter-field select {
     width: 100%;
     min-width: 0;
-    height: 40px;
+    height: 42px;
 
-    padding: 0 36px;
+    padding: 0 40px;
 
     border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 8px;
+    border-radius: 10px;
 
     background: var(--surface, #ffffff);
     color: var(--text-primary, #111827);
@@ -181,6 +181,7 @@
     font-size: 13px;
 
     outline: none;
+    box-sizing: border-box;
 
     transition:
         border-color 160ms ease,
@@ -208,6 +209,39 @@
 
 .support-search-field {
     min-width: 0;
+}
+
+.support-search-field input {
+    min-width: 0;
+    box-shadow: inset 0 1px 0 rgba(15, 23, 42, 0.02);
+}
+
+.support-search-field input:hover {
+    border-color: var(--border-hover, #d1d5db);
+}
+
+.support-search-field input:focus {
+    background: #ffffff;
+}
+
+.support-search-field i {
+    left: 14px;
+    font-size: 17px;
+}
+
+.support-filter-clear {
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
+    gap: 0;
+}
+
+.support-filter-clear i {
+    font-size: 18px;
+}
+
+.support-filter-clear:hover {
+    background: var(--surface-secondary, #f9fafb);
 }
 
 .support-filter-submit,

@@ -47,7 +47,7 @@ class SupportRequestUpdated implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        $supportRequest = SupportRequest::query()
+        $supportRequest = SupportRequest::withTrashed()
             ->with(['user', 'agency'])
             ->find($this->id);
 
@@ -74,6 +74,8 @@ class SupportRequestUpdated implements ShouldBroadcastNow
             'updated_at' => $supportRequest->updated_at?->toIso8601String(),
             'answer' => $supportRequest->answer,
             'answer_image' => $supportRequest->answer_image,
+            'deleted_at' => $supportRequest->deleted_at?->toIso8601String(),
+            'trash_reason' => $supportRequest->trash_reason,
         ];
     }
 }

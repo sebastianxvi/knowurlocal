@@ -2432,14 +2432,19 @@ body {
     }
 
     .inquiries-filter-tab {
-        min-height: 36px;
+        min-height: 38px;
         justify-content: flex-start;
-        padding-inline: 9px;
+        padding-inline: 10px;
         font-size: 11px;
+    }
+
+    .inquiries-filter-tab[data-filter="trashed"] {
+        grid-column: 1 / -1;
     }
 
     .inquiries-filter-tab span {
         display: inline;
+        min-width: 0;
     }
 
     .inquiries-section-heading {
@@ -2472,11 +2477,1083 @@ body {
 
     .inquiries-filter-tab {
         gap: 5px;
-        padding-inline: 7px;
+        padding-inline: 8px;
         font-size: 10px;
+    }
+
+    .inquiries-filter-tab[data-filter="trashed"] {
+        grid-column: 1 / -1;
     }
 
     .inquiries-filter-tab i {
         font-size: 14px;
     }
+}
+
+
+/* --------------------------------------------------------------------------
+   Trashed inquiry state
+   -------------------------------------------------------------------------- */
+
+.inquiry-status-badge.trashed {
+    border-color: rgba(180, 83, 9, 0.24);
+    background: rgba(180, 83, 9, 0.08);
+    color: #92400e;
+}
+
+.inquiry-trash-notice {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1rem 1.1rem;
+    border: 1px solid rgba(180, 83, 9, 0.24);
+    border-radius: 1rem;
+    background: rgba(180, 83, 9, 0.06);
+}
+
+.inquiry-trash-notice-icon {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex: 0 0 2.5rem;
+    place-items: center;
+    border-radius: 0.8rem;
+    background: rgba(180, 83, 9, 0.12);
+    color: #92400e;
+}
+
+.inquiry-trash-notice-content {
+    min-width: 0;
+}
+
+.inquiry-trash-notice-content > strong {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.inquiry-trash-notice-content > p {
+    margin: 0;
+}
+
+.inquiry-trash-notice-content > time {
+    display: block;
+    margin-top: 0.65rem;
+    font-size: 0.78rem;
+    opacity: 0.7;
+}
+
+.inquiry-trash-reason {
+    margin-top: 0.85rem;
+    padding: 0.8rem 0.9rem;
+    border-left: 3px solid currentColor;
+    border-radius: 0.6rem;
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.inquiry-trash-reason > span {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    opacity: 0.72;
+}
+
+.inquiry-trash-reason > p {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.inquiry-trash-toast {
+    position: fixed;
+    z-index: 9999;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+    width: min(28rem, calc(100vw - 2rem));
+    padding: 1rem;
+    border: 1px solid rgba(180, 83, 9, 0.24);
+    border-radius: 1rem;
+    background: var(--surface, #fff);
+    box-shadow: 0 1rem 3rem rgba(15, 23, 42, 0.16);
+}
+
+.inquiry-trash-toast-icon {
+    display: grid;
+    width: 2.4rem;
+    height: 2.4rem;
+    flex: 0 0 2.4rem;
+    place-items: center;
+    border-radius: 0.75rem;
+    background: rgba(180, 83, 9, 0.1);
+    color: #92400e;
+}
+
+.inquiry-trash-toast-content {
+    min-width: 0;
+    flex: 1;
+}
+
+.inquiry-trash-toast-content strong {
+    display: block;
+    margin-bottom: 0.2rem;
+}
+
+.inquiry-trash-toast-content p {
+    margin: 0;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.inquiry-trash-toast-close {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 2rem;
+    place-items: center;
+    border: 0;
+    border-radius: 0.6rem;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.inquiry-trash-toast-close:hover {
+    background: rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 640px) {
+    .inquiry-trash-toast {
+        right: 1rem;
+        bottom: 1rem;
+        width: calc(100vw - 2rem);
+    }
+
+    .inquiry-trash-notice {
+        gap: 0.75rem;
+        padding: 0.9rem;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+   Inquiry status drawer
+   --------------------------------------------------------------------------
+   The status filters use one consistent vertical list at every breakpoint.
+   This keeps labels aligned and gives unread indicators a dedicated visual
+   position instead of competing with the label/count row.
+   -------------------------------------------------------------------------- */
+
+.inquiries-filter-picker {
+    position: relative;
+    width: 100%;
+}
+
+.inquiries-filter-trigger {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 46px;
+    gap: 14px;
+    padding: 0 14px;
+    border: 1px solid #dfe6f1;
+    border-radius: 12px;
+    background: #fff;
+    color: #2e3b55;
+    box-shadow: 0 2px 8px rgba(31, 43, 68, 0.04);
+    cursor: pointer;
+    text-align: left;
+}
+
+.inquiries-filter-trigger:hover {
+    border-color: #cbd6e8;
+    background: #fcfdff;
+}
+
+.inquiries-filter-trigger:focus-visible,
+.inquiries-filter-tab:focus-visible {
+    outline: 3px solid rgba(79, 111, 200, 0.18);
+    outline-offset: 2px;
+}
+
+.inquiries-filter-trigger-leading,
+.inquiries-filter-trigger-selection {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.inquiries-filter-trigger-leading {
+    gap: 8px;
+    color: #71809a;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.inquiries-filter-trigger-leading i {
+    color: #5574c9;
+    font-size: 17px;
+}
+
+.inquiries-filter-trigger-selection {
+    justify-content: flex-end;
+    gap: 7px;
+    padding-right: 2px;
+    color: #34415b;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.inquiries-filter-trigger-selection > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.inquiries-filter-trigger-selection > i {
+    margin-left: 2px;
+    color: #7b879d;
+    font-size: 15px;
+    transition: transform 160ms ease;
+}
+
+.inquiries-filter-picker.is-open .inquiries-filter-trigger-selection > i {
+    transform: rotate(180deg);
+}
+
+.inquiries-filter-trigger-count,
+.inquiries-filter-trigger-selection strong {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 6px;
+    background: #f1f4fa;
+    color: #68758e;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* The trigger's unread state is a real notification dot, not an inline badge. */
+.inquiries-filter-trigger-unread {
+    position: absolute;
+    top: 8px;
+    right: 31px;
+    width: 9px;
+    height: 9px;
+    min-width: 9px;
+    padding: 0;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #dc2626;
+    box-shadow: 0 1px 3px rgba(220, 38, 38, 0.28);
+    font-size: 0;
+    line-height: 0;
+}
+
+.inquiries-filter-trigger-unread[hidden] {
+    display: none;
+}
+
+.inquiries-filter-drawer {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 7px);
+    left: 0;
+    right: 0;
+    padding: 10px;
+    border: 1px solid #dfe6f1;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 16px 36px rgba(31, 43, 68, 0.13);
+}
+
+.inquiries-filter-drawer[hidden] {
+    display: none;
+}
+
+.inquiries-filter-drawer .inquiries-filter-tabs {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.inquiries-filter-drawer .inquiries-filter-tab {
+    position: relative;
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    align-items: center;
+    min-width: 0;
+    min-height: 42px;
+    gap: 9px;
+    padding: 0 13px;
+    border: 1px solid #e4e9f1;
+    border-radius: 9px;
+    background: #fff;
+    color: #65718a;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.inquiries-filter-drawer .inquiries-filter-tab:hover {
+    border-color: #cfd9ea;
+    background: #fbfcff;
+}
+
+.inquiries-filter-drawer .inquiries-filter-tab.active {
+    border-color: #d7e0fb;
+    background: #f5f7ff;
+    color: #4968bd;
+    box-shadow: inset 0 0 0 1px rgba(73, 104, 189, 0.02);
+}
+
+.inquiries-filter-drawer .inquiries-filter-tab i {
+    justify-self: center;
+    width: 22px;
+    color: inherit;
+    font-size: 15px;
+}
+
+.inquiries-filter-drawer .inquiries-filter-tab > span:not(.inquiries-filter-unread-badge) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.inquiries-filter-drawer .inquiries-filter-tab strong {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: end;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 6px;
+    background: #f1f4fa;
+    color: #68758e;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.inquiries-filter-drawer .inquiries-filter-tab.active strong {
+    background: #e8edff;
+    color: #4968bd;
+}
+
+/* Unread state is deliberately detached from the text/count row. */
+.inquiries-filter-drawer .inquiries-filter-unread-badge {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 9px;
+    height: 9px;
+    min-width: 9px;
+    padding: 0;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #dc2626;
+    box-shadow: 0 1px 3px rgba(220, 38, 38, 0.28);
+    font-size: 0;
+    line-height: 0;
+}
+
+.inquiries-filter-drawer .inquiries-filter-unread-badge[hidden] {
+    display: none;
+}
+
+/* Remove the previous mobile-only abbreviation. The full label is used
+   everywhere so the selected state never changes wording by viewport. */
+.inquiries-filter-drawer .inquiries-filter-tab[data-filter="needs_attention"] > span:not(.inquiries-filter-unread-badge) {
+    font-size: inherit;
+}
+
+@media (max-width: 640px) {
+    .inquiries-filter-trigger {
+        min-height: 44px;
+        padding-inline: 12px;
+    }
+
+    .inquiries-filter-trigger-leading,
+    .inquiries-filter-trigger-selection {
+        font-size: 11px;
+    }
+
+    .inquiries-filter-drawer {
+        top: calc(100% + 6px);
+        padding: 8px;
+        border-radius: 12px;
+    }
+
+    .inquiries-filter-drawer .inquiries-filter-tab {
+        min-height: 40px;
+        padding-inline: 11px;
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 380px) {
+    .inquiries-filter-trigger {
+        min-height: 42px;
+        padding-inline: 10px;
+    }
+
+    .inquiries-filter-trigger-leading,
+    .inquiries-filter-trigger-selection {
+        font-size: 10px;
+    }
+
+    .inquiries-filter-trigger-leading i {
+        font-size: 15px;
+    }
+
+    .inquiries-filter-drawer .inquiries-filter-tab {
+        min-height: 39px;
+    }
+}
+
+/* =========================================================
+   FINAL INQUIRY FILTER / PAGE POLISH
+   The status drawer is the single source of visual hierarchy.
+   ========================================================= */
+
+.inquiries-page {
+    max-width: 1120px;
+    padding: 34px 24px 64px;
+}
+
+.inquiries-page-header {
+    margin-bottom: 22px;
+}
+
+.inquiries-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.inquiries-header-eyebrow {
+    margin-bottom: 6px;
+    color: #72809a;
+    font-size: 10px;
+    letter-spacing: .1em;
+}
+
+.inquiries-header-eyebrow i {
+    color: #5875c5;
+}
+
+.inquiries-header-copy h1 {
+    color: #25324d;
+    font-size: 25px;
+    letter-spacing: -.03em;
+}
+
+.inquiries-header-copy p {
+    margin-top: 5px;
+    color: #7b879c;
+    font-size: 12px;
+}
+
+.inquiries-back-button {
+    min-height: 36px;
+    padding-inline: 11px;
+    border-color: #e1e7f0;
+    border-radius: 9px;
+    color: #64718a;
+    box-shadow: 0 1px 2px rgba(31, 43, 68, .025);
+}
+
+.inquiries-toolbar {
+    gap: 9px;
+    margin-bottom: 24px;
+}
+
+.inquiries-search {
+    min-height: 44px;
+    border-color: #dfe6f1;
+    border-radius: 11px;
+    box-shadow: 0 2px 8px rgba(31, 43, 68, .025);
+}
+
+.inquiries-search > i {
+    margin-left: 13px;
+    color: #8794aa;
+    font-size: 16px;
+}
+
+.inquiries-search input {
+    min-height: 42px;
+    padding-left: 9px;
+    color: #33415d;
+    font-size: 12px;
+}
+
+.inquiries-search input::placeholder {
+    color: #8b96a9;
+}
+
+.inquiries-filter-picker {
+    width: 100%;
+}
+
+.inquiries-filter-trigger {
+    min-height: 44px;
+    padding: 0 13px;
+    border-color: #dfe6f1;
+    border-radius: 11px;
+    box-shadow: 0 2px 8px rgba(31, 43, 68, .025);
+}
+
+.inquiries-filter-trigger-leading {
+    gap: 7px;
+    color: #71809a;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.inquiries-filter-trigger-leading i {
+    color: #5875c5;
+    font-size: 15px;
+}
+
+.inquiries-filter-trigger-selection {
+    gap: 6px;
+    color: #4a5872;
+    font-size: 11px;
+}
+
+.inquiries-filter-trigger-count,
+.inquiries-filter-trigger-selection strong {
+    min-width: 19px;
+    height: 19px;
+    border-radius: 6px;
+    font-size: 9px;
+}
+
+/* Red notification bubble: a real badge with its unread number. */
+.inquiries-filter-trigger-unread {
+    position: absolute;
+    top: 6px;
+    right: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    padding: 0;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #dc2626;
+    color: #fff;
+    box-shadow: 0 2px 5px rgba(220, 38, 38, .24);
+    font-size: 8px;
+    font-weight: 750;
+    line-height: 1;
+    z-index: 2;
+}
+
+.inquiries-filter-drawer {
+    padding: 8px;
+    border-color: #dfe6f1;
+    border-radius: 13px;
+    box-shadow: 0 18px 40px rgba(31, 43, 68, .14);
+}
+
+.inquiries-filter-drawer .inquiries-filter-tabs {
+    gap: 5px;
+}
+
+.inquiries-filter-drawer .inquiries-filter-tab {
+    min-height: 40px;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    gap: 9px;
+    padding: 0 11px;
+    border-color: #e4e9f1;
+    border-radius: 9px;
+    color: #64718a;
+    font-size: 11px;
+}
+
+.inquiries-filter-drawer .inquiries-filter-tab > span:not(.inquiries-filter-unread-badge) {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: inherit;
+}
+
+.inquiries-filter-drawer .inquiries-filter-tab strong {
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border-radius: 6px;
+    font-size: 9px;
+}
+
+/* Unread notification bubbles sit independently in the upper-right corner. */
+.inquiries-filter-drawer .inquiries-filter-unread-badge {
+    top: 5px;
+    right: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    padding: 0;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #dc2626;
+    color: #fff;
+    box-shadow: 0 2px 5px rgba(220, 38, 38, .24);
+    font-size: 8px;
+    font-weight: 750;
+    line-height: 1;
+}
+
+.inquiries-filter-drawer .inquiries-filter-unread-badge[hidden] {
+    display: none;
+}
+
+.inquiries-section-heading {
+    margin-bottom: 11px;
+}
+
+.inquiries-section-eyebrow {
+    margin-bottom: 3px;
+    color: #8b96aa;
+    font-size: 9px;
+    letter-spacing: .11em;
+}
+
+.inquiries-section-heading h2 {
+    color: #27334e;
+    font-size: 18px;
+    letter-spacing: -.02em;
+}
+
+.inquiries-section-meta {
+    min-height: 28px;
+    padding: 0 9px;
+    border: 1px solid #e3e8f1;
+    border-radius: 8px;
+    background: #fff;
+    color: #7b879c;
+    font-size: 10px;
+}
+
+.inquiries-list {
+    gap: 10px;
+}
+
+.inquiry-card {
+    border-color: #e2e8f1;
+    border-radius: 13px;
+    box-shadow: 0 2px 9px rgba(31, 43, 68, .035);
+}
+
+.inquiry-card:hover {
+    border-color: #d5deed;
+    box-shadow: 0 7px 20px rgba(31, 43, 68, .06);
+}
+
+.inquiry-toggle {
+    padding: 17px 18px;
+    gap: 14px;
+}
+
+.inquiry-card-topline {
+    gap: 7px;
+    margin-bottom: 9px;
+}
+
+.inquiry-id {
+    color: #8d99ad;
+    font-size: 11px;
+}
+
+.inquiry-status-badge {
+    min-height: 23px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 10px;
+}
+
+.inquiry-unread-badge {
+    min-height: 21px;
+    padding: 0 7px;
+    border-radius: 999px;
+    font-size: 9px;
+}
+
+.inquiry-date {
+    color: #8d99ad;
+    font-size: 10px;
+}
+
+.inquiry-question {
+    color: #2d3952;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.inquiry-agency {
+    margin-top: 7px;
+    color: #78849a;
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.inquiry-agency i {
+    color: #7b8bc1;
+    font-size: 13px;
+}
+
+.inquiry-chevron {
+    flex-basis: 32px;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: #fafbfe;
+}
+
+.inquiry-details {
+    margin-right: 18px;
+    margin-left: 18px;
+}
+
+.inquiry-card.expanded .inquiry-details {
+    margin-bottom: 18px;
+}
+
+@media (max-width: 760px) {
+    .inquiries-page {
+        padding: 20px 14px 42px;
+    }
+
+    .inquiries-page-header {
+        margin-bottom: 16px;
+    }
+
+    .inquiries-title-row {
+        gap: 10px;
+    }
+
+    .inquiries-header-copy h1 {
+        font-size: 23px;
+    }
+
+    .inquiries-header-copy p {
+        margin-top: 4px;
+        font-size: 11px;
+        line-height: 1.5;
+    }
+
+    .inquiries-back-button {
+        min-height: 34px;
+        padding-inline: 10px;
+        font-size: 11px;
+    }
+
+    .inquiries-search {
+        min-height: 42px;
+    }
+
+    .inquiries-search input {
+        min-height: 40px;
+        font-size: 12px;
+    }
+
+    .inquiries-toolbar {
+        gap: 7px;
+        margin-bottom: 20px;
+    }
+
+    .inquiries-filter-trigger {
+        min-height: 42px;
+        padding-inline: 11px;
+    }
+
+    .inquiries-filter-trigger-leading,
+    .inquiries-filter-trigger-selection {
+        font-size: 10px;
+    }
+
+    .inquiries-filter-trigger-selection > span:first-child {
+        max-width: 145px;
+    }
+
+    .inquiries-filter-trigger-unread {
+        top: 5px;
+        right: 26px;
+        width: 17px;
+        height: 17px;
+        min-width: 17px;
+        font-size: 7px;
+    }
+
+    .inquiries-filter-drawer {
+        top: calc(100% + 5px);
+        padding: 7px;
+        border-radius: 12px;
+    }
+
+    .inquiries-filter-drawer .inquiries-filter-tab {
+        min-height: 39px;
+        padding-inline: 10px;
+        font-size: 10px;
+    }
+
+    .inquiries-filter-drawer .inquiries-filter-unread-badge {
+        width: 17px;
+        height: 17px;
+        min-width: 17px;
+        font-size: 7px;
+    }
+
+    .inquiries-section-heading {
+        margin-bottom: 9px;
+    }
+
+    .inquiries-section-heading h2 {
+        font-size: 17px;
+    }
+
+    .inquiries-section-meta {
+        min-height: 26px;
+        padding-inline: 8px;
+        font-size: 9px;
+    }
+
+    .inquiries-list {
+        gap: 8px;
+    }
+
+    .inquiry-card {
+        border-radius: 12px;
+    }
+
+    .inquiry-toggle {
+        padding: 14px 13px;
+        gap: 9px;
+    }
+
+    .inquiry-card-topline {
+        gap: 5px;
+        margin-bottom: 7px;
+    }
+
+    .inquiry-status-badge {
+        min-height: 21px;
+        padding-inline: 7px;
+        font-size: 9px;
+    }
+
+    .inquiry-unread-badge {
+        min-height: 20px;
+        padding-inline: 6px;
+        font-size: 8px;
+    }
+
+    .inquiry-date {
+        font-size: 9px;
+    }
+
+    .inquiry-question {
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .inquiry-agency {
+        margin-top: 6px;
+        font-size: 9px;
+    }
+
+    .inquiry-agency i {
+        font-size: 12px;
+    }
+
+    .inquiry-chevron {
+        flex-basis: 30px;
+        width: 30px;
+        height: 30px;
+    }
+
+    .inquiry-details {
+        margin-right: 13px;
+        margin-left: 13px;
+    }
+
+    .inquiry-card.expanded .inquiry-details {
+        margin-bottom: 13px;
+    }
+}
+
+@media (max-width: 380px) {
+    .inquiries-page {
+        padding-inline: 10px;
+    }
+
+    .inquiries-header-copy h1 {
+        font-size: 22px;
+    }
+
+    .inquiries-filter-trigger-selection > span:first-child {
+        max-width: 125px;
+    }
+
+    .inquiries-filter-drawer .inquiries-filter-tab {
+        min-height: 38px;
+    }
+}
+
+
+
+/* --------------------------------------------------------------------------
+   Unread badge correction
+   --------------------------------------------------------------------------
+   Unread notifications are a separate control from the status total.
+   They must never overlay, obscure, or replace the gray total counter.
+   -------------------------------------------------------------------------- */
+
+/* Trigger: label | total | unread notification | chevron */
+.inquiries-filter-trigger-selection {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    align-items: center;
+    justify-content: initial;
+    gap: 7px;
+    min-width: 0;
+    padding-right: 0;
+}
+
+.inquiries-filter-trigger-selection > span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.inquiries-filter-trigger-selection .inquiries-filter-trigger-count,
+.inquiries-filter-trigger-selection strong {
+    grid-column: 2;
+}
+
+.inquiries-filter-trigger-selection .inquiries-filter-trigger-unread {
+    position: static;
+    grid-column: 3;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #dc2626;
+    color: #fff;
+    box-shadow: 0 2px 5px rgba(220, 38, 38, .24);
+    font-size: 8px;
+    font-weight: 750;
+    line-height: 1;
+    z-index: auto;
+}
+
+.inquiries-filter-trigger-selection .inquiries-filter-trigger-unread[hidden] {
+    display: none;
+}
+
+.inquiries-filter-trigger-selection > i {
+    grid-column: 4;
+    margin-left: 0;
+}
+
+/* Drawer: icon | label | total | unread notification */
+.inquiries-filter-drawer .inquiries-filter-tab {
+    grid-template-columns: 22px minmax(0, 1fr) auto 20px;
+    padding-right: 10px;
+}
+
+.inquiries-filter-drawer .inquiries-filter-tab > strong {
+    grid-column: 3;
+    justify-self: end;
+}
+
+.inquiries-filter-drawer .inquiries-filter-unread-badge {
+    position: static;
+    grid-column: 4;
+    justify-self: end;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #dc2626;
+    color: #fff;
+    box-shadow: 0 2px 5px rgba(220, 38, 38, .24);
+    font-size: 8px;
+    font-weight: 750;
+    line-height: 1;
+    z-index: auto;
+}
+
+.inquiries-filter-drawer .inquiries-filter-unread-badge[hidden] {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .inquiries-filter-trigger-selection {
+        grid-template-columns: minmax(0, 1fr) auto auto auto;
+        gap: 5px;
+    }
+
+    .inquiries-filter-trigger-selection .inquiries-filter-trigger-unread {
+        width: 17px;
+        height: 17px;
+        min-width: 17px;
+        font-size: 7px;
+    }
+
+    .inquiries-filter-drawer .inquiries-filter-tab {
+        grid-template-columns: 22px minmax(0, 1fr) auto 20px;
+        gap: 8px;
+        padding-right: 9px;
+    }
+
+    .inquiries-filter-drawer .inquiries-filter-unread-badge {
+        width: 17px;
+        height: 17px;
+        min-width: 17px;
+        font-size: 7px;
+    }
+}
+
+.inquiries-filter-drawer .inquiries-filter-tab[data-filter="needs_attention"]::before,
+.inquiries-filter-drawer .inquiries-filter-tab[data-filter="needs_attention"]::after {
+    content: none !important;
 }

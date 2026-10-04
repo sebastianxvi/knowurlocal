@@ -16,6 +16,60 @@ function initializeFilters() {
         )
     );
 
+    const filterPicker = document.querySelector("[data-inquiry-filter-picker]");
+    const filterTrigger = document.querySelector("[data-inquiry-filter-trigger]");
+    const filterDrawer = document.querySelector("[data-inquiry-filter-drawer]");
+    const filterDrawerClose = document.querySelector("[data-inquiry-filter-close]");
+    const filterLabel = document.querySelector("[data-inquiry-filter-label]");
+    const filterTriggerCount = document.querySelector("[data-inquiry-filter-trigger-count]");
+    const filterTriggerUnread = document.querySelector(".inquiries-filter-trigger-unread");
+
+    const filterLabels = {
+        needs_attention: "Needs Attention",
+        pending: "Pending",
+        follow_up: "Follow-up",
+        answered: "Answered",
+        trashed: "Trashed",
+    };
+
+    const closeFilterDrawer = () => {
+        if (!filterDrawer || !filterTrigger) return;
+        filterDrawer.hidden = true;
+        filterTrigger.setAttribute("aria-expanded", "false");
+        filterPicker?.classList.remove("is-open");
+    };
+
+    const openFilterDrawer = () => {
+        if (!filterDrawer || !filterTrigger) return;
+        filterDrawer.hidden = false;
+        filterTrigger.setAttribute("aria-expanded", "true");
+        filterPicker?.classList.add("is-open");
+    };
+
+    filterTrigger?.addEventListener("click", () => {
+        if (filterDrawer?.hidden) openFilterDrawer();
+        else closeFilterDrawer();
+    });
+
+    filterDrawerClose?.addEventListener("click", closeFilterDrawer);
+
+    const updateFilterTrigger = (filter, cards = getInquiryCards()) => {
+        if (!filterLabel) return;
+        filterLabel.textContent = filterLabels[filter] || "Needs Attention";
+
+        const count = cards.filter((card) => getFilterForStatus(card.dataset.status) === filter).length;
+        if (filterTriggerCount) filterTriggerCount.textContent = String(count);
+
+        const sourceBadge = document.querySelector(
+            `[data-filter-unread-count][data-filter="${filter}"]:not(.inquiries-filter-trigger-unread)`
+        );
+        if (filterTriggerUnread) {
+            const unread = Number(sourceBadge?.textContent || 0);
+            filterTriggerUnread.textContent = unread > 99 ? "99+" : String(unread);
+            filterTriggerUnread.hidden = !sourceBadge || sourceBadge.hidden;
+        }
+    };
+
     const searchInput = document.querySelector(
         "[data-inquiry-search]"
     );
@@ -23,6 +77,44 @@ function initializeFilters() {
     const clearSearchButton = document.querySelector(
         "[data-clear-inquiry-search]"
     );
+
+    const setTrashedUnreadCount = (count) => {
+        const safeCount = Number.isFinite(Number(count))
+            ? Math.max(0, Math.floor(Number(count)))
+            : 0;
+
+        document.querySelectorAll(
+            '[data-filter-unread-count][data-filter="trashed"]'
+        ).forEach((badge) => {
+            badge.textContent = safeCount > 99 ? '99+' : String(safeCount);
+            badge.hidden = safeCount <= 0;
+            badge.setAttribute(
+                'aria-label',
+                `${safeCount} new trashed ${safeCount === 1 ? 'inquiry' : 'inquiries'}`
+            );
+        });
+    };
+
+    window.setTrashedInquiryUnreadCount = setTrashedUnreadCount;
+
+    const setNeedsAttentionUnreadCount = (count) => {
+        const safeCount = Number.isFinite(Number(count))
+            ? Math.max(0, Math.floor(Number(count)))
+            : 0;
+
+        document.querySelectorAll(
+            '[data-filter-unread-count][data-filter="needs_attention"]'
+        ).forEach((badge) => {
+            badge.textContent = safeCount > 99 ? '99+' : String(safeCount);
+            badge.hidden = safeCount <= 0;
+            badge.setAttribute(
+                'aria-label',
+                `${safeCount} new ${safeCount === 1 ? 'response' : 'responses'} needing attention`
+            );
+        });
+    };
+
+    window.setNeedsAttentionUnreadCount = setNeedsAttentionUnreadCount;
 
     const resultMeta = document.querySelector(
         "[data-inquiry-result-meta]"
@@ -71,6 +163,10 @@ function initializeFilters() {
 
         if (status === "answered") {
             return "answered";
+        }
+
+        if (status === "trashed") {
+            return "trashed";
         }
 
         return null;
@@ -156,6 +252,11 @@ function initializeFilters() {
                 heading: "No answered inquiries yet",
                 message: "Your submitted questions will appear here once an office responds.",
             },
+            trashed: {
+                icon: "ph-trash",
+                heading: "No trashed inquiries",
+                message: "Inquiries moved to the trash by administration will appear here with their reason.",
+            },
         };
 
         const state =
@@ -185,6 +286,7 @@ function initializeFilters() {
             pending: 0,
             follow_up: 0,
             answered: 0,
+            trashed: 0,
         };
 
         cards.forEach((card) => {
@@ -207,6 +309,9 @@ function initializeFilters() {
                 countElement.textContent = String(count);
             }
         });
+
+        const currentFilter = filterButtons.find((button) => button.classList.contains("active"))?.dataset.filter || "needs_attention";
+        updateFilterTrigger(currentFilter, cards);
     };
 
     const updateResultMeta = (
@@ -325,6 +430,14 @@ function initializeFilters() {
             });
 
             applyFilter(selectedFilter);
+            updateFilterTrigger(selectedFilter);
+            closeFilterDrawer();
+
+            /*
+             * Do not acknowledge trashed inquiries merely because the
+             * citizen opened the tab. Each record is acknowledged when
+             * that specific card is expanded.
+             */
         });
     });
 
@@ -383,6 +496,7 @@ function initializeFilters() {
         initialFilter,
         initialCards
     );
+    updateFilterTrigger(initialFilter, initialCards);
 }
 
 export {

@@ -48,7 +48,7 @@ import {
     createRealtimeSupportRequestRow,
     updateRealtimeSupportRequestRow,
     realtimeRequestMatchesCurrentView,
-} from './request-table.js';
+} from './request-table.js?v=202610042300';
 
 
 /*
@@ -83,6 +83,168 @@ let realtimeInitialized = false;
 
 let realtimeRetryTimer = null;
 
+let authoritativeRefreshTimer = null;
+
+let authoritativeRefreshInProgress = false;
+
+
+/*
+|--------------------------------------------------------------------------
+| AUTHORITATIVE TABLE REFRESH
+|--------------------------------------------------------------------------
+|
+| Realtime payloads are intentionally small. The server-rendered table is
+| still authoritative for filters, pagination, status labels, counts, and
+| any future row changes. After a creation event we therefore reconcile the
+| visible table with the current URL instead of relying only on a client-
+| constructed row.
+|--------------------------------------------------------------------------
+*/
+
+async function refreshCurrentTableView() {
+    if (!tableBody || authoritativeRefreshInProgress) {
+        return;
+    }
+
+    authoritativeRefreshInProgress = true;
+
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('_realtime', String(Date.now()));
+
+        const response = await fetch(url.toString(), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'text/html',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            cache: 'no-store',
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                `Support Requests refresh failed with status ${response.status}.`
+            );
+        }
+
+        const html = await response.text();
+        const documentParser = new DOMParser();
+        const parsed = documentParser.parseFromString(
+            html,
+            'text/html'
+        );
+
+        const freshBody =
+            parsed.getElementById(
+                'support-requests-table-body'
+            );
+
+        if (!freshBody) {
+            throw new Error(
+                'Support Requests refresh did not return the table body.'
+            );
+        }
+
+        tableBody.innerHTML = freshBody.innerHTML;
+
+        [
+            'data-status',
+            'data-status-filter',
+            'data-agency',
+            'data-search',
+        ].forEach((attribute) => {
+            const value = freshBody.getAttribute(attribute);
+
+            if (value === null) {
+                tableBody.removeAttribute(attribute);
+            } else {
+                tableBody.setAttribute(attribute, value);
+            }
+        });
+
+        const currentResultMeta =
+            document.querySelector(
+                '.admin-list-result-meta[role="status"]'
+            );
+
+        const freshResultMeta =
+            parsed.querySelector(
+                '.admin-list-result-meta[role="status"]'
+            );
+
+        if (currentResultMeta && freshResultMeta) {
+            currentResultMeta.innerHTML =
+                freshResultMeta.innerHTML;
+        }
+
+        const currentTabs =
+            document.querySelector(
+                '.support-dataset-tabs'
+            );
+
+        const freshTabs =
+            parsed.querySelector(
+                '.support-dataset-tabs'
+            );
+
+        if (currentTabs && freshTabs) {
+            currentTabs.innerHTML =
+                freshTabs.innerHTML;
+        }
+
+        const currentPagination =
+            document.querySelector(
+                '.support-pagination'
+            );
+
+        const freshPagination =
+            parsed.querySelector(
+                '.support-pagination'
+            );
+
+        if (currentPagination && freshPagination) {
+            currentPagination.innerHTML =
+                freshPagination.innerHTML;
+        } else if (!currentPagination && freshPagination) {
+            const section =
+                document.querySelector(
+                    '.support-request-section'
+                );
+
+            section?.appendChild(
+                freshPagination.cloneNode(true)
+            );
+        } else if (currentPagination && !freshPagination) {
+            currentPagination.remove();
+        }
+    } catch (error) {
+        console.warn(
+            'KNOWURLOCAL: Unable to reconcile the Support Requests table after a realtime event.',
+            error
+        );
+    } finally {
+        authoritativeRefreshInProgress = false;
+    }
+}
+
+function scheduleAuthoritativeTableRefresh() {
+    if (authoritativeRefreshTimer !== null) {
+        window.clearTimeout(
+            authoritativeRefreshTimer
+        );
+    }
+
+    authoritativeRefreshTimer =
+        window.setTimeout(
+            () => {
+                authoritativeRefreshTimer = null;
+                refreshCurrentTableView();
+            },
+            150
+        );
+}
+
 
 /*
 |--------------------------------------------------------------------------
@@ -97,6 +259,60 @@ let realtimeRetryTimer = null;
 |--------------------------------------------------------------------------
 */
 
+function updateLiveActiveCount(delta) {
+    if (!Number.isFinite(delta) || delta === 0) {
+        return;
+    }
+
+    const countElement = document.querySelector(
+        '.support-dataset-tabs .support-dataset-tab:first-child .support-dataset-count'
+    );
+
+    if (countElement) {
+        const current = Number.parseInt(
+            countElement.textContent.replace(/[^0-9]/g, ''),
+            10
+        );
+
+        if (Number.isFinite(current)) {
+            countElement.textContent = String(
+                Math.max(0, current + delta)
+            );
+        }
+    }
+
+    const resultMeta = document.querySelector(
+        '.admin-list-result-meta[role="status"] span'
+    );
+
+    if (resultMeta) {
+        const match = resultMeta.textContent.match(/([0-9,]+)/);
+
+        if (match) {
+            const current = Number.parseInt(
+                match[1].replace(/,/g, ''),
+                10
+            );
+
+            if (Number.isFinite(current)) {
+                const next = Math.max(0, current + delta);
+                const label = next === 1 ? 'request' : 'requests';
+
+                resultMeta.textContent =
+                    `${next.toLocaleString()} ${label}`;
+            }
+        }
+    }
+}
+
+
+/**
+ * Process a newly-created support request.
+ *
+ * This is shared by the direct Echo listener and the notification
+ * module's in-page relay. The latter is an intentional fallback:
+ * both modules subscribe to the same admin channel.
+ */
 function handleRealtimeSupportRequest(request) {
 
     /*
@@ -138,6 +354,7 @@ function handleRealtimeSupportRequest(request) {
             request
         )
     ) {
+        scheduleAuthoritativeTableRefresh();
         return;
     }
 
@@ -242,6 +459,8 @@ if (currentSort === 'oldest') {
     tableBody.prepend(row);
 }
 
+    updateLiveActiveCount(1);
+
 
     /*
     |--------------------------------------------------------------------------
@@ -269,6 +488,13 @@ if (currentSort === 'oldest') {
         },
         2500
     );
+
+    /*
+     * Reconcile against the authoritative server-rendered view.
+     * This also handles pagination, active filters, and any mismatch
+     * between a compact broadcast payload and the current table state.
+     */
+    scheduleAuthoritativeTableRefresh();
 }
 
 
@@ -286,6 +512,26 @@ function handleRealtimeSupportRequestUpdate(request) {
 
     updateRealtimeSupportRequestRow(request);
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| IN-PAGE REALTIME RELAY
+|--------------------------------------------------------------------------
+|
+| admin-notifications.js also subscribes to admin.support-requests.
+| When it receives a creation event, it relays the same payload here.
+| This gives the table a resilient same-page fallback without changing
+| the server event contract.
+|--------------------------------------------------------------------------
+*/
+
+window.addEventListener(
+    'knowurlocal:support-request-created',
+    (event) => {
+        handleRealtimeSupportRequest(event.detail);
+    }
+);
 
 
 /*

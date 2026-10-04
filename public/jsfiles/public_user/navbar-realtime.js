@@ -24,10 +24,40 @@ function getCsrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content || '';
 }
 
-function updateBadges(count) {
+function updateBadges(count, trashedUnreadCount = 0, needsAttentionUnreadCount = 0) {
     const safeCount = Number.isSafeInteger(Number(count))
         ? Math.max(0, Number(count))
         : 0;
+
+    const safeTrashedCount = Number.isFinite(Number(trashedUnreadCount))
+        ? Math.max(0, Math.floor(Number(trashedUnreadCount)))
+        : 0;
+
+    const safeNeedsAttentionCount = Number.isFinite(Number(needsAttentionUnreadCount))
+        ? Math.max(0, Math.floor(Number(needsAttentionUnreadCount)))
+        : 0;
+
+    document
+        .querySelectorAll('[data-filter-unread-count][data-filter="trashed"]')
+        .forEach((badge) => {
+            badge.textContent = safeTrashedCount > 99 ? '99+' : String(safeTrashedCount);
+            badge.hidden = safeTrashedCount <= 0;
+            badge.setAttribute(
+                'aria-label',
+                `${safeTrashedCount} new trashed ${safeTrashedCount === 1 ? 'inquiry' : 'inquiries'}`
+            );
+        });
+
+    document
+        .querySelectorAll('[data-filter-unread-count][data-filter="needs_attention"]')
+        .forEach((badge) => {
+            badge.textContent = safeNeedsAttentionCount > 99 ? '99+' : String(safeNeedsAttentionCount);
+            badge.hidden = safeNeedsAttentionCount <= 0;
+            badge.setAttribute(
+                'aria-label',
+                `${safeNeedsAttentionCount} new ${safeNeedsAttentionCount === 1 ? 'response' : 'responses'} needing attention`
+            );
+        });
 
     document
         .querySelectorAll('[data-inquiry-notification-badge]')
@@ -71,7 +101,7 @@ async function refreshNotificationCount() {
         throw new Error('Invalid notification count response.');
     }
 
-    updateBadges(data.count);
+    updateBadges(data.count, data.trashed_unread_count, data.needs_attention_unread_count);
     return Number(data.count) || 0;
 }
 
@@ -140,6 +170,27 @@ function handleRealtimeAnswer(payload) {
     );
 }
 
+function handleRealtimeSupportRequestUpdate(payload) {
+    if (!payload || typeof payload !== 'object') {
+        return;
+    }
+
+    if (payload.action === 'trashed') {
+        refreshNotificationCount().catch((error) => {
+            console.warn(
+                'KNOWURLOCAL: Unable to refresh trash notification count.',
+                error
+            );
+        });
+
+        window.dispatchEvent(
+            new CustomEvent('inquiry:trashed', {
+                detail: payload,
+            })
+        );
+    }
+}
+
 function connectRealtime() {
     if (initialized) {
         return true;
@@ -160,6 +211,10 @@ function connectRealtime() {
         .listen(
             '.support.request.answer.created',
             handleRealtimeAnswer
+        )
+        .listen(
+            '.support.request.updated',
+            handleRealtimeSupportRequestUpdate
         );
 
     initialized = true;

@@ -2457,10 +2457,25 @@ resetTextareaHeights();
                 showCancel:
                     true,
 
-                onConfirm: () => {
+                input: {
+                    label: "Reason for trashing",
+                    placeholder: "Explain why this FAQ is being moved to the trash…",
+                    required: true,
+                    minLength: 3,
+                    maxLength: 1000,
+                    validationMessage: "Please provide a reason (at least 3 characters)."
+                },
 
+                onConfirm: (reason) => {
+                    let reasonInput = deleteForm.querySelector('input[name="reason"]');
+                    if (!reasonInput) {
+                        reasonInput = document.createElement("input");
+                        reasonInput.type = "hidden";
+                        reasonInput.name = "reason";
+                        deleteForm.appendChild(reasonInput);
+                    }
+                    reasonInput.value = reason.trim();
                     deleteForm.submit();
-
                 }
 
             });

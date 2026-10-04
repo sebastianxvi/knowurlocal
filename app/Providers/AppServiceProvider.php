@@ -209,18 +209,29 @@ class AppServiceProvider extends ServiceProvider
                  * answer workflow where the response has not yet been opened.
                  */
                 $unreadInquiryCount =
-                    SupportRequest::where(
+                    SupportRequest::withTrashed()
+                    ->where(
                         'user_id',
                         auth()->id()
                     )
                     ->where(function ($query) {
                         $query
-                            ->where('status', 'awaiting_confirmation')
-                            ->whereNull('answer_seen_at')
+                            ->where(function ($query) {
+                                $query
+                                    ->whereNull('deleted_at')
+                                    ->where('status', 'awaiting_confirmation')
+                                    ->whereNull('answer_seen_at');
+                            })
                             ->orWhere(function ($query) {
                                 $query
+                                    ->whereNull('deleted_at')
                                     ->where('status', 'answered')
                                     ->whereNull('answer_seen_at');
+                            })
+                            ->orWhere(function ($query) {
+                                $query
+                                    ->whereNotNull('deleted_at')
+                                    ->whereNull('trash_seen_at');
                             });
                     })
                     ->count();

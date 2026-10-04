@@ -19,11 +19,14 @@ class SupportRequest extends Model
         'ip_address',
         'answered_at',
         'answer_seen_at',
+        'trash_reason',
+        'trash_seen_at',
     ];
 
     protected $casts = [
         'answered_at' => 'datetime',
         'answer_seen_at' => 'datetime',
+        'trash_seen_at' => 'datetime',
     ];
 
     /*

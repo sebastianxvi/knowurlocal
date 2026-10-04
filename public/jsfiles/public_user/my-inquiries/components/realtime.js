@@ -263,6 +263,11 @@ async function handleRealtimeAnswer(payload) {
             return;
         }
 
+        if (inquiry.deleted_at) {
+            showTrashedNotification(inquiry);
+            refreshInquiryTabUnreadCounts();
+        }
+
         updateInquiryCard(
             card,
             inquiry
@@ -318,6 +323,15 @@ async function handleRealtimeStatusUpdate(payload) {
             return;
         }
 
+        if (inquiry.deleted_at) {
+            showTrashedNotification(inquiry);
+            refreshInquiryTabUnreadCounts();
+        }
+
+        window.dispatchEvent(
+            new CustomEvent('inquiry:notification-changed')
+        );
+
         /*
          * updateInquiryCard dispatches inquiry:updated after the
          * authoritative status is written to the card. The filter
@@ -335,9 +349,128 @@ async function handleRealtimeStatusUpdate(payload) {
     }
 }
 
+async function refreshInquiryTabUnreadCounts() {
+    try {
+        const response = await fetch(
+            '/my-inquiries/notification-count',
+            {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                cache: 'no-store',
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Notification count request failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data?.success !== true) {
+            throw new Error('Invalid notification count response.');
+        }
+
+        window.setTrashedInquiryUnreadCount?.(
+            data.trashed_unread_count ?? 0
+        );
+
+        window.setNeedsAttentionUnreadCount?.(
+            data.needs_attention_unread_count ?? 0
+        );
+    } catch (error) {
+        console.warn(
+            'KNOWURLOCAL: Unable to refresh inquiry tab unread counts.',
+            error
+        );
+    }
+}
+
+window.addEventListener(
+    'inquiry:notification-changed',
+    () => {
+        refreshInquiryTabUnreadCounts();
+    }
+);
+
+function showTrashedNotification(inquiry) {
+    const existing = document.querySelector('[data-inquiry-trash-toast]');
+    existing?.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'inquiry-trash-toast';
+    toast.dataset.inquiryTrashToast = '';
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="inquiry-trash-toast-icon" aria-hidden="true">
+            <i class="ph-light ph-trash"></i>
+        </div>
+        <div class="inquiry-trash-toast-content">
+            <strong>Your inquiry was moved to the trash</strong>
+            <p>${escapeHtml(inquiry.trash_reason || 'The administration moved this inquiry to the trash.')}</p>
+        </div>
+        <button type="button" class="inquiry-trash-toast-close" aria-label="Dismiss notification">
+            <i class="ph-light ph-x"></i>
+        </button>
+    `;
+
+    toast.querySelector('.inquiry-trash-toast-close')?.addEventListener('click', () => toast.remove());
+    document.body.appendChild(toast);
+
+    window.setTimeout(() => toast.remove(), 9000);
+}
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = String(value ?? '');
+    return div.innerHTML;
+}
+
 /**
  * Subscribe to the authenticated user's private channel.
  */
+window.addEventListener(
+    'inquiry:trashed',
+    async (event) => {
+        const supportRequestId = Number(event.detail?.id);
+
+        if (
+            !Number.isSafeInteger(supportRequestId) ||
+            supportRequestId <= 0
+        ) {
+            return;
+        }
+
+        const card = findInquiryCard(supportRequestId);
+
+        if (!card) {
+            return;
+        }
+
+        try {
+            const inquiry = await fetchInquiry(supportRequestId);
+
+            if (Number(inquiry.id) !== supportRequestId) {
+                return;
+            }
+
+            showTrashedNotification(inquiry);
+            updateInquiryCard(card, inquiry);
+            window.dispatchEvent(
+                new CustomEvent('inquiry:notification-changed')
+            );
+        } catch (error) {
+            console.error(
+                'KNOWURLOCAL realtime trash update failed.',
+                error
+            );
+        }
+    }
+);
+
 function connectRealtime() {
     if (realtimeInitialized) {
         return;

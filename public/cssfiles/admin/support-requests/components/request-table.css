@@ -128,8 +128,16 @@
     width: 128px;
 }
 
+.support-col-trash-reason {
+    width: 270px;
+}
+
 .support-col-actions {
     width: 142px;
+}
+
+.support-table.is-trashed {
+    min-width: 1250px;
 }
 
 
@@ -288,6 +296,69 @@
     background: #f0fdf4;
 
     color: #15803d;
+}
+
+
+/* =========================================================
+   TRASH REASON
+   ========================================================= */
+
+.support-request-trash-reason {
+    color: var(--text-secondary, #4b5563);
+}
+
+.support-trash-reason-content {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.support-trash-reason-text {
+    display: -webkit-box;
+    overflow: hidden;
+
+    max-width: 270px;
+
+    color: var(--text-secondary, #4b5563);
+
+    line-height: 1.4;
+
+    text-overflow: ellipsis;
+
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.support-trash-reason-text:hover {
+    color: var(--text-primary, #1f2937);
+}
+
+.support-trash-reason-view {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent-primary, #2563eb);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.support-trash-reason-view:hover {
+    text-decoration: underline;
+}
+
+.support-trash-reason-view:focus-visible {
+    outline: 2px solid var(--accent-primary, #2563eb);
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+.support-trash-reason-empty {
+    color: var(--text-muted, #9ca3af);
+    font-style: italic;
 }
 
 
@@ -536,23 +607,6 @@
     background: #eef2ff;
 
     color: #4338ca;
-}
-
-
-/* =========================================================
-   TRASH ACTIONS
-   ========================================================= */
-
-.support-trash-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-
-    gap: 7px;
-}
-
-.support-trash-actions form {
-    margin: 0;
 }
 
 

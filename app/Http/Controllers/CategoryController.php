@@ -282,8 +282,13 @@ $categoryColorUsage = Category::query()
      *
      * This is a soft delete.
      */
-    public function destroy(Category $category)
+    public function destroy(Request $request, Category $category)
     {
+        $request->validate([
+            'reason' => ['required', 'string', 'min:3', 'max:1000'],
+        ]);
+
+        $reason = trim($request->input('reason'));
         /*
          * Capture the category information before the
          * soft-delete occurs.
@@ -302,6 +307,8 @@ $categoryColorUsage = Category::query()
          * Laravel sets deleted_at instead of removing
          * the database row.
          */
+        $category->trash_reason = $reason;
+        $category->save();
         $category->delete();
 
         /*
@@ -311,8 +318,8 @@ $categoryColorUsage = Category::query()
             'delete_category',
             $categoryId,
             $oldData,
-            null,
-            'Moved Category to Trash: ' . $categoryName
+            ['trash_reason' => $reason],
+            'Moved Category to Trash: ' . $categoryName . ' | Reason: ' . $reason
         );
 
         return back()->with(

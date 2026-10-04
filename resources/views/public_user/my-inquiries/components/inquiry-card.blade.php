@@ -1,11 +1,13 @@
 @php
     $latestResponse = $req->latestResponse;
+    $displayStatus = $req->trashed() ? 'trashed' : $req->status;
 
     $statusLabels = [
         'pending' => 'Waiting for response',
         'awaiting_confirmation' => 'Response available',
         'needs_follow_up' => 'Follow-up needed',
         'answered' => 'Resolved',
+        'trashed' => 'Trashed by administration',
     ];
 
     $statusIcons = [
@@ -13,13 +15,14 @@
         'awaiting_confirmation' => 'ph-question',
         'needs_follow_up' => 'ph-arrow-counter-clockwise',
         'answered' => 'ph-check',
+        'trashed' => 'ph-trash',
     ];
 @endphp
 
 <article
     class="inquiry-card"
     data-id="{{ $req->id }}"
-    data-status="{{ $req->status }}"
+    data-status="{{ $displayStatus }}"
     data-answer-seen="{{ $req->answer_seen_at ? '1' : '0' }}"
 >
     <button
@@ -36,22 +39,33 @@
                     #{{ $req->id }}
                 </span>
 
-                <span class="inquiry-status-badge {{ $req->status }}">
+                <span class="inquiry-status-badge {{ $displayStatus }}">
                     <i
-                        class="ph-light {{ $statusIcons[$req->status] ?? 'ph-clock' }}"
+                        class="ph-light {{ $statusIcons[$displayStatus] ?? 'ph-clock' }}"
                         aria-hidden="true"
                     ></i>
 
-                    {{ $statusLabels[$req->status] ?? ucfirst(str_replace('_', ' ', $req->status)) }}
+                    {{ $statusLabels[$displayStatus] ?? ucfirst(str_replace('_', ' ', $displayStatus)) }}
                 </span>
 
-                @if (
+                @if ($req->trashed() && is_null($req->trash_seen_at))
+                    <span
+                        class="inquiry-unread-badge"
+                        data-unread-trash
+                        data-unread-type="trash"
+                        title="New trashed inquiry"
+                        aria-label="New trashed inquiry"
+                    >
+                        New
+                    </span>
+                @elseif (
                     $req->status === 'awaiting_confirmation' && is_null($req->answer_seen_at) ||
                     ($req->status === 'answered' && is_null($req->answer_seen_at))
                 )
                     <span
                         class="inquiry-unread-badge"
                         data-unread-response
+                        data-unread-type="response"
                         title="New response"
                         aria-label="New response"
                     >
@@ -115,7 +129,37 @@
             </section>
 
 
-            @if ($latestResponse)
+            @if ($req->trashed())
+
+                <section class="inquiry-trash-notice" data-trash-notice>
+                    <div class="inquiry-trash-notice-icon" aria-hidden="true">
+                        <i class="ph-light ph-trash"></i>
+                    </div>
+
+                    <div class="inquiry-trash-notice-content">
+                        <strong>This inquiry was moved to the trash</strong>
+
+                        <p>
+                            The administration removed this inquiry from the active support queue.
+                            Your inquiry remains visible here for your records.
+                        </p>
+
+                        @if ($req->trash_reason)
+                            <div class="inquiry-trash-reason">
+                                <span>Reason provided by the administration</span>
+                                <p>{{ $req->trash_reason }}</p>
+                            </div>
+                        @endif
+
+                        @if ($req->deleted_at)
+                            <time datetime="{{ $req->deleted_at->toISOString() }}">
+                                {{ $req->deleted_at->format('M d, Y · g:i A') }}
+                            </time>
+                        @endif
+                    </div>
+                </section>
+
+            @elseif ($latestResponse)
 
                 <section class="official-response">
 

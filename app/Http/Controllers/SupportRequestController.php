@@ -8,6 +8,8 @@ use App\Models\UserLog;
 use App\Services\FaqSimilarityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 use App\Services\SupportRequestResponseService;
 use App\Events\SupportRequestResponseCreated;
 use App\Events\SupportRequestAnswerCreated;
@@ -1061,7 +1063,7 @@ public function viewCitizenResponseAttachment(
  */
 public function userInquiry($id)
 {
-    $supportRequest = SupportRequest::query()
+    $supportRequest = SupportRequest::withTrashed()
         ->where('id', $id)
         ->where('user_id', auth()->id())
         ->with([
@@ -1121,23 +1123,46 @@ public function userInquiry($id)
      */
     public function notificationCount()
     {
-        $count = SupportRequest::query()
+        $count = SupportRequest::withTrashed()
             ->where('user_id', auth()->id())
             ->where(function ($query) {
                 $query
-                    ->where('status', 'awaiting_confirmation')
-                    ->whereNull('answer_seen_at')
+                    ->where(function ($query) {
+                        $query
+                            ->whereNull('deleted_at')
+                            ->where('status', 'awaiting_confirmation')
+                            ->whereNull('answer_seen_at');
+                    })
                     ->orWhere(function ($query) {
                         $query
+                            ->whereNull('deleted_at')
                             ->where('status', 'answered')
                             ->whereNull('answer_seen_at');
+                    })
+                    ->orWhere(function ($query) {
+                        $query
+                            ->whereNotNull('deleted_at')
+                            ->whereNull('trash_seen_at');
                     });
             })
+            ->count();
+
+        $trashedUnreadCount = SupportRequest::onlyTrashed()
+            ->where('user_id', auth()->id())
+            ->whereNull('trash_seen_at')
+            ->count();
+
+        $needsAttentionUnreadCount = SupportRequest::where('user_id', auth()->id())
+            ->whereNull('deleted_at')
+            ->where('status', 'awaiting_confirmation')
+            ->whereNull('answer_seen_at')
             ->count();
 
         return response()->json([
             'success' => true,
             'count' => $count,
+            'trashed_unread_count' => $trashedUnreadCount,
+            'needs_attention_unread_count' => $needsAttentionUnreadCount,
         ]);
     }
 
@@ -1154,7 +1179,27 @@ public function userInquiry($id)
         * The user ID comes from the authenticated session,
         * never from browser input.
         */
-        $requests = SupportRequest::query()
+        /*
+         * A trashed inquiry remains visible to its owner so the citizen
+         * can understand what happened and read the administration's reason.
+         *
+         * The trash tab is responsible for acknowledging new trashed records.
+         * Do not clear that unread state merely because this page was opened;
+         * otherwise the tab could never tell the user that something new was
+         * waiting inside Trashed.
+         */
+        $unreadTrashCount = SupportRequest::onlyTrashed()
+            ->where('user_id', auth()->id())
+            ->whereNull('trash_seen_at')
+            ->count();
+
+        $unreadNeedsAttentionCount = SupportRequest::where('user_id', auth()->id())
+            ->whereNull('deleted_at')
+            ->where('status', 'awaiting_confirmation')
+            ->whereNull('answer_seen_at')
+            ->count();
+
+        $requests = SupportRequest::withTrashed()
             ->where('user_id', auth()->id())
             ->with([
                 'agency',
@@ -1203,10 +1248,45 @@ public function userInquiry($id)
 
         return view(
             'public_user.my-inquiries.index',
-            compact('requests')
+            compact('requests', 'unreadTrashCount', 'unreadNeedsAttentionCount')
         );
     }
     
+
+
+    /**
+     * =========================================================
+     * 🗑️ MARK ONE TRASHED INQUIRY AS SEEN
+     * =========================================================
+     *
+     * A trashed inquiry is acknowledged only when the citizen
+     * actually expands that specific inquiry. Opening the Trashed
+     * tab alone must not clear unseen indicators for records the
+     * citizen has not viewed.
+     */
+    public function markTrashSeen($id)
+    {
+        $support = SupportRequest::onlyTrashed()
+            ->where('id', $id)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        if (is_null($support->trash_seen_at)) {
+            $support->update([
+                'trash_seen_at' => now(),
+            ]);
+        }
+
+        $remainingUnread = SupportRequest::onlyTrashed()
+            ->where('user_id', auth()->id())
+            ->whereNull('trash_seen_at')
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'trashed_unread_count' => $remainingUnread,
+        ]);
+    }
 
 
     /**
@@ -1605,8 +1685,13 @@ public function update(
      * The record remains in the database and can be restored
      * by a Superadmin.
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
+        $request->validate([
+            'reason' => ['required', 'string', 'min:3', 'max:1000'],
+        ]);
+
+        $reason = trim($request->input('reason'));
         /*
          * Defense-in-depth authorization.
          *
@@ -1664,6 +1749,15 @@ public function update(
 
 
         /*
+         * Persist the reason on the support request before the soft delete.
+         * The record remains recoverable and the citizen can still see the
+         * reason even though normal admin queries exclude trashed rows.
+         */
+        $support->trash_reason = $reason;
+        $support->trash_seen_at = null;
+        $support->save();
+
+        /*
          * Perform the soft delete.
          */
         $support->delete();
@@ -1678,10 +1772,19 @@ public function update(
             $supportId,
             $agencyId,
             $oldData,
-            null,
-            $description
+            ['trash_reason' => $reason],
+            $description . ' | Reason: ' . $reason
         );
 
+        /*
+         * Notify both administrator and citizen realtime listeners.
+         * The helper catches broadcast failures so a realtime outage
+         * can never turn a successful database mutation into a 500 error.
+         */
+        $this->broadcastSupportRequestUpdated(
+            $support->fresh(),
+            'trashed'
+        );
 
         return back()->with(
             'success',
@@ -1831,16 +1934,64 @@ public function update(
 
         /*
          * Permanently remove the record.
+         *
+         * A Support Request can have structured response records
+         * attached to it. Although the normal schema uses cascading
+         * foreign keys, explicitly removing those children here makes
+         * the destructive operation reliable against an existing
+         * Supabase/PostgreSQL schema that may have been migrated from
+         * an earlier constraint definition.
          */
-        $support->forceDelete();
+        try {
+            DB::transaction(function () use ($support) {
+                $support->responses()
+                    ->with('components')
+                    ->get()
+                    ->each(function ($response) {
+                        $response->components()->delete();
+                    });
 
-if (
-    $imagePath &&
-    Storage::disk('public')->exists($imagePath)
-) {
-    Storage::disk('public')->delete($imagePath);
-}
+                $support->responses()->delete();
 
+                $support->forceDelete();
+            });
+        } catch (Throwable $e) {
+            \Log::error(
+                'Support Request permanent deletion failed.',
+                [
+                    'support_request_id' => $supportId,
+                    'error' => $e->getMessage(),
+                ]
+            );
+
+            return back()->with(
+                'error',
+                'The support request could not be permanently deleted. No data was removed.'
+            );
+        }
+
+        /*
+         * Database deletion succeeded. Remove the optional answer
+         * attachment separately; a storage failure must not roll back
+         * an already-completed database deletion.
+         */
+        if (
+            $imagePath &&
+            Storage::disk('public')->exists($imagePath)
+        ) {
+            try {
+                Storage::disk('public')->delete($imagePath);
+            } catch (Throwable $e) {
+                \Log::warning(
+                    'Support Request answer image could not be removed after permanent deletion.',
+                    [
+                        'support_request_id' => $supportId,
+                        'path' => $imagePath,
+                        'error' => $e->getMessage(),
+                    ]
+                );
+            }
+        }
 
         /*
          * The audit record is created AFTER successful
