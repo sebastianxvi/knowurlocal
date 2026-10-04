@@ -1119,13 +1119,17 @@ DB::transaction(function () use (
          */
         if ($hasChanges) {
 
+            $responseChanged = $this->seededResponseChanged($existingFaq, $faqData);
+
             $existingFaq->update($faqData);
             $existingFaq->refresh();
 
-            // Seeded FAQ content is user-facing content too, so an update
-            // must publish a new immutable response version rather than
-            // leaving current_version_id pointing at an older answer.
-            $this->publishSeededVersion($existingFaq);
+            // Seeder updates follow the same rule as admin edits: agency,
+            // questions and keywords are metadata and must not create a new
+            // response version. Only the actual answer/response payload does.
+            if ($responseChanged) {
+                $this->publishSeededVersion($existingFaq);
+            }
 
             $updated++;
 
@@ -1167,6 +1171,88 @@ $this->command->info(
 $this->command->info(
     "Unchanged: {$unchanged}"
 );
+    }
+
+    /**
+     * Determine whether seeded data changes the published response.
+     * Metadata changes must never reset response feedback.
+     */
+    private function seededResponseChanged(Faq $faq, array $newData): bool
+    {
+        $current = $faq->current_version_id
+            ? FaqVersion::query()->whereKey($faq->current_version_id)->where('faq_id', $faq->id)->first()
+            : null;
+
+        $old = $current ? [
+            'answer' => $current->answer,
+            'answer_fil' => $current->answer_fil,
+            'image' => $current->image,
+            'response_components' => $current->response_components ?? [],
+        ] : [
+            'answer' => $faq->answer,
+            'answer_fil' => $faq->answer_fil,
+            'image' => $faq->image,
+            'response_components' => $faq->response_components ?? [],
+        ];
+
+        $normalizeText = static function ($value): ?string {
+            if ($value === null) {
+                return null;
+            }
+            return trim(str_replace(["\r\n", "\r"], "\n", (string) $value));
+        };
+
+        $normalizeComponents = static function ($components) use ($normalizeText): array {
+            if (!is_array($components)) {
+                return [];
+            }
+
+            $result = [];
+            foreach ($components as $index => $component) {
+                if (!is_array($component)) {
+                    continue;
+                }
+
+                $type = (string) ($component['type'] ?? '');
+                if ($type === '') {
+                    continue;
+                }
+
+                $result[] = [
+                    'type' => $type,
+                    'language' => (string) ($component['language'] ?? ''),
+                    'content' => $normalizeText($component['content'] ?? ''),
+                    'label' => array_key_exists('label', $component) && $component['label'] !== null
+                        ? trim((string) $component['label'])
+                        : null,
+                    '_order' => isset($component['sort_order']) ? (int) $component['sort_order'] : $index,
+                ];
+            }
+
+            usort($result, static fn (array $a, array $b): int => $a['_order'] <=> $b['_order']);
+            foreach ($result as &$component) {
+                unset($component['_order']);
+            }
+            unset($component);
+
+            return array_values($result);
+        };
+
+        $oldSnapshot = [
+            'answer' => $normalizeText($old['answer'] ?? ''),
+            'answer_fil' => $normalizeText($old['answer_fil'] ?? null),
+            'image' => $normalizeText($old['image'] ?? null),
+            'response_components' => $normalizeComponents($old['response_components'] ?? []),
+        ];
+
+        $newSnapshot = [
+            'answer' => $normalizeText($newData['answer'] ?? ''),
+            'answer_fil' => $normalizeText($newData['answer_fil'] ?? null),
+            'image' => $normalizeText($newData['image'] ?? null),
+            'response_components' => $normalizeComponents($newData['response_components'] ?? []),
+        ];
+
+        return $oldSnapshot !== $newSnapshot;
     }
 
     /**

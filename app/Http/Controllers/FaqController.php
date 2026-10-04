@@ -1229,10 +1229,16 @@ $faq->id
                 ->with('success', 'No changes were made.');
         }
 
-        // A new version is created only when the user-facing FAQ response or
-        // its context changes. Keyword-only/admin metadata edits do not wipe
-        // out useful feedback.
-        $responseChanged = $this->faqResponseChanged($oldData, $newData);
+        // Compare the proposed response with the currently published
+        // response, not merely with mutable FAQ metadata. This prevents
+        // agency/question/keyword edits (or harmless component form
+        // metadata) from creating a duplicate response version.
+        $publishedResponse = $faq->currentVersion;
+        $responseBaseline = $publishedResponse
+            ? $this->responseSnapshot($publishedResponse)
+            : $oldData;
+
+        $responseChanged = $this->faqResponseChanged($responseBaseline, $newData);
 
         DB::transaction(function () use (
             $faq,
@@ -1500,39 +1506,112 @@ public function forceDestroy($id)
 }
 
     /**
-     * Build the immutable response snapshot that should be associated with a
-     * feedback generation.
+     * Build the immutable snapshot used to determine whether the published
+     * response itself changed.
+     *
+     * FAQ metadata is intentionally excluded here. Changing the agency,
+     * English/Filipino question, or keywords changes how the FAQ is indexed
+     * and displayed, but it does not create a new answer generation and must
+     * not invalidate feedback already collected for the current response.
      */
-    private function responseSnapshot(array|Faq $source): array
+    private function responseSnapshot(array|Faq|FaqVersion $source): array
     {
-        if ($source instanceof Faq) {
-            return [
-                'agency_id' => $source->agency_id,
-                'question' => $source->question,
-                'answer' => $source->answer,
-                'question_fil' => $source->question_fil,
-                'answer_fil' => $source->answer_fil,
-                'image' => $source->image,
-                'response_components' => $source->response_components ?? [],
-            ];
+        if ($source instanceof Faq || $source instanceof FaqVersion) {
+            $answer = $source->answer;
+            $answerFil = $source->answer_fil;
+            $image = $source->image;
+            $components = $source->response_components ?? [];
+        } else {
+            $answer = $source['answer'] ?? '';
+            $answerFil = $source['answer_fil'] ?? null;
+            $image = $source['image'] ?? null;
+            $components = $source['response_components'] ?? [];
         }
 
         return [
-            'agency_id' => $source['agency_id'] ?? null,
-            'question' => $source['question'] ?? '',
-            'answer' => $source['answer'] ?? '',
-            'question_fil' => $source['question_fil'] ?? null,
-            'answer_fil' => $source['answer_fil'] ?? null,
-            'image' => $source['image'] ?? null,
-            'response_components' => $source['response_components'] ?? [],
+            'answer' => $this->normalizeResponseText($answer),
+            'answer_fil' => $this->normalizeResponseText($answerFil),
+            'image' => $image !== null ? trim((string) $image) : null,
+            'response_components' => $this->normalizeResponseComponentsForComparison($components),
         ];
     }
 
     /**
-     * Determine whether an FAQ edit represents a new user-facing response.
-     * Keyword-only changes deliberately do not reset feedback.
+     * Normalize response text only for equality checks. Formatting-only
+     * differences such as line endings or surrounding whitespace should not
+     * reset feedback when the user-visible response is unchanged.
      */
-    private function faqResponseChanged(array $oldData, array $newData): bool
+    private function normalizeResponseText(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return trim(str_replace(["\r\n", "\r"], "\n", $value));
+    }
+
+    /**
+     * Compare only user-facing response component data. Browser/helper
+     * metadata such as existing_content, source IDs, attachment URLs and
+     * generated sort_order values are deliberately ignored because they do
+     * not change the published response itself.
+     */
+    private function normalizeResponseComponentsForComparison(mixed $components): array
+    {
+        if (!is_array($components)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($components as $index => $component) {
+            if (!is_array($component)) {
+                continue;
+            }
+
+            $type = (string) ($component['type'] ?? '');
+            if ($type === '') {
+                continue;
+            }
+
+            $language = (string) ($component['language'] ?? '');
+            $content = $component['content'] ?? '';
+            $label = $component['label'] ?? null;
+
+            $normalized[] = [
+                'type' => $type,
+                'language' => $language,
+                'content' => is_string($content)
+                    ? trim(str_replace(["\r\n", "\r"], "\n", $content))
+                    : $content,
+                'label' => $label !== null
+                    ? trim((string) $label)
+                    : null,
+                '_order' => isset($component['sort_order'])
+                    ? (int) $component['sort_order']
+                    : $index,
+            ];
+        }
+
+        usort($normalized, static function (array $a, array $b): int {
+            return $a['_order'] <=> $b['_order'];
+        });
+
+        foreach ($normalized as &$component) {
+            unset($component['_order']);
+        }
+        unset($component);
+
+        return array_values($normalized);
+    }
+
+    /**
+     * Determine whether an FAQ edit represents a new user-facing response.
+     * Only answer text or response attachments/components reset feedback by
+     * publishing a new immutable response version. FAQ metadata changes such
+     * as agency, question, and keywords deliberately do not.
+     */
+    private function faqResponseChanged(array|Faq|FaqVersion $oldData, array $newData): bool
     {
         $old = $this->responseSnapshot($oldData);
         $new = $this->responseSnapshot($newData);
@@ -1581,6 +1660,15 @@ public function forceDestroy($id)
             : null;
 
         if ($current) {
+            // Final invariant: never create a duplicate version when the
+            // proposed response is byte/structure-equivalent to the already
+            // published response. This protects against form normalization,
+            // stale metadata, and future callers that accidentally request a
+            // version for a metadata-only edit.
+            if (!$this->faqResponseChanged($current, $snapshot)) {
+                return $current;
+            }
+
             $current->update(['superseded_at' => now()]);
         }
 
