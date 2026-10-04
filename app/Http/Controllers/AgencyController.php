@@ -356,6 +356,17 @@ public function getAll()
     ])
         ->findOrFail($id);
 
+    if (auth()->check() && auth()->user()->role === 'user') {
+        app(\App\Services\AuditLogService::class)->record(
+            action: 'navigate',
+            page: 'agency_details',
+            targetType: 'agency',
+            targetId: (int) $agency->id,
+            agencyId: (int) $agency->id,
+            description: 'Opened navigation for ' . $agency->agency_name,
+        );
+    }
+
 
     return view(
         'public_user.map-navigation',
@@ -2244,6 +2255,9 @@ public function restore($id)
 
                 'category_id' =>
                     null,
+
+                'target_type' => $agencyId ? 'agency' : ($targetUserId ? 'user' : null),
+                'target_id' => $agencyId ?: $targetUserId,
 
 
                 /*

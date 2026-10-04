@@ -16,6 +16,8 @@ class UserLog extends Model
     'faq_id',
     'category_id',
     'support_request_id',
+    'target_type',
+    'target_id',
 
     'action',
     'page',
@@ -42,6 +44,46 @@ class UserLog extends Model
         'old_values' => 'array',
         'new_values' => 'array',
     ];
+
+    /**
+     * Return the most useful historical "before" payload.
+     *
+     * The audit system originally used the scalar old_value column and
+     * later introduced old_values JSON. Some older records (especially
+     * destructive admin actions) can therefore legitimately contain an
+     * empty JSON array alongside a populated legacy value.
+     */
+    public function getAuditOldDataAttribute(): mixed
+    {
+        if (is_array($this->old_values) && $this->old_values !== []) {
+            return $this->old_values;
+        }
+
+        if ($this->old_values !== null && $this->old_values !== '') {
+            return $this->old_values;
+        }
+
+        return $this->old_value;
+    }
+
+    /**
+     * Return the most useful historical "after" payload.
+     *
+     * Prefer structured JSON, but fall back to the legacy scalar column
+     * when the structured payload is empty or missing.
+     */
+    public function getAuditNewDataAttribute(): mixed
+    {
+        if (is_array($this->new_values) && $this->new_values !== []) {
+            return $this->new_values;
+        }
+
+        if ($this->new_values !== null && $this->new_values !== '') {
+            return $this->new_values;
+        }
+
+        return $this->new_value;
+    }
 
 
     /**
@@ -72,6 +114,16 @@ class UserLog extends Model
     }
 
     /**
+     * Historical FAQ target. Soft-deleted FAQs remain resolvable.
+     */
+    public function faq()
+    {
+        return $this->belongsTo(
+            \App\Models\Faq::class
+        )->withTrashed();
+    }
+
+    /**
  * 🔗 RELATION: Support Request
  *
  * Include soft-deleted Support Requests so historical
@@ -85,6 +137,18 @@ public function supportRequest()
         'support_request_id'
     )->withTrashed();
 }
+
+
+    /**
+     * Generic relationship for collaboration-task audit targets.
+     */
+    public function collaborationTask()
+    {
+        return $this->belongsTo(
+            \App\Models\CollaborationTask::class,
+            'target_id'
+        );
+    }
 
 
     /**
@@ -116,7 +180,7 @@ public function supportRequest()
                 $this->user->last_name;
         }
 
-        return 'Guest';
+        return 'Unknown actor';
     }
 
 
@@ -128,219 +192,22 @@ public function supportRequest()
      *
      * The database continues storing stable action identifiers.
      */
-    public function getActionLabelAttribute()
+    public function getActionLabelAttribute(): string
     {
-        return match ($this->action) {
-
-            /*
-             * =====================================================
-             * AGENCY
-             * =====================================================
-             */
-
-            'create_agency' =>
-                'Create Agency',
-
-            'update_agency' =>
-                'Update Agency',
-
-            'trash_agency' =>
-                'Move to Trash',
-
-            'restore_agency' =>
-                'Restore',
-
-            'force_delete_agency' =>
-                'Delete Permanently',
-
-            'delete_agency' =>
-                'Delete Agency',
-
-
-            /*
-             * =====================================================
-             * FAQ
-             * =====================================================
-             */
-
-            'create_faq' =>
-                'Create FAQ',
-
-            'update_faq' =>
-                'Update FAQ',
-
-            'delete_faq' =>
-                'Move to Trash',
-
-            'restore_faq' =>
-                'Restore',
-
-            'force_delete_faq' =>
-                'Delete Permanently',
-
-
-            /*
-             * =====================================================
-             * CATEGORY
-             * =====================================================
-             */
-
-            'create_category' =>
-                'Create Category',
-
-            'update_category' =>
-                'Update Category',
-
-            'delete_category' =>
-                'Move to Trash',
-
-            'restore_category' =>
-                'Restore',
-
-            'force_delete_category' =>
-                'Delete Permanently',
-
-
-            /*
-             * =====================================================
-             * SUPPORT REQUESTS
-             * =====================================================
-             */
-
-            'delete_support_request' =>
-                'Move to Trash',
-
-            'restore_support_request' =>
-                'Restore',
-
-            'force_delete_support_request' =>
-                'Delete Permanently',
-
-            'answer_support_request' =>
-                'Answer Support Request',
-
-            'forward_support_response' =>
-                'Forward Support Response',
-
-
-            /*
-             * =====================================================
-             * AUTHENTICATION
-             * =====================================================
-             */
-
-            'login' =>
-                'Login',
-
-            'logout' =>
-                'Logout',
-
-            'session_expired' =>
-                'Session Expired',
-
-            'admin_login' =>
-                'Admin Login',
-
-            'admin_logout' =>
-                'Admin Logout',
-
-
-            /*
-            * =====================================================
-            * ADMIN MANAGEMENT
-            * =====================================================
-            */
-
-            'approve_admin' =>
-                'Approve Admin',
-
-            'promote_admin' =>
-                'Promote Admin',
-
-            'demote_admin' =>
-                'Demote Admin',
-
-            'deactivate_admin' =>
-                'Deactivate Admin',
-
-            'reactivate_admin' =>
-                'Reactivate Admin',
-
-            'delete_admin' =>
-                'Delete Admin',
-
-            'invite_admin' =>
-                'Invite Admin',
-
-                /*
-                * =====================================================
-                * PUBLIC USER MANAGEMENT
-                * =====================================================
-                */
-
-                'deactivate_user' =>
-                    'Deactivate User',
-
-                'reactivate_user' =>
-                    'Reactivate User',
-
-                'delete_user' =>
-                    'Delete User',
-
-            'create_collaboration_task' =>
-                'Create Collaboration Task',
-
-            'update_collaboration_task' =>
-                'Update Collaboration Task',
-
-
-            /*
-             * =====================================================
-             * PUBLIC ACTIVITY
-             * =====================================================
-             */
-
-            'view_map' =>
-                'View Map',
-
-            'view_agencies' =>
-                'View Agencies',
-
-            'view_agency' =>
-                'View Agency',
-
-            'search_agency' =>
-                'Search Agency',
-
-            'get_directions' =>
-                'Get Directions',
-
-            'contact_agency' =>
-                'Contact Agency',
-
-            'filter_category' =>
-                'Filter Category',
-
-            'navigate' =>
-                'Navigate',
-
-
-            /*
-             * =====================================================
-             * FALLBACK
-             * =====================================================
-             */
-
-            default =>
-                ucwords(
-                    str_replace(
-                        '_',
-                        ' ',
-                        $this->action
-                    )
-                ),
-        };
+        return config("activity_logs.actions.{$this->action}.label")
+            ?? ucwords(str_replace('_', ' ', (string) $this->action));
     }
+
+    public function getActionIconAttribute(): string
+    {
+        return config("activity_logs.actions.{$this->action}.icon", 'ph-lightning');
+    }
+
+    public function getActionGroupAttribute(): string
+    {
+        return config("activity_logs.actions.{$this->action}.group", 'Other Activity');
+    }
+
 
 
     /**
@@ -349,82 +216,31 @@ public function supportRequest()
      * Converts internal page identifiers into administrator-
      * facing page names.
      */
-    public function getPageLabelAttribute()
+    public function getPageLabelAttribute(): string
     {
         return match ($this->page) {
-
-            /*
-             * =====================================================
-             * NGA & NGO
-             * =====================================================
-             */
-
-            'nga_ngo_management' =>
-                'NGA & NGO Management',
-
-            'nga_ngo_recovery' =>
-                'NGA & NGO Recovery',
-
-
-            /*
-             * =====================================================
-             * FAQ
-             * =====================================================
-             */
-
-            'admin_faq' =>
-                'FAQ Management',
-
-            'admin_faq_recovery' =>
-                'FAQ Recovery',
-
-
-            /*
-             * =====================================================
-             * CATEGORY
-             * =====================================================
-             */
-
-            'admin_category' =>
-                'Category Management',
-
-
-            /*
-            * =====================================================
-            * USER MANAGEMENT
-            * =====================================================
-            */
-
-            'admin_users' =>
-                'User Management',
-
-
-            /*
-             * =====================================================
-             * SUPPORT REQUESTS
-             * =====================================================
-             */
-
-            'admin_support_requests' =>
-                'Support Requests',
-
-
-            /*
-             * =====================================================
-             * FALLBACK
-             * =====================================================
-             */
-
-            default =>
-                ucwords(
-                    str_replace(
-                        '_',
-                        ' ',
-                        $this->page
-                    )
-                ),
+            'nga_ngo_management' => 'NGA & NGO Management',
+            'nga_ngo_recovery' => 'NGA & NGO Recovery',
+            'admin_faq' => 'FAQ Management',
+            'admin_faq_recovery' => 'FAQ Recovery',
+            'admin_category' => 'Category Management',
+            'admin_users' => 'User Management',
+            'admin_support_requests' => 'Support Requests',
+            'admin_management' => 'Admin Management',
+            'admin_dashboard' => 'Admin Dashboard',
+            'map' => 'Map',
+            'agencies_list' => 'Agencies',
+            'agency_details' => 'Agency Details',
+            'user_inquiries' => 'My Inquiries',
+            'chatbot' => 'Chatbot',
+            'login' => 'Authentication',
+            'navbar' => 'Navigation',
+            default => $this->page
+                ? ucwords(str_replace('_', ' ', $this->page))
+                : 'System',
         };
     }
+
 
 
     /**

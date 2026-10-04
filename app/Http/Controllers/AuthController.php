@@ -193,6 +193,21 @@ class AuthController extends Controller
         // 🧹 Cleanup
         $record->delete();
 
+        app(\App\Services\AuditLogService::class)->record(
+            action: 'verify_account',
+            page: 'login',
+            targetType: 'user',
+            targetId: (int) $user->id,
+            targetUserId: (int) $user->id,
+            newValues: [
+                'role' => $user->role,
+                'status' => $user->status,
+            ],
+            description: 'Verified account email for User #' . $user->id,
+            actorId: null,
+            role: $user->role,
+        );
+
         if ($user->role === 'admin' || $user->role === 'superadmin') {
     return redirect('/admin/login')
         ->with(
@@ -1065,6 +1080,18 @@ public function resetPassword(Request $request)
 
     $user->save();
 
+    app(\App\Services\AuditLogService::class)->record(
+        action: 'password_reset',
+        page: 'login',
+        targetType: 'user',
+        targetId: (int) $user->id,
+        targetUserId: (int) $user->id,
+        newValues: ['password_changed' => true],
+        description: 'Password reset completed for User #' . $user->id,
+        actorId: null,
+        role: $user->role,
+    );
+
 
     /*
      * The password-reset authorization must be destroyed
@@ -1144,8 +1171,9 @@ public function resetPassword(Request $request)
 
             UserLog::create([
                 'user_id' => Auth::id(),
-                'action' => 'login',
+                'action' => in_array($user->role, ['admin', 'superadmin'], true) ? 'admin_login' : 'login',
                 'page' => 'login',
+                'role' => $user->role,
                 'ip_address' => $request->ip(),
                 'device' => $request->userAgent(),
             ]);
@@ -1174,7 +1202,7 @@ public function resetPassword(Request $request)
         if ($user) {
             UserLog::create([
                 'user_id' => $user->id,
-                'action' => 'logout',
+                'action' => in_array($user->role, ['admin', 'superadmin'], true) ? 'admin_logout' : 'logout',
                 'page' => 'navbar',
                 'ip_address' => $request->ip(),
                 'device' => substr($request->userAgent(), 0, 255),

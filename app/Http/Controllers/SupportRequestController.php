@@ -6,6 +6,7 @@ use App\Models\Agency;
 use App\Models\SupportRequest;
 use App\Models\UserLog;
 use App\Services\FaqSimilarityService;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -548,6 +549,14 @@ if (
      * Create the official response and move the ticket
      * into the citizen-confirmation stage.
      */
+    /*
+     * Capture the authoritative state BEFORE creating the new response.
+     * This is important because the official answer now lives in
+     * support_request_responses/support_response_components rather than
+     * in SupportRequest.answer.
+     */
+    $oldData = $this->buildAuditSnapshot($supportRequest);
+
     $response = $responseService->createAndForward(
         $supportRequest,
         auth()->id(),
@@ -585,12 +594,14 @@ if (
         (int) $response->id
     );
 
+    $newData = $this->buildAuditSnapshot($supportRequest->fresh(), $response);
+
     $this->logAction(
         'forward_support_response',
         (int) $supportRequest->id,
         (int) $validated['agency_id'],
-        null,
-        $this->buildAuditSnapshot($supportRequest->fresh()),
+        $oldData,
+        $newData,
         'Forwarded official response for Support Request #' . $supportRequest->id
     );
 
@@ -1275,6 +1286,17 @@ public function userInquiry($id)
             $support->update([
                 'trash_seen_at' => now(),
             ]);
+
+            app(AuditLogService::class)->record(
+                action: 'view_trashed_inquiry',
+                page: 'user_inquiries',
+                targetType: 'support_request',
+                targetId: (int) $support->id,
+                supportRequestId: (int) $support->id,
+                agencyId: $support->agency_id ? (int) $support->agency_id : null,
+                newValues: ['state' => 'trashed_inquiry_viewed'],
+                description: 'Viewed trashed Support Request #' . $support->id,
+            );
         }
 
         $remainingUnread = SupportRequest::onlyTrashed()
@@ -1333,6 +1355,17 @@ public function userInquiry($id)
                 'answer_seen_at' =>
                     now(),
             ]);
+
+            app(AuditLogService::class)->record(
+                action: 'view_support_response',
+                page: 'user_inquiries',
+                targetType: 'support_request',
+                targetId: (int) $support->id,
+                supportRequestId: (int) $support->id,
+                agencyId: $support->agency_id ? (int) $support->agency_id : null,
+                newValues: ['state' => 'response_viewed'],
+                description: 'Viewed response for Support Request #' . $support->id,
+            );
         }
 
 
@@ -1402,6 +1435,8 @@ public function confirmResponse($id)
      * responded_at records when the citizen completed
      * the confirmation step.
      */
+    $oldData = $this->buildAuditSnapshot($supportRequest->fresh(), $response);
+
     $response->update([
         'status' => 'accepted',
         'responded_at' => now(),
@@ -1416,6 +1451,20 @@ public function confirmResponse($id)
         'answered_at' => now(),
         'answer_seen_at' => now(),
     ]);
+
+    $newData = $this->buildAuditSnapshot($supportRequest->fresh(), $response->fresh());
+
+    app(AuditLogService::class)->record(
+        action: 'confirm_support_response',
+        page: 'user_inquiries',
+        targetType: 'support_request',
+        targetId: (int) $supportRequest->id,
+        supportRequestId: (int) $supportRequest->id,
+        agencyId: $supportRequest->agency_id ? (int) $supportRequest->agency_id : null,
+        oldValues: $oldData,
+        newValues: $newData,
+        description: 'Confirmed response for Support Request #' . $supportRequest->id,
+    );
 
     $this->broadcastSupportRequestUpdated(
         $supportRequest->fresh(),
@@ -1494,6 +1543,8 @@ public function requestFollowUp(Request $request, $id)
      * The reason is stored on the response attempt itself,
      * preserving the history of what happened.
      */
+    $oldData = $this->buildAuditSnapshot($supportRequest->fresh(), $response);
+
     $response->update([
         'status' => 'needs_follow_up',
         'responded_at' => now(),
@@ -1507,6 +1558,20 @@ public function requestFollowUp(Request $request, $id)
     $supportRequest->update([
         'status' => 'needs_follow_up',
     ]);
+
+    $newData = $this->buildAuditSnapshot($supportRequest->fresh(), $response->fresh());
+
+    app(AuditLogService::class)->record(
+        action: 'request_support_follow_up',
+        page: 'user_inquiries',
+        targetType: 'support_request',
+        targetId: (int) $supportRequest->id,
+        supportRequestId: (int) $supportRequest->id,
+        agencyId: $supportRequest->agency_id ? (int) $supportRequest->agency_id : null,
+        oldValues: $oldData,
+        newValues: $newData,
+        description: 'Requested follow-up for Support Request #' . $supportRequest->id,
+    );
 
     $this->broadcastSupportRequestUpdated(
         $supportRequest->fresh(),
@@ -1603,6 +1668,11 @@ public function update(
     }
 
     /*
+     * Preserve the complete previous answer state for the audit trail.
+     */
+    $oldData = $this->buildAuditSnapshot($support);
+
+    /*
      * Update the Support Request record.
      */
     $support->update([
@@ -1667,6 +1737,15 @@ public function update(
     ) {
         Storage::disk('public')->delete($oldImagePath);
     }
+
+    $this->logAction(
+        'update_support_answer',
+        (int) $support->id,
+        $support->agency_id ? (int) $support->agency_id : null,
+        $oldData,
+        $this->buildAuditSnapshot($support->fresh()),
+        'Updated answer for Support Request #' . $support->id
+    );
 
     return back()->with(
         'success',
@@ -2151,6 +2230,17 @@ public function update(
             );
         }
 
+        app(AuditLogService::class)->record(
+            action: 'convert_support_to_faq',
+            page: 'admin_support_requests',
+            targetType: 'support_request',
+            targetId: (int) $support->id,
+            supportRequestId: (int) $support->id,
+            agencyId: (int) $support->agency_id,
+            newValues: ['conversion_started' => true],
+            description: 'Prepared Support Request #' . $support->id . ' for FAQ conversion',
+        );
+
 
         /*
          * Pass only the Support Request ID and agency ID.
@@ -2211,44 +2301,74 @@ public function update(
     }
 
     private function buildAuditSnapshot(
-        SupportRequest $support
+        SupportRequest $support,
+        $response = null
     ): array {
+        /*
+         * The current support workflow stores official responses in
+         * dedicated response/component tables. The old snapshot only
+         * read SupportRequest.answer, which is why Forwarded Official
+         * Response logs displayed "No value" for the actual answer.
+         *
+         * Always resolve the latest response when one is not explicitly
+         * supplied so destructive/history logs retain the full response
+         * lifecycle even after the ticket itself is deleted.
+         */
+        if ($response === null) {
+            $response = $support->latestResponse()
+                ->with('components')
+                ->first();
+        } elseif (!$response->relationLoaded('components')) {
+            $response->load('components');
+        }
+
+        $responseSnapshot = null;
+
+        if ($response) {
+            $responseSnapshot = [
+                'id' => (int) $response->id,
+                'status' => $response->status,
+                'forwarded_at' => $response->forwarded_at?->toDateTimeString(),
+                'responded_at' => $response->responded_at?->toDateTimeString(),
+                'follow_up_reason' => $response->follow_up_reason,
+                'components' => $response->components
+                    ->map(function ($component) {
+                        $type = (string) $component->type;
+                        $hasAttachment = in_array($type, ['image', 'file'], true);
+
+                        return [
+                            'type' => $type,
+                            'label' => $component->label,
+                            'content' => $hasAttachment
+                                ? null
+                                : $component->content,
+                            'attachment' => $hasAttachment,
+                            'sort_order' => (int) $component->sort_order,
+                        ];
+                    })
+                    ->values()
+                    ->all(),
+            ];
+        }
+
         return [
-
-            'support_request_id' =>
-                $support->id,
-
-            'user_id' =>
-                $support->user_id,
-
-            'agency_id' =>
-                $support->agency_id,
-
-            'question' =>
-                $support->question,
-
-            'answer' =>
-                $support->answer,
-
-            'answer_image' =>
-    $support->answer_image,
-
-            'status' =>
-                $support->status,
-
-            'answered_at' =>
-                $support->answered_at?->toDateTimeString(),
-
-            'answer_seen_at' =>
-                $support->answer_seen_at?->toDateTimeString(),
-
-            'created_at' =>
-                $support->created_at?->toDateTimeString(),
-
-            'updated_at' =>
-                $support->updated_at?->toDateTimeString(),
+            'support_request_id' => $support->id,
+            'user_id' => $support->user_id,
+            'agency_id' => $support->agency_id,
+            'question' => $support->question,
+            'answer' => $support->answer,
+            'answer_image' => $support->answer_image,
+            'status' => $support->status,
+            'answered_at' => $support->answered_at?->toDateTimeString(),
+            'answer_seen_at' => $support->answer_seen_at?->toDateTimeString(),
+            'trash_reason' => $support->trash_reason,
+            'trash_seen_at' => $support->trash_seen_at?->toDateTimeString(),
+            'created_at' => $support->created_at?->toDateTimeString(),
+            'updated_at' => $support->updated_at?->toDateTimeString(),
+            'official_response' => $responseSnapshot,
         ];
     }
+
 
 
     /**
@@ -2305,6 +2425,9 @@ public function update(
 
                 'support_request_id' =>
                     $supportRequestId,
+
+                'target_type' => 'support_request',
+                'target_id' => $supportRequestId,
 
                 /*
                  * Stable machine-readable action.

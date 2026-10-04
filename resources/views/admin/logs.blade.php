@@ -10,7 +10,7 @@
 @section('title', 'KNOWURLOCAL | ' . ucfirst(auth()->user()->role) . ' Module')
 
 @section('page-title', 'Activity Logs')
-@section('page-subtitle', 'Monitor user activities')
+@section('page-subtitle', 'Review a complete audit trail of user and administrator activity')
 
 @section('content')
 
@@ -52,10 +52,19 @@
                 <i class="ph-light ph-funnel" aria-hidden="true"></i>
                 <select name="action" id="logs-action">
                     <option value="">All Actions</option>
-                    @foreach($availableActions as $action)
-                        <option value="{{ $action }}" {{ request('action') == $action ? 'selected' : '' }}>
-                            {{ ucfirst(str_replace('_',' ', $action)) }}
-                        </option>
+                    @php
+                        $groupedActions = $availableActions->groupBy(
+                            fn ($action) => config("activity_logs.actions.{$action}.group", 'Other Activity')
+                        );
+                    @endphp
+                    @foreach($groupedActions as $group => $groupActions)
+                        <optgroup label="{{ $group }}">
+                            @foreach($groupActions as $action)
+                                <option value="{{ $action }}" {{ request('action') == $action ? 'selected' : '' }}>
+                                    {{ config("activity_logs.actions.{$action}.label", ucfirst(str_replace('_',' ', $action))) }}
+                                </option>
+                            @endforeach
+                        </optgroup>
                     @endforeach
                 </select>
             </div>
@@ -123,10 +132,10 @@
                 <tr>
                     <th class="col-user">User</th>
                     <th class="col-target">Target</th>
-                    <th class="col-action">Action</th>
+                    <th class="col-action">Activity</th>
                     <th class="col-change">Changes</th>
-                    <th class="col-page">Page</th>
-                    <th class="col-date">Date</th>
+                    <th class="col-page">Source</th>
+                    <th class="col-date">Time</th>
                 </tr>
             </thead>
 
@@ -150,27 +159,33 @@
                 <tr class="log-row"
     data-action="{{ $log->action }}"
                     data-old='@json(
-                        $log->old_values !== null
-                            ? $log->old_values
-                            : $log->old_value
+                        $log->audit_old_data,
+                        JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
                     )'
                     data-new='@json(
-                        $log->new_values !== null
-                            ? $log->new_values
-                            : $log->new_value
+                        $log->audit_new_data,
+                        JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
                     )'
+                    data-description="{{ $log->description }}"
+                    data-actor="{{ $log->actor_name }}"
+                    data-role="{{ $log->role ?? 'user' }}"
+                    data-target="{{ $log->log_target_name && $log->log_target !== 'System' ? $log->log_target_name . ' (' . $log->log_target . ')' : ($log->log_target_name ?? 'System') }}"
+                    data-page="{{ $log->page_label }}"
+                    data-ip="{{ $log->ip_address ?? 'Not recorded' }}"
+                    data-device="{{ $log->device ?? 'Not recorded' }}"
+                    data-group="{{ $log->action_group }}"
                 >
 
                     <!-- USER -->
                     <td class="col-user">
                         <div class="actor-cell">
 
-                            <span class="role-badge {{ $log->user->role ?? 'user' }}">
+                            <span class="role-badge {{ $log->role ?? 'user' }}">
 
                                 <i class="ph-light
-                                    @if(($log->user->role ?? '') === 'superadmin')
+                                    @if(($log->role ?? '') === 'superadmin')
                                         ph-crown
-                                    @elseif(($log->user->role ?? '') === 'admin')
+                                    @elseif(($log->role ?? '') === 'admin')
                                         ph-shield
                                     @else
                                         ph-user
@@ -178,7 +193,7 @@
                                 "></i>
 
                                 <span>
-                                    {{ ucfirst($log->user->role ?? 'User') }}
+                                    {{ ucfirst($log->role ?? 'user') }}
                                 </span>
 
                             </span>
@@ -251,88 +266,12 @@
 
                     
                     <!-- ACTION -->
-<td>
-    <span class="badge action {{ $log->action }}">
-
-        <i class="ph-light 
-            @switch($log->action)
-
-                {{-- AUTH --}}
-                @case('login') ph-sign-in @break
-                @case('logout') ph-sign-out @break
-                @case('session_expired') ph-timer @break
-                @case('admin_login') ph-shield-check @break
-                @case('admin_logout') ph-shield-slash @break
-
-                {{-- PUBLIC USER ACTIVITY --}}
-                @case('view_map') ph-map-trifold @break
-                @case('view_agencies') ph-buildings @break
-                @case('view_agency') ph-building @break
-                @case('search_agency') ph-magnifying-glass @break
-                @case('get_directions') ph-navigation-arrow @break
-                @case('contact_agency') ph-address-book @break
-                @case('filter_category') ph-funnel-simple @break
-                @case('navigate') ph-compass @break
-
-                {{-- CREATE --}}
-                @case('create_agency') ph-plus-circle @break
-                @case('create_faq') ph-chat-centered-dots @break
-                @case('create_category') ph-tag @break
-
-                {{-- UPDATE --}}
-                @case('update_agency') ph-pencil-simple @break
-                @case('update_faq') ph-pencil-simple-line @break
-                @case('update_category') ph-pencil-simple @break
-
-                {{-- AGENCY LIFECYCLE --}}
-                @case('trash_agency') ph-trash @break
-                @case('restore_agency') ph-arrow-counter-clockwise @break
-                @case('force_delete_agency') ph-trash-simple @break
-
-                {{-- FAQ LIFECYCLE --}}
-                @case('delete_faq') ph-trash @break
-                @case('restore_faq') ph-arrow-counter-clockwise @break
-                @case('force_delete_faq') ph-trash-simple @break
-
-                {{-- CATEGORY LIFECYCLE --}}
-                @case('delete_category') ph-trash @break
-                @case('restore_category') ph-arrow-counter-clockwise @break
-                @case('force_delete_category') ph-trash-simple @break
-
-                {{-- OTHER DELETE ACTIONS --}}
-                @case('delete_agency') ph-trash @break
-                @case('delete_support_request') ph-trash @break
-                @case('restore_support_request') ph-arrow-counter-clockwise @break
-                @case('force_delete_support_request') ph-trash-simple @break
-                
-
-                {{-- ADMIN --}}
-                @case('approve_admin') ph-check @break
-                @case('promote_admin') ph-arrow-up-right @break
-                @case('demote_admin') ph-arrow-down-right @break
-                @case('deactivate_admin') ph-user-minus @break
-                @case('reactivate_admin') ph-user-check @break
-                @case('delete_admin') ph-user-minus @break
-                @case('invite_admin') ph-paper-plane-tilt @break
-
-                {{-- PUBLIC USER MANAGEMENT --}}
-                @case('deactivate_user') ph-user-minus @break
-                @case('reactivate_user') ph-user-check @break
-                @case('delete_user') ph-trash @break
-
-                {{-- DEFAULT --}}
-                @default ph-lightning
-
-            @endswitch
-        "></i>
-
-        {{ $log->action_label }}
-
-    </span>
-</td>
-
-                    
-
+                    <td>
+                        <span class="badge action {{ $log->action }}" title="{{ $log->action_group }}">
+                            <i class="ph-light {{ $log->action_icon }}" aria-hidden="true"></i>
+                            {{ $log->action_label }}
+                        </span>
+                    </td>
 
                     <!-- CHANGE -->
 <td class="audit-change-cell">
@@ -1003,6 +942,28 @@
             @endswitch
         </span>
 
+    @elseif($log->action === 'forward_support_response')
+
+        @php
+            $forwardedData = $log->audit_new_data;
+            $forwardedResponse = is_array($forwardedData)
+                ? ($forwardedData['official_response'] ?? null)
+                : null;
+            $componentCount = is_array($forwardedResponse)
+                ? count($forwardedResponse['components'] ?? [])
+                : 0;
+        @endphp
+
+        <span
+            class="change-status"
+            title="{{ $componentCount }} response component(s) forwarded"
+        >
+            Response forwarded
+            @if($componentCount > 0)
+                · {{ $componentCount }} component{{ $componentCount === 1 ? '' : 's' }}
+            @endif
+        </span>
+
     @elseif($log->old_value && $log->new_value)
 
         <div class="change-box">
@@ -1029,8 +990,8 @@
 
     @else
 
-        <span class="change-status">
-            System action
+        <span class="change-status" title="{{ $log->description ?? $log->action_label }}">
+            {{ $log->description ?: $log->action_label }}
         </span>
 
     @endif
@@ -1134,35 +1095,40 @@
 
 
 
-<div id="logModal" class="log-modal">
-
+<div id="logModal" class="log-modal" role="dialog" aria-modal="true" aria-labelledby="logModalTitle">
     <div class="modal-content">
-
         <div class="modal-header">
-            <span>Log Details</span>
-            <button id="closeModal">&times;</button>
+            <div>
+                <span id="logModalGroup" class="modal-kicker">Activity</span>
+                <h3 id="logModalTitle">Log Details</h3>
+            </div>
+            <button id="closeModal" type="button" aria-label="Close log details">&times;</button>
         </div>
 
         <div class="modal-body">
+            <div id="modalSummary" class="log-detail-summary"></div>
 
-            <div class="modal-block">
-                <div class="modal-label">Old Value</div>
-                <div id="modalOld" class="modal-box old"></div>
+            <div class="log-detail-grid">
+                <div class="log-detail-item"><span>Actor</span><strong id="modalActor"></strong></div>
+                <div class="log-detail-item"><span>Target</span><strong id="modalTarget"></strong></div>
+                <div class="log-detail-item"><span>Page</span><strong id="modalPage"></strong></div>
+                <div class="log-detail-item"><span>Role</span><strong id="modalRole"></strong></div>
+                <div class="log-detail-item"><span>IP Address</span><strong id="modalIp"></strong></div>
+                <div class="log-detail-item log-detail-item-wide"><span>Device</span><strong id="modalDevice"></strong></div>
             </div>
 
-            <div class="modal-arrow">
-                <i class="ph-light ph-arrow-right"></i>
+            <div class="log-state-grid">
+                <div class="modal-block">
+                    <div class="modal-label">Previous State</div>
+                    <div id="modalOld" class="modal-box old"></div>
+                </div>
+                <div class="modal-block">
+                    <div class="modal-label">Resulting State</div>
+                    <div id="modalNew" class="modal-box new"></div>
+                </div>
             </div>
-
-            <div class="modal-block">
-                <div class="modal-label">New Value</div>
-                <div id="modalNew" class="modal-box new"></div>
-            </div>
-
         </div>
-
     </div>
-
 </div>
 
 @endsection
@@ -1174,6 +1140,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('logModal');
     const modalOld = document.getElementById('modalOld');
     const modalNew = document.getElementById('modalNew');
+    const modalSummary = document.getElementById('modalSummary');
+    const modalGroup = document.getElementById('logModalGroup');
+    const modalTitle = document.getElementById('logModalTitle');
+    const modalActor = document.getElementById('modalActor');
+    const modalTarget = document.getElementById('modalTarget');
+    const modalPage = document.getElementById('modalPage');
+    const modalRole = document.getElementById('modalRole');
+    const modalIp = document.getElementById('modalIp');
+    const modalDevice = document.getElementById('modalDevice');
     const closeBtn = document.getElementById('closeModal');
 
 
@@ -1338,49 +1313,203 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     /* =========================================================
+       OFFICIAL SUPPORT RESPONSE FORMATTER
+       ========================================================= */
+
+    function formatOfficialResponse(response, counterpart = {}) {
+
+        if (!response || typeof response !== 'object') {
+            return `
+                <div class="data-value">
+                    No response recorded
+                </div>
+            `;
+        }
+
+        const status = response.status || 'Unknown';
+        const forwardedAt = response.forwarded_at || 'Not recorded';
+        const respondedAt = response.responded_at;
+        const counterpartRespondedAt = counterpart?.responded_at;
+        const reason = response.follow_up_reason;
+        const counterpartReason = counterpart?.follow_up_reason;
+        const components = Array.isArray(response.components)
+            ? response.components
+            : [];
+
+        const componentHtml = components.length
+            ? components.map((component, index) => {
+                const type = component?.type || 'component';
+                const label = component?.label || '';
+                const isAttachment = component?.attachment === true;
+                const content = component?.content;
+
+                let valueHtml;
+
+                if (isAttachment) {
+                    valueHtml = `
+                        <div class="response-attachment">
+                            <i class="ph-light ph-paperclip" aria-hidden="true"></i>
+                            Private ${escapeHtml(type)} attachment
+                        </div>
+                    `;
+                } else if (content === null || content === undefined || content === '') {
+                    valueHtml = '<div class="data-value">No value</div>';
+                } else {
+                    valueHtml = `
+                        <div class="data-value audit-long-text">
+                            ${escapeHtml(content)}
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="response-component">
+                        <div class="response-component-header">
+                            <span>${index + 1}. ${escapeHtml(type)}</span>
+                            ${label ? `<span class="response-component-label">${escapeHtml(label)}</span>` : ''}
+                        </div>
+                        ${valueHtml}
+                    </div>
+                `;
+            }).join('')
+            : `
+                <div class="data-value">
+                    No response components recorded
+                </div>
+            `;
+
+        const respondedAtHtml =
+            respondedAt || counterpartRespondedAt
+                ? `
+                    <div class="data-row">
+                        <div class="data-label">Citizen Responded At</div>
+                        <div class="data-value">${escapeHtml(respondedAt || 'Not recorded')}</div>
+                    </div>
+                `
+                : '';
+
+        const reasonHtml =
+            reason || counterpartReason
+                ? `
+                    <div class="data-row">
+                        <div class="data-label">Follow-up Reason</div>
+                        <div class="data-value audit-long-text">${escapeHtml(reason || 'Not recorded')}</div>
+                    </div>
+                `
+                : '';
+
+        return `
+            <div class="official-response-audit">
+                <div class="data-row">
+                    <div class="data-label">Response Status</div>
+                    <div class="data-value">${escapeHtml(status)}</div>
+                </div>
+
+                <div class="data-row">
+                    <div class="data-label">Forwarded At</div>
+                    <div class="data-value">${escapeHtml(forwardedAt)}</div>
+                </div>
+
+                ${respondedAtHtml}
+
+                ${reasonHtml}
+
+                <div class="data-row">
+                    <div class="data-label">Response Components</div>
+                    <div class="response-components-list">
+                        ${componentHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+
+    /* =========================================================
        GENERIC OBJECT FORMATTER
        ========================================================= */
 
-    function formatObject(object) {
+    function hasAuditValue(value) {
+        return !(
+            value === null ||
+            value === undefined ||
+            value === ''
+        );
+    }
 
-        /*
-         * Object.entries() converts an object into
-         * [key, value] pairs that we can safely iterate.
-         */
-        return Object.entries(object).map(([key, value]) => {
 
-            const label = formatLabel(key);
+    function formatObject(object, counterpart = {}) {
 
+        const hasStructuredResponse =
+            !!object?.official_response ||
+            !!counterpart?.official_response;
+
+        return Object.entries(object).filter(([key, value]) => {
 
             /*
-             * CONTACTS GET THEIR OWN SPECIAL FORMAT.
-             *
-             * This is the important fix for:
-             *
-             * [object Object],[object Object]
+             * The structured response tables are now authoritative for
+             * official responses. The legacy answer fields are still
+             * supported for older/manual reply records, but must not be
+             * shown beside a structured response.
              */
-            if (key === 'contacts' && Array.isArray(value)) {
+            if (
+                hasStructuredResponse &&
+                ['answer', 'answer_image'].includes(key)
+            ) {
+                return false;
+            }
 
+            const counterpartValue = counterpart?.[key];
+
+            /*
+             * Do not display fields that are empty on BOTH sides.
+             *
+             * This removes misleading "No value" rows for fields that are
+             * simply not applicable to this lifecycle event, while still
+             * preserving a cleared value when it changed from populated
+             * -> empty.
+             */
+            return hasAuditValue(value) || hasAuditValue(counterpartValue);
+
+        }).map(([key, value]) => {
+
+            const label = formatLabel(key);
+            const counterpartValue = counterpart?.[key];
+
+            /*
+             * Official support responses have their own renderer because
+             * the actual answer is a sequence of typed components.
+             */
+            if (key === 'official_response') {
                 return `
                     <div class="data-row">
-
-                        <div class="data-label">
-                            ${escapeHtml(label)}
-                        </div>
-
-                        <div class="contact-audit-list">
-                            ${formatContacts(value)}
-                        </div>
-
+                        <div class="data-label">${escapeHtml(label)}</div>
+                        ${formatOfficialResponse(value, counterpartValue)}
                     </div>
                 `;
             }
 
 
             /*
-             * Nested arrays/objects other than contacts should
-             * still be displayed safely instead of becoming
-             * [object Object].
+             * CONTACTS GET THEIR OWN SPECIAL FORMAT.
+             */
+            if (key === 'contacts' && Array.isArray(value)) {
+                return `
+                    <div class="data-row">
+                        <div class="data-label">
+                            ${escapeHtml(label)}
+                        </div>
+                        <div class="contact-audit-list">
+                            ${formatContacts(value)}
+                        </div>
+                    </div>
+                `;
+            }
+
+
+            /*
+             * Nested arrays/objects retain their structure and compare
+             * against the corresponding value from the opposite state.
              */
             if (
                 Array.isArray(value) ||
@@ -1389,47 +1518,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     value !== null
                 )
             ) {
-
                 return `
                     <div class="data-row">
-
                         <div class="data-label">
                             ${escapeHtml(label)}
                         </div>
-
                         <div class="data-value">
-
-                            ${formatNestedValue(value)}
-
+                            ${formatNestedValue(value, counterpartValue)}
                         </div>
-
                     </div>
                 `;
             }
 
 
             /*
-             * Normal scalar database values.
+             * A null/empty value is meaningful when the opposite state
+             * contains a value: it means the field was cleared or was not
+             * yet recorded at that point in the lifecycle.
              */
-            const displayValue =
-                value === null ||
-                value === undefined ||
-                value === ''
-                    ? 'No value'
-                    : value;
-
+            const displayValue = hasAuditValue(value)
+                ? value
+                : 'Not recorded';
 
             return `
                 <div class="data-row">
-
                     <div class="data-label">
                         ${escapeHtml(label)}
                     </div>
-
                     <div class="data-value">
                         ${escapeHtml(displayValue)}
                     </div>
-
                 </div>
             `;
 
@@ -1441,35 +1559,33 @@ document.addEventListener('DOMContentLoaded', () => {
        NESTED VALUE FORMATTER
        ========================================================= */
 
-    function formatNestedValue(value) {
+    function formatNestedValue(value, counterpart = {}) {
 
-        /*
-         * Arrays are formatted one item at a time.
-         */
         if (Array.isArray(value)) {
+            return value.map((item, index) => {
 
-            return value.map(item => {
+                const counterpartItem = Array.isArray(counterpart)
+                    ? counterpart[index]
+                    : {};
 
-                /*
-                 * Nested objects should be represented as
-                 * structured JSON rather than [object Object].
-                 */
                 if (
                     typeof item === 'object' &&
                     item !== null
                 ) {
-
                     return `
                         <div class="nested-object">
-                            ${formatObject(item)}
+                            ${formatObject(item, counterpartItem || {})}
                         </div>
                     `;
                 }
 
-
                 return `
                     <div class="data-value">
-                        ${escapeHtml(item)}
+                        ${escapeHtml(
+                            hasAuditValue(item)
+                                ? item
+                                : 'Not recorded'
+                        )}
                     </div>
                 `;
 
@@ -1477,31 +1593,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
 
-        /*
-         * Nested object.
-         */
         if (
             typeof value === 'object' &&
             value !== null
         ) {
-
             return `
                 <div class="nested-object">
-                    ${formatObject(value)}
+                    ${formatObject(value, counterpart || {})}
                 </div>
             `;
         }
 
 
-        /*
-         * Scalar fallback.
-         */
         return escapeHtml(
-            value === null ||
-            value === undefined ||
-            value === ''
-                ? 'No value'
-                : value
+            hasAuditValue(value)
+                ? value
+                : 'Not recorded'
         );
     }
 
@@ -1510,18 +1617,55 @@ document.addEventListener('DOMContentLoaded', () => {
        MAIN AUDIT DATA FORMATTER
        ========================================================= */
 
-    function formatData(value) {
+    function parseAuditValue(value) {
 
-        /*
-         * NULL means there was no previous/new state.
-         */
         if (
             value === null ||
             value === undefined ||
             value === '' ||
             value === 'null'
         ) {
+            return null;
+        }
 
+        if (typeof value !== 'string') {
+            return value;
+        }
+
+        try {
+            let parsed = JSON.parse(value);
+
+            /*
+             * Handle accidentally double-encoded JSON from older records.
+             */
+            if (typeof parsed === 'string') {
+                try {
+                    parsed = JSON.parse(parsed);
+                } catch {
+                    // Keep the first decoded value.
+                }
+            }
+
+            return parsed;
+        } catch {
+            return value;
+        }
+    }
+
+
+    function formatData(value, counterpart = null) {
+
+        const parsed = parseAuditValue(value);
+        const parsedCounterpart = parseAuditValue(counterpart);
+
+        /*
+         * NULL means there was no previous/new state.
+         */
+        if (
+            parsed === null ||
+            parsed === undefined ||
+            parsed === ''
+        ) {
             return `
                 <div class="data-value">
                     No recorded data
@@ -1530,113 +1674,84 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
 
-        try {
-
-            let parsed = value;
-
-
-            /*
-             * data-* attributes always arrive from HTML as strings.
-             *
-             * Therefore JSON must normally be decoded here.
-             */
-            if (typeof parsed === 'string') {
-
-                parsed = JSON.parse(parsed);
-
-
-                /*
-                 * Handle accidentally double-encoded JSON.
-                 */
-                if (typeof parsed === 'string') {
-
-                    try {
-                        parsed = JSON.parse(parsed);
-                    } catch {
-                        /*
-                         * If the second parse fails, the first
-                         * decoded string is still usable.
-                         */
-                    }
-                }
-            }
+        /*
+         * Handle simple scalar values.
+         */
+        if (
+            typeof parsed !== 'object' ||
+            parsed === null
+        ) {
+            return `
+                <div class="data-value">
+                    ${escapeHtml(parsed)}
+                </div>
+            `;
+        }
 
 
-            /*
-             * Handle simple scalar values.
-             */
-            if (
-                typeof parsed !== 'object' ||
-                parsed === null
-            ) {
+        /*
+         * A top-level array can occur in older audit records.
+         */
+        if (Array.isArray(parsed)) {
 
+            if (parsed.length === 0) {
                 return `
                     <div class="data-value">
-                        ${escapeHtml(parsed)}
+                        No recorded data
                     </div>
                 `;
             }
 
 
             /*
-             * A top-level array can occur in older audit records.
-             *
-             * Format it safely instead of converting it into
-             * comma-separated [object Object] values.
+             * If the array looks like a contact collection,
+             * render it using the specialized contact UI.
              */
-            if (Array.isArray(parsed)) {
-
-                /*
-                 * If the array looks like a contact collection,
-                 * render it using the specialized contact UI.
-                 */
-                if (
-                    parsed.length === 0 ||
-                    parsed.every(item =>
-                        item &&
-                        typeof item === 'object' &&
-                        (
-                            'value' in item ||
-                            'type' in item ||
-                            'type_slug' in item
-                        )
+            if (
+                parsed.every(item =>
+                    item &&
+                    typeof item === 'object' &&
+                    (
+                        'value' in item ||
+                        'type' in item ||
+                        'type_slug' in item
                     )
-                ) {
-
-                    return `
-                        <div class="contact-audit-list">
-                            ${formatContacts(parsed)}
-                        </div>
-                    `;
-                }
-
-
-                /*
-                 * Generic array fallback.
-                 */
-                return formatNestedValue(parsed);
+                )
+            ) {
+                return `
+                    <div class="contact-audit-list">
+                        ${formatContacts(parsed)}
+                    </div>
+                `;
             }
 
 
-            /*
-             * Normal structured audit object.
-             */
-            return formatObject(parsed);
+            return formatNestedValue(
+                parsed,
+                Array.isArray(parsedCounterpart)
+                    ? parsedCounterpart
+                    : []
+            );
+        }
 
-        } catch (error) {
 
-            /*
-             * Never allow malformed historical audit data to
-             * break the modal.
-             *
-             * Fall back to escaped plain text.
-             */
+        /*
+         * Empty objects are equivalent to an empty audit payload.
+         */
+        if (Object.keys(parsed).length === 0) {
             return `
                 <div class="data-value">
-                    ${escapeHtml(value)}
+                    No recorded data
                 </div>
             `;
         }
+
+        return formatObject(
+            parsed,
+            parsedCounterpart && typeof parsedCounterpart === 'object'
+                ? parsedCounterpart
+                : {}
+        );
     }
 
 
@@ -1651,11 +1766,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const oldVal = row.dataset.old;
             const newVal = row.dataset.new;
 
+            const actionLabel = row.querySelector('.badge.action')?.textContent?.trim() || row.dataset.action;
+            const description = row.dataset.description?.trim() || 'No additional description recorded.';
+
+            modalGroup.textContent = row.dataset.group || 'Activity';
+            modalTitle.textContent = actionLabel;
+            modalSummary.textContent = description;
+            modalActor.textContent = row.dataset.actor || 'Unknown actor';
+            modalTarget.textContent = row.dataset.target || 'System';
+            modalPage.textContent = row.dataset.page || 'System';
+            modalRole.textContent = row.dataset.role || 'Unknown';
+            modalIp.textContent = row.dataset.ip || 'Not recorded';
+            modalDevice.textContent = row.dataset.device || 'Not recorded';
+
 
             /*
              * Render the previous state first.
              */
-            modalOld.innerHTML = formatData(oldVal);
+            modalOld.innerHTML = formatData(oldVal, newVal);
 
 
             /*
@@ -1741,14 +1869,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
 
-                modalNew.innerHTML = formatData(newVal);
+                modalNew.innerHTML = formatData(newVal, oldVal);
 
             } else {
 
                 /*
                  * Normal update action.
                  */
-                modalNew.innerHTML = formatData(newVal);
+                modalNew.innerHTML = formatData(newVal, oldVal);
             }
 
 
@@ -1787,24 +1915,6 @@ document.addEventListener('DOMContentLoaded', () => {
         'click',
         closeModal
     );
-
-
-    /* =========================================================
-       CLOSE WHEN CLICKING THE BACKDROP
-       ========================================================= */
-
-    modal.addEventListener('click', event => {
-
-        /*
-         * Only close when the actual backdrop is clicked.
-         *
-         * Clicking inside the modal content does nothing.
-         */
-        if (event.target === modal) {
-            closeModal();
-        }
-
-    });
 
 
     /* =========================================================

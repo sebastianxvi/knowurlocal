@@ -6,6 +6,7 @@ use App\Models\ChatbotLog;
 use App\Models\Faq;
 use App\Models\FaqFeedback;
 use App\Models\FaqVersion;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -44,6 +45,21 @@ class FaqFeedbackController extends Controller
                     ? (isset($validated['comment']) ? trim($validated['comment']) : null)
                     : null,
             ]
+        );
+
+        app(AuditLogService::class)->record(
+            action: 'submit_faq_feedback',
+            page: 'chatbot',
+            targetType: 'faq',
+            targetId: (int) $log->faq_id,
+            faqId: (int) $log->faq_id,
+            newValues: [
+                'rating' => $feedback->rating,
+                'reason' => $feedback->reason,
+                'comment' => $feedback->comment,
+                'faq_version_id' => $feedback->faq_version_id,
+            ],
+            description: 'Submitted FAQ feedback for FAQ #' . $log->faq_id,
         );
 
         return response()->json([

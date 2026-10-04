@@ -807,41 +807,7 @@ class DashboardController extends Controller
      */
     private function administrativeActions(): array
     {
-        return [
-            'admin_login',
-            'admin_logout',
-            'create_agency',
-            'update_agency',
-            'trash_agency',
-            'restore_agency',
-            'force_delete_agency',
-            'delete_agency',
-            'create_faq',
-            'update_faq',
-            'delete_faq',
-            'restore_faq',
-            'force_delete_faq',
-            'create_category',
-            'update_category',
-            'delete_category',
-            'restore_category',
-            'force_delete_category',
-            'delete_support_request',
-            'restore_support_request',
-            'force_delete_support_request',
-            'answer_support_request',
-            'forward_support_response',
-            'approve_admin',
-            'invite_admin',
-            'promote_admin',
-            'demote_admin',
-            'deactivate_admin',
-            'reactivate_admin',
-            'delete_admin',
-            'deactivate_user',
-            'reactivate_user',
-            'delete_user',
-        ];
+        return config('activity_logs.admin_actions', []);
     }
 
     /**
@@ -880,9 +846,7 @@ class DashboardController extends Controller
                     ->where('user_id', $currentAdminId)
                     ->orWhere(function ($subQuery) use ($adminActions) {
                         $subQuery
-                            ->whereHas('user', function ($userQuery) {
-                                $userQuery->where('role', 'user');
-                            })
+                            ->where('role', 'user')
                             ->whereNotIn('action', $adminActions);
                     });
             });

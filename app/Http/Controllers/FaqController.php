@@ -1531,7 +1531,7 @@ public function forceDestroy($id)
         null,
         'Permanently deleted FAQ: ' . $oldData['question'],
         null,
-        null
+        $faq->id
     );
 
 
@@ -2124,6 +2124,8 @@ public function forceDestroy($id)
                 'target_user_id' => $targetUserId,
                 'agency_id' => $agencyId,
                 'faq_id' => $faqId,
+                'target_type' => $faqId ? 'faq' : ($agencyId ? 'agency' : ($targetUserId ? 'user' : null)),
+                'target_id' => $faqId ?: ($agencyId ?: $targetUserId),
 
                 'action' => $action,
                 'page'   => $page,

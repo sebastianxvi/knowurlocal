@@ -226,6 +226,8 @@ class CollaborationController extends Controller
     {
         UserLog::create([
             'user_id' => auth()->id(),
+            'target_type' => 'collaboration_task',
+            'target_id' => $task->id,
             'action' => $action,
             'page' => 'admin_dashboard',
             'role' => auth()->user()->role,
@@ -233,6 +235,7 @@ class CollaborationController extends Controller
             'device' => substr((string) request()->userAgent(), 0, 255),
             'new_values' => [
                 'task_id' => $task->id,
+                'title' => $task->title,
                 'task_type' => $task->task_type,
                 'status' => $task->status,
                 'assigned_to_id' => $task->assigned_to_id,

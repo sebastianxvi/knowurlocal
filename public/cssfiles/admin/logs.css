@@ -289,11 +289,6 @@ body{
     color:#0369a1;
 }
 
-.badge.view_map{
-    background:#ede9fe;
-    color:#5b21b6;
-}
-
 /* ================= PUBLIC USER ACTIONS ================= */
 
 .badge.search_agency{
@@ -949,6 +944,59 @@ body{
     font-size:13px;
     color:#1e293b;
     line-height:1.4;
+    overflow-wrap:anywhere;
+}
+
+.audit-long-text{
+    white-space:pre-wrap;
+}
+
+.official-response-audit{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+
+.response-components-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.response-component{
+    padding:9px 10px;
+    border:1px solid #e2e8f0;
+    border-radius:8px;
+    background:#f8fafc;
+}
+
+.response-component-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:4px;
+    font-size:11px;
+    font-weight:700;
+    color:#475569;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+}
+
+.response-component-label{
+    max-width:65%;
+    font-weight:600;
+    text-transform:none;
+    letter-spacing:0;
+    overflow-wrap:anywhere;
+}
+
+.response-attachment{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    color:#475569;
 }
 
 /* ================= SCROLLBAR (PREMIUM TOUCH) ================= */
@@ -1508,4 +1556,219 @@ body{
     font-size:12px;
 
     font-weight:600;
+}
+
+/* =========================================================
+   MODERN ACTIVITY LOG ACTIONS
+========================================================= */
+.badge.submit_support_request,
+.badge.confirm_support_response,
+.badge.reactivate_admin,
+.badge.reactivate_user,
+.badge.restore_agency,
+.badge.restore_faq,
+.badge.restore_category,
+.badge.restore_support_request {
+    background:#dcfce7;
+    color:#166534;
+}
+
+.badge.view_support_response,
+.badge.get_directions,
+.badge.navigate,
+.badge.view_map,
+.badge.view_agencies,
+.badge.view_agency,
+.badge.search_agency,
+.badge.filter_category {
+    background:#e0f2fe;
+    color:#0369a1;
+}
+
+.badge.confirm_support_response,
+.badge.submit_faq_feedback {
+    background:#eef2ff;
+    color:#4338ca;
+}
+
+.badge.request_support_follow_up,
+.badge.update_collaboration_task,
+.badge.update_agency,
+.badge.update_faq,
+.badge.update_category {
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.badge.create_collaboration_task,
+.badge.convert_support_to_faq,
+.badge.answer_support_request,
+.badge.forward_support_response {
+    background:#e0f2fe;
+    color:#0369a1;
+}
+
+/* =========================================================
+   MODERN DETAIL MODAL
+========================================================= */
+.modal-kicker {
+    display:block;
+    margin-bottom:3px;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#94a3b8;
+}
+
+.modal-header h3 {
+    margin:0;
+    font-size:18px;
+    line-height:1.25;
+    color:#1e293b;
+}
+
+.log-detail-summary {
+    padding:12px 14px;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    background:#f8fafc;
+    color:#334155;
+    font-size:13px;
+    line-height:1.5;
+}
+
+.log-detail-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+}
+
+.log-detail-item {
+    min-width:0;
+    padding:11px 12px;
+    border:1px solid #edf2f7;
+    border-radius:10px;
+    background:#fff;
+}
+
+.log-detail-item span {
+    display:block;
+    margin-bottom:4px;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:#94a3b8;
+}
+
+.log-detail-item strong {
+    display:block;
+    min-width:0;
+    overflow-wrap:anywhere;
+    font-size:12px;
+    line-height:1.4;
+    font-weight:600;
+    color:#334155;
+}
+
+.log-detail-item-wide {
+    grid-column:1 / -1;
+}
+
+.log-state-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+}
+
+.modal-box {
+    min-height:56px;
+    max-height:280px;
+    overflow:auto;
+}
+
+@media (max-width: 900px) {
+    .logs-page {
+        padding:8px 12px;
+    }
+
+    .support-filter-form {
+        grid-template-columns:1fr 1fr;
+    }
+
+    .support-search-field {
+        grid-column:1 / -1;
+    }
+
+    .table-wrapper {
+        overflow-x:auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .logs-page {
+        margin-top:0;
+        padding:6px 8px;
+    }
+
+    .support-filter-form {
+        display:grid;
+        grid-template-columns:1fr;
+        gap:8px;
+    }
+
+    .support-search-field {
+        grid-column:auto;
+    }
+
+    .admin-filter-tabs {
+        width:100%;
+        overflow-x:auto;
+    }
+
+    .modal-content {
+        width:100%;
+        max-height:calc(100vh - 24px);
+        border-radius:14px;
+    }
+
+    .log-modal {
+        padding:12px;
+    }
+
+    .modal-body {
+        max-height:calc(100vh - 120px);
+        padding:14px;
+    }
+
+    .log-detail-grid,
+    .log-state-grid {
+        grid-template-columns:1fr;
+    }
+
+    .log-detail-item-wide {
+        grid-column:auto;
+    }
+
+    .badge.action {
+        max-width:210px;
+    }
+}
+
+.badge.view_trashed_inquiry {
+    background:#fff1f2;
+    color:#be123c;
+}
+
+.badge.update_support_answer { background:#fef3c7; color:#92400e; }
+
+.badge.verify_account {
+    background:#dcfce7;
+    color:#166534;
+}
+
+.badge.password_reset {
+    background:#ede9fe;
+    color:#5b21b6;
 }

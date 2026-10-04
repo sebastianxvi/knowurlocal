@@ -513,6 +513,9 @@ public function forceDestroy(int $id)
                  */
                 'category_id' => $categoryId,
 
+                'target_type' => 'category',
+                'target_id' => $categoryId,
+
                 /*
                  * Stable machine-readable action.
                  */

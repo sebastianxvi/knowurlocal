@@ -7,6 +7,7 @@ use App\Models\ChatbotLog;
 use App\Models\Faq;
 use App\Models\FaqVersion;
 use App\Models\SupportRequest;
+use App\Services\AuditLogService;
 use App\Services\FaqChatbotService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -310,6 +311,21 @@ class ChatbotController extends Controller
         ]);
 
         $supportRequest->load(['user', 'agency']);
+
+        app(AuditLogService::class)->record(
+            action: 'submit_support_request',
+            page: 'chatbot',
+            targetType: 'support_request',
+            targetId: (int) $supportRequest->id,
+            agencyId: $supportRequest->agency_id ? (int) $supportRequest->agency_id : null,
+            supportRequestId: (int) $supportRequest->id,
+            newValues: [
+                'question' => $supportRequest->question,
+                'status' => $supportRequest->status,
+                'agency_id' => $supportRequest->agency_id,
+            ],
+            description: 'Submitted Support Request #' . $supportRequest->id,
+        );
 
         try {
             broadcast(new SupportRequestCreated(

@@ -71,73 +71,7 @@ class UserLogController extends Controller
          * Keep this synchronized with the action names used
          * throughout the administrative controllers.
          */
-        $adminActions = [
-
-            /*
-             * Authentication
-             */
-            'admin_login',
-            'admin_logout',
-
-            /*
-             * Agency management
-             */
-            'create_agency',
-            'update_agency',
-            'trash_agency',
-            'restore_agency',
-            'force_delete_agency',
-
-            /*
-             * Legacy agency action.
-             */
-            'delete_agency',
-
-            /*
-             * FAQ management
-             */
-            'create_faq',
-            'update_faq',
-            'delete_faq',
-            'restore_faq',
-            'force_delete_faq',
-
-            /*
-             * Category management
-             */
-            'create_category',
-            'update_category',
-            'delete_category',
-            'restore_category',
-            'force_delete_category',
-
-            /*
-            * Support Request management
-            */
-            'delete_support_request',
-            'restore_support_request',
-            'force_delete_support_request',
-            'answer_support_request',
-            'forward_support_response',
-
-            /*
-            * Administrator management
-            */
-            'approve_admin',
-            'invite_admin',
-            'promote_admin',
-            'demote_admin',
-            'deactivate_admin',
-            'reactivate_admin',
-            'delete_admin',
-
-            /*
-            * Public User Management
-            */
-            'deactivate_user',
-            'reactivate_user',
-            'delete_user',
-        ];
+        $adminActions = config('activity_logs.admin_actions', []);
 
 
         /**
@@ -153,7 +87,9 @@ class UserLogController extends Controller
         $query = UserLog::with([
             'agency',
             'category',
+            'faq',
             'supportRequest',
+            'collaborationTask',
             'user',
             'targetUser',
         ])
@@ -208,21 +144,8 @@ class UserLogController extends Controller
                     $adminActions
                 ) {
 
-                    $sub->whereHas(
-                        'user',
-                        function ($userQuery) {
-
-                            $userQuery->where(
-                                'role',
-                                'user'
-                            );
-                        }
-                    )
-
-                    ->whereNotIn(
-                        'action',
-                        $adminActions
-                    );
+                    $sub->where('role', 'user')
+                        ->whereNotIn('action', $adminActions);
                 });
             });
         }
@@ -246,34 +169,13 @@ class UserLogController extends Controller
          */
         if ($request->role === 'admin') {
 
-            $query->whereHas(
-                'user',
-                function ($q) {
-
-                    $q->whereIn(
-                        'role',
-                        [
-                            'admin',
-                            'superadmin',
-                        ]
-                    );
-                }
-            );
+            $query->whereIn('role', ['admin', 'superadmin']);
         }
 
 
         if ($request->role === 'user') {
 
-            $query->whereHas(
-                'user',
-                function ($q) {
-
-                    $q->where(
-                        'role',
-                        'user'
-                    );
-                }
-            );
+            $query->where('role', 'user');
         }
 
 
@@ -341,7 +243,7 @@ class UserLogController extends Controller
                  */
                 $q->where(
                     'action',
-                    'LIKE',
+                    'ILIKE',
                     "%{$search}%"
                 )
 
@@ -349,10 +251,19 @@ class UserLogController extends Controller
                 /*
                  * Page.
                  */
-                ->orWhere(
-                    'page',
-                    'LIKE',
-                    "%{$search}%"
+                ->orWhereRaw(
+                    'page ILIKE ?',
+                    ["%{$search}%"]
+                )
+
+                ->orWhereRaw(
+                    'description ILIKE ?',
+                    ["%{$search}%"]
+                )
+
+                ->orWhereRaw(
+                    'target_type ILIKE ?',
+                    ["%{$search}%"]
                 )
 
 
@@ -366,12 +277,12 @@ class UserLogController extends Controller
                         $userQuery
                             ->where(
                                 'first_name',
-                                'LIKE',
+                                'ILIKE',
                                 "%{$search}%"
                             )
                             ->orWhere(
                                 'last_name',
-                                'LIKE',
+                                'ILIKE',
                                 "%{$search}%"
                             );
                     }
@@ -387,7 +298,7 @@ class UserLogController extends Controller
 
                         $agencyQuery->where(
                             'agency_name',
-                            'LIKE',
+                            'ILIKE',
                             "%{$search}%"
                         );
                     }
@@ -402,7 +313,7 @@ class UserLogController extends Controller
 
         $supportQuery->where(
             'question',
-            'LIKE',
+            'ILIKE',
             "%{$search}%"
         );
     }
@@ -418,7 +329,7 @@ class UserLogController extends Controller
 
                         $categoryQuery->where(
                             'category_name',
-                            'LIKE',
+                            'ILIKE',
                             "%{$search}%"
                         );
                     }
@@ -431,17 +342,19 @@ class UserLogController extends Controller
                  * This remains searchable even after the
                  * related record has been permanently deleted.
                  */
-                ->orWhere(
-                    'old_values',
-                    'LIKE',
-                    "%{$search}%"
+                ->orWhereRaw(
+                    'CAST(old_values AS TEXT) ILIKE ?',
+                    ["%{$search}%"]
                 )
 
+                ->orWhereRaw(
+                    'CAST(new_values AS TEXT) ILIKE ?',
+                    ["%{$search}%"]
+                )
 
-                ->orWhere(
-                    'new_values',
-                    'LIKE',
-                    "%{$search}%"
+                ->orWhereRaw(
+                    'CAST(target_id AS TEXT) ILIKE ?',
+                    ["%{$search}%"]
                 );
             });
         }
@@ -461,19 +374,7 @@ class UserLogController extends Controller
                 $request->role === 'admin',
                 function ($q) {
 
-                    $q->whereHas(
-                        'user',
-                        function ($u) {
-
-                            $u->whereIn(
-                                'role',
-                                [
-                                    'admin',
-                                    'superadmin',
-                                ]
-                            );
-                        }
-                    );
+                    $q->whereIn('role', ['admin', 'superadmin']);
                 }
             )
 
@@ -481,21 +382,8 @@ class UserLogController extends Controller
                 $request->role === 'user',
                 function ($q) use ($adminActions) {
 
-                    $q->whereHas(
-                        'user',
-                        function ($u) {
-
-                            $u->where(
-                                'role',
-                                'user'
-                            );
-                        }
-                    )
-
-                    ->whereNotIn(
-                        'action',
-                        $adminActions
-                    );
+                    $q->where('role', 'user')
+                        ->whereNotIn('action', $adminActions);
                 }
             )
 
@@ -507,7 +395,9 @@ class UserLogController extends Controller
 
 ->orderBy('action')
 
-->pluck('action');
+->pluck('action')
+            ->sortBy(fn ($action) => config("activity_logs.actions.{$action}.label", ucwords(str_replace('_', ' ', $action))))
+            ->values();
 
 
         /**
@@ -524,19 +414,7 @@ class UserLogController extends Controller
                 $request->role === 'admin',
                 function ($q) {
 
-                    $q->whereHas(
-                        'user',
-                        function ($u) {
-
-                            $u->whereIn(
-                                'role',
-                                [
-                                    'admin',
-                                    'superadmin',
-                                ]
-                            );
-                        }
-                    );
+                    $q->whereIn('role', ['admin', 'superadmin']);
                 }
             )
 
@@ -544,21 +422,8 @@ class UserLogController extends Controller
                 $request->role === 'user',
                 function ($q) use ($adminActions) {
 
-                    $q->whereHas(
-                        'user',
-                        function ($u) {
-
-                            $u->where(
-                                'role',
-                                'user'
-                            );
-                        }
-                    )
-
-                    ->whereNotIn(
-                        'action',
-                        $adminActions
-                    );
+                    $q->where('role', 'user')
+                        ->whereNotIn('action', $adminActions);
                 }
             )
 
@@ -620,6 +485,77 @@ class UserLogController extends Controller
          */
         $logs->getCollection()->transform(
             function ($log) {
+
+                /**
+                 * =================================================
+                 * GENERIC TARGET
+                 * =================================================
+                 *
+                 * Newer modules can identify their target without
+                 * needing another dedicated foreign-key column.
+                 */
+                if ($log->target_type && $log->target_id) {
+                    $target = match ($log->target_type) {
+                        'agency' => $log->agency,
+                        'faq' => $log->faq,
+                        'category' => $log->category,
+                        'support_request' => $log->supportRequest,
+                        'user' => $log->targetUser,
+                        default => null,
+                    };
+
+                    if ($log->target_type === 'collaboration_task') {
+                        $task = $log->collaborationTask;
+
+                        $log->log_target = 'Collaboration Task #' . $log->target_id;
+                        $log->log_target_name = $task
+                            ? ($task->title ?: 'Collaboration Task #' . $task->id)
+                            : ($log->new_values['title'] ?? 'Deleted Collaboration Task');
+
+                        return $log;
+                    }
+
+                    if ($target) {
+                        $log->log_target = match ($log->target_type) {
+                            'agency' => 'Agency #' . $target->id,
+                            'faq' => 'FAQ #' . $target->id,
+                            'category' => 'Category #' . $target->id,
+                            'support_request' => 'Support Request #' . $target->id,
+                            'user' => 'User #' . $target->id,
+                            default => ucfirst(str_replace('_', ' ', $log->target_type)) . ' #' . $log->target_id,
+                        };
+
+                        $log->log_target_name = match ($log->target_type) {
+                            'agency' => $target->agency_name,
+                            'faq' => $target->question,
+                            'category' => $target->category_name,
+                            'support_request' => 'Request #' . $target->id . ' — ' . \Illuminate\Support\Str::limit((string) $target->question, 80),
+                            'user' => trim($target->first_name . ' ' . $target->last_name) ?: $target->email,
+                            default => $log->log_target,
+                        };
+
+                        return $log;
+                    }
+
+                    // The generic target survives permanent deletion. Use the
+                    // audit snapshot for the human-readable name when the model
+                    // can no longer be resolved.
+                    $history = is_array($log->old_values) ? $log->old_values : [];
+                    $history = array_merge($history, is_array($log->new_values) ? $log->new_values : []);
+
+                    $log->log_target = ucfirst(str_replace('_', ' ', $log->target_type)) . ' #' . $log->target_id;
+                    $log->log_target_name = match ($log->target_type) {
+                        'agency' => $history['agency_name'] ?? 'Deleted Agency',
+                        'faq' => $history['question'] ?? 'Deleted FAQ',
+                        'category' => $history['category_name'] ?? 'Deleted Category',
+                        'support_request' => 'Request #' . $log->target_id . ($history['question'] ?? '' ? ' — ' . \Illuminate\Support\Str::limit((string) $history['question'], 80) : ''),
+                        'user' => trim(($history['first_name'] ?? '') . ' ' . ($history['last_name'] ?? '')) ?: ($history['email'] ?? 'Deleted User'),
+                        'collaboration_task' => $history['title'] ?? 'Deleted Collaboration Task',
+                        default => $log->log_target,
+                    };
+
+                    return $log;
+                }
 
                 /**
                  * =================================================

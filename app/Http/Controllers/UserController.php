@@ -263,6 +263,8 @@ UserLog::create([
     'user_id' => auth()->id(),
 
     'target_user_id' => $user->id,
+    'target_type' => 'user',
+    'target_id' => $user->id,
 
     'action' => 'deactivate_user',
 
@@ -341,6 +343,8 @@ UserLog::create([
     'user_id' => auth()->id(),
 
     'target_user_id' => $user->id,
+    'target_type' => 'user',
+    'target_id' => $user->id,
 
     'action' => 'reactivate_user',
 
@@ -441,6 +445,8 @@ UserLog::create([
     'user_id' => auth()->id(),
 
     'target_user_id' => $user->id,
+    'target_type' => 'user',
+    'target_id' => $user->id,
 
     'action' => 'delete_user',
 

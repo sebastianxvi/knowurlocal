@@ -151,6 +151,8 @@ class UserActivityController extends Controller
         'user_id' => Auth::id(),
 
         'agency_id' => $agency->id,
+        'target_type' => 'agency',
+        'target_id' => $agency->id,
 
         'action' => $validated['action'],
 
@@ -245,6 +247,8 @@ public function categoryAction(Request $request)
         'user_id' => Auth::id(),
 
         'category_id' => $category->id,
+        'target_type' => 'category',
+        'target_id' => $category->id,
 
         'action' => 'filter_category',
 

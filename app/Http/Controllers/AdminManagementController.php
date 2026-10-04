@@ -253,6 +253,8 @@ public function admins(Request $request)
         UserLog::create([
             'user_id' => auth()->id() ?? 0,
             'target_user_id' => $user->id,
+        'target_type' => 'user',
+        'target_id' => $user->id,
             'action' => 'invite_admin',
             'page' => 'admin_management',
             'role' => auth()->user()->role ?? 'admin',
@@ -729,6 +731,8 @@ private function logAdminAction(
          * The administrator account being affected.
          */
         'target_user_id' => $user->id,
+        'target_type' => 'user',
+        'target_id' => $user->id,
 
         /*
          * This is an admin-management audit, so there is
