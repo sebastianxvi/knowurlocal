@@ -3,6 +3,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('cssfiles/theme.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/table.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/components/action-menu.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-layout.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/category-management.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
@@ -116,6 +117,10 @@
 
 <th>Agencies</th>
 
+@if(($status ?? 'active') === 'trashed')
+<th>Trash Reason</th>
+@endif
+
 <th>Action</th>
 
 </tr>
@@ -151,124 +156,155 @@
 
 </td>
 
+@if(($status ?? 'active') === 'trashed')
+<td class="admin-trash-reason-cell">
+    @if($category->trash_reason)
+        <div class="admin-trash-reason-content">
+            <span class="admin-trash-reason-text" title="{{ $category->trash_reason }}">
+                {{ $category->trash_reason }}
+            </span>
+
+            @if(mb_strlen($category->trash_reason) > 140)
+                <button
+                    type="button"
+                    class="admin-trash-reason-view"
+                    data-trash-reason="{{ $category->trash_reason }}"
+                    aria-label="View full trash reason for {{ $category->category_name }}"
+                >
+                    View full
+                </button>
+            @endif
+        </div>
+    @else
+        <span class="admin-trash-reason-empty">No reason recorded</span>
+    @endif
+</td>
+@endif
+
 <td>
 
-    <div class="tablebtn">
+    <div class="admin-row-actions">
 
-        {{-- =================================================
-             ACTIVE CATEGORY
-             ================================================= --}}
+    @if(($status ?? 'active') === 'active')
 
-        @if(($status ?? 'active') === 'active')
+        {{-- PRIMARY: EDIT --}}
+        <button
+            type="button"
+            class="admin-action-primary edit-category"
+            aria-label="Edit {{ $category->category_name }}"
+            title="Edit category"
+            data-id="{{ $category->id }}"
+            data-name="{{ $category->category_name }}"
+            data-color="{{ $category->display_color }}"
+            data-update="{{ route('admin.categories.update', $category) }}"
+        >
+            <i class="ph-light ph-pencil-simple" aria-hidden="true"></i>
+            <span>Edit</span>
+        </button>
 
-            {{-- EDIT --}}
+        {{-- SECONDARY ACTIONS --}}
+        <div class="admin-action-menu">
             <button
                 type="button"
-                class="btn btn-primary edit-category admin-table-icon-action" aria-label="Edit" title="Edit"
-
-                data-id="{{ $category->id }}"
-                data-name="{{ $category->category_name }}"
-                data-color="{{ $category->display_color }}"
-
-                data-update="{{ route(
-                    'admin.categories.update',
-                    $category
-                ) }}"
+                class="admin-action-menu-trigger"
+                aria-label="More actions for {{ $category->category_name }}"
+                aria-expanded="false"
+                aria-haspopup="menu"
             >
-                <i class="ph-light ph-pencil-simple"></i>
-                <span class="sr-only">Edit</span>
+                <i class="ph-light ph-dots-three-vertical" aria-hidden="true"></i>
             </button>
 
+            <div class="admin-action-menu-content" role="menu">
 
-            {{-- MOVE TO TRASH --}}
-            <form
-                action="{{ route(
-                    'admin.categories.destroy',
-                    $category
-                ) }}"
-                method="POST"
-                class="delete-category-form"
-            >
-
-                @csrf
-                @method('DELETE')
-
-                <button
-                    type="button"
-                    class="btn btn-danger delete-category admin-table-icon-action" aria-label="Trash" title="Trash"
-                    data-category-name="{{ $category->category_name }}"
+                {{-- MOVE TO TRASH --}}
+                <form
+                    action="{{ route('admin.categories.destroy', $category) }}"
+                    method="POST"
+                    class="delete-category-form"
                 >
-                    <i class="ph-light ph-trash"></i>
-                    <span class="sr-only">Trash</span>
-                </button>
+                    @csrf
+                    @method('DELETE')
 
-            </form>
+                    <button
+                        type="submit"
+                        class="admin-menu-action admin-menu-danger delete-category"
+                        data-category-name="{{ $category->category_name }}"
+                        role="menuitem"
+                    >
+                        <i class="ph-light ph-trash" aria-hidden="true"></i>
+                        <span>Move to trash</span>
+                    </button>
+                </form>
 
+            </div>
+        </div>
 
-        {{-- =================================================
-             TRASHED CATEGORY
-             =================================================
-             Only Superadmins should reach this branch.
-             The controller must enforce this server-side too.
-             ================================================= --}}
+    @elseif(
+        ($status ?? 'active') === 'trashed'
+        && auth()->user()->role === 'superadmin'
+    )
 
-        @elseif(
-            ($status ?? 'active') === 'trashed'
-            && auth()->user()->role === 'superadmin'
-        )
+        {{-- PRIMARY: RESTORE --}}
+        <form
+            action="{{ route('admin.categories.restore', $category) }}"
+            method="POST"
+            class="restore-category-form"
+        >
+            @csrf
+            @method('PATCH')
 
-            {{-- RESTORE --}}
-            <form
-                action="{{ route(
-                    'admin.categories.restore',
-                    $category
-                ) }}"
-                method="POST"
-                class="restore-category-form"
+            <button
+                type="submit"
+                class="admin-action-primary restore-category"
+                data-category-name="{{ $category->category_name }}"
+                aria-label="Restore {{ $category->category_name }}"
             >
+                <i class="ph-light ph-arrow-counter-clockwise" aria-hidden="true"></i>
+                <span>Restore</span>
+            </button>
+        </form>
 
-                @csrf
-                @method('PATCH')
-
-                <button
-                    type="button"
-                    class="btn btn-restore restore-category admin-table-icon-action" aria-label="Restore" title="Restore"
-                    data-category-name="{{ $category->category_name }}"
-                >
-                    <i class="ph-light ph-arrow-counter-clockwise"></i>
-                    <span class="sr-only">Restore</span>
-                </button>
-
-            </form>
-
-
-            {{-- PERMANENT DELETE --}}
-            <form
-                action="{{ route(
-                    'admin.categories.force-delete',
-                    $category
-                ) }}"
-                method="POST"
-                class="force-delete-category-form"
+        {{-- SECONDARY ACTIONS --}}
+        <div class="admin-action-menu">
+            <button
+                type="button"
+                class="admin-action-menu-trigger"
+                aria-label="More actions for {{ $category->category_name }}"
+                aria-expanded="false"
+                aria-haspopup="menu"
             >
+                <i class="ph-light ph-dots-three-vertical" aria-hidden="true"></i>
+            </button>
 
-                @csrf
-                @method('DELETE')
+            <div class="admin-action-menu-content" role="menu">
 
-                <button
-                    type="button"
-                    class="btn btn-danger force-delete-category admin-table-icon-action" aria-label="Delete Permanently" title="Delete Permanently"
-                    data-category-name="{{ $category->category_name }}"
+                {{-- PERMANENT DELETE --}}
+                <form
+                    action="{{ route('admin.categories.force-delete', $category) }}"
+                    method="POST"
+                    class="force-delete-category-form"
                 >
-                    <i class="ph-light ph-trash"></i>
-                    <span class="sr-only">Delete Permanently</span>
-                </button>
+                    @csrf
+                    @method('DELETE')
 
-            </form>
+                    <button
+                        type="submit"
+                        class="admin-menu-action admin-menu-danger force-delete-category"
+                        data-category-name="{{ $category->category_name }}"
+                        role="menuitem"
+                    >
+                        <i class="ph-light ph-trash" aria-hidden="true"></i>
+                        <span>Delete permanently</span>
+                    </button>
+                </form>
 
-        @endif
+            </div>
+        </div>
 
-    </div>
+    @endif
+
+</div>
+
 
 </td>
 
@@ -278,7 +314,7 @@
 
 <tr>
 
-    <td colspan="5" class="empty">
+    <td colspan="{{ ($status ?? 'active') === 'trashed' ? 6 : 5 }}" class="empty">
 
         @if(($status ?? 'active') === 'trashed')
 
@@ -596,6 +632,8 @@ window.__FLASH_ERROR__ = @json(session('error'));
 
 
 
+<script src="{{ asset('jsfiles/admin/trash-reason.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/components/action-menu.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/category-management.js') }}"></script>
 
 

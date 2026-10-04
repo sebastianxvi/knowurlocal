@@ -3,6 +3,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('cssfiles/theme.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/table.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/components/action-menu.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/nga-management.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
 @endpush
@@ -142,6 +143,9 @@
                     <th>Location</th>
                     <th>Email</th>
                     <th>Hotline</th>
+                    @if($status === 'trashed')
+                        <th>Trash Reason</th>
+                    @endif
                     <th>Action</th>
                 </tr>
             </thead>
@@ -253,136 +257,171 @@
                         {{ $primaryHotline?->value ?? '—' }}
                     </td>
 
+                    @if($status === 'trashed')
+                        <td class="admin-trash-reason-cell">
+                            @if($agency->trash_reason)
+                                <div class="admin-trash-reason-content">
+                                    <span class="admin-trash-reason-text" title="{{ $agency->trash_reason }}">
+                                        {{ $agency->trash_reason }}
+                                    </span>
+
+                                    @if(mb_strlen($agency->trash_reason) > 140)
+                                        <button
+                                            type="button"
+                                            class="admin-trash-reason-view"
+                                            data-trash-reason="{{ $agency->trash_reason }}"
+                                            aria-label="View full trash reason for {{ $agency->agency_name }}"
+                                        >
+                                            View full
+                                        </button>
+                                    @endif
+                                </div>
+                            @else
+                                <span class="admin-trash-reason-empty">No reason recorded</span>
+                            @endif
+                        </td>
+                    @endif
+
                     <!-- =====================================================
      ACTIONS
      ===================================================== -->
 
 <td>
 
-    <div class="tablebtn">
+    <div class="admin-row-actions">
 
-        {{-- =================================================
-             ACTIVE AGENCY
-             =================================================
-             Normal Admin + Superadmin
-             ================================================= --}}
+    @if($status === 'active')
 
-        @if($status === 'active')
+        {{-- PRIMARY: EDIT --}}
+        <button
+            type="button"
+            class="admin-action-primary"
+            aria-label="Edit {{ $agency->agency_name }}"
+            title="Edit agency"
+            data-id="{{ $agency->id }}"
+            data-name="{{ $agency->agency_name }}"
+            data-abbreviation="{{ $agency->agency_abbreviation }}"
+            data-type_id="{{ $agency->agency_type_id }}"
+            data-category_id="{{ $agency->category_id }}"
+            data-description="{{ $agency->agency_description }}"
+            data-office_head_name="{{ $agency->office_head_name }}"
+            data-office_head_position="{{ $agency->office_head_position }}"
+            data-services_offered="{{ $agency->services_offered }}"
+            data-location="{{ $agency->agency_location }}"
+            data-office="{{ $agency->office_hours }}"
+            data-lat="{{ $agency->lat }}"
+            data-lng="{{ $agency->lng }}"
+            data-image="{{ $agency->agency_image }}"
+            data-image-url="{{ $agency->agency_image ? Storage::disk('public')->url($agency->agency_image) : '' }}"
+            data-contacts="{{ $agencyContacts->toJson() }}"
+        >
+            <i class="ph-light ph-pencil-simple" aria-hidden="true"></i>
+            <span>Edit</span>
+        </button>
 
-            <!-- EDIT -->
+        {{-- SECONDARY ACTIONS --}}
+        <div class="admin-action-menu">
             <button
                 type="button"
-                class="btn btn-primary admin-table-icon-action" aria-label="Edit" title="Edit"
-
-                data-id="{{ $agency->id }}"
-                data-name="{{ $agency->agency_name }}"
-                data-abbreviation="{{ $agency->agency_abbreviation }}"
-                data-type_id="{{ $agency->agency_type_id }}"
-                data-category_id="{{ $agency->category_id }}"
-                data-description="{{ $agency->agency_description }}"
-                data-office_head_name="{{ $agency->office_head_name }}"
-                data-office_head_position="{{ $agency->office_head_position }}"
-                data-services_offered="{{ $agency->services_offered }}"
-                data-location="{{ $agency->agency_location }}"
-                data-office="{{ $agency->office_hours }}"
-                data-lat="{{ $agency->lat }}"
-                data-lng="{{ $agency->lng }}"
-                data-image="{{ $agency->agency_image }}"
-    data-image-url="{{ $agency->agency_image ? Storage::disk('public')->url($agency->agency_image) : '' }}" 
-                data-contacts="{{ $agencyContacts->toJson() }}"
+                class="admin-action-menu-trigger"
+                aria-label="More actions for {{ $agency->agency_name }}"
+                aria-expanded="false"
+                aria-haspopup="menu"
             >
-            <i class="ph-light ph-pencil-simple"></i>
-                <span class="sr-only">Edit</span>
+                <i class="ph-light ph-dots-three-vertical" aria-hidden="true"></i>
             </button>
 
+            <div class="admin-action-menu-content" role="menu">
 
-            <!-- SOFT DELETE -->
-            <form
-                action="{{ route(
-                    'admin.agencies.destroy',
-                    $agency->id
-                ) }}"
-                method="POST"
-                class="delete-form"
-            >
-                @csrf
-                @method('DELETE')
-
-                <button
-                    type="button"
-                    class="btn btn-danger delete-btn admin-table-icon-action" aria-label="Trash" title="Trash"
-                    data-agency-name="{{ $agency->agency_name }}"
+                {{-- MOVE TO TRASH --}}
+                <form
+                    action="{{ route('admin.agencies.destroy', $agency->id) }}"
+                    method="POST"
+                    class="delete-form"
                 >
-                    <i class="ph-light ph-trash"></i>
-                    <span class="sr-only">Trash</span>
-                </button>
+                    @csrf
+                    @method('DELETE')
 
-            </form>
+                    <button
+                        type="submit"
+                        class="admin-menu-action admin-menu-danger delete-btn"
+                        data-agency-name="{{ $agency->agency_name }}"
+                        role="menuitem"
+                    >
+                        <i class="ph-light ph-trash" aria-hidden="true"></i>
+                        <span>Move to trash</span>
+                    </button>
+                </form>
 
+            </div>
+        </div>
 
-        {{-- =================================================
-             TRASHED AGENCY
-             =================================================
-             Superadmin only.
-             The backend middleware remains the real security
-             boundary.
-             ================================================= --}}
+    @elseif(
+        $status === 'trashed'
+        && auth()->user()->role === 'superadmin'
+    )
 
-        @elseif(
-            $status === 'trashed'
-            && auth()->user()->role === 'superadmin'
-        )
+        {{-- PRIMARY: RESTORE --}}
+        <form
+            action="{{ route('admin.agencies.restore', $agency->id) }}"
+            method="POST"
+            class="restore-form"
+        >
+            @csrf
+            @method('PATCH')
 
-            <!-- RESTORE -->
-            <form
-                action="{{ route(
-                    'admin.agencies.restore',
-                    $agency->id
-                ) }}"
-                method="POST"
-                class="restore-form"
+            <button
+                type="submit"
+                class="admin-action-primary restore-btn"
+                data-agency-name="{{ $agency->agency_name }}"
+                aria-label="Restore {{ $agency->agency_name }}"
             >
-                @csrf
-                @method('PATCH')
+                <i class="ph-light ph-arrow-counter-clockwise" aria-hidden="true"></i>
+                <span>Restore</span>
+            </button>
+        </form>
 
-                <button
-                    type="button"
-                    class="btn btn-restore restore-btn admin-table-icon-action" aria-label="Restore" title="Restore"
-                    data-agency-name="{{ $agency->agency_name }}"
-                >
-                    <i class="ph-light ph-arrow-counter-clockwise"></i>
-                    <span class="sr-only">Restore</span>
-                </button>
-
-            </form>
-
-
-            <!-- PERMANENT DELETE -->
-            <form
-                action="{{ route(
-                    'admin.agencies.force-delete',
-                    $agency->id
-                ) }}"
-                method="POST"
-                class="force-delete-form"
+        {{-- SECONDARY ACTIONS --}}
+        <div class="admin-action-menu">
+            <button
+                type="button"
+                class="admin-action-menu-trigger"
+                aria-label="More actions for {{ $agency->agency_name }}"
+                aria-expanded="false"
+                aria-haspopup="menu"
             >
-                @csrf
-                @method('DELETE')
+                <i class="ph-light ph-dots-three-vertical" aria-hidden="true"></i>
+            </button>
 
-                <button
-                    type="button"
-                    class="btn btn-danger force-delete-btn admin-table-icon-action" aria-label="Delete Permanently" title="Delete Permanently"
-                    data-agency-name="{{ $agency->agency_name }}"
+            <div class="admin-action-menu-content" role="menu">
+
+                {{-- PERMANENT DELETE --}}
+                <form
+                    action="{{ route('admin.agencies.force-delete', $agency->id) }}"
+                    method="POST"
+                    class="force-delete-form"
                 >
-                    <i class="ph-light ph-trash"></i>
-                    <span class="sr-only">Delete Permanently</span>
-                </button>
+                    @csrf
+                    @method('DELETE')
 
-            </form>
+                    <button
+                        type="submit"
+                        class="admin-menu-action admin-menu-danger force-delete-btn"
+                        data-agency-name="{{ $agency->agency_name }}"
+                        role="menuitem"
+                    >
+                        <i class="ph-light ph-trash" aria-hidden="true"></i>
+                        <span>Delete permanently</span>
+                    </button>
+                </form>
 
-        @endif
+            </div>
+        </div>
 
-    </div>
+    @endif
+
+</div>
+
 
 </td>
 
@@ -391,7 +430,7 @@
 
                 <!-- EMPTY STATE -->
                 <tr>
-                    <td colspan="6" class="empty">
+                    <td colspan="{{ $status === 'trashed' ? 7 : 6 }}" class="empty">
                         No agencies found.
                     </td>
                 </tr>
@@ -881,6 +920,8 @@ Additional contact information may be added.
 </script>
 
 
+<script src="{{ asset('jsfiles/admin/trash-reason.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/components/action-menu.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/nga-management.js') }}"></script>
 
 @if(session('success'))

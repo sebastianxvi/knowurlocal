@@ -3867,7 +3867,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const btn =
                 e.target.closest(
-                    ".btn-primary"
+                    ".admin-action-primary[data-contacts]"
                 );
 
 

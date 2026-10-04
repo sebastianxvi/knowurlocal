@@ -1,0 +1,131 @@
+/* =========================================================
+   ADMIN TABLE ACTIONS
+   Shared visual language for lifecycle/admin tables.
+   ========================================================= */
+
+.admin-row-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.admin-action-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 7px;
+    background: var(--surface, #ffffff);
+    color: var(--text-primary, #374151);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.admin-action-primary:hover {
+    border-color: var(--primary-color, #2563eb);
+    background: var(--primary-soft, #eff6ff);
+    color: var(--primary-color, #2563eb);
+}
+
+.admin-action-primary i { font-size: 15px; }
+
+.admin-action-menu {
+    position: relative;
+    flex: 0 0 34px;
+}
+
+.admin-action-menu-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-muted, #9ca3af);
+    font: inherit;
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.admin-action-menu-trigger:hover,
+.admin-action-menu-trigger[aria-expanded="true"] {
+    border-color: var(--border-color, #e5e7eb);
+    background: var(--surface-secondary, #f9fafb);
+    color: var(--text-primary, #374151);
+}
+
+.admin-action-menu-trigger i { font-size: 18px; }
+
+/*
+ * The panel is moved to <body> by action-menu.js. Fixed positioning is
+ * therefore relative to the actual viewport, not a transformed/overflowing
+ * table wrapper. This prevents the dropdown from appearing several rows
+ * below its trigger.
+ */
+.admin-action-menu-content {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1100;
+    display: none;
+    min-width: 175px;
+    max-width: min(240px, calc(100vw - 16px));
+    padding: 5px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 9px;
+    background: var(--surface, #ffffff);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10), 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.admin-action-menu-content.is-visible { display: block; }
+
+.admin-menu-action {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 34px;
+    padding: 0 9px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary, #4b5563);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+}
+
+.admin-menu-action:hover {
+    background: var(--surface-secondary, #f3f4f6);
+    color: var(--text-primary, #111827);
+}
+
+.admin-menu-action i { flex: 0 0 auto; font-size: 16px; }
+.admin-menu-danger { color: #dc2626; }
+.admin-menu-danger:hover { background: #fef2f2; color: #b91c1c; }
+.admin-menu-secondary { color: #4f46e5; }
+.admin-menu-secondary:hover { background: #eef2ff; color: #4338ca; }
+.admin-menu-success { color: #047857; }
+.admin-menu-success:hover { background: #ecfdf5; color: #065f46; }
+
+@media (max-width: 640px) {
+    .admin-action-primary { min-height: 32px; padding: 0 9px; }
+    .admin-action-menu-trigger { width: 32px; height: 32px; }
+    .admin-action-menu { flex-basis: 32px; }
+}

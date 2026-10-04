@@ -706,3 +706,62 @@
         justify-content: flex-end;
     }
 }
+/* =========================================================
+   SHARED TRASH REASON
+   ========================================================= */
+
+.admin-trash-reason-cell {
+    color: var(--text-secondary, #4b5563);
+    min-width: 180px;
+}
+
+.admin-trash-reason-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+    max-width: 290px;
+}
+
+.admin-trash-reason-text {
+    display: -webkit-box;
+    max-width: 290px;
+    overflow: hidden;
+    color: var(--text-secondary, #4b5563);
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow-wrap: anywhere;
+}
+
+.admin-trash-reason-text:hover {
+    color: var(--text-primary, #1f2937);
+}
+
+.admin-trash-reason-view {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent-primary, #2563eb);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.admin-trash-reason-view:hover {
+    text-decoration: underline;
+}
+
+.admin-trash-reason-view:focus-visible {
+    outline: 2px solid var(--accent-primary, #2563eb);
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+.admin-trash-reason-empty {
+    color: var(--text-muted, #9ca3af);
+    font-style: italic;
+}

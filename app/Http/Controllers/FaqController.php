@@ -169,17 +169,16 @@ public function prepareFromSupport(
         }
 
         /*
-         * The structured Support Request response is the authoritative
-         * answer for the new ticket workflow. The legacy answer column is
-         * used only when an older ticket still stores its response there.
+         * A completed Support Request can legitimately contain an
+         * attachment-only response. Do not require a text answer here:
+         * the response components are the authoritative FAQ response,
+         * and the FAQ response builder can publish image/file/link/QR
+         * components without an accompanying text block.
+         *
+         * The final empty-response guard is performed after all components
+         * have been built below, so legacy answer_image records are also
+         * supported.
          */
-        if (trim($responseAnswer) === '') {
-            return response()->json([
-                'success' => false,
-                'message' =>
-                    'The completed support request does not contain a response that can be added to an FAQ.',
-            ], 422);
-        }
 
         /*
          * Translate the entire conversion in one batch.
@@ -217,6 +216,8 @@ public function prepareFromSupport(
             'detected_language' => $questionPair['language'],
             'question' => $questionPair['en'],
             'question_fil' => $questionPair['fil'],
+            'answer' => '',
+            'answer_fil' => '',
         ];
 
         if (!$latestResponse) {
@@ -300,9 +301,13 @@ public function prepareFromSupport(
 
         /*
          * Legacy tickets may not have structured response components.
-         * Seed both language response blocks from the legacy answer pair.
+         * Only synthesize text blocks when a legacy text answer actually
+         * exists. Attachment-only tickets must remain attachment-only.
          */
-        if (!collect($responseComponents)->contains(fn ($component) => ($component['type'] ?? null) === 'text')) {
+        if (
+            $responseComponents === []
+            && trim($responseAnswer) !== ''
+        ) {
             $responseComponents[] = [
                 'type' => 'text',
                 'language' => 'en',
@@ -338,6 +343,18 @@ public function prepareFromSupport(
                     ? Storage::disk('public')->url(ltrim($support->answer_image, '/'))
                     : null,
             ];
+        }
+
+        /*
+         * Never prepare an empty FAQ. A response is valid when it contains
+         * either text or at least one attachment/link/QR component.
+         */
+        if ($responseComponents === []) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'The completed support request does not contain a response or attachment that can be added to an FAQ.',
+            ], 422);
         }
 
         return response()->json([
@@ -833,8 +850,18 @@ public function store(Request $request)
         ],
 
         'answer' => [
-            'required',
+            'nullable',
             'string',
+            function ($attribute, $value, $fail) use ($request) {
+                if (
+                    trim((string) $value) === ''
+                    && !$this->requestContainsResponseContent($request)
+                ) {
+                    $fail(
+                        'Add a text response or at least one attachment, link, or QR code to the FAQ.'
+                    );
+                }
+            },
         ],
 
         // Filipino / Taglish is optional.
@@ -1084,7 +1111,7 @@ $faq = Faq::create([
     'agency_id'    => $request->agency_id,
 
     'question'     => $request->question,
-    'answer'       => $request->answer,
+    'answer'       => (string) ($request->input('answer') ?? ''),
 
     'question_fil' => $request->question_fil,
     'answer_fil'   => $request->answer_fil,
@@ -1146,7 +1173,20 @@ $faq->id
         $request->validate([
             'agency_id' => 'required|exists:agencies,id',
             'question' => 'required|string|max:255',
-            'answer' => 'required|string',
+            'answer' => [
+                'nullable',
+                'string',
+                function ($attribute, $value, $fail) use ($request) {
+                    if (
+                        trim((string) $value) === ''
+                        && !$this->requestContainsResponseContent($request)
+                    ) {
+                        $fail(
+                            'Add a text response or at least one attachment, link, or QR code to the FAQ.'
+                        );
+                    }
+                },
+            ],
             'question_fil' => 'nullable|string|max:255',
             'answer_fil' => 'nullable|string',
             'keywords' => 'nullable|string|max:1000',
@@ -1700,6 +1740,54 @@ public function forceDestroy($id)
         $faq->forceFill(['current_version_id' => $version->id])->save();
 
         return $version;
+    }
+
+    /**
+     * Determine whether the FAQ request contains any usable response
+     * content even when there is no text answer.
+     *
+     * Attachment-only FAQs are valid because the response_components
+     * payload is the source of truth for images, files, links and QR codes.
+     */
+    private function requestContainsResponseContent(Request $request): bool
+    {
+        $components = $request->input('response_components', []);
+
+        if (!is_array($components)) {
+            return false;
+        }
+
+        foreach ($components as $index => $component) {
+            if (!is_array($component)) {
+                continue;
+            }
+
+            $type = $component['type'] ?? null;
+            $content = trim((string) ($component['content'] ?? ''));
+
+            if ($type === 'text' && $content !== '') {
+                return true;
+            }
+
+            if (in_array($type, ['link', 'qr_code'], true) && $content !== '') {
+                return true;
+            }
+
+            if (in_array($type, ['image', 'file'], true)) {
+                $uploaded = $request->file("response_components.$index.file");
+
+                if (
+                    $content !== ''
+                    || trim((string) ($component['existing_content'] ?? '')) !== ''
+                    || !empty($component['source_component_id'])
+                    || ($uploaded && method_exists($uploaded, 'isValid') && $uploaded->isValid())
+                ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

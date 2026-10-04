@@ -2,6 +2,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('cssfiles/components/table.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/components/action-menu.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/faqs.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/faq-response-builder.css') }}">
@@ -149,6 +150,9 @@
                     <th>Question</th>
                     <th>Feedback</th>
                     <th>Date updated</th>
+                    @if($status === 'trashed')
+                        <th>Trash Reason</th>
+                    @endif
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -209,140 +213,179 @@
                         @endif
                     </td>
 
+                    @if($status === 'trashed')
+                        <td class="admin-trash-reason-cell">
+                            @if($faq->trash_reason)
+                                <div class="admin-trash-reason-content">
+                                    <span class="admin-trash-reason-text" title="{{ $faq->trash_reason }}">
+                                        {{ $faq->trash_reason }}
+                                    </span>
+
+                                    @if(mb_strlen($faq->trash_reason) > 140)
+                                        <button
+                                            type="button"
+                                            class="admin-trash-reason-view"
+                                            data-trash-reason="{{ $faq->trash_reason }}"
+                                            aria-label="View full trash reason for FAQ #{{ $faq->id }}"
+                                        >
+                                            View full
+                                        </button>
+                                    @endif
+                                </div>
+                            @else
+                                <span class="admin-trash-reason-empty">No reason recorded</span>
+                            @endif
+                        </td>
+                    @endif
+
                     <td>
 
-    <div class="tablebtn">
+    <div class="admin-row-actions">
 
-        {{-- =================================================
-             ACTIVE FAQ
-             =================================================
-             Normal Admin + Superadmin
-             ================================================= --}}
+    @if($status === 'active')
 
-        @if($status === 'active')
+        {{-- PRIMARY: EDIT --}}
+        <button
+            type="button"
+            class="admin-action-primary edit-btn"
+            aria-label="Edit FAQ #{{ $faq->id }}"
+            title="Edit FAQ"
+            data-id="{{ $faq->id }}"
+            data-agency="{{ $faq->agency_id }}"
+            data-question="{{ $faq->question }}"
+            data-answer="{{ $faq->answer }}"
+            data-question-fil="{{ $faq->question_fil }}"
+            data-answer-fil="{{ $faq->answer_fil }}"
+            data-keywords="{{ e($faq->keywords ?? '') }}"
+            data-image="{{ $faq->image }}"
+            data-response-components='{{ json_encode($faq->response_components ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}'
+        >
+            <i class="ph-light ph-pencil-simple" aria-hidden="true"></i>
+            <span>Edit</span>
+        </button>
 
-            <button type="button" class="admin-table-icon-action faq-feedback-open"
-                data-feedback-url="{{ route('admin.faqs.feedback', $faq->id) }}"
-                data-faq-question="{{ $faq->question }}"
-                aria-label="View feedback for FAQ {{ $faq->id }}" title="View feedback">
-                <i class="ph-light ph-chat-circle-text" aria-hidden="true"></i>
-            </button>
-
-            {{-- EDIT --}}
+        {{-- SECONDARY ACTIONS --}}
+        <div class="admin-action-menu">
             <button
                 type="button"
-                class="btn btn-primary edit-btn admin-table-icon-action" aria-label="Edit" title="Edit"
-
-                data-id="{{ $faq->id }}"
-                data-agency="{{ $faq->agency_id }}"
-
-                data-question="{{ $faq->question }}"
-                data-answer="{{ $faq->answer }}"
-
-                data-question-fil="{{ $faq->question_fil }}"
-                data-answer-fil="{{ $faq->answer_fil }}"
-
-                data-keywords="{{ e($faq->keywords ?? '') }}"
-                data-image="{{ $faq->image }}"
-                data-response-components='{{ json_encode($faq->response_components ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}'
+                class="admin-action-menu-trigger"
+                aria-label="More actions for FAQ #{{ $faq->id }}"
+                aria-expanded="false"
+                aria-haspopup="menu"
             >
-                <i class="ph-light ph-pencil-simple"></i>
-                <span class="sr-only">Edit</span>
+                <i class="ph-light ph-dots-three-vertical" aria-hidden="true"></i>
             </button>
 
+            <div class="admin-action-menu-content" role="menu">
 
-            {{-- SOFT DELETE --}}
-            <form
-                method="POST"
-                action="{{ route('faqs.destroy', $faq->id) }}"
-                class="delete-form"
-            >
-
-                @csrf
-                @method('DELETE')
-
+                {{-- VIEW FEEDBACK --}}
                 <button
                     type="button"
-                    class="btn btn-danger delete-btn admin-table-icon-action" aria-label="Trash" title="Trash"
+                    class="admin-menu-action admin-menu-secondary faq-feedback-open"
+                    data-feedback-url="{{ route('admin.faqs.feedback', $faq->id) }}"
                     data-faq-question="{{ $faq->question }}"
+                    role="menuitem"
                 >
-                    <i class="ph-light ph-trash"></i>
-                    <span class="sr-only">Trash</span>
+                    <i class="ph-light ph-chat-circle-text" aria-hidden="true"></i>
+                    <span>View feedback</span>
                 </button>
 
-            </form>
+                {{-- MOVE TO TRASH --}}
+                <form
+                    method="POST"
+                    action="{{ route('faqs.destroy', $faq->id) }}"
+                    class="delete-form"
+                >
+                    @csrf
+                    @method('DELETE')
 
+                    <button
+                        type="submit"
+                        class="admin-menu-action admin-menu-danger delete-btn"
+                        data-faq-question="{{ $faq->question }}"
+                        role="menuitem"
+                    >
+                        <i class="ph-light ph-trash" aria-hidden="true"></i>
+                        <span>Move to trash</span>
+                    </button>
+                </form>
 
-        {{-- =================================================
-             TRASHED FAQ
-             =================================================
-             Superadmin only.
-             ================================================= --}}
+            </div>
+        </div>
 
-        @elseif(
-            $status === 'trashed'
-            && auth()->user()->role === 'superadmin'
-        )
+    @elseif(
+        $status === 'trashed'
+        && auth()->user()->role === 'superadmin'
+    )
 
-            {{-- RESTORE --}}
-            <form
-                method="POST"
-                action="{{ route(
-                    'admin.faqs.restore',
-                    $faq->id
-                ) }}"
-                class="restore-form"
+        {{-- PRIMARY: RESTORE --}}
+        <form
+            method="POST"
+            action="{{ route('admin.faqs.restore', $faq->id) }}"
+            class="restore-form"
+        >
+            @csrf
+            @method('PATCH')
+
+            <button
+                type="submit"
+                class="admin-action-primary restore-btn"
+                data-faq-question="{{ $faq->question }}"
+                aria-label="Restore FAQ #{{ $faq->id }}"
             >
+                <i class="ph-light ph-arrow-counter-clockwise" aria-hidden="true"></i>
+                <span>Restore</span>
+            </button>
+        </form>
 
-                @csrf
-                @method('PATCH')
-
-                <button
-                    type="button"
-                    class="btn btn-restore restore-btn admin-table-icon-action" aria-label="Restore" title="Restore"
-                    data-faq-question="{{ $faq->question }}"
-                >
-                    <i class="ph-light ph-arrow-counter-clockwise"></i>
-                    <span class="sr-only">Restore</span>
-                </button>
-
-            </form>
-
-
-            {{-- PERMANENT DELETE --}}
-            <form
-                method="POST"
-                action="{{ route(
-                    'admin.faqs.force-delete',
-                    $faq->id
-                ) }}"
-                class="force-delete-form"
+        {{-- SECONDARY ACTIONS --}}
+        <div class="admin-action-menu">
+            <button
+                type="button"
+                class="admin-action-menu-trigger"
+                aria-label="More actions for FAQ #{{ $faq->id }}"
+                aria-expanded="false"
+                aria-haspopup="menu"
             >
+                <i class="ph-light ph-dots-three-vertical" aria-hidden="true"></i>
+            </button>
 
-                @csrf
-                @method('DELETE')
+            <div class="admin-action-menu-content" role="menu">
 
-                <button
-                    type="button"
-                    class="btn btn-danger force-delete-btn admin-table-icon-action" aria-label="Delete Permanently" title="Delete Permanently"
-                    data-faq-question="{{ $faq->question }}"
+                {{-- PERMANENT DELETE --}}
+                <form
+                    method="POST"
+                    action="{{ route('admin.faqs.force-delete', $faq->id) }}"
+                    class="force-delete-form"
                 >
-                    <i class="ph-light ph-trash"></i>
-                    <span class="sr-only">Delete Permanently</span>
-                </button>
+                    @csrf
+                    @method('DELETE')
 
-            </form>
+                    <button
+                        type="submit"
+                        class="admin-menu-action admin-menu-danger force-delete-btn"
+                        data-faq-question="{{ $faq->question }}"
+                        role="menuitem"
+                    >
+                        <i class="ph-light ph-trash" aria-hidden="true"></i>
+                        <span>Delete permanently</span>
+                    </button>
+                </form>
 
-        @endif
+            </div>
+        </div>
 
-    </div>
+    @endif
+
+</div>
+
 
 </td>
 
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="empty">
+                    <td colspan="{{ $status === 'trashed' ? 6 : 5 }}" class="empty">
                         @if($status === 'trashed')
                             No deleted FAQs found.
                         @else
@@ -592,7 +635,7 @@
                     <div class="faq-text-response-heading">
                         <div>
                             <span>Text response</span>
-                            <small>Add one or more text blocks for the English answer.</small>
+                            <small>Optional when the FAQ response is provided through attachments.</small>
                         </div>
                     </div>
 
@@ -637,7 +680,7 @@
                     <div class="faq-text-response-heading">
                         <div>
                             <span>Text response</span>
-                            <small>Add one or more text blocks for the Tagalog / Taglish answer.</small>
+                            <small>Optional when the FAQ response is provided through attachments.</small>
                         </div>
                     </div>
 
@@ -802,6 +845,8 @@ window.SUPPORT_FAQ_PREPARE_URL =
 </script>
 
 <script src="{{ asset('jsfiles/admin/faq-response-builder.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/trash-reason.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/components/action-menu.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/faqs.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/faq-feedback-modal.js') }}?v={{ filemtime(public_path('jsfiles/admin/faq-feedback-modal.js')) }}"></script>
 
