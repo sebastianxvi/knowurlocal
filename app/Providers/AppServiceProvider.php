@@ -124,6 +124,63 @@ class AppServiceProvider extends ServiceProvider
         });
 
         /*
+         * Authentication abuse protection.
+         *
+         * Login is shared by public users and administrators, so it
+         * receives both a per-email/IP limit and a broader per-IP limit.
+         * This prevents an attacker from bypassing the email key simply
+         * by cycling through addresses.
+         */
+        RateLimiter::for('login', function ($request) {
+            $email = strtolower(trim((string) $request->input('email', '')));
+
+            return [
+                Limit::perMinute(5)->by(
+                    'login-email:' . $email . '|ip:' . $request->ip()
+                ),
+                Limit::perMinute(30)->by(
+                    'login-ip:' . $request->ip()
+                ),
+            ];
+        });
+
+        /*
+         * Registration creates and emails a verification OTP, so the
+         * endpoint itself needs abuse protection in addition to the
+         * existing OTP-resend throttle.
+         */
+        RateLimiter::for('registration', function ($request) {
+            $email = strtolower(trim((string) $request->input('email', '')));
+
+            return [
+                Limit::perMinute(3)->by(
+                    'registration-email:' . $email . '|ip:' . $request->ip()
+                ),
+                Limit::perMinute(10)->by(
+                    'registration-ip:' . $request->ip()
+                ),
+            ];
+        });
+
+        /*
+         * Admin invitations are privileged mail-sending operations.
+         * Limit both the recipient and the inviting administrator/IP.
+         */
+        RateLimiter::for('admin-invite', function ($request) {
+            $email = strtolower(trim((string) $request->input('email', '')));
+            $userId = $request->user()?->id ?? 'guest';
+
+            return [
+                Limit::perMinute(3)->by(
+                    'admin-invite-email:' . $email
+                ),
+                Limit::perMinute(10)->by(
+                    'admin-invite-user:' . $userId . '|ip:' . $request->ip()
+                ),
+            ];
+        });
+
+        /*
          * Share the lightweight admin notification center with the shared
          * header. Notifications are intentionally derived from current
          * actionable records; no separate notification-history table is

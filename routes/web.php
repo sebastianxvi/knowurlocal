@@ -40,6 +40,7 @@ Route::get('/login-page', function () {
 })->name('public.login');
 
 Route::post('/login', [AuthController::class, 'login'])
+    ->middleware('throttle:login')
     ->name('login.submit');
 
 Route::post('/logout', [AuthController::class, 'logout'])
@@ -51,6 +52,7 @@ Route::get('/register', function () {
 })->name('public.register');
 
 Route::post('/register', [AuthController::class, 'register'])
+    ->middleware('throttle:registration')
     ->name('public.register.submit');
 
     /*
@@ -123,6 +125,7 @@ Route::get('/otp/session', function (Request $request) {
 })->middleware('throttle:60,1')->name('otp.session');
 
 Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])
+    ->middleware('throttle:10,1')
     ->name('otp.verify');
 
 Route::post('/resend-otp', [AuthController::class, 'resendOtp'])
@@ -263,19 +266,6 @@ Route::prefix('admin')->group(function () {
     |--------------------------------------------------------------------------
     */
 
-    // Route::get('/login', function () {
-
-    //     if (auth()->check()) {
-    //         return redirect('/admin/dashboard');
-    //     }
-
-    //     return view('admin.login-page');
-
-    // })->name('admin.login');
-
-    // Route::post('/login', [AuthController::class, 'login'])
-    //     ->name('admin.login.submit');
-
     /*
     |--------------------------------------------------------------------------
     | ADMIN REGISTRATION (TOKEN-BASED)
@@ -288,6 +278,7 @@ Route::prefix('admin')->group(function () {
 
     // 🔐 Still uses AuthController but will validate token later
     Route::post('/register', [AuthController::class, 'register'])
+        ->middleware('throttle:registration')
         ->name('admin.register');
 
 
@@ -562,6 +553,7 @@ Route::post(
 
     // INVITE SYSTEM
     Route::post('/invite', [AdminInviteController::class, 'sendInvite'])
+        ->middleware('throttle:admin-invite')
         ->name('admin.invite');
 
     /*

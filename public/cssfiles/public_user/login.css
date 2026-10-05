@@ -9,29 +9,29 @@
 
 :root {
 
-    --color-primary: #315fbd;
+    --color-primary: #5272c9;
 
-    --color-primary-dark: #274f9f;
+    --color-primary-dark: #435fa8;
 
-    --color-primary-soft: #eef4ff;
+    --color-primary-soft: #e8edfb;
 
-    --color-accent: #6b5fd3;
+    --color-accent: #8274c4;
 
-    --color-text: #172033;
+    --color-text: #1a1e28;
 
-    --color-text-secondary: #61708a;
+    --color-text-secondary: #555d6c;
 
-    --color-text-muted: #8a96a8;
+    --color-text-muted: #757d8c;
 
-    --color-border: #dfe5ee;
+    --color-border: rgba(30, 38, 55, 0.10);
 
-    --color-border-soft: #e8edf4;
+    --color-border-soft: rgba(30, 38, 55, 0.065);
 
     --color-surface: #ffffff;
 
     --color-surface-soft: #f7f9fc;
 
-    --color-page: #f2f5f9;
+    --color-page: #f6f7fa;
 
     --color-danger: #c84d61;
 
@@ -83,12 +83,23 @@ html {
 
     min-height: 100%;
 
+    /*
+     * Authentication decorations intentionally extend beyond some
+     * component edges. They must never become page-level horizontal
+     * overflow on mobile.
+     */
+    overflow-x: clip;
+
 }
 
 
 body {
 
     min-height: 100vh;
+
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
 
     font-family:
         "Inter",
@@ -103,9 +114,9 @@ body {
         radial-gradient(
             circle at 10% 10%,
             rgba(
-                49,
-                95,
-                189,
+                82,
+                114,
+                201,
                 0.07
             ),
             transparent 32%
@@ -216,6 +227,13 @@ body {
 
     position: absolute;
 
+    /*
+     * Decorative pseudo-elements intentionally sit outside the form
+     * bounds. Clip them at the form side so they cannot enlarge the
+     * mobile document width.
+     */
+    overflow-x: clip;
+
     top: 0;
 
     width: 50%;
@@ -288,6 +306,49 @@ body {
 
 
 /* =========================================================
+   5.5 FORM-SIDE DETAILS
+   ========================================================= */
+
+.form-side::before {
+
+    content: "";
+
+    position: absolute;
+    width: 180px;
+    height: 180px;
+    top: -90px;
+    right: -70px;
+
+    border-radius: 50%;
+
+    background: radial-gradient(
+        circle,
+        rgba(82,114,201,0.08) 0%,
+        rgba(82,114,201,0) 70%
+    );
+
+    pointer-events: none;
+}
+
+.form-side::after {
+
+    content: "";
+
+    position: absolute;
+    right: 28px;
+    bottom: 28px;
+    width: 54px;
+    height: 54px;
+
+    border: 1px solid rgba(82,114,201,0.09);
+    border-radius: 14px;
+
+    transform: rotate(12deg);
+
+    pointer-events: none;
+}
+
+/* =========================================================
    6. FORM
    ========================================================= */
 
@@ -296,6 +357,8 @@ body {
     width: 100%;
 
     max-width: 350px;
+
+    min-width: 0;
 
 }
 
@@ -356,18 +419,32 @@ body {
    7. NAME ROW
    ========================================================= */
 
+/*
+ * Keep the two registration name fields inside the form width.
+ * Using two 50% flex items plus a gap makes the row wider than
+ * its parent (50% + 50% + 10px), which can create horizontal
+ * scrolling on narrower registration layouts.
+ */
 .row {
 
-    display: flex;
+    display: grid;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 
     gap: 10px;
+
+    width: 100%;
+
+    min-width: 0;
 
 }
 
 
 .input-group.half {
 
-    width: 50%;
+    width: auto;
+
+    min-width: 0;
 
 }
 
@@ -427,7 +504,7 @@ body {
 
     outline: none;
 
-    background: var(--color-surface-soft);
+    background: #f0f2f6;
 
     color: var(--color-text);
 
@@ -693,7 +770,7 @@ body {
         linear-gradient(
             135deg,
             var(--color-primary),
-            #416fca
+            #6a83d0
         );
 
     color: #ffffff;
@@ -862,9 +939,9 @@ body {
         ),
         linear-gradient(
             145deg,
-            #274f9f,
-            #315fbd 58%,
-            #426fc8
+            #435fa8,
+            #5272c9 58%,
+            #6a83d0
         );
 
     clip-path:
@@ -909,6 +986,125 @@ body {
 
 }
 
+
+/* =========================================================
+   14. PANEL ATMOSPHERE
+   ========================================================= */
+
+.overlay-panel::before {
+
+    content: "";
+
+    position: absolute;
+
+    width: 430px;
+    height: 430px;
+
+    left: -170px;
+    top: -120px;
+
+    border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 50%;
+
+    box-shadow:
+        0 0 0 34px rgba(255,255,255,0.025),
+        0 0 0 68px rgba(255,255,255,0.018);
+
+    pointer-events: none;
+}
+
+.overlay-panel::after {
+
+    content: "";
+
+    position: absolute;
+
+    right: -90px;
+    bottom: -150px;
+
+    width: 320px;
+    height: 320px;
+
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 50%;
+
+    background:
+        radial-gradient(circle at center, rgba(255,255,255,0.07), transparent 62%);
+
+    pointer-events: none;
+}
+
+.panel-logo-art {
+
+    position: absolute;
+
+    right: 42px;
+    top: 38px;
+
+    width: 118px;
+    height: 118px;
+
+    object-fit: contain;
+
+    opacity: 0.065;
+
+    filter: brightness(0) invert(1);
+
+    transform: rotate(7deg);
+
+    pointer-events: none;
+
+    user-select: none;
+}
+
+.panel-route-art {
+
+    position: absolute;
+
+    right: 48px;
+    bottom: 58px;
+
+    width: 150px;
+    height: 84px;
+
+    opacity: 0.22;
+
+    pointer-events: none;
+}
+
+.panel-route-art::before {
+
+    content: "";
+
+    position: absolute;
+    inset: 18px 4px 12px 8px;
+
+    border: 1px solid rgba(255,255,255,0.55);
+    border-left-color: transparent;
+    border-bottom-color: transparent;
+    border-radius: 46% 54% 42% 58%;
+
+    transform: rotate(-15deg);
+}
+
+.panel-route-art::after {
+
+    content: "";
+
+    position: absolute;
+    right: 4px;
+    top: 10px;
+
+    width: 8px;
+    height: 8px;
+
+    border: 2px solid rgba(255,255,255,0.9);
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    box-shadow:
+        -78px 44px 0 -1px rgba(255,255,255,0.75),
+        -120px 15px 0 -2px rgba(255,255,255,0.55);
+}
 
 /* =========================================================
    14. PANEL CONTENT
@@ -1068,6 +1264,11 @@ body {
 }
 
 
+
+
+
+
+
 .panel-content p {
 
     max-width: 285px;
@@ -1200,8 +1401,15 @@ body {
     .container {
 
         width: 100%;
-
+        max-width: 100%;
+        min-width: 0;
         min-height: 100vh;
+
+        /*
+         * Keep the animated/decorative layers inside the viewport.
+         * Vertical content remains available because the container
+         * grows with its form section.
+         */
 
         height: auto;
 
@@ -1211,7 +1419,8 @@ body {
 
         box-shadow: none;
 
-        overflow: visible;
+        overflow-x: clip;
+        overflow-y: visible;
 
         display: flex;
 
@@ -1397,7 +1606,9 @@ body {
 
     .form {
 
+        width: 100%;
         max-width: 430px;
+        min-width: 0;
 
     }
 
@@ -1453,7 +1664,7 @@ body {
      */
     .row {
 
-        flex-direction: column;
+        grid-template-columns: minmax(0, 1fr);
 
         gap: 0;
 

@@ -344,11 +344,11 @@ public function approve($id)
     /*
      * Generate the admin login URL using Laravel's named route.
      *
-     * route() is preferable to hardcoding /admin/login because
+     * route() is preferable to hardcoding an authentication path because
      * the URL will automatically remain correct if the route
      * definition changes later.
      */
-    $loginLink = route('admin.login');
+    $loginLink = route('public.login');
 
     /*
      * Send the approval notification.

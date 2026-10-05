@@ -18,10 +18,16 @@ class AdminInviteController extends Controller
      */
     public function sendInvite(Request $request)
 {
+    // Normalize the recipient before validation and persistence so
+    // invitations use the same canonical email representation as auth.
+    $request->merge([
+        'email' => strtolower(trim((string) $request->input('email', ''))),
+    ]);
+
     // Validate that the supplied address is valid
     // and does not already belong to an existing user.
     $request->validate([
-        'email' => 'required|email|unique:users,email'
+        'email' => 'required|email|max:255|unique:users,email'
     ]);
 
     // Generate a cryptographically random invitation token.

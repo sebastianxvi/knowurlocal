@@ -473,7 +473,7 @@
                     Already have an admin account?
 
                     <a
-                        href="{{ route('admin.login') }}"
+                        href="{{ route('public.login') }}"
                         class="admin-registration-login-link"
                     >
                         Back to Login

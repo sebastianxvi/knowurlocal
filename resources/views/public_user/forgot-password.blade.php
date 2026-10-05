@@ -241,6 +241,19 @@
                      SERVER VALIDATION ERROR
                      ================================================= --}}
 
+                @if (session('success'))
+
+                    <p
+                        class="form-success"
+                        role="status"
+                    >
+                        <i class="ph-light ph-check-circle" aria-hidden="true"></i>
+                        {{ session('success') }}
+                    </p>
+
+                @endif
+
+
                 @error('email')
 
                     <p

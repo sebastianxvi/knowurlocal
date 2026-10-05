@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\EmailVerification;
 use App\Models\User;
 use App\Models\UserLog;
@@ -21,6 +22,12 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
+        // Normalize the canonical account identifier before validation.
+        // This keeps registration, login, and recovery consistent.
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email', ''))),
+        ]);
+
         // 🔍 Detect admin registration via token
         $isAdminRegister = $request->has('token') && !empty($request->token);
 
@@ -57,8 +64,8 @@ class AuthController extends Controller
                 return back()->withErrors(['email' => 'Invalid or expired invite']);
             }
 
-            // 🔒 Ensure email matches invite
-            if ($invite->email !== $request->email) {
+            // 🔒 Ensure email matches invite using normalized values.
+            if (strtolower(trim($invite->email)) !== $request->email) {
                 return back()->withErrors(['email' => 'This email is not invited']);
             }
 
@@ -140,58 +147,108 @@ class AuthController extends Controller
      */
     public function verifyOtp(Request $request)
     {
-        
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email', ''))),
+        ]);
 
         $request->validate([
             'otp' => 'required|digits:6',
-            'email' => 'required|email'
+            'email' => 'required|email|max:255',
         ]);
 
-        $record = EmailVerification::where('email', $request->email)->first();
-        
+        /*
+         * Lock the pending verification row while consuming it.
+         * This prevents two concurrent requests with the same OTP
+         * from creating duplicate accounts or consuming the same
+         * admin invitation twice.
+         */
+        try {
+            $user = DB::transaction(function () use ($request) {
+                $record = EmailVerification::where(
+                    'email',
+                    $request->email
+                )->lockForUpdate()->first();
 
-        if (!$record) {
-            return back()->withErrors(['otp' => 'Invalid request']);
+                if (!$record) {
+                    throw new \RuntimeException('invalid_request');
+                }
+
+                if (now()->greaterThan($record->expires_at)) {
+                    $record->delete();
+                    throw new \RuntimeException('expired');
+                }
+
+                if ((string) $record->otp !== (string) trim($request->otp)) {
+                    throw new \RuntimeException('incorrect');
+                }
+
+                /*
+                 * If this is an invited admin registration, lock the
+                 * invitation as well and verify that it is still valid.
+                 */
+                if ($record->invite_token) {
+                    $invite = AdminInvite::where(
+                        'token',
+                        $record->invite_token
+                    )->lockForUpdate()->first();
+
+                    if (!$invite || !$invite->isValid()) {
+                        $record->delete();
+                        throw new \RuntimeException('invite_invalid');
+                    }
+                }
+
+                $user = User::create([
+                    'first_name' => $record->first_name,
+                    'last_name'  => $record->last_name,
+                    'email'      => $record->email,
+                    'password'   => $record->password,
+                    'email_verified_at' => now(),
+                    'role' => $record->role ?? 'user',
+                    'status' => in_array(
+                        $record->role,
+                        ['admin', 'superadmin'],
+                        true
+                    ) ? 'pending' : 'active',
+                ]);
+
+                if ($record->invite_token) {
+                    AdminInvite::where('token', $record->invite_token)
+                        ->update([
+                            'used' => true,
+                            'updated_at' => now(),
+                        ]);
+                }
+
+                $record->delete();
+
+                return $user;
+            });
+        } catch (\RuntimeException $exception) {
+            return match ($exception->getMessage()) {
+                'expired' => back()->withErrors([
+                    'otp' => 'OTP expired. Please request a new code.',
+                ]),
+                'incorrect' => back()->withErrors([
+                    'otp' => 'Incorrect OTP',
+                ]),
+                'invite_invalid' => back()->withErrors([
+                    'otp' => 'This invitation is no longer valid. Please contact the administrator who invited you.',
+                ]),
+                default => back()->withErrors([
+                    'otp' => 'Invalid verification request. Please start the registration process again.',
+                ]),
+            };
         }
 
-        if (now()->greaterThan($record->expires_at)) {
-            return back()->withErrors(['otp' => 'OTP expired']);
-        }
-
-        if ((string)$record->otp !== (string)trim($request->otp)) {
-            return back()->withErrors(['otp' => 'Incorrect OTP']);
-        }
-
-        // 🔐 Create actual user
-        $user = User::create([
-            'first_name' => $record->first_name,
-            'last_name'  => $record->last_name,
-            'email'      => $record->email,
-            'password'   => $record->password,
-            'email_verified_at' => now(),
-            'role' => $record->role ?? 'user',
-            'status' => in_array($record->role, ['admin', 'superadmin'])
-            ? 'pending'
-            : 'active',
-        ]);
-
-        // 🔥 ADD THIS BLOCK (VERY IMPORTANT)
-        // prevents auto-login / leftover session
+        /*
+         * Do not leave an authenticated session attached to the
+         * newly verified account. Regenerate the session after the
+         * security-sensitive verification operation.
+         */
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        // 🔐 Mark invite used
-        if ($record->invite_token) {
-            AdminInvite::where('token', $record->invite_token)
-                ->update([
-                    'used' => true,
-                    'updated_at' => now()
-                ]);
-        }
-
-        // 🧹 Cleanup
-        $record->delete();
 
         app(\App\Services\AuditLogService::class)->record(
             action: 'verify_account',
@@ -208,19 +265,13 @@ class AuthController extends Controller
             role: $user->role,
         );
 
-        if ($user->role === 'admin' || $user->role === 'superadmin') {
-    return redirect('/admin/login')
-        ->with(
-            'success',
-            'Your email has been verified successfully. Your admin account is now awaiting approval. You will be able to sign in once an administrator approves your account.'
-        );
-}
-
-return redirect('/login-page')
-    ->with(
-        'success',
-        'Your email has been verified. You can now log in to your KNOWURLOCAL account.'
-    );
+        return redirect('/login-page')
+            ->with(
+                'success',
+                $user->role === 'admin' || $user->role === 'superadmin'
+                    ? 'Your email has been verified successfully. Your admin account is now awaiting approval. You will be able to sign in once an administrator approves your account.'
+                    : 'Your email has been verified. You can now log in to your KNOWURLOCAL account.'
+            );
     }
 
 
@@ -234,8 +285,12 @@ public function resendOtp(Request $request)
     /*
      * Validate the email supplied by the OTP page.
      */
+    $request->merge([
+        'email' => strtolower(trim((string) $request->input('email', ''))),
+    ]);
+
     $request->validate([
-        'email' => 'required|email',
+        'email' => 'required|email|max:255',
     ]);
 
 
@@ -409,6 +464,14 @@ public function sendPasswordResetOtp(Request $request)
      */
     $email = strtolower(trim($request->email));
 
+
+    /*
+     * Starting a new recovery request must invalidate any previous
+     * verification marker in this session. Otherwise a user could
+     * begin a second reset after already completing OTP verification
+     * and accidentally retain authorization for the new flow.
+     */
+    $request->session()->forget('password_reset_verified');
 
     /*
      * Look for the account using the normalized email.
@@ -843,6 +906,18 @@ public function resendPasswordResetOtp(Request $request)
 
 
     /*
+     * A verified recovery flow must not accept a new OTP. The user
+     * should proceed directly to the new-password step instead.
+     */
+    if ($request->session()->get('password_reset_verified')) {
+        return response()->json([
+            'success' => false,
+            'message' =>
+                'This password reset has already been verified. Please continue to the new-password step.',
+        ], 409);
+    }
+
+    /*
      * Check the server-side resend cooldown.
      */
     $availableAt = $request->session()->get(
@@ -1133,61 +1208,96 @@ public function resetPassword(Request $request)
      */
     public function login(Request $request)
     {
+        /*
+         * Normalize the canonical account identifier before validation.
+         * This keeps login consistent with registration and recovery.
+         */
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email', ''))),
+        ]);
+
         $request->validate([
-            'email' => 'required|email',
-            'password' => 'required'
+            'email' => 'required|email|max:255',
+            'password' => 'required|string',
         ]);
 
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !$user->email_verified_at) {
-            return back()->withErrors([
-                'email' => 'Please verify your email first'
-            ]);
+        /*
+         * Always return the same authentication failure response for
+         * unknown, unverified, inactive, and wrong-password accounts.
+         * This avoids exposing useful account-state information.
+         */
+        if (
+            !$user ||
+            !Hash::check(
+                $request->password,
+                $user->password
+            )
+        ) {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'We couldn\'t sign you in. Check your email, password, and account status, then try again.',
+                ]);
         }
 
-        if ($user->status !== 'active') {
-    return back()->withErrors([
-        'email' =>
-            'Your admin account is awaiting approval. You can sign in once an administrator has approved your account.'
-    ]);
-}
-
-        if (Auth::attempt($request->only('email','password'))) {
-
-            $request->session()->regenerate();
-
-            /*
-            * Record the most recent successful login.
-            *
-            * This is intentionally updated only after
-            * authentication succeeds.
-            */
-            $user = Auth::user();
-
-            $user->update([
-                'last_login_at' => now(),
-            ]);
-
-            UserLog::create([
-                'user_id' => Auth::id(),
-                'action' => in_array($user->role, ['admin', 'superadmin'], true) ? 'admin_login' : 'login',
-                'page' => 'login',
-                'role' => $user->role,
-                'ip_address' => $request->ip(),
-                'device' => $request->userAgent(),
-            ]);
-
-            if (in_array(Auth::user()->role, ['admin', 'superadmin'])) {
-                return redirect('/admin/dashboard');
-            }
-
-            return redirect()->intended('/map');
+        /*
+         * Credentials are correct. Only now enforce the account's
+         * verification and activation state. We deliberately do not
+         * authenticate an account that is not ready to sign in.
+         */
+        if (!$user->email_verified_at || $user->status !== 'active') {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'We couldn\'t sign you in. Your account may still need email verification or administrator approval.',
+                ]);
         }
 
-        return back()->withErrors([
-            'email' => 'Invalid credentials'
+        Auth::login($user);
+
+        /*
+         * Regenerate the session ID after successful authentication
+         * to prevent session fixation.
+         */
+        $request->session()->regenerate();
+
+        /*
+         * Record the most recent successful login.
+         */
+        $user = Auth::user();
+
+        $user->update([
+            'last_login_at' => now(),
         ]);
+
+        UserLog::create([
+            'user_id' => Auth::id(),
+            'action' => in_array(
+                $user->role,
+                ['admin', 'superadmin'],
+                true
+            ) ? 'admin_login' : 'login',
+            'page' => 'login',
+            'role' => $user->role,
+            'ip_address' => $request->ip(),
+            'device' => substr(
+                $request->userAgent(),
+                0,
+                255
+            ),
+        ]);
+
+        if (in_array(
+            Auth::user()->role,
+            ['admin', 'superadmin'],
+            true
+        )) {
+            return redirect('/admin/dashboard');
+        }
+
+        return redirect()->intended('/map');
     }
 
     /**
@@ -1214,10 +1324,6 @@ public function resetPassword(Request $request)
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        // if ($user && in_array($user->role, ['admin','superadmin'])) {
-        //     return redirect('/admin/login');
-        // }
 
         return redirect('/login-page');
     }

@@ -525,6 +525,20 @@
 
     <aside class="overlay-panel">
 
+        {{-- Subtle brand/map details keep the original layout while
+             tying the auth screen into KNOWURLOCAL's location-first theme. --}}
+        <img
+            src="{{ asset('images/logo.png') }}"
+            alt=""
+            class="panel-logo-art"
+            aria-hidden="true"
+        >
+
+        <span
+            class="panel-route-art"
+            aria-hidden="true"
+        ></span>
+
 
         {{-- =================================================
              LOGIN PANEL
@@ -550,7 +564,6 @@
                 navigate locations, and get answers without
                 unnecessary trips.
             </p>
-
 
             <ul class="features">
 
