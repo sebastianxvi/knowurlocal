@@ -324,6 +324,13 @@ class DashboardController extends Controller
             ->pluck('total', 'status')
             ->map(fn ($value) => (int) $value);
 
+        $queueStatusCounts = [
+            'pending' => (int) ($statusCounts['pending'] ?? 0),
+            'awaiting_confirmation' => (int) ($statusCounts['awaiting_confirmation'] ?? 0),
+            'needs_follow_up' => (int) ($statusCounts['needs_follow_up'] ?? 0),
+            'answered' => (int) ($statusCounts['answered'] ?? 0),
+        ];
+
         $pendingInquiries = (int) ($statusCounts['pending'] ?? 0);
         $awaitingConfirmation = (int) ($statusCounts['awaiting_confirmation'] ?? 0);
         $needsFollowUp = (int) ($statusCounts['needs_follow_up'] ?? 0);
@@ -488,6 +495,7 @@ class DashboardController extends Controller
         $clarificationQuestions = 0;
         $ruleMatches = 0;
         $semanticMatches = 0;
+        $similarityMatches = 0;
         $popularFaqs = collect();
         $popularAgencies = collect();
 
@@ -520,7 +528,8 @@ class DashboardController extends Controller
 
             if ($hasMatchMethod) {
                 $ruleMatches = ChatbotLog::where('match_method', 'rule')->count();
-                $semanticMatches = ChatbotLog::where('match_method', 'ai')->count();
+                $semanticMatches = ChatbotLog::where('match_method', 'semantic')->count();
+                $similarityMatches = ChatbotLog::where('match_method', 'similarity')->count();
             }
         }
 
@@ -535,6 +544,17 @@ class DashboardController extends Controller
                 ->limit(5)
                 ->get();
         }
+
+        $chatbotMatchMethods = [
+            'semantic' => $semanticMatches,
+            'similarity' => $similarityMatches,
+            'rule' => $ruleMatches,
+        ];
+
+        $feedbackBreakdown = [
+            'helpful' => $faqFeedbackHelpful,
+            'not_helpful' => $faqFeedbackNotHelpful,
+        ];
 
         $faqAnswerRate = $knowledgeQuestions > 0
             ? round(($faqAnswered / $knowledgeQuestions) * 100)
@@ -575,6 +595,9 @@ class DashboardController extends Controller
             'trendSubmitted',
             'trendAnswered',
             'trendResponseRate',
+            'queueStatusCounts',
+            'chatbotMatchMethods',
+            'feedbackBreakdown',
             'totalAgencies',
             'completeAgencies',
             'incompleteAgencies',
@@ -662,12 +685,9 @@ class DashboardController extends Controller
                 'collaboration_overdue' => $data['collaborationOverdue'],
                 'collaboration_completed' => $data['collaborationCompleted'],
             ],
-            'status_counts' => [
-                'pending' => $data['pendingInquiries'],
-                'awaiting_confirmation' => $data['awaitingConfirmation'],
-                'needs_follow_up' => $data['needsFollowUp'],
-                'answered' => $data['answeredInquiries'],
-            ],
+            'status_counts' => $data['queueStatusCounts'],
+            'chatbot_match_methods' => $data['chatbotMatchMethods'],
+            'feedback_breakdown' => $data['feedbackBreakdown'],
             'trend' => $data['inquiryTrend'],
             'support_agencies' => $data['topSupportAgencies']->map(fn ($item) => [
                 'name' => $item->agency?->agency_name ?? 'Unassigned agency',

@@ -288,7 +288,7 @@ class FaqChatbotService
             'faq' => $faq,
             'confidence' => $confidence,
             'language' => $language,
-            'method' => 'ai',
+            'method' => 'semantic',
         ];
     }
 
@@ -494,7 +494,7 @@ class FaqChatbotService
             'faq' => $best['faq'],
             'confidence' => max(0.0, min(1.0, $best['score'])),
             'language' => $best['language'],
-            'method' => 'fallback',
+            'method' => 'similarity',
         ];
     }
 

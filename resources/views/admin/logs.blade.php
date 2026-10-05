@@ -1118,14 +1118,31 @@
             </div>
 
             <div class="log-state-grid">
-                <div class="modal-block">
-                    <div class="modal-label">Previous State</div>
-                    <div id="modalOld" class="modal-box old"></div>
-                </div>
-                <div class="modal-block">
-                    <div class="modal-label">Resulting State</div>
-                    <div id="modalNew" class="modal-box new"></div>
-                </div>
+                <section class="log-state-card log-state-card-old" aria-labelledby="previousStateLabel">
+                    <div class="log-state-card-header">
+                        <span class="log-state-indicator" aria-hidden="true"><i class="fas fa-minus"></i></span>
+                        <div>
+                            <span id="previousStateLabel" class="log-state-title">Previous State</span>
+                            <span class="log-state-subtitle">Before this activity</span>
+                        </div>
+                    </div>
+                    <div class="log-state-card-body">
+                        <div id="modalOld" class="modal-box old"></div>
+                    </div>
+                </section>
+
+                <section class="log-state-card log-state-card-new" aria-labelledby="resultingStateLabel">
+                    <div class="log-state-card-header">
+                        <span class="log-state-indicator" aria-hidden="true"><i class="fas fa-arrow-right"></i></span>
+                        <div>
+                            <span id="resultingStateLabel" class="log-state-title">Resulting State</span>
+                            <span class="log-state-subtitle">After this activity</span>
+                        </div>
+                    </div>
+                    <div class="log-state-card-body">
+                        <div id="modalNew" class="modal-box new"></div>
+                    </div>
+                </section>
             </div>
         </div>
     </div>

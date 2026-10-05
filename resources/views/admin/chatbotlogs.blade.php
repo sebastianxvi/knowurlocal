@@ -116,6 +116,47 @@
 
                 @forelse($logs as $log)
 
+@php
+    $responseLanguage = $log->response_language ?: null;
+    $responseComponents = collect($log->faqVersion?->response_components ?? [])
+        ->filter(function ($component) use ($responseLanguage) {
+            if (!is_array($component) || empty($component['type'])) {
+                return false;
+            }
+
+            $componentLanguage = $component['language'] ?? null;
+
+            return !$responseLanguage
+                || in_array($component['type'], ['image', 'file', 'link', 'qr_code'], true)
+                || $componentLanguage === $responseLanguage
+                || $componentLanguage === null;
+        })
+        ->map(function ($component) {
+            $type = (string) ($component['type'] ?? '');
+            $language = (string) ($component['language'] ?? '');
+            $label = trim((string) ($component['label'] ?? ''));
+            $content = trim((string) ($component['content'] ?? ''));
+
+            return [
+                'type' => $type,
+                'language' => $language,
+                'label' => $label !== '' ? $label : null,
+                'content' => in_array($type, ['image', 'file'], true)
+                    ? null
+                    : ($content !== '' ? $content : null),
+                'summary' => match ($type) {
+                    'image' => 'Private image attachment',
+                    'file' => 'Private file attachment',
+                    'link' => $label !== '' ? $label : ($content !== '' ? $content : 'Link'),
+                    'qr_code' => $label !== '' ? $label : 'QR code',
+                    default => $content,
+                },
+            ];
+        })
+        ->values()
+        ->all();
+@endphp
+
 <tr
     class="chatbot-log-row"
     data-id="{{ $log->id }}"
@@ -128,7 +169,12 @@
     data-answer="{{ $log->answer }}"
     data-agency="{{ $log->agency?->agency_name ?? '' }}"
     data-faq-id="{{ $log->faq_id ?? '' }}"
-    data-faq-question="{{ $log->faq?->question ?? '' }}"
+    data-faq-question="{{ $log->faqVersion?->question ?? $log->faq?->question ?? '' }}"
+    data-faq-version-id="{{ $log->faq_version_id ?? '' }}"
+    data-faq-version-number="{{ $log->faqVersion?->version_number ?? '' }}"
+    data-faq-version-published="{{ $log->faqVersion?->created_at?->format('M d, Y H:i') ?? '' }}"
+    data-response-language="{{ $log->response_language ?? '' }}"
+    data-response-components="{{ e(json_encode($responseComponents, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) }}"
     data-outcome="{{ $log->outcome }}"
     data-match-method="{{ $log->match_method ?? '' }}"
     data-score="{{ $log->score ?? '' }}"
@@ -255,8 +301,8 @@
                 'semantic' =>
                     'ph-brain',
 
-                'ai' =>
-                    'ph-sparkle',
+                'similarity' =>
+                    'ph-chart-line',
 
                 default =>
                     'ph-chat-centered-text',
@@ -524,616 +570,283 @@
 
 <!-- ================= CHATBOT DETAIL MODAL ================= -->
 
-<div
-    id="chatbotLogModal"
-    class="log-modal"
-    aria-hidden="true"
->
+<div id="chatbotLogModal" class="log-modal" aria-hidden="true">
     <div
         class="modal-content chatbot-detail-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="chatbotModalTitle"
     >
-
-        <!-- HEADER -->
         <div class="modal-header">
-
             <div class="modal-title-group">
-                <span id="chatbotModalTitle">
-                    Chatbot Interaction
-                </span>
-
-                <span
-                    id="chatbotModalId"
-                    class="modal-reference"
-                ></span>
+                <div>
+                    <span class="modal-eyebrow">CHATBOT INTERACTION</span>
+                    <span id="chatbotModalTitle">Interaction Details</span>
+                </div>
+                <span id="chatbotModalId" class="modal-reference"></span>
             </div>
-
-            <button
-                type="button"
-                id="closeChatbotModal"
-                class="modal-close"
-                aria-label="Close chatbot interaction details"
-            >
+            <button type="button" id="closeChatbotModal" class="modal-close" aria-label="Close chatbot interaction details">
                 <i class="ph-light ph-x"></i>
             </button>
-
         </div>
 
-
-        <!-- BODY -->
-        <div class="modal-body">
-
-            <!-- USER -->
-            <div class="chatbot-detail-section">
-
-                <span class="modal-label">
-                    User
-                </span>
-
-                <div
-                    id="chatbotUser"
-                    class="chatbot-detail-value"
-                ></div>
-
-            </div>
-
-
-            <!-- QUESTION -->
-            <div class="chatbot-detail-section">
-
-                <span class="modal-label">
-                    Question
-                </span>
-
-                <div
-                    id="chatbotQuestion"
-                    class="chatbot-detail-box"
-                ></div>
-
-            </div>
-
-
-            <!-- ANSWER -->
-            <div class="chatbot-detail-section">
-
-                <span class="modal-label">
-                    Answer
-                </span>
-
-                <div
-                    id="chatbotAnswer"
-                    class="chatbot-detail-box"
-                ></div>
-
-            </div>
-
-
-            <!-- RESULT -->
-            <div class="chatbot-detail-grid">
-
-                <div class="chatbot-detail-section">
-
-                    <span class="modal-label">
-                        Agency
-                    </span>
-
-                    <div
-                        id="chatbotAgency"
-                        class="chatbot-detail-value"
-                    ></div>
-
+        <div class="modal-body chatbot-detail-body">
+            <section class="chatbot-log-block">
+                <div class="chatbot-block-heading">
+                    <span class="modal-label">INTERACTION</span>
                 </div>
-
-
-                <div class="chatbot-detail-section">
-
-                    <span class="modal-label">
-                        Outcome
-                    </span>
-
-                    <div
-                        id="chatbotOutcome"
-                        class="chatbot-detail-value"
-                    ></div>
-
+                <div class="chatbot-detail-grid">
+                    <div class="chatbot-detail-section"><span class="modal-label">User</span><div id="chatbotUser" class="chatbot-detail-value"></div></div>
+                    <div class="chatbot-detail-section"><span class="modal-label">Agency</span><div id="chatbotAgency" class="chatbot-detail-value"></div></div>
                 </div>
-
-
-                <div class="chatbot-detail-section">
-
-                    <span class="modal-label">
-                        Match Method
-                    </span>
-
-                    <div
-                        id="chatbotMatchMethod"
-                        class="chatbot-detail-value"
-                    ></div>
-
+                <div class="chatbot-detail-section chatbot-detail-wide">
+                    <span class="modal-label">Question</span>
+                    <div id="chatbotQuestion" class="chatbot-detail-box"></div>
                 </div>
+            </section>
 
-
-                <div class="chatbot-detail-section">
-
-                    <span class="modal-label">
-                        Score
-                    </span>
-
-                    <div
-                        id="chatbotScore"
-                        class="chatbot-detail-value"
-                    ></div>
-
+            <section class="chatbot-log-block">
+                <div class="chatbot-block-heading"><span class="modal-label">RESULT</span></div>
+                <div class="chatbot-detail-grid">
+                    <div class="chatbot-detail-section"><span class="modal-label">Outcome</span><div id="chatbotOutcome" class="chatbot-detail-value"></div></div>
+                    <div class="chatbot-detail-section"><span class="modal-label">Match Method</span><div id="chatbotMatchMethod" class="chatbot-detail-value"></div></div>
+                    <div class="chatbot-detail-section"><span id="chatbotScoreLabel" class="modal-label">Match Score</span><div id="chatbotScore" class="chatbot-detail-value"></div></div>
                 </div>
+            </section>
 
-            </div>
+            <section id="chatbotResponseBlock" class="chatbot-log-block">
+                <div class="chatbot-block-heading"><span class="modal-label">RESPONSE DELIVERED</span></div>
+                <div class="chatbot-detail-section">
+                    <span class="modal-label">Answer</span>
+                    <div id="chatbotAnswer" class="chatbot-detail-box"></div>
+                </div>
+                <div id="chatbotComponentsWrap" class="chatbot-detail-section chatbot-components-section">
+                    <span class="modal-label">Response Components</span>
+                    <div id="chatbotComponents" class="chatbot-components"></div>
+                </div>
+            </section>
 
+            <section id="chatbotKnowledgeBlock" class="chatbot-log-block">
+                <div class="chatbot-block-heading"><span class="modal-label">KNOWLEDGE USED</span></div>
+                <div id="chatbotFaq" class="faq-reference"></div>
+            </section>
 
-            <!-- KNOWLEDGE USED -->
-            <div class="chatbot-detail-section">
-
-                <span class="modal-label">
-                    Knowledge Used
-                </span>
-
-                <div
-                    id="chatbotFaq"
-                    class="chatbot-detail-box"
-                ></div>
-
-            </div>
-
-
-            <!-- SYSTEM INFORMATION -->
-            <div class="chatbot-detail-section">
-
-                <span class="modal-label">
-                    System Information
-                </span>
-
+            <section class="chatbot-log-block">
+                <div class="chatbot-block-heading"><span class="modal-label">SYSTEM INFORMATION</span></div>
                 <div class="chatbot-system-info">
-
-                    <div>
-                        <span>User ID</span>
-                        <strong id="chatbotUserId"></strong>
-                    </div>
-
-                    <div>
-                        <span>FAQ ID</span>
-                        <strong id="chatbotFaqId"></strong>
-                    </div>
-
-                    <div>
-                        <span>IP Address</span>
-                        <strong id="chatbotIp"></strong>
-                    </div>
-
-                    <div>
-                        <span>Date</span>
-                        <strong id="chatbotDate"></strong>
-                    </div>
-
+                    <div><span>User ID</span><strong id="chatbotUserId"></strong></div>
+                    <div><span>FAQ ID</span><strong id="chatbotFaqId"></strong></div>
+                    <div><span>FAQ Version</span><strong id="chatbotFaqVersion"></strong></div>
+                    <div><span>Response Language</span><strong id="chatbotResponseLanguage"></strong></div>
+                    <div><span>Response Published</span><strong id="chatbotFaqPublished"></strong></div>
+                    <div><span>IP Address</span><strong id="chatbotIp"></strong></div>
+                    <div><span>Interaction Date</span><strong id="chatbotDate"></strong></div>
                 </div>
-
-            </div>
-
+            </section>
         </div>
-
     </div>
 </div>
 
 @push('scripts')
-
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-
-    /*
-     * Get references to the modal and all
-     * elements that will receive log information.
-     */
     const modal = document.getElementById('chatbotLogModal');
     const closeButton = document.getElementById('closeChatbotModal');
-
     const modalId = document.getElementById('chatbotModalId');
-
     const user = document.getElementById('chatbotUser');
     const userId = document.getElementById('chatbotUserId');
-
     const question = document.getElementById('chatbotQuestion');
     const answer = document.getElementById('chatbotAnswer');
-
     const agency = document.getElementById('chatbotAgency');
-
     const outcome = document.getElementById('chatbotOutcome');
     const matchMethod = document.getElementById('chatbotMatchMethod');
     const score = document.getElementById('chatbotScore');
-
     const faq = document.getElementById('chatbotFaq');
     const faqId = document.getElementById('chatbotFaqId');
-
+    const faqVersion = document.getElementById('chatbotFaqVersion');
+    const faqPublished = document.getElementById('chatbotFaqPublished');
+    const responseLanguage = document.getElementById('chatbotResponseLanguage');
     const ipAddress = document.getElementById('chatbotIp');
     const createdAt = document.getElementById('chatbotDate');
+    const responseBlock = document.getElementById('chatbotResponseBlock');
+    const knowledgeBlock = document.getElementById('chatbotKnowledgeBlock');
+    const componentsWrap = document.getElementById('chatbotComponentsWrap');
+    const components = document.getElementById('chatbotComponents');
 
-
-    /*
-     * Escape dynamic content before placing it
-     * inside HTML.
-     *
-     * This is important because chatbot questions
-     * and answers are not trusted HTML content.
-     */
     function escapeHtml(value) {
-
         const element = document.createElement('div');
-
         element.textContent = value ?? '';
-
         return element.innerHTML;
     }
 
-
-    /*
-     * Provides a meaningful message for null values.
-     *
-     * We deliberately avoid using "-".
-     */
     function displayValue(value, fallback) {
-
-        if (
-            value === null ||
-            value === undefined ||
-            value === ''
-        ) {
-            return escapeHtml(fallback);
-        }
-
-        return escapeHtml(value);
+        return value === null || value === undefined || value === ''
+            ? escapeHtml(fallback)
+            : escapeHtml(value);
     }
 
+    function formatLabel(value, fallback = 'Not available') {
+        if (!value) return fallback;
+        return String(value).replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase());
+    }
 
-    /*
-     * Converts database values such as:
-     *
-     * wrong_agency
-     *
-     * into:
-     *
-     * Wrong Agency
-     */
-    function formatLabel(value, fallback = 'Not evaluated') {
-
+    function renderOutcome(value) {
         if (!value) {
-            return fallback;
+            return '<span class="text-muted">Not recorded</span>';
         }
 
-        return value
-            .replaceAll('_', ' ')
-            .replace(/\b\w/g, letter => letter.toUpperCase());
+        const icons = {
+            answered: 'ph-check-circle',
+            fallback: 'ph-warning-circle',
+            error: 'ph-x-circle',
+            greeting: 'ph-hand-waving',
+            thanks: 'ph-smiley',
+            irrelevant: 'ph-prohibit',
+            clarification: 'ph-chat-circle-dots',
+            wrong_agency: 'ph-arrow-bend-up-left'
+        };
+
+        return `<span class="badge action ${escapeHtml(value)}"><i class="ph-light ${icons[value] || 'ph-chat-centered-text'}"></i>${escapeHtml(formatLabel(value))}</span>`;
     }
 
+    function renderMatchMethod(value) {
+        if (!value) return '<span class="text-muted">Not evaluated</span>';
 
-    /*
-     * Opens the chatbot interaction modal
-     * using the data stored on the clicked row.
-     */
+        const icons = {
+            rule: 'ph-faders',
+            semantic: 'ph-brain',
+            similarity: 'ph-chart-line',
+            ai: 'ph-sparkle',
+            none: 'ph-minus-circle'
+        };
+
+        const labels = {
+            rule: 'Rule',
+            semantic: 'Semantic',
+            similarity: 'Similarity',
+            ai: 'AI',
+            none: 'Not evaluated'
+        };
+
+        const label = labels[value] || formatLabel(value);
+
+        return `<span class="badge action match-${escapeHtml(value)}"><i class="ph-light ${icons[value] || 'ph-git-branch'}"></i>${escapeHtml(label)}</span>`;
+    }
+
+    function renderScore(value) {
+        if (value === null || value === undefined || value === '') {
+            return '<span class="text-muted">Not evaluated</span>';
+        }
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return '<span class="text-muted">Not evaluated</span>';
+        const safe = Math.max(0, Math.min(100, numeric));
+        const cls = safe >= 80 ? 'score-high' : (safe >= 50 ? 'score-medium' : 'score-low');
+        const icon = safe >= 80 ? 'ph-check-circle' : (safe >= 50 ? 'ph-chart-line' : 'ph-warning-circle');
+        return `<span class="badge action ${cls}"><i class="ph-light ${icon}"></i>${safe}%</span>`;
+    }
+
+    function renderComponents(raw) {
+        let items = [];
+        try { items = raw ? JSON.parse(raw) : []; } catch (_) { items = []; }
+        if (!Array.isArray(items) || items.length === 0) {
+            componentsWrap.hidden = true;
+            components.innerHTML = '';
+            return;
+        }
+
+        componentsWrap.hidden = false;
+        components.innerHTML = items.map((item, index) => {
+            const type = String(item.type || 'component');
+            const icon = { text: 'ph-text-aa', image: 'ph-image', file: 'ph-file', link: 'ph-link', qr_code: 'ph-qr-code' }[type] || 'ph-cube';
+            const summary = item.summary || item.content || item.label || 'No component content recorded';
+            const language = item.language ? ` · ${escapeHtml(item.language.toUpperCase())}` : '';
+            return `<div class="chatbot-component-item"><div class="chatbot-component-meta"><span class="chatbot-component-index">${index + 1}</span><i class="ph-light ${icon}"></i><strong>${escapeHtml(formatLabel(type))}</strong><span>${language}</span></div><div class="chatbot-component-content">${escapeHtml(summary)}</div></div>`;
+        }).join('');
+    }
+
     function openChatbotModal(log) {
-
         modalId.textContent = `#${log.id}`;
+        user.innerHTML = displayValue(log.user_name, 'Unknown user');
+        userId.textContent = log.user_id || 'Not recorded';
+        question.innerHTML = displayValue(log.question, 'No question recorded');
+        agency.innerHTML = displayValue(log.agency_name, 'No agency context');
+        outcome.innerHTML = renderOutcome(log.outcome);
+        matchMethod.innerHTML = renderMatchMethod(log.match_method);
 
+        const scoreLabels = {
+            semantic: 'Semantic Confidence',
+            similarity: 'Similarity Score',
+            rule: 'Rule Match Score'
+        };
+        const scoreLabel = scoreLabels[log.match_method] || 'Match Score';
+        document.getElementById('chatbotScoreLabel').textContent = scoreLabel;
 
-        /*
-         * USER
-         */
-        user.innerHTML = displayValue(
-            log.user_name,
-            'Unknown user'
-        );
+        score.innerHTML = renderScore(log.score);
+        answer.innerHTML = displayValue(log.answer, 'No answer recorded');
+        renderComponents(log.response_components);
 
-        userId.innerHTML = displayValue(
-            log.user_id,
-            'No user ID'
-        );
+        const hasKnowledge = Boolean(log.faq_id);
+        knowledgeBlock.hidden = !hasKnowledge;
+        responseBlock.hidden = !log.answer && !log.response_components;
 
-
-        /*
-         * QUESTION / ANSWER
-         */
-        question.innerHTML = displayValue(
-            log.question,
-            'No question recorded'
-        );
-
-        answer.innerHTML = displayValue(
-            log.answer,
-            'No answer recorded'
-        );
-
-
-        /*
-         * AGENCY
-         */
-        agency.innerHTML = displayValue(
-            log.agency_name,
-            'No agency context'
-        );
-
-
-        /*
-         * CHATBOT RESULT
-         */
-        if (log.outcome) {
-
-    const outcomeIcon = {
-        answered: 'ph-check-circle',
-        fallback: 'ph-warning-circle',
-        greeting: 'ph-hand-waving',
-        thanks: 'ph-smiley',
-        irrelevant: 'ph-prohibit',
-        clarification: 'ph-chat-circle-dots',
-        wrong_agency: 'ph-arrow-bend-up-left'
-    };
-
-    const icon = outcomeIcon[log.outcome]
-        || 'ph-chat-centered-text';
-
-    outcome.innerHTML = `
-        <span class="badge action ${escapeHtml(log.outcome)}">
-            <i class="ph-light ${icon}"></i>
-            ${escapeHtml(formatLabel(log.outcome))}
-        </span>
-    `;
-
-} else {
-
-    outcome.innerHTML = `
-        <span class="text-muted">
-            Not available
-        </span>
-    `;
-
-}
-        if (log.match_method) {
-
-    const matchIcon = {
-        rule: 'ph-faders',
-        semantic: 'ph-brain',
-        ai: 'ph-sparkle'
-    };
-
-    const icon = matchIcon[log.match_method]
-        || 'ph-chat-centered-text';
-
-    matchMethod.innerHTML = `
-        <span class="badge action match-${escapeHtml(log.match_method)}">
-            <i class="ph-light ${icon}"></i>
-            ${escapeHtml(formatLabel(log.match_method))}
-        </span>
-    `;
-
-} else {
-
-    matchMethod.innerHTML = `
-        <span class="text-muted">
-            Not evaluated
-        </span>
-    `;
-
-}
-
-
-        /*
-         * SCORE
-         *
-         * Scores are stored from 0 to 100.
-         */
-        if (
-    log.score !== null &&
-    log.score !== undefined &&
-    log.score !== ''
-) {
-
-    const numericScore = Number(log.score);
-
-    const safeScore = Math.max(
-        0,
-        Math.min(100, numericScore)
-    );
-
-    let scoreClass;
-    let scoreIcon;
-
-    if (safeScore >= 80) {
-
-        scoreClass = 'score-high';
-        scoreIcon = 'ph-check-circle';
-
-    } else if (safeScore >= 50) {
-
-        scoreClass = 'score-medium';
-        scoreIcon = 'ph-chart-line';
-
-    } else {
-
-        scoreClass = 'score-low';
-        scoreIcon = 'ph-warning-circle';
-
-    }
-
-    score.innerHTML = `
-        <span class="badge action ${scoreClass}">
-            <i class="ph-light ${scoreIcon}"></i>
-            ${safeScore}%
-        </span>
-    `;
-
-} else {
-
-    score.innerHTML = `
-        <span class="text-muted">
-            Not evaluated
-        </span>
-    `;
-
-}
-
-
-        /*
-         * FAQ
-         */
-        if (log.faq_id) {
-
-            faq.innerHTML = `
-                <div class="faq-reference">
-
-                    <span class="faq-reference-title">
-                        ${displayValue(
-                            log.faq_question,
-                            'Matched FAQ'
-                        )}
-                    </span>
-
-                    <span class="faq-reference-id">
-                        FAQ #${escapeHtml(log.faq_id)}
-                    </span>
-
-                </div>
-            `;
-
-            faqId.textContent = log.faq_id;
-
+        if (hasKnowledge) {
+            faq.innerHTML = `<div><span class="faq-reference-title">${displayValue(log.faq_question, 'Matched FAQ')}</span><span class="faq-reference-meta">FAQ #${escapeHtml(log.faq_id)} · Version ${escapeHtml(log.faq_version_number || 'Unknown')}</span></div>`;
         } else {
-
-            faq.textContent = 'No FAQ matched';
-
-            faqId.textContent = 'Not applicable';
-
+            faq.innerHTML = '';
         }
 
+        faqId.textContent = log.faq_id || 'Not applicable';
+        faqVersion.textContent = log.faq_version_number ? `Version ${log.faq_version_number} · #${log.faq_version_id}` : 'Not applicable';
+        const languageLabels = {
+            en: 'English',
+            fil: 'Filipino'
+        };
+        responseLanguage.textContent = languageLabels[log.response_language] || (log.response_language || 'Not recorded');
+        faqPublished.textContent = log.faq_version_published || 'Not recorded';
+        ipAddress.textContent = log.ip_address || 'Not recorded';
+        createdAt.textContent = log.created_at || 'Not available';
 
-        /*
-         * SYSTEM INFORMATION
-         */
-        ipAddress.innerHTML = displayValue(
-            log.ip_address,
-            'Not recorded'
-        );
-
-        createdAt.innerHTML = displayValue(
-            log.created_at,
-            'Not available'
-        );
-
-
-        /*
-         * Show the modal.
-         */
         modal.classList.add('active');
-
-        modal.setAttribute(
-            'aria-hidden',
-            'false'
-        );
-
-        /*
-         * Prevent the page underneath from scrolling.
-         */
+        modal.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
-
     }
 
-
-    /*
-     * Every chatbot row becomes clickable.
-     *
-     * This matches the existing Activity Logs UX.
-     */
-    document
-    .querySelectorAll('.chatbot-log-row')
-    .forEach(row => {
-
-        row.addEventListener('click', () => {
-
-            /*
-             * Read the chatbot interaction directly
-             * from the clicked table row.
-             */
-            const log = {
-                id: row.dataset.id,
-                user_name: row.dataset.user,
-                user_id: row.dataset.userId,
-                question: row.dataset.question,
-                answer: row.dataset.answer,
-                agency_name: row.dataset.agency,
-                faq_id: row.dataset.faqId,
-                faq_question: row.dataset.faqQuestion,
-                outcome: row.dataset.outcome,
-                match_method: row.dataset.matchMethod,
-                score: row.dataset.score || null,
-                ip_address: row.dataset.ip,
-                created_at: row.dataset.date
-            };
-
-            openChatbotModal(log);
-
-        });
-
+    document.querySelectorAll('.chatbot-log-row').forEach(row => {
+        row.addEventListener('click', () => openChatbotModal({
+            id: row.dataset.id,
+            user_name: row.dataset.user,
+            user_id: row.dataset.userId,
+            question: row.dataset.question,
+            answer: row.dataset.answer,
+            agency_name: row.dataset.agency,
+            faq_id: row.dataset.faqId,
+            faq_question: row.dataset.faqQuestion,
+            faq_version_id: row.dataset.faqVersionId,
+            faq_version_number: row.dataset.faqVersionNumber,
+            faq_version_published: row.dataset.faqVersionPublished,
+            response_language: row.dataset.responseLanguage,
+            response_components: row.dataset.responseComponents,
+            outcome: row.dataset.outcome,
+            match_method: row.dataset.matchMethod,
+            score: row.dataset.score || null,
+            ip_address: row.dataset.ip,
+            created_at: row.dataset.date
+        }));
     });
 
-
-    /*
-     * Close the modal.
-     */
     function closeChatbotModal() {
-
         modal.classList.remove('active');
-
-        modal.setAttribute(
-            'aria-hidden',
-            'true'
-        );
-
+        modal.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
-
     }
 
-
-    closeButton.addEventListener(
-        'click',
-        closeChatbotModal
-    );
-
-
-    /*
-     * Clicking the backdrop closes the modal.
-     */
-    modal.addEventListener('click', event => {
-
-        if (event.target === modal) {
-            closeChatbotModal();
-        }
-
-    });
-
-
-    /*
-     * Escape closes the modal.
-     */
+    closeButton.addEventListener('click', closeChatbotModal);
+    modal.addEventListener('click', event => { if (event.target === modal) closeChatbotModal(); });
     document.addEventListener('keydown', event => {
-
-        if (
-            event.key === 'Escape' &&
-            modal.classList.contains('active')
-        ) {
-            closeChatbotModal();
-        }
-
+        if (event.key === 'Escape' && modal.classList.contains('active')) closeChatbotModal();
     });
-
 });
 </script>
-
 @endpush
 
 @endsection

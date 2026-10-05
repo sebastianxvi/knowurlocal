@@ -545,3 +545,98 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.__FLASH_ERROR__ = null;
 });
+// ================= CATEGORY AGENCY DIRECTORY =================
+(() => {
+    const modal = document.getElementById('category-agencies-modal');
+    const title = document.getElementById('category-agencies-title');
+    const subtitle = document.getElementById('category-agencies-subtitle');
+    const summary = document.getElementById('category-agencies-summary');
+    const list = document.getElementById('category-agencies-list');
+    const closeButton = document.getElementById('category-agencies-close');
+
+    if (!modal || !title || !subtitle || !summary || !list || !closeButton) return;
+
+    const directory = window.categoryAgencyDirectory || {};
+    let lastTrigger = null;
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function render(categoryId, categoryName) {
+        const agencies = Array.isArray(directory[categoryId])
+            ? directory[categoryId]
+            : [];
+
+        title.textContent = categoryName || 'Agencies';
+        subtitle.textContent = 'Registered agencies in this category';
+        summary.textContent = agencies.length === 1
+            ? '1 active agency is currently registered in this category.'
+            : `${agencies.length} active agencies are currently registered in this category.`;
+
+        if (!agencies.length) {
+            list.innerHTML = `
+                <div class="category-agencies-empty">
+                    <i class="ph-light ph-buildings" aria-hidden="true"></i>
+                    No active agencies are currently registered in this category.
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = agencies.map((agency) => {
+            const meta = [];
+            if (agency.abbreviation) meta.push(`<span class="category-agency-item-abbr">${escapeHtml(agency.abbreviation)}</span>`);
+            if (agency.type) meta.push(`<span class="category-agency-item-dot">•</span><span>${escapeHtml(agency.type)}</span>`);
+
+            return `
+                <div class="category-agency-item">
+                    <div class="category-agency-item-icon" aria-hidden="true">
+                        <i class="ph-light ph-buildings"></i>
+                    </div>
+                    <div class="category-agency-item-body">
+                        <p class="category-agency-item-name">${escapeHtml(agency.name)}</p>
+                        ${meta.length ? `<div class="category-agency-item-meta">${meta.join('')}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function open(trigger) {
+        lastTrigger = trigger;
+        render(trigger.dataset.categoryId, trigger.dataset.categoryName);
+        modal.classList.add('active');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        closeButton.focus();
+    }
+
+    function close() {
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+        if (lastTrigger) lastTrigger.focus();
+    }
+
+    document.addEventListener('click', (event) => {
+        const trigger = event.target.closest('.category-agency-count');
+        if (!trigger || trigger.classList.contains('category-agency-count--empty')) return;
+        open(trigger);
+    });
+
+    closeButton.addEventListener('click', close);
+
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) close();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('active')) close();
+    });
+})();

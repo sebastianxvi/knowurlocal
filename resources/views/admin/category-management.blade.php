@@ -152,7 +152,27 @@
 
 <td>
 
-{{ $category->agencies_count }}
+@if($category->agencies_count > 0)
+    <button
+        type="button"
+        class="category-agency-count"
+        data-category-id="{{ $category->id }}"
+        data-category-name="{{ $category->category_name }}"
+        aria-label="View agencies in {{ $category->category_name }}"
+        title="View agencies in {{ $category->category_name }}"
+    >
+        <span class="category-agency-count-number">{{ $category->agencies_count }}</span>
+        <span class="category-agency-count-label">
+            {{ $category->agencies_count === 1 ? 'agency' : 'agencies' }}
+        </span>
+        <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i>
+    </button>
+@else
+    <span class="category-agency-count category-agency-count--empty">
+        <span class="category-agency-count-number">0</span>
+        <span class="category-agency-count-label">agencies</span>
+    </span>
+@endif
 
 </td>
 
@@ -590,6 +610,48 @@ $colors = [
 </div>
 
 
+<!-- =========================================================
+     CATEGORY AGENCY DIRECTORY MODAL
+     ========================================================= -->
+<div
+    id="category-agencies-modal"
+    class="category-agencies-modal"
+    aria-hidden="true"
+>
+    <div
+        class="category-agencies-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="category-agencies-title"
+    >
+        <div class="category-agencies-header">
+            <div class="category-agencies-heading">
+                <div class="category-agencies-icon" aria-hidden="true">
+                    <i class="ph-light ph-buildings"></i>
+                </div>
+                <div>
+                    <span class="category-agencies-eyebrow">Category directory</span>
+                    <h2 id="category-agencies-title">Agencies</h2>
+                    <p id="category-agencies-subtitle">Registered agencies in this category</p>
+                </div>
+            </div>
+
+            <button
+                type="button"
+                class="category-agencies-close"
+                id="category-agencies-close"
+                aria-label="Close agency list"
+            >
+                <i class="ph-light ph-x" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <div class="category-agencies-summary" id="category-agencies-summary" aria-live="polite"></div>
+
+        <div class="category-agencies-list" id="category-agencies-list"></div>
+    </div>
+</div>
+
 <script src="{{ asset('jsfiles/components/form-system.js') }}"></script>
 
 @endsection
@@ -614,6 +676,8 @@ window.categoryRoutes = {
  * JavaScript uses it only for UX feedback.
  */
 window.categoryColorUsage = @json($categoryColorUsage);
+
+window.categoryAgencyDirectory = @json($categoryAgencyDirectory);
 
 </script>
 

@@ -23,6 +23,7 @@ class ChatbotLog extends Model
         'outcome',
         'match_method',
         'score',
+        'response_language',
         'ip_address',
     ];
 

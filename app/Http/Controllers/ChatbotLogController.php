@@ -49,6 +49,7 @@ class ChatbotLogController extends Controller
             'user',
             'agency',
             'faq',
+            'faqVersion',
         ])->orderBy('created_at', $sort);
 
 
@@ -72,6 +73,7 @@ class ChatbotLogController extends Controller
             'irrelevant',
             'clarification',
             'wrong_agency',
+            'error',
         ];
 
         if (
@@ -209,6 +211,21 @@ class ChatbotLogController extends Controller
                             'LIKE',
                             "%{$search}%"
                         );
+                    })
+
+                    /*
+                     * HISTORICAL FAQ VERSION
+                     *
+                     * A chatbot log points to the exact published response
+                     * generation that was shown to the user. Searching the
+                     * current FAQ alone can miss older wording after an admin
+                     * publishes a new version.
+                     */
+                    ->orWhereHas('faqVersion', function ($versionQuery) use ($search) {
+                        $versionQuery
+                            ->where('question', 'LIKE', "%{$search}%")
+                            ->orWhere('answer', 'LIKE', "%{$search}%")
+                            ->orWhere('keywords', 'LIKE', "%{$search}%");
                     });
                 });
             }

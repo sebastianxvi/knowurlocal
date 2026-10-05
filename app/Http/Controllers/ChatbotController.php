@@ -111,7 +111,8 @@ class ChatbotController extends Controller
         ?int $agencyId = null,
         ?int $faqId = null,
         ?int $faqVersionId = null,
-        ?int $score = null
+        ?int $score = null,
+        ?string $responseLanguage = null
     ): ?int {
         try {
             $log = ChatbotLog::create([
@@ -124,6 +125,7 @@ class ChatbotController extends Controller
                 'outcome' => $outcome,
                 'match_method' => $matchMethod,
                 'score' => $score,
+                'response_language' => $responseLanguage,
                 'ip_address' => request()->ip(),
             ]);
 
@@ -411,11 +413,12 @@ class ChatbotController extends Controller
                         $question,
                         $payload['content'],
                         'answered',
-                        $match['method'] ?? 'ai',
+                        $match['method'] ?? 'semantic',
                         $faq->agency_id,
                         $faq->id,
                         $faqVersionId,
-                        (int) round(((float) $match['confidence']) * 100)
+                        (int) round(((float) $match['confidence']) * 100),
+                        $match['language'] ?? 'en'
                     );
 
                     return response()->json([
@@ -448,7 +451,7 @@ class ChatbotController extends Controller
                 $question,
                 $reply,
                 'error',
-                'ai',
+                null,
                 $agencyId
             );
 
@@ -468,7 +471,7 @@ class ChatbotController extends Controller
             $question,
             $reply,
             'fallback',
-            'ai',
+            null,
             $agencyId
         );
 

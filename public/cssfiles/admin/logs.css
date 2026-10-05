@@ -947,6 +947,40 @@ body{
     overflow-wrap:anywhere;
 }
 
+/*
+ * Audit state fields use their own inner surfaces so the values
+ * do not sit directly against the Previous/Resulting State container.
+ * This mirrors the compact card treatment used by the chatbot logs.
+ */
+.modal-box > .data-row{
+    margin:0 0 10px;
+    padding:10px 12px;
+    border:1px solid rgba(226,232,240,.95);
+    border-radius:9px;
+    background:rgba(255,255,255,.72);
+    gap:4px;
+}
+
+.modal-box > .data-row:last-child{
+    margin-bottom:0;
+}
+
+.modal-box > .data-row .data-label{
+    line-height:1.3;
+}
+
+.modal-box > .data-row .data-value{
+    padding-top:1px;
+}
+
+.modal-box > .data-value{
+    margin:0;
+    padding:10px 12px;
+    border:1px solid rgba(226,232,240,.95);
+    border-radius:9px;
+    background:rgba(255,255,255,.72);
+}
+
 .audit-long-text{
     white-space:pre-wrap;
 }
@@ -1058,6 +1092,11 @@ body{
 .badge.match-semantic{
     background:#f0edff;
     color:#6654b8;
+}
+
+.badge.match-similarity{
+    background:#ecfdf5;
+    color:#147d64;
 }
 
 .badge.match-none{
@@ -1205,7 +1244,37 @@ body{
 
     grid-template-columns:repeat(2, minmax(0, 1fr));
 
-    gap:12px;
+    gap:10px;
+}
+
+/*
+ * Treat each compact field as a small surface of its own.
+ * This keeps labels and values comfortably away from the
+ * section border instead of making the text appear cramped.
+ */
+.chatbot-detail-grid > .chatbot-detail-section{
+    min-width:0;
+
+    padding:10px 12px;
+
+    border:1px solid #e2e8f0;
+    border-radius:9px;
+
+    background:#fff;
+
+    gap:5px;
+}
+
+.chatbot-detail-grid > .chatbot-detail-section .modal-label{
+    margin:0;
+}
+
+.chatbot-detail-grid > .chatbot-detail-section .chatbot-detail-value{
+    padding:0;
+}
+
+.chatbot-detail-grid > .chatbot-detail-section .badge{
+    align-self:flex-start;
 }
 
 /* ================= KNOWLEDGE USED ================= */
@@ -1676,16 +1745,143 @@ body{
     grid-column:1 / -1;
 }
 
+/* =========================================================
+   AUDIT STATE COMPARISON
+   ---------------------------------------------------------
+   Previous/Resulting State is treated as a pair of cards
+   rather than a label sitting above a colored scroll box.
+   This gives the section a clearer hierarchy and prevents
+   the headings from visually touching the state containers.
+========================================================= */
 .log-state-grid {
     display:grid;
     grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:12px;
+    gap:14px;
+    align-items:stretch;
 }
 
-.modal-box {
-    min-height:56px;
+.log-state-card {
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    border:1px solid #e2e8f0;
+    border-radius:14px;
+    background:#ffffff;
+    box-shadow:0 1px 2px rgba(15,23,42,.03);
+}
+
+.log-state-card-header {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-height:62px;
+    padding:11px 14px;
+    border-bottom:1px solid #e8edf3;
+    background:#ffffff;
+}
+
+.log-state-indicator {
+    width:30px;
+    height:30px;
+    flex:0 0 30px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:9px;
+    font-size:12px;
+}
+
+.log-state-card-old .log-state-indicator {
+    background:#fff1f2;
+    color:#be123c;
+}
+
+.log-state-card-new .log-state-indicator {
+    background:#eff6ff;
+    color:#2563eb;
+}
+
+.log-state-card-header > div {
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+
+.log-state-title {
+    display:block;
+    font-size:12px;
+    line-height:1.25;
+    font-weight:700;
+    letter-spacing:.045em;
+    text-transform:uppercase;
+    color:#334155;
+}
+
+.log-state-subtitle {
+    display:block;
+    font-size:10px;
+    line-height:1.3;
+    color:#94a3b8;
+}
+
+.log-state-card-body {
+    min-height:0;
+    padding:10px;
+    background:#f8fafc;
+}
+
+.log-state-card-old .log-state-card-body {
+    background:#fff8f8;
+}
+
+.log-state-card-new .log-state-card-body {
+    background:#f7fbff;
+}
+
+.log-state-card .modal-box {
+    min-height:190px;
     max-height:280px;
+    padding:2px;
     overflow:auto;
+    border-radius:10px;
+    background:transparent;
+}
+
+.log-state-card .modal-box.old,
+.log-state-card .modal-box.new {
+    color:#1e293b;
+}
+
+.log-state-card .modal-box > .data-row {
+    margin:0 0 8px;
+    padding:10px 11px;
+    border-radius:9px;
+    background:#ffffff;
+}
+
+.log-state-card .modal-box > .data-row:last-child {
+    margin-bottom:0;
+}
+
+.log-state-card .modal-box > .data-value {
+    padding:10px 11px;
+    border-radius:9px;
+    background:#ffffff;
+}
+
+.log-state-card .modal-box::-webkit-scrollbar {
+    width:5px;
+}
+
+.log-state-card .modal-box::-webkit-scrollbar-track {
+    background:transparent;
+}
+
+.log-state-card .modal-box::-webkit-scrollbar-thumb {
+    background:#cbd5e1;
+    border-radius:999px;
 }
 
 @media (max-width: 900px) {
@@ -1771,4 +1967,150 @@ body{
 .badge.password_reset {
     background:#ede9fe;
     color:#5b21b6;
+}
+
+/* =========================================================
+   CHATBOT LOG DETAIL — STRUCTURED AUDIT STYLE
+   ========================================================= */
+.chatbot-detail-body{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.chatbot-log-block{
+    border:1px solid #e8ecf1;
+    border-radius:10px;
+    background:#fbfcfd;
+    padding:14px;
+}
+
+.chatbot-log-block[hidden],
+.chatbot-components-section[hidden]{
+    display:none !important;
+}
+
+.chatbot-block-heading{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:10px;
+}
+
+.modal-eyebrow{
+    display:block;
+    margin-bottom:2px;
+    color:#8b95a5;
+    font-size:9px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+#chatbotModalTitle{
+    display:inline-block;
+    color:#172033;
+    font-size:16px;
+    font-weight:600;
+    letter-spacing:-.01em;
+}
+
+.chatbot-detail-wide{
+    margin-top:12px;
+}
+
+.chatbot-components{
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+}
+
+.chatbot-component-item{
+    padding:10px 12px;
+    border:1px solid #e2e8f0;
+    border-radius:9px;
+    background:#fff;
+}
+
+.chatbot-component-meta{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    min-width:0;
+    margin-bottom:5px;
+    color:#64748b;
+    font-size:11px;
+}
+
+.chatbot-component-meta strong{
+    color:#334155;
+    font-size:11px;
+    font-weight:600;
+}
+
+.chatbot-component-meta > span:last-child{
+    color:#94a3b8;
+    font-size:10px;
+}
+
+.chatbot-component-index{
+    display:grid;
+    place-items:center;
+    width:19px;
+    height:19px;
+    flex:0 0 19px;
+    border-radius:50%;
+    background:#eff6ff;
+    color:#2563eb !important;
+    font-size:9px !important;
+    font-weight:700;
+}
+
+.chatbot-component-content{
+    color:#475569;
+    font-size:12px;
+    line-height:1.55;
+    overflow-wrap:anywhere;
+    white-space:pre-wrap;
+}
+
+.faq-reference-meta{
+    display:block;
+    margin-top:4px;
+    color:#64748b;
+    font-size:10px;
+}
+
+.badge.error{
+    background:#fee2e2;
+    color:#b91c1c;
+}
+
+.chatbot-log-row:focus-visible{
+    outline:2px solid #2563eb;
+    outline-offset:-2px;
+}
+
+@media (max-width:640px){
+    .chatbot-log-block{padding:12px;}
+    .chatbot-detail-grid{gap:9px;}
+    .chatbot-detail-grid > .chatbot-detail-section{padding:10px;}
+    .chatbot-detail-wide{margin-top:10px;}
+}
+
+
+@media (max-width: 640px) {
+    .log-state-card-header {
+        min-height:58px;
+        padding:10px 12px;
+    }
+
+    .log-state-card-body {
+        padding:8px;
+    }
+
+    .log-state-card .modal-box {
+        min-height:150px;
+        max-height:260px;
+    }
 }

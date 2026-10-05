@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Agency;
 use App\Models\UserLog;
 use Illuminate\Http\Request;
 
@@ -38,7 +39,21 @@ class CategoryController extends Controller
          * withCount('agencies') counts only active agencies
          * because the Agency model uses SoftDeletes.
          */
-        $query = Category::withCount('agencies');
+        $query = Category::withCount('agencies')
+            ->with([
+                'agencies' => function ($agencyQuery) {
+                    $agencyQuery
+                        ->select([
+                            'id',
+                            'agency_name',
+                            'agency_abbreviation',
+                            'agency_type_id',
+                            'category_id',
+                        ])
+                        ->with('type:id,name')
+                        ->orderBy('agency_name');
+                },
+            ]);
 
         /*
          * Laravel normally excludes soft-deleted categories.
@@ -110,6 +125,32 @@ class CategoryController extends Controller
             ->withQueryString();
 
         /*
+         * Prepare the agency directory payload in the controller.
+         *
+         * Keeping this transformation out of the Blade template
+         * avoids deeply nested @json expressions that can confuse
+         * Blade's directive parser and produce invalid compiled PHP.
+         */
+        $categoryAgencyDirectory = $categories
+            ->getCollection()
+            ->mapWithKeys(function (Category $category) {
+                return [
+                    $category->id => $category->agencies
+                        ->map(function (Agency $agency) {
+                            return [
+                                'id' => $agency->id,
+                                'name' => $agency->agency_name,
+                                'abbreviation' => $agency->agency_abbreviation,
+                                'type' => $agency->type?->name,
+                            ];
+                        })
+                        ->values()
+                        ->all(),
+                ];
+            })
+            ->all();
+
+        /*
          * Calculate the two status counts separately.
          *
          * Category::count()
@@ -145,7 +186,8 @@ $categoryColorUsage = Category::query()
         'status',
         'activeCount',
         'trashedCount',
-        'categoryColorUsage'
+        'categoryColorUsage',
+        'categoryAgencyDirectory'
     )
 );
     }
