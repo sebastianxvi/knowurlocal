@@ -11,6 +11,7 @@ use App\Services\AuditLogService;
 use App\Services\FaqChatbotService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class ChatbotController extends Controller
@@ -26,11 +27,12 @@ class ChatbotController extends Controller
      * The AI never supplies answer text. It only selects an existing FAQ
      * and a stored language variant. All response content comes from the configured PostgreSQL database.
      */
-    private function faqResponsePayload(Faq $faq, FaqVersion $version, string $language): array
+    private function faqResponsePayload(Faq $faq, ?FaqVersion $version, string $language): array
     {
         $selectedLanguage = $language === 'fil' ? 'fil' : 'en';
-        $components = is_array($version->response_components)
-            ? $version->response_components
+        $source = $version ?? $faq;
+        $components = is_array($source->response_components)
+            ? $source->response_components
             : [];
 
         $texts = collect($components)
@@ -46,8 +48,8 @@ class ChatbotController extends Controller
 
         if ($texts === []) {
             $fallback = $selectedLanguage === 'fil'
-                ? $version->answer_fil
-                : $version->answer;
+                ? $source->answer_fil
+                : $source->answer;
 
             if (filled($fallback)) {
                 $texts = [(string) $fallback];
@@ -55,8 +57,8 @@ class ChatbotController extends Controller
                 // If the requested stored language does not exist, use the
                 // other already-approved database variant without rewriting it.
                 $other = $selectedLanguage === 'fil'
-                    ? $version->answer
-                    : $version->answer_fil;
+                    ? $source->answer
+                    : $source->answer_fil;
 
                 if (filled($other)) {
                     $texts = [(string) $other];
@@ -71,11 +73,16 @@ class ChatbotController extends Controller
                 $type = $component['type'];
 
                 if (in_array($type, ['image', 'file'], true)) {
-                    $url = route('chatbot.faq-version-attachment', [
-                        'faqId' => $faq->id,
-                        'versionId' => $version->id,
-                        'componentIndex' => $index,
-                    ]);
+                    $url = $version
+                        ? route('chatbot.faq-version-attachment', [
+                            'faqId' => $faq->id,
+                            'versionId' => $version->id,
+                            'componentIndex' => $index,
+                        ])
+                        : route('chatbot.faq-attachment', [
+                            'faqId' => $faq->id,
+                            'componentIndex' => $index,
+                        ]);
                 } else {
                     $url = $component['content'] ?? null;
                 }
@@ -94,8 +101,8 @@ class ChatbotController extends Controller
         return [
             'content' => implode("\n\n", $texts),
             'attachments' => $attachments,
-            'image' => filled($version->image)
-                ? Storage::disk('public')->url(ltrim((string) $version->image, '/'))
+            'image' => filled($source->image)
+                ? Storage::disk('public')->url(ltrim((string) $source->image, '/'))
                 : null,
         ];
     }
@@ -356,19 +363,100 @@ class ChatbotController extends Controller
     }
 
     /**
+     * Resolve the response version that should be shown for a selected FAQ.
+     *
+     * The FAQ itself remains the retrieval source. Version resolution happens
+     * only after a match is selected so a broken/missing publication pointer
+     * cannot turn an otherwise valid chatbot match into a 503.
+     *
+     * Preference order:
+     * 1. The newest non-superseded version.
+     * 2. The FAQ's explicit current_version_id.
+     * 3. The newest version as a final historical recovery path.
+     *
+     * Returning null is intentional: faqResponsePayload() can use the FAQ row
+     * as a legacy/current-response fallback when versioning data is unavailable.
+     */
+    private function resolvePublishedFaqVersion(Faq $faq): ?FaqVersion
+    {
+        try {
+            /*
+             * The newest non-superseded version is the published response.
+             * Prefer it over the pointer because a stale current_version_id
+             * should never make the chatbot show an older answer.
+             */
+            $published = FaqVersion::query()
+                ->where('faq_id', $faq->id)
+                ->whereNull('superseded_at')
+                ->orderByDesc('version_number')
+                ->first();
+
+            if ($published) {
+                return $published;
+            }
+
+            if ($faq->current_version_id) {
+                $current = FaqVersion::query()
+                    ->whereKey((int) $faq->current_version_id)
+                    ->where('faq_id', $faq->id)
+                    ->first();
+
+                if ($current) {
+                    return $current;
+                }
+            }
+
+            return FaqVersion::query()
+                ->where('faq_id', $faq->id)
+                ->orderByDesc('version_number')
+                ->first();
+        } catch (\Throwable $e) {
+            // Versioning must never make a valid FAQ unavailable. The caller
+            // will fall back to the response stored on the FAQ row.
+            Log::warning('KNOWURLOCAL chatbot FAQ version resolution failed.', [
+                'faq_id' => $faq->id,
+                'current_version_id' => $faq->current_version_id,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
      * Main AI FAQ retrieval endpoint.
      *
      * The complete flow is intentionally simple:
      *
      * browser question
-     *     -> AI semantic retrieval over existing FAQs
+     *     -> exact / strong local FAQ retrieval
+     *     -> AI semantic retrieval only for ambiguous questions
      *     -> validated FAQ ID
      *     -> database FAQ
      *     -> stored response
      *
-     * There is no rule-based matching, keyword scoring, intent classifier,
-     * agency parser, generated answer, or AI-written response in this path.
+     * The AI never writes the answer. It only helps select an existing FAQ
+     * when deterministic retrieval is not already confident enough.
      */
+    /**
+     * Return a chatbot response with a lightweight version header. This makes
+     * it immediately obvious in DevTools whether the browser is talking to
+     * the current chatbot backend after a deployment/cache clear.
+     */
+    private function chatbotJson(array $payload, int $status = 200, ?string $matchMethod = null)
+    {
+        $response = response()
+            ->json($payload, $status)
+            ->header('X-KNOWURLOCAL-Chatbot', 'v15-ai');
+
+        if ($matchMethod !== null) {
+            $response->header('X-KNOWURLOCAL-Chatbot-Match', $matchMethod);
+        }
+
+        return $response;
+    }
+
     public function ask(Request $request)
     {
         $validated = $request->validate([
@@ -381,71 +469,22 @@ class ChatbotController extends Controller
             ? (int) $validated['agency_id']
             : null;
 
+        /*
+         * Retrieval and response rendering are intentionally separate failure
+         * boundaries. A problem resolving historical FAQ versions must NEVER
+         * turn a valid FAQ match into the generic "couldn't verify" message.
+         */
         try {
             $match = $this->chatbot->findMatch($question, $agencyId);
-
-            if ($match !== null) {
-                /** @var Faq $faq */
-                $faq = $match['faq'];
-                // Capture the exact published response generation before
-                // rendering/logging it. This prevents an admin edit occurring
-                // between payload creation and log creation from assigning
-                // feedback to the wrong version.
-                $faqVersionId = (int) $faq->current_version_id;
-                $faqVersion = $faq->currentVersion;
-
-                if (!$faqVersion || (int) $faqVersion->id !== $faqVersionId) {
-                    throw new \RuntimeException('The selected FAQ has no valid published response version.');
-                }
-
-                $payload = $this->faqResponsePayload(
-                    $faq,
-                    $faqVersion,
-                    $match['language'] ?? 'en'
-                );
-
-                if (
-                    trim($payload['content']) !== ''
-                    || $payload['attachments'] !== []
-                    || $payload['image'] !== null
-                ) {
-                    $chatLogId = $this->logChat(
-                        $question,
-                        $payload['content'],
-                        'answered',
-                        $match['method'] ?? 'semantic',
-                        $faq->agency_id,
-                        $faq->id,
-                        $faqVersionId,
-                        (int) round(((float) $match['confidence']) * 100),
-                        $match['language'] ?? 'en'
-                    );
-
-                    return response()->json([
-                        'feedback_log_id' => $chatLogId,
-                        'choices' => [[
-                            'message' => [
-                                'content' => $payload['content'],
-                                'attachments' => $payload['attachments'],
-                                'image' => $payload['image'],
-                            ],
-                        ]],
-                    ]);
-                }
-            }
         } catch (\Throwable $e) {
-            /*
-             * Do not disguise an AI/provider/database failure as a legitimate
-             * "no FAQ matched" result. The two cases have different meanings
-             * and need different operational handling.
-             */
-            Log::error('KNOWURLOCAL AI FAQ retrieval failed.', [
+            Log::error('KNOWURLOCAL chatbot retrieval failed.', [
                 'exception' => get_class($e),
                 'message' => $e->getMessage(),
-                'question_length' => mb_strlen($question, 'UTF-8'),
+                'question' => $question,
+                'agency_id' => $agencyId,
             ]);
 
-            $reply = 'The assistant is temporarily unavailable. Please try again or send a ticket.';
+            $reply = 'I couldn’t access the FAQ database right now. Please try again or send a ticket.';
 
             $this->logChat(
                 $question,
@@ -455,33 +494,127 @@ class ChatbotController extends Controller
                 $agencyId
             );
 
-            return response()->json([
+            return $this->chatbotJson([
                 'choices' => [[
                     'message' => [
                         'content' => $reply,
                         'fallback' => true,
                     ],
                 ]],
-            ], 503);
+            ], 200, 'error');
         }
 
-        $reply = "I couldn’t find a matching FAQ for your question.";
+        if ($match === null) {
+            $reply = "I couldn’t find a matching FAQ for your question.";
 
-        $this->logChat(
+            $this->logChat(
+                $question,
+                $reply,
+                'fallback',
+                null,
+                $agencyId
+            );
+
+            return $this->chatbotJson([
+                'choices' => [[
+                    'message' => [
+                        'content' => $reply,
+                        'fallback' => true,
+                    ],
+                ]],
+            ], 200, 'fallback');
+        }
+
+        /** @var Faq $faq */
+        $faq = $match['faq'];
+        $faqVersion = $this->resolvePublishedFaqVersion($faq);
+
+        try {
+            $payload = $this->faqResponsePayload(
+                $faq,
+                $faqVersion,
+                $match['language'] ?? 'en'
+            );
+        } catch (\Throwable $e) {
+            /*
+             * The FAQ row itself is the canonical emergency response source.
+             * Versioning/attachments are enhancements, not prerequisites for
+             * returning the approved text stored on the FAQ.
+             */
+            Log::warning('KNOWURLOCAL chatbot response rendering degraded to FAQ row.', [
+                'faq_id' => $faq->id,
+                'faq_version_id' => $faqVersion?->id,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+            ]);
+
+            $language = ($match['language'] ?? 'en') === 'fil' ? 'fil' : 'en';
+            $content = $language === 'fil'
+                ? (string) ($faq->answer_fil ?? $faq->answer ?? '')
+                : (string) ($faq->answer ?? $faq->answer_fil ?? '');
+
+            $payload = [
+                'content' => trim($content),
+                'attachments' => [],
+                'image' => null,
+            ];
+        }
+
+        if (
+            trim((string) $payload['content']) === ''
+            && $payload['attachments'] === []
+            && $payload['image'] === null
+        ) {
+            Log::warning('KNOWURLOCAL chatbot matched FAQ without usable response content.', [
+                'faq_id' => $faq->id,
+                'faq_version_id' => $faqVersion?->id,
+            ]);
+
+            $reply = 'This FAQ does not currently have a published response. Please send a ticket for human assistance.';
+
+            $this->logChat(
+                $question,
+                $reply,
+                'error',
+                $match['method'] ?? 'semantic',
+                $faq->agency_id,
+                $faq->id,
+                $faqVersion?->id,
+                (int) round(((float) ($match['confidence'] ?? 0)) * 100),
+                $match['language'] ?? 'en'
+            );
+
+            return $this->chatbotJson([
+                'choices' => [[
+                    'message' => [
+                        'content' => $reply,
+                        'fallback' => true,
+                    ],
+                ]],
+            ], 200, 'matched-no-response');
+        }
+
+        $chatLogId = $this->logChat(
             $question,
-            $reply,
-            'fallback',
-            null,
-            $agencyId
+            (string) $payload['content'],
+            'answered',
+            $match['method'] ?? 'semantic',
+            $faq->agency_id,
+            $faq->id,
+            $faqVersion?->id,
+            (int) round(((float) ($match['confidence'] ?? 0)) * 100),
+            $match['language'] ?? 'en'
         );
 
-        return response()->json([
+        return $this->chatbotJson([
+            'feedback_log_id' => $chatLogId,
             'choices' => [[
                 'message' => [
-                    'content' => $reply,
-                    'fallback' => true,
+                    'content' => $payload['content'],
+                    'attachments' => $payload['attachments'],
+                    'image' => $payload['image'],
                 ],
             ]],
-        ]);
+        ], 200, $match['method'] ?? 'semantic');
     }
 }

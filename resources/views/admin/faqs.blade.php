@@ -64,23 +64,18 @@
                     id="faq-search"
                     name="search"
                     value="{{ request('search') }}"
-                    placeholder="Search question..."
+                    placeholder="Search question, answer, keyword, or agency..."
                     autocomplete="off"
                 >
             </div>
 
-            <div class="support-filter-field">
-                <label for="faq-agency-filter" class="sr-only">Filter by agency</label>
-                <i class="ph-light ph-buildings" aria-hidden="true"></i>
-                <select name="agency" id="faq-agency-filter">
-                    <option value="">All Agencies</option>
-                    @foreach($agencies as $agency)
-                        <option value="{{ $agency->id }}" {{ request('agency') == $agency->id ? 'selected' : '' }}>
-                            {{ $agency->agency_name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+            @include('admin.components.searchable-agency-filter', [
+                'id' => 'faq-agency-filter',
+                'name' => 'agency',
+                'value' => request('agency'),
+                'agencies' => $agencies,
+                'label' => 'Filter by agency',
+            ])
 
             <div class="support-filter-field">
                 <label for="faq-date-filter" class="sr-only">Filter by date</label>
@@ -118,10 +113,10 @@
                 <span class="sr-only">Filter</span>
             </button>
 
-            @if(request()->has('search') || request()->has('agency') || request()->has('date') || request()->has('feedback') || request('sort', 'latest') !== 'latest')
+            @if(request()->filled('search') || request()->filled('agency') || request()->filled('date') || request()->filled('feedback') || request('sort', 'latest') !== 'latest')
                 <a href="{{ route('faqs.index', ['status' => $status]) }}" class="support-filter-clear admin-icon-button" aria-label="Clear filters" title="Clear filters">
                     <i class="ph-light ph-x" aria-hidden="true"></i>
-                    <span>Clear</span>
+                    <span class="sr-only">Clear filters</span>
                 </a>
             @endif
 
@@ -812,6 +807,25 @@
      */
     window.FAQ_TRANSLATE_URL =
         @json(route('faqs.translate'));
+
+    /*
+     * Private FAQ response attachment endpoint.
+     *
+     * The attachment files live on the private disk, so the browser must
+     * use the authenticated admin route rather than a public /faqs/... URL.
+     * The response builder replaces these placeholders with the actual FAQ
+     * and component IDs when an existing attachment is displayed.
+     */
+    @php
+        $faqAttachmentUrlTemplate = route(
+            'admin.faqs.response-attachment',
+            [
+                'faqId' => '__FAQ_ID__',
+                'componentIndex' => '__COMPONENT_INDEX__',
+            ]
+        );
+    @endphp
+    window.FAQ_ATTACHMENT_URL_TEMPLATE = @json($faqAttachmentUrlTemplate);
 
     /*
      * Support Request → FAQ conversion data.

@@ -75,7 +75,7 @@
             <div class="support-filter-field support-search-field">
                 <label for="agency-search" class="sr-only">Search agencies</label>
                 <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
-                <input type="search" id="agency-search" name="search" placeholder="Search agency..." value="{{ request('search') }}" autocomplete="off">
+                <input type="search" id="agency-search" name="search" placeholder="Search agency name or abbreviation..." value="{{ request('search') }}" autocomplete="off">
             </div>
 
             <div class="support-filter-field">

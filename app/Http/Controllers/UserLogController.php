@@ -290,17 +290,29 @@ class UserLogController extends Controller
 
 
                 /*
+                 * Target user.
+                 */
+                ->orWhereHas(
+                    'targetUser',
+                    function ($targetUserQuery) use ($search) {
+                        $targetUserQuery
+                            ->where('first_name', 'ILIKE', "%{$search}%")
+                            ->orWhere('last_name', 'ILIKE', "%{$search}%")
+                            ->orWhere('email', 'ILIKE', "%{$search}%");
+                    }
+                )
+
+
+                /*
                  * Existing agency records.
                  */
                 ->orWhereHas(
                     'agency',
                     function ($agencyQuery) use ($search) {
 
-                        $agencyQuery->where(
-                            'agency_name',
-                            'ILIKE',
-                            "%{$search}%"
-                        );
+                        $agencyQuery
+                            ->where('agency_name', 'ILIKE', "%{$search}%")
+                            ->orWhere('agency_abbreviation', 'ILIKE', "%{$search}%");
                     }
                 )
 

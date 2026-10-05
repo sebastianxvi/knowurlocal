@@ -59,7 +59,7 @@ class OpenRouterService
         $payload = [
             'messages' => $messages,
             'temperature' => $temperature,
-            'max_tokens' => 1000,
+            'max_tokens' => 700,
         ];
 
         /*
@@ -84,7 +84,7 @@ class OpenRouterService
                 'X-Title' => 'KNOWURLOCAL FAQ Assistant',
             ])
             ->connectTimeout(10)
-            ->timeout(60);
+            ->timeout(45);
 
         $response = null;
         $responseFormatRemoved = false;

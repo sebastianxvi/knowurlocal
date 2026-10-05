@@ -163,7 +163,7 @@
     </div>
     
 
-    <script src="{{ asset('jsfiles/public_user/chatbot.js') }}"></script>
+    <script src="{{ asset('jsfiles/public_user/chatbot.js') }}?v={{ filemtime(public_path('jsfiles/public_user/chatbot.js')) }}"></script>
 
 
 

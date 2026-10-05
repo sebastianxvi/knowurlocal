@@ -3,59 +3,43 @@
 namespace App\Services;
 
 use App\Models\Faq;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
- * AI-only FAQ retrieval for the public KNOWURLOCAL chatbot.
+ * AI-first FAQ retrieval.
  *
- * The AI is a retrieval/judging layer only:
+ * The model is ONLY a selector. It never receives FAQ answers and therefore
+ * cannot rewrite, summarize, or invent the response shown to the user.
  *
- *     user question
- *          -> AI compares against the FAQ catalog
- *          -> AI returns an existing FAQ id
- *          -> Laravel loads that FAQ
- *          -> Laravel returns the stored answer
+ * Flow:
+ *   user question
+ *      -> active FAQ catalog
+ *      -> AI semantic selector (all eligible FAQs)
+ *      -> validate selected FAQ id against that catalog
+ *      -> return the selected FAQ
+ *      -> controller renders the stored/published FAQ response
  *
- * The model is never allowed to generate the public answer.
+ * Deterministic matching exists only as a failure fallback when the AI
+ * provider is unavailable or returns unusable output. It is never the normal
+ * matching path and it is not used to pre-filter the AI catalog.
  */
 class FaqChatbotService
 {
-    /**
-     * The current FAQ dataset is small enough to send as one retrieval catalog.
-     *
-     * Keeping the catalog in one request is deliberate. A multi-stage
-     * chunk/shortlist pipeline can discard the correct FAQ before the final
-     * judge ever sees it.
-     */
-    private const MAX_CATALOG_RECORDS = 500;
-
-    /**
-     * AI confidence is metadata, but an extremely low-confidence selection
-     * is not safe to publish as a retrieval result.
-     */
-    private const MIN_AI_CONFIDENCE = 0.65;
+    private const AI_MIN_CONFIDENCE = 0.45;
+    private const MAX_FAQ_FIELD_LENGTH = 700;
+    private const AI_PROFILE_MIN_CONFIDENCE = 0.35;
+    private const AI_MAX_CANDIDATES_PER_BATCH = 90;
 
     public function __construct(
         private OpenRouterService $ai
     ) {
     }
 
-    /**
-     * Find an existing FAQ using AI semantic retrieval.
-     *
-     * The AI receives only retrieval evidence: question variants, agency
-     * metadata, and administrator keywords. It never receives answer text,
-     * because the answer must come exclusively from the published FAQ version.
-     *
-     * A small deterministic fallback is used only when the AI provider is
-     * unavailable. This keeps the chatbot usable without ever generating or
-     * rewriting a response.
-     */
     public function findMatch(string $question, ?int $agencyId = null): ?array
     {
-        $question = trim($question);
+        $question = $this->clean($question);
 
         if ($question === '') {
             return null;
@@ -67,643 +51,704 @@ class FaqChatbotService
             return null;
         }
 
-        if ($faqs->count() > self::MAX_CATALOG_RECORDS) {
-            throw new RuntimeException(
-                'The FAQ catalog is too large for the configured AI retrieval catalog.'
-            );
+        $eligible = $faqs
+            ->filter(fn (Faq $faq): bool => $this->agencyAllowed($faq, $agencyId))
+            ->values();
+
+        if ($eligible->isEmpty()) {
+            return null;
         }
 
-        $candidates = $faqs
-            ->map(fn (Faq $faq) => $this->toCandidate($faq))
-            ->values()
-            ->all();
-
-        $payload = $this->encode([
-            'user_question' => $question,
-            'current_agency_id' => $agencyId,
-            'faq_candidates' => $candidates,
-        ]);
-
+        /*
+         * AI owns normal retrieval. We deliberately do not use lexical
+         * pre-filtering, keyword maps, entity maps, or hard-coded intents.
+         *
+         * The first AI pass turns messy natural language into a compact
+         * semantic representation. The second AI pass compares that meaning
+         * against the complete live FAQ catalog. This makes paraphrases,
+         * typos, Taglish, and newly-created FAQs first-class inputs.
+         */
         try {
-            $response = $this->ai->chat(
-                [
-                    [
-                        'role' => 'system',
-                        'content' => $this->retrievalPrompt(),
-                    ],
-                    [
-                        'role' => 'user',
-                        'content' => $payload,
-                    ],
-                ],
-                0.0,
-                ['type' => 'json_object']
+            $profile = $this->understandQuestion($question, $agencyId);
+
+            if ($this->profileIsUsable($profile)) {
+                $decision = $this->matchProfileAgainstCatalog(
+                    $question,
+                    $profile,
+                    $agencyId,
+                    $eligible
+                );
+
+                $match = $this->resolveAiDecision($decision, $question, $eligible);
+
+                if ($match !== null) {
+                    return $match;
+                }
+            }
+
+            /*
+             * If the semantic-profile call or its decision is inconclusive,
+             * give the model one direct matching attempt. This is still AI
+             * matching; it is not a rule-based substitute.
+             */
+            $directDecision = $this->retrieveWithAi($question, $agencyId, $eligible);
+            $directMatch = $this->resolveAiDecision(
+                $directDecision,
+                $question,
+                $eligible
             );
 
-            $decision = $this->decodeResponse($response);
+            if ($directMatch !== null) {
+                return $directMatch;
+            }
 
-            $match = $this->resolveDecision($decision, $faqs, $question);
+            /*
+             * Free routed models can occasionally under-rank a short,
+             * typo-heavy paraphrase even when the semantic profile is correct.
+             * Give the same user request one final AI recovery pass so the
+             * user never has to repeat the question just to get a match.
+             */
+            $recoveryDecision = $this->retrieveWithAiRecovery(
+                $question,
+                $profile ?? [],
+                $agencyId,
+                $eligible
+            );
+            $recoveryMatch = $this->resolveAiDecision(
+                $recoveryDecision,
+                $question,
+                $eligible
+            );
 
-            if ($match !== null) {
-                return $match;
+            if ($recoveryMatch !== null) {
+                return $recoveryMatch;
             }
         } catch (\Throwable $e) {
-            // AI retrieval is optional; the public answer must still come
-            // from the database if a provider/network failure occurs.
-            report($e);
+            Log::warning('KNOWURLOCAL FAQ AI matching failed; using deterministic fallback.', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'question' => $question,
+                'agency_id' => $agencyId,
+            ]);
         }
 
-        return $this->fallbackMatch($question, $agencyId, $faqs);
-    }
+        // Provider outage / unusable model response only.
+        $fallback = $this->deterministicFallback($question, $eligible);
 
-    /**
-     * Load the FAQ catalog without making optional newer columns a hard
-     * dependency for chatbot retrieval.
-     *
-     * The core FAQ fields have existed since the original FAQ migration.
-     * Filipino fields, images, and response components were added later,
-     * so the chatbot tolerates an environment whose migration history is
-     * one step behind instead of converting a valid FAQ lookup into a 500.
-     */
-    private function loadFaqCatalog(): Collection
-    {
-        // Only retrieval evidence belongs in the AI catalog. Response content
-        // is deliberately excluded; it is fetched from the published version
-        // only after an FAQ has been selected.
-        $faqColumns = [
-            'id',
-            'agency_id',
-            'question',
-            'keywords',
-        ];
-
-        foreach ([
-            'question_fil',
-            'current_version_id',
-        ] as $optionalColumn) {
-            if (Schema::hasColumn('faqs', $optionalColumn)) {
-                $faqColumns[] = $optionalColumn;
-            }
-        }
-
-        $agencyColumns = [
-            'id',
-            'agency_name',
-        ];
-
-        if (Schema::hasColumn('agencies', 'agency_abbreviation')) {
-            $agencyColumns[] = 'agency_abbreviation';
-        }
-
-        $query = Faq::query()
-            ->with([
-                'agency' => function ($query) use ($agencyColumns) {
-                    $query->select($agencyColumns);
-                },
-                // The controller needs the exact published version that the
-                // AI-selected FAQ points to. Eager-loading it also avoids an
-                // extra query for every matched FAQ.
-                'currentVersion',
-            ])
-            ->select($faqColumns);
-
-        // An FAQ without a published version cannot produce a valid public
-        // chatbot answer. Never expose such a row to the retrieval model or
-        // deterministic fallback. This turns version integrity into an
-        // invariant of the retrieval catalog instead of a late controller
-        // failure.
-        if (in_array('current_version_id', $faqColumns, true)) {
-            $query
-                ->whereNotNull('current_version_id')
-                ->whereHas('currentVersion');
-        }
-
-        return $query->get();
-    }
-
-    /**
-     * Convert a database FAQ into compact semantic evidence.
-     *
-     * Answers are evidence only. They are never sent back as model output.
-     */
-    private function toCandidate(Faq $faq): array
-    {
-        return [
-            'id' => (int) $faq->id,
-            'agency_id' => $faq->agency_id !== null
-                ? (int) $faq->agency_id
-                : null,
-            'agency' => $this->text(
-                $faq->agency?->agency_name,
-                300
-            ),
-            'agency_abbreviation' => $this->text(
-                $faq->agency?->agency_abbreviation,
-                100
-            ),
-            'keywords' => $this->text(
-                $faq->keywords,
-                700
-            ),
-            'question_en' => $this->text(
-                $faq->question,
-                1000
-            ),
-            'question_fil' => $this->text(
-                $faq->question_fil,
-                1000
-            ),
-        ];
-    }
-
-    /**
-     * Resolve the AI's selection against the exact collection loaded from
-     * the database. The AI cannot invent an answer or an arbitrary FAQ id.
-     */
-    private function resolveDecision(
-        array $decision,
-        Collection $faqs,
-        string $question
-    ): ?array {
-        $faqId = $decision['faq_id'] ?? null;
-
-        if ($faqId === null || $faqId === '' || !is_numeric($faqId)) {
+        if ($fallback === null) {
             return null;
         }
 
-        $faq = $faqs->firstWhere('id', (int) $faqId);
+        return $this->formatMatch(
+            $fallback['faq'],
+            $fallback['confidence'],
+            $question,
+            'fallback',
+            $this->detectLanguage($question, $fallback['faq'])
+        );
+    }
 
-        if (!$faq) {
-            throw new RuntimeException(
-                'FAQ AI selected an ID outside the database catalog.'
+    private function understandQuestion(string $question, ?int $agencyId): array
+    {
+        $payload = json_encode([
+            'task' => 'understand_user_faq_question',
+            'user_question' => $question,
+            'current_agency_id' => $agencyId,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+
+        return $this->decodeResponse($this->ai->chat([
+            ['role' => 'system', 'content' => $this->semanticProfilePrompt()],
+            ['role' => 'user', 'content' => $payload],
+        ], 0.1, null));
+    }
+
+    private function profileIsUsable(array $profile): bool
+    {
+        $confidence = $profile['confidence'] ?? 0;
+
+        return is_numeric($confidence)
+            && (float) $confidence >= self::AI_PROFILE_MIN_CONFIDENCE
+            && (
+                filled($profile['semantic_question'] ?? null)
+                || filled($profile['intent'] ?? null)
+                || !empty($profile['entities'] ?? [])
+            );
+    }
+
+    private function matchProfileAgainstCatalog(
+        string $question,
+        array $profile,
+        ?int $agencyId,
+        Collection $faqs
+    ): array {
+        /*
+         * For the current catalog this is one AI call. If the catalog grows
+         * beyond the safe batch size, rank each AI batch and then let AI make
+         * a final semantic decision over the batch winners. No FAQ is removed
+         * using local/rule-based matching.
+         */
+        $chunks = $faqs->values()->chunk(self::AI_MAX_CANDIDATES_PER_BATCH);
+
+        if ($chunks->count() === 1) {
+            return $this->askAiToRankProfile(
+                $question,
+                $profile,
+                $agencyId,
+                $chunks->first()
             );
         }
 
-        /*
-         * Confidence is no longer just analytics. A low-confidence selection
-         * must not become a public answer simply because the model supplied a
-         * valid FAQ id.
-         */
-        $rawConfidence = $decision['confidence'] ?? 0.0;
+        $winners = collect();
 
-        if (!is_numeric($rawConfidence)) {
+        foreach ($chunks as $chunk) {
+            $decision = $this->askAiToRankProfile(
+                $question,
+                $profile,
+                $agencyId,
+                $chunk
+            );
+
+            $index = $decision['candidate_index'] ?? null;
+            if (is_numeric($index)) {
+                $faq = $chunk->get((int) $index);
+                if ($faq) {
+                    $winners->push($faq);
+                }
+            } elseif (isset($decision['faq_id']) && is_numeric($decision['faq_id'])) {
+                $faq = $chunk->firstWhere('id', (int) $decision['faq_id']);
+                if ($faq) {
+                    $winners->push($faq);
+                }
+            }
+        }
+
+        if ($winners->isEmpty()) {
+            return [
+                'candidate_index' => null,
+                'confidence' => 0,
+                'language' => $profile['language'] ?? 'en',
+            ];
+        }
+
+        return $this->askAiToRankProfile(
+            $question,
+            $profile,
+            $agencyId,
+            $winners->values()
+        );
+    }
+
+    private function askAiToRankProfile(
+        string $question,
+        array $profile,
+        ?int $agencyId,
+        Collection $faqs
+    ): array {
+        $candidates = $this->buildCandidates($faqs);
+
+        $payload = json_encode([
+            'task' => 'select_best_faq_using_semantic_profile',
+            'user_question' => $question,
+            'semantic_profile' => $profile,
+            'current_agency_id' => $agencyId,
+            'faq_candidates' => $candidates,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+
+        return $this->decodeResponse($this->ai->chat([
+            ['role' => 'system', 'content' => $this->profileMatchingPrompt()],
+            ['role' => 'user', 'content' => $payload],
+        ], 0.0, null));
+    }
+
+    private function buildCandidates(Collection $faqs): array
+    {
+        return $faqs->values()->map(function (Faq $faq, int $index): array {
+            return [
+                'candidate_index' => $index,
+                'faq_id' => (int) $faq->id,
+                'agency_id' => $faq->agency_id !== null ? (int) $faq->agency_id : null,
+                'agency' => $this->limit((string) ($faq->agency?->agency_name ?? ''), 220),
+                'agency_abbreviation' => $this->limit((string) ($faq->agency?->agency_abbreviation ?? ''), 80),
+                'keywords' => $this->limit((string) ($faq->keywords ?? ''), self::MAX_FAQ_FIELD_LENGTH),
+                'question_en' => $this->limit((string) ($faq->question ?? ''), self::MAX_FAQ_FIELD_LENGTH),
+                'question_fil' => $this->limit((string) ($faq->question_fil ?? ''), self::MAX_FAQ_FIELD_LENGTH),
+            ];
+        })->all();
+    }
+
+    private function loadFaqCatalog(): Collection
+    {
+        return Faq::query()
+            ->with('agency:id,agency_name,agency_abbreviation')
+            ->orderBy('id')
+            ->get();
+    }
+
+    private function retrieveWithAiRecovery(
+        string $question,
+        array $profile,
+        ?int $agencyId,
+        Collection $faqs
+    ): array {
+        $payload = json_encode([
+            'task' => 'recover_a_semantic_faq_match_without_forcing_an_answer',
+            'user_question' => $question,
+            'semantic_profile' => $profile,
+            'current_agency_id' => $agencyId,
+            'faq_candidates' => $this->buildCandidates($faqs),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+
+        return $this->decodeResponse($this->ai->chat([
+            ['role' => 'system', 'content' => $this->recoveryPrompt()],
+            ['role' => 'user', 'content' => $payload],
+        ], 0.0, null));
+    }
+
+    private function retrieveWithAi(string $question, ?int $agencyId, Collection $faqs): array
+    {
+        $payload = json_encode([
+            'task' => 'select_the_single_best_existing_faq',
+            'user_question' => $question,
+            'current_agency_id' => $agencyId,
+            'faq_candidates' => $this->buildCandidates($faqs),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+
+        return $this->decodeResponse($this->ai->chat([
+            ['role' => 'system', 'content' => $this->retrievalPrompt()],
+            ['role' => 'user', 'content' => $payload],
+        ], 0.0, null));
+    }
+
+    private function resolveAiDecision(array $decision, string $question, Collection $faqs): ?array
+    {
+        $index = $decision['candidate_index'] ?? null;
+        $faq = null;
+
+        if (is_numeric($index)) {
+            $faq = $faqs->get((int) $index);
+        }
+
+        if (!$faq && isset($decision['faq_id']) && is_numeric($decision['faq_id'])) {
+            $faq = $faqs->firstWhere('id', (int) $decision['faq_id']);
+        }
+
+        if (!$faq) {
             return null;
         }
 
-        $confidence = (float) $rawConfidence;
-
-        if ($confidence > 1.0 && $confidence <= 100.0) {
-            $confidence /= 100.0;
+        $confidence = $decision['confidence'] ?? null;
+        if (!is_numeric($confidence)) {
+            return null;
         }
 
-        $confidence = max(0.0, min(1.0, $confidence));
+        $confidence = (float) $confidence;
+        if ($confidence > 1 && $confidence <= 100) {
+            $confidence /= 100;
+        }
 
-        if ($confidence < self::MIN_AI_CONFIDENCE) {
+        if ($confidence < self::AI_MIN_CONFIDENCE) {
             return null;
         }
 
         /*
-         * Do not blindly trust a semantic model selection. If the wording is
-         * already lexically close, it is safe to accept it directly. If it is
-         * a looser paraphrase, run a second, narrowly-scoped verification
-         * step that checks whether the candidate answers the SAME INFORMATION
-         * REQUEST rather than merely sharing the same agency/topic.
+         * If the model provides a runner-up, require a meaningful semantic
+         * margin unless the top score is extremely strong. This prevents a
+         * generic FAQ from winning simply because it is the closest topic.
          */
-        if (!$this->hasStrongLexicalEvidence($question, $faq)) {
-            if (!$this->verifyAiSelection($question, $faq)) {
+        $runnerUp = $decision['runner_up_confidence'] ?? null;
+        if (is_numeric($runnerUp)) {
+            $runnerUp = (float) $runnerUp;
+            if ($runnerUp > 1 && $runnerUp <= 100) {
+                $runnerUp /= 100;
+            }
+
+            if ($confidence < 0.82 && ($confidence - $runnerUp) < 0.04) {
                 return null;
             }
         }
 
-        $language = strtolower(
-            trim((string) ($decision['language'] ?? 'en'))
-        );
+        $language = strtolower(trim((string) ($decision['language'] ?? '')));
+        if (!in_array($language, ['en', 'fil'], true)) {
+            $language = $this->detectLanguage($question, $faq);
+        }
 
-        $language = match ($language) {
-            'fil', 'filipino', 'tagalog', 'taglish' => 'fil',
-            default => 'en',
-        };
-
-        return [
-            'faq' => $faq,
-            'confidence' => $confidence,
-            'language' => $language,
-            'method' => 'semantic',
-        ];
+        return $this->formatMatch($faq, $confidence, $question, 'semantic', $language);
     }
 
     /**
-     * Strong lexical evidence means the user's wording is already close
-     * enough to the FAQ that a second model call is unnecessary.
-     *
-     * This is deliberately stricter than the fallback scorer. The fallback
-     * may select a best candidate only when the AI provider is unavailable;
-     * this gate protects against an over-eager AI selection.
+     * Conservative fallback used only when AI cannot be used.
+     * This is intentionally small and does not contain a predefined FAQ map.
      */
-    private function hasStrongLexicalEvidence(string $question, Faq $faq): bool
+    private function deterministicFallback(string $question, Collection $faqs): ?array
     {
-        $questionTokens = $this->tokens($question);
-
-        if ($questionTokens === []) {
-            return false;
-        }
-
-        $variants = array_filter([
-            (string) $faq->question,
-            (string) ($faq->question_fil ?? ''),
-        ], static fn (string $value): bool => trim($value) !== '');
-
-        foreach ($variants as $variant) {
-            $variantTokens = $this->tokens($variant);
-
-            if ($variantTokens === []) {
-                continue;
-            }
-
-            if ($this->normalize($variant) === $this->normalize($question)) {
-                return true;
-            }
-
-            $similarity = $this->tokenSimilarity($questionTokens, $variantTokens);
-            $coverage = $this->tokenCoverage($questionTokens, $variantTokens);
-
-            if ($similarity >= 0.45 || $coverage >= 0.70) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Ask the model to verify only the selected FAQ against the user's
-     * question. This second pass is intentionally answer-free and much
-     * stricter than the broad catalog retrieval prompt.
-     */
-    private function verifyAiSelection(string $question, Faq $faq): bool
-    {
-        try {
-            $payload = $this->encode([
-                'user_question' => $question,
-                'candidate_faq' => $this->toCandidate($faq),
-            ]);
-
-            $response = $this->ai->chat(
-                [
-                    [
-                        'role' => 'system',
-                        'content' => $this->verificationPrompt(),
-                    ],
-                    [
-                        'role' => 'user',
-                        'content' => $payload,
-                    ],
-                ],
-                0.0,
-                ['type' => 'json_object']
-            );
-
-            $decision = $this->decodeResponse($response);
-
-            return ($decision['match'] ?? false) === true;
-        } catch (\Throwable $e) {
-            // If verification cannot be completed, fail closed rather than
-            // turning an unverified semantic guess into a public answer.
-            report($e);
-            return false;
-        }
-    }
-
-    /**
-     * Conservative local fallback used only when AI retrieval cannot run.
-     * It never creates an answer; it only selects an existing FAQ using the
-     * same question/agency/keyword evidence exposed to the AI.
-     */
-    private function fallbackMatch(
-        string $question,
-        ?int $agencyId,
-        Collection $faqs
-    ): ?array {
-        $normalizedQuestion = $this->normalize($question);
-        $questionTokens = $this->tokens($question);
-
-        if ($normalizedQuestion === '' || $questionTokens === []) {
+        $needle = $this->normalize($question);
+        if ($needle === '') {
             return null;
         }
-
-        $best = null;
 
         foreach ($faqs as $faq) {
-            $questionVariants = array_filter([
-                [
-                    'value' => (string) $faq->question,
-                    'language' => 'en',
-                ],
-                [
-                    'value' => (string) ($faq->question_fil ?? ''),
-                    'language' => 'fil',
-                ],
-            ], static fn (array $variant): bool => trim($variant['value']) !== '');
-
-            $bestQuestionSimilarity = 0.0;
-            $bestQuestionCoverage = 0.0;
-            $detectedLanguage = 'en';
-
-            foreach ($questionVariants as $variant) {
-                $variantNormalized = $this->normalize($variant['value']);
-                $variantTokens = $this->tokens($variant['value']);
-
-                if ($variantNormalized !== '' && $variantNormalized === $normalizedQuestion) {
-                    $bestQuestionSimilarity = 1.0;
-                    $bestQuestionCoverage = 1.0;
-                    $detectedLanguage = $variant['language'];
-                    break;
+            foreach ([$faq->question, $faq->question_fil] as $variant) {
+                if ($variant !== null && $this->normalize((string) $variant) === $needle) {
+                    return [
+                        'faq' => $faq,
+                        'confidence' => 1.0,
+                    ];
                 }
-
-                $similarity = $this->tokenSimilarity($questionTokens, $variantTokens);
-                $coverage = $this->tokenCoverage($questionTokens, $variantTokens);
-
-                // Coverage matters because users commonly omit qualifiers
-                // such as "conciliation process" while retaining the core
-                // entities and action, e.g. "How long does DOLE SEnA usually
-                // take?". Plain Jaccard similarity undervalues that query.
-                if (
-                    $similarity > $bestQuestionSimilarity
-                    || ($similarity === $bestQuestionSimilarity && $coverage > $bestQuestionCoverage)
-                ) {
-                    $bestQuestionSimilarity = $similarity;
-                    $bestQuestionCoverage = $coverage;
-                    $detectedLanguage = $variant['language'];
-                }
-            }
-
-            $keywordTokens = $this->tokens((string) $faq->keywords);
-            $keywordSimilarity = $this->tokenSimilarity(
-                $questionTokens,
-                $keywordTokens
-            );
-
-            // Measure whether the user's words hit the FAQ's identifying
-            // agency/keyword vocabulary. This protects the fallback from
-            // matching merely because both questions contain generic words
-            // such as "how", "long", or "process".
-            $identityTokens = array_values(array_unique(array_merge(
-                $keywordTokens,
-                $this->tokens((string) $faq->agency?->agency_name),
-                $this->tokens((string) $faq->agency?->agency_abbreviation)
-            )));
-            $identityCoverage = $this->tokenCoverage(
-                $questionTokens,
-                $identityTokens
-            );
-
-            $agencyScore = 0.0;
-            if ($agencyId !== null && (int) $faq->agency_id === $agencyId) {
-                $agencyScore = 1.0;
-            }
-
-            $score = ($bestQuestionSimilarity * 0.45)
-                + ($bestQuestionCoverage * 0.35)
-                + ($identityCoverage * 0.15)
-                + ($agencyScore * 0.05);
-
-            if ($bestQuestionSimilarity >= 0.999) {
-                $score = 1.0;
-            }
-
-            if ($best === null || $score > $best['score']) {
-                $best = [
-                    'faq' => $faq,
-                    'score' => $score,
-                    'language' => $detectedLanguage,
-                ];
             }
         }
 
-        // This is still deliberately conservative. It is a safety net for
-        // an unavailable/uncertain AI provider, not a second AI system.
-        // Require meaningful question overlap plus identifying vocabulary.
-        if (
-            $best === null
-            || $best['score'] < 0.50
-        ) {
-            return null;
+        // Small typo-tolerant recovery for provider outages. This is generic
+        // and derives candidates from the current database, so new FAQs are
+        // automatically covered without code changes.
+        $best = null;
+        $bestScore = 0.0;
+
+        foreach ($faqs as $faq) {
+            $score = max(
+                $this->fieldSimilarity($question, (string) ($faq->question ?? '')),
+                $this->fieldSimilarity($question, (string) ($faq->question_fil ?? ''))
+            );
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best = $faq;
+            }
         }
 
+        return $best !== null && $bestScore >= 0.82
+            ? ['faq' => $best, 'confidence' => $bestScore]
+            : null;
+    }
+
+    private function formatMatch(
+        Faq $faq,
+        float $confidence,
+        string $question,
+        string $method,
+        ?string $language = null
+    ): array {
         return [
-            'faq' => $best['faq'],
-            'confidence' => max(0.0, min(1.0, $best['score'])),
-            'language' => $best['language'],
-            'method' => 'similarity',
+            'faq' => $faq,
+            'confidence' => max(0.0, min(1.0, $confidence)),
+            'language' => $language ?? $this->detectLanguage($question, $faq),
+            'method' => $method,
         ];
     }
 
-    private function normalize(string $value): string
+    private function agencyAllowed(Faq $faq, ?int $agencyId): bool
     {
-        $value = mb_strtolower(trim($value), 'UTF-8');
-        $value = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $value) ?? '';
-        return trim(preg_replace('/\s+/u', ' ', $value) ?? '');
+        return $agencyId === null
+            || $faq->agency_id === null
+            || (int) $faq->agency_id === $agencyId;
     }
 
-    private function tokens(string $value): array
+    private function detectLanguage(string $question, Faq $faq): string
     {
-        $normalized = $this->normalize($value);
+        $en = $this->fieldSimilarity($question, (string) ($faq->question ?? ''));
+        $fil = $this->fieldSimilarity($question, (string) ($faq->question_fil ?? ''));
 
-        if ($normalized === '') {
-            return [];
-        }
-
-        $stopWords = [
-            'a', 'an', 'and', 'are', 'can', 'do', 'does', 'for', 'how', 'i',
-            'in', 'is', 'it', 'me', 'my', 'of', 'on', 'the', 'to', 'what',
-            'when', 'where', 'which', 'who', 'with', 'you',
-            'ang', 'ano', 'ay', 'ba', 'bakit', 'dahil', 'gaano', 'ito', 'ko',
-            'kung', 'mag', 'mga', 'mo', 'na', 'ng', 'ni', 'para', 'saan',
-            'si', 'sila', 'upo', 'wala', 'at', 'o', 'sa', 'may',
-        ];
-
-        return array_values(array_unique(array_filter(
-            preg_split('/\s+/u', $normalized) ?: [],
-            static fn (string $token): bool => $token !== '' && !in_array($token, $stopWords, true)
-        )));
+        return $fil > $en ? 'fil' : 'en';
     }
 
-    private function tokenSimilarity(array $left, array $right): float
-    {
-        if ($left === [] || $right === []) {
-            return 0.0;
-        }
-
-        $intersection = count(array_intersect($left, $right));
-        $union = count(array_unique(array_merge($left, $right)));
-
-        return $union > 0 ? $intersection / $union : 0.0;
-    }
-
-    /**
-     * Return the proportion of the user's meaningful tokens represented in
-     * the candidate vocabulary. Unlike Jaccard similarity, this does not
-     * penalize a user for leaving out descriptive words from the FAQ.
-     */
-    private function tokenCoverage(array $left, array $right): float
-    {
-        if ($left === [] || $right === []) {
-            return 0.0;
-        }
-
-        $intersection = count(array_intersect($left, $right));
-
-        return $intersection / count($left);
-    }
-
-    /**
-     * Decode an OpenRouter JSON response defensively.
-     *
-     * Some providers/models wrap JSON in markdown fences even when the
-     * response_format request was accepted. We remove only the wrapper and
-     * then require valid JSON.
-     */
-    private function decodeResponse(array $response): array
-    {
-        $content = data_get(
-            $response,
-            'choices.0.message.content'
-        );
-
-        if (!is_string($content) || trim($content) === '') {
-            throw new RuntimeException(
-                'FAQ AI returned an empty response.'
-            );
-        }
-
-        $content = trim($content);
-
-        $content = preg_replace(
-            '/^\s*```(?:json)?\s*|\s*```\s*$/i',
-            '',
-            $content
-        );
-
-        $content = trim($content);
-
-        $json = json_decode(
-            $content,
-            true,
-            512,
-            JSON_THROW_ON_ERROR
-        );
-
-        if (!is_array($json)) {
-            throw new RuntimeException(
-                'FAQ AI returned an invalid JSON object.'
-            );
-        }
-
-        return $json;
-    }
-
-    private function encode(array $payload): string
-    {
-        return json_encode(
-            $payload,
-            JSON_UNESCAPED_UNICODE
-            | JSON_UNESCAPED_SLASHES
-            | JSON_THROW_ON_ERROR
-        );
-    }
-
-    private function text(
-        mixed $value,
-        int $limit
-    ): string {
-        $value = trim((string) $value);
-
-        if ($value === '') {
-            return '';
-        }
-
-        return mb_strlen($value, 'UTF-8') > $limit
-            ? mb_substr($value, 0, $limit, 'UTF-8') . '…'
-            : $value;
-    }
-
-
-    private function verificationPrompt(): string
+    private function semanticProfilePrompt(): string
     {
         return <<<'PROMPT'
-You are a strict FAQ relevance verifier for the KNOWURLOCAL chatbot.
+You are KNOWURLOCAL's semantic query-understanding engine.
 
-Your only task is to decide whether the supplied FAQ answers the SAME SPECIFIC
-QUESTION the user is asking. Do not answer the user.
+Your job is to understand what the USER is asking so another AI can match it to an existing FAQ.
 
-A match is valid when:
-- the user may have paraphrased or shortened the FAQ question; AND
-- the requested information, outcome, or action is the same; AND
-- the agency/service context is compatible when relevant.
+Do NOT answer the user.
+Do NOT invent facts.
+Do NOT use any FAQ answer because none is supplied.
 
-Reject the candidate when it merely shares an agency, service, person, place,
-or broad topic with the user's question. In particular, different information
-types are NOT matches: duration vs requirements, eligibility vs procedure,
-location vs processing time, fees vs documents, or how-to vs status.
+Normalize meaning, not wording. Handle:
+- spelling mistakes and missing letters
+- abbreviations
+- English, Filipino, Taglish
+- informal speech
+- grammatical mistakes
+- singular/plural differences
+- indirect questions
+- "how long" / "how many days" / "what timeframe" as the same duration intent when appropriate
+- "what paperwork" / "what documents" / "what do I need to submit" as requirements when appropriate
+- eligibility questions such as "can I", "am I allowed", "do I qualify"
+- procedure questions such as "how do I", "where do I start", "what is the process"
 
-Examples:
-- "How long does DOLE SEnA take?" -> MATCH for a FAQ about the SEnA
-  conciliation period.
-- "Usually, how much time does DOLE give the parties to settle through SEnA?"
-  -> MATCH for that same SEnA duration FAQ.
-- "What documents do I need for SEnA?" -> NO MATCH for a duration FAQ.
-- "Can I file a SEnA request?" -> NO MATCH for a duration FAQ.
-- "Where is the DOLE office?" -> NO MATCH for a duration FAQ.
+Identify:
+- the semantic_question: a concise normalized representation of the user's actual information need
+- intent: the requested information type
+- entities: named programs, services, agencies, acronyms, offices, or other specific subjects
+- constraints: important qualifiers such as tenant farmer, new learner, location, timeframe, etc.
+- language: en or fil
+- confidence: confidence that you understood the question, not whether an FAQ exists
 
-Return ONLY JSON:
-{"match":true}
+IMPORTANT:
+"SEnA", "RSBSA", "NIA", etc. are not interchangeable just because they occur in government FAQs.
+Preserve every meaningful entity and qualifier.
+Do not turn the question into a broad topic such as "government documents".
+
+OUTPUT ONLY JSON:
+{
+  "semantic_question":"...",
+  "intent":"...",
+  "entities":["..."],
+  "constraints":["..."],
+  "language":"en",
+  "confidence":0.95
+}
+PROMPT;
+    }
+
+    private function profileMatchingPrompt(): string
+    {
+        return <<<'PROMPT'
+You are KNOWURLOCAL's AI FAQ retrieval engine.
+
+The application supplies:
+1. the original user question,
+2. an AI-generated semantic profile of that question,
+3. the COMPLETE current FAQ candidate set.
+
+Your ONLY job is to select the existing FAQ that best answers the SAME INFORMATION NEED.
+
+The answer itself is NOT supplied and must never be invented. The application will fetch the approved stored answer after you select an FAQ.
+
+MATCHING RULES:
+- Read every candidate before deciding.
+- Match meaning, not literal wording.
+- Treat ordinary spelling mistakes as noise when context makes the intended meaning clear.
+- Use the semantic profile to understand paraphrases, but always check it against the original user question.
+- Preserve specific entities. If the user asks about SEnA, an RSBSA FAQ is not a match merely because both involve documents or government services.
+- Preserve intent. Duration, requirements, eligibility, procedure, location, fees, status, and other intents are different even within the same program.
+- Preserve qualifiers. "tenant farmer", "farm worker", "does not own land", etc. can distinguish FAQs that otherwise share the same topic.
+- Keywords are supporting evidence, never the deciding factor by themselves.
+- Agency is supporting evidence unless the user's question clearly identifies that agency/program.
+- Prefer a semantically precise FAQ over a generic FAQ with more shared words.
+- A candidate must actually answer the user's question, not merely discuss the same topic.
+- If none genuinely answers it, return null.
+- Do not force a match just because a candidate is the closest available topic.
+
+TYPO/NOISY INPUT:
+Interpret obvious errors such as:
+"dayz" -> days
+"tak" -> take
+"concilliation" -> conciliation
+"documnts" -> documents
+"regster" -> register
+but only when the surrounding sentence supports that interpretation. Do not reject a question simply because several words are misspelled.
+
+RANKING:
+Consider, in order:
+1. exact information need / intent
+2. specific entities and program/service
+3. important qualifiers
+4. agency context
+5. useful keywords
+6. wording similarity
+
+Return the best candidate plus the runner-up confidence so the server can detect close/ambiguous choices.
+
+OUTPUT ONLY JSON:
+{
+  "candidate_index":12,
+  "confidence":0.94,
+  "runner_up_confidence":0.31,
+  "language":"en"
+}
+
+If there is no genuine match:
+{
+  "candidate_index":null,
+  "confidence":0,
+  "runner_up_confidence":0,
+  "language":"en"
+}
+PROMPT;
+    }
+
+    private function recoveryPrompt(): string
+    {
+        return <<<'PROMPT'
+You are the final recovery pass for KNOWURLOCAL FAQ retrieval.
+
+The user may have typed a short, informal, misspelled, or heavily paraphrased
+version of an existing FAQ question. Your job is to recover the correct EXISTING
+FAQ when the semantic meaning is genuinely the same.
+
+Use the original question and semantic profile together. Ignore harmless spelling
+noise such as missing letters, phonetic spellings, repeated/missing characters,
+and informal grammar when the intended meaning is clear. Examples include
+"dayz" for "days", "tenent" for "tenant", "regster" for "register", and
+"concilliation" for "conciliation". Do not require the user to use the FAQ's
+exact wording.
+
+Match the actual information need first: duration must match duration, eligibility
+must match eligibility, requirements must match requirements, procedure must match
+procedure, and so on. Preserve named programs, agencies, and important qualifiers.
+A shared word like "documents", "registration", or "government" is not enough.
+
+This is a recovery pass, not an answer generator. FAQ answers are not supplied.
+If one candidate clearly expresses the same information need, select it even if
+the wording overlap is low. If none genuinely matches, return null.
+
+OUTPUT ONLY JSON:
+{"candidate_index":12,"confidence":0.88,"runner_up_confidence":0.20,"language":"en"}
 or
-{"match":false}
+{"candidate_index":null,"confidence":0,"runner_up_confidence":0,"language":"en"}
 PROMPT;
     }
 
     private function retrievalPrompt(): string
     {
         return <<<'PROMPT'
-You are the FAQ retrieval engine for the KNOWURLOCAL chatbot.
+You are KNOWURLOCAL's fallback semantic FAQ selector.
 
-Your ONLY job is to select the ID of the EXISTING FAQ that best matches the
-user's question. You do not answer the user.
+Select the single existing FAQ that best answers the user's actual question.
+You are not an answer generator. FAQ answers are not supplied to you.
 
-Compare the user's question against ONLY these retrieval fields:
-- English FAQ question
-- Filipino/Taglish FAQ question
-- agency name and abbreviation
-- administrator-provided keywords
-- current agency id, when supplied
+Understand:
+- paraphrases
+- typos
+- English, Filipino, and Taglish
+- abbreviations
+- intent differences
+- specific program/service names
+- important qualifiers
 
-Matching rules:
-1. Match the user's INTENT, not just the same agency, topic, or named service.
-2. Exact and near-exact question matches are strongest.
-3. Understand legitimate paraphrases and natural English, Filipino, and Taglish.
-4. The candidate must answer the SAME specific information request. For example,
-   "How long does SEnA take?" matches a duration FAQ, while "What documents
-   do I need for SEnA?" does NOT match that duration FAQ even though both mention SEnA.
-5. Use agency information to distinguish otherwise similar FAQs.
-6. Keywords support a match; they do not have to be copied verbatim.
-7. Do not match because of a shared agency/service name alone.
-8. Do not match because both questions are generally about labor, registration,
-   requirements, processing, or another broad topic. The requested outcome must match.
-9. If no supplied FAQ actually answers the user's specific request, return null.
-10. Prefer null over a weak or speculative match.
+Do not match merely because of shared words such as "documents", "registration", "government", or an agency name.
+A question about SEnA must not be matched to RSBSA just because both have document requirements.
+A duration question must not be matched to a requirements question merely because both mention the same program.
 
-IMPORTANT: Answer text is NOT provided and must never be generated. The
-application will retrieve the latest published answer from PostgreSQL after
-you return the FAQ id.
+Read ALL candidates. If no FAQ genuinely answers the question, return null.
 
-Return ONLY this JSON object:
-{"faq_id":123,"confidence":0.98,"language":"en"}
-
-faq_id must be one of the supplied FAQ ids or null.
-confidence must be between 0.0 and 1.0.
-language must be "en" or "fil" and describes the user's question language.
-
-No prose outside the JSON object.
+OUTPUT ONLY JSON:
+{"candidate_index":12,"confidence":0.94,"runner_up_confidence":0.30,"language":"en"}
+or
+{"candidate_index":null,"confidence":0,"runner_up_confidence":0,"language":"en"}
 PROMPT;
+    }
+
+    private function decodeResponse(array $response): array
+    {
+        $content = data_get($response, 'choices.0.message.content');
+
+        if (is_array($content)) {
+            $content = collect($content)
+                ->map(fn ($part) => is_string($part) ? $part : (string) data_get($part, 'text', ''))
+                ->implode('');
+        }
+
+        if (!is_string($content) || trim($content) === '') {
+            throw new RuntimeException('FAQ AI returned an empty response.');
+        }
+
+        $content = trim($content);
+        $content = preg_replace('/^```(?:json)?\s*/i', '', $content) ?? $content;
+        $content = preg_replace('/\s*```$/', '', $content) ?? $content;
+        $content = trim($content);
+
+        try {
+            $json = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            // Free routed models occasionally add a short sentence around the
+            // JSON. Recover only the first JSON object; never parse arbitrary
+            // prose as an FAQ decision.
+            $start = strpos($content, '{');
+            $end = strrpos($content, '}');
+            if ($start === false || $end === false || $end <= $start) {
+                throw new RuntimeException('FAQ AI returned invalid JSON.', 0, $e);
+            }
+
+            try {
+                $json = json_decode(
+                    substr($content, $start, $end - $start + 1),
+                    true,
+                    512,
+                    JSON_THROW_ON_ERROR
+                );
+            } catch (\JsonException $inner) {
+                throw new RuntimeException('FAQ AI returned invalid JSON.', 0, $inner);
+            }
+        }
+
+        if (!is_array($json)) {
+            throw new RuntimeException('FAQ AI returned invalid JSON.');
+        }
+
+        return $json;
+    }
+
+    private function clean(string $value): string
+    {
+        return trim(preg_replace('/\s+/u', ' ', $value) ?? '');
+    }
+
+    private function limit(string $value, int $max): string
+    {
+        $value = trim($value);
+
+        return mb_strlen($value, 'UTF-8') > $max
+            ? mb_substr($value, 0, $max, 'UTF-8') . '…'
+            : $value;
+    }
+
+    private function normalize(string $value): string
+    {
+        $value = mb_strtolower(trim($value), 'UTF-8');
+        $value = function_exists('transliterator_transliterate')
+            ? (transliterator_transliterate('Any-Latin; Latin-ASCII', $value) ?: $value)
+            : $value;
+        $value = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $value) ?? '';
+
+        return trim(preg_replace('/\s+/u', ' ', $value) ?? '');
+    }
+
+    private function tokens(string $value): array
+    {
+        $normalized = $this->normalize($value);
+        if ($normalized === '') {
+            return [];
+        }
+
+        $stop = [
+            'the','a','an','and','are','can','could','do','does','for','from','how','i','in','is','it','me','my','of','on','or','to','what','when','where','which','who','with','would','you','your',
+            'ang','ano','ay','ba','bakit','dahil','gaano','ito','iyan','iyon','ko','kung','mga','mo','na','ng','ni','nito','natin','para','po','opo','pwede','saan','sa','si','sila','at','o','may','mag','pag',
+        ];
+
+        $tokens = preg_split('/\s+/u', $normalized) ?: [];
+        $tokens = array_filter($tokens, static fn (string $token): bool => mb_strlen($token, 'UTF-8') >= 3 && !in_array($token, $stop, true));
+
+        return array_values(array_unique($tokens));
+    }
+
+    private function fieldSimilarity(string $source, string $candidate): float
+    {
+        $left = $this->tokens($source);
+        $right = $this->tokens($candidate);
+
+        if ($left === [] || $right === []) {
+            return 0.0;
+        }
+
+        $intersection = count(array_intersect($left, $right));
+        $union = count(array_unique(array_merge($left, $right)));
+        $jaccard = $union > 0 ? $intersection / $union : 0.0;
+
+        $fuzzy = 0.0;
+        foreach ($left as $token) {
+            $best = 0.0;
+            foreach ($right as $candidateToken) {
+                $max = max(strlen($token), strlen($candidateToken));
+                if ($max === 0) {
+                    continue;
+                }
+                $best = max($best, 1 - levenshtein($token, $candidateToken) / $max);
+            }
+            $fuzzy += $best;
+        }
+
+        $fuzzy /= count($left);
+
+        return max($jaccard, $fuzzy * 0.8 + $jaccard * 0.2);
     }
 }

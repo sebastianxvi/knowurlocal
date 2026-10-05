@@ -38,10 +38,10 @@
                 </summary>
                 <div class="analytics-export-dropdown">
                     <a href="{{ route('admin.analytics.export', ['period' => $period, 'month' => $selectedMonth]) }}" target="_blank" rel="noopener">
-                        <i class="ph-light ph-file-pdf"></i><span><strong>Analytics report</strong><small>{{ $periodLabel }} selected period</small></span>
+                        <i class="ph-light ph-file-pdf"></i><span><strong>Analytics PDF</strong><small>{{ $periodLabel }} selected period</small></span>
                     </a>
                     <a href="{{ route('admin.report.full', ['period' => $period, 'month' => $selectedMonth]) }}" target="_blank" rel="noopener">
-                        <i class="ph-light ph-files"></i><span><strong>Full administrative report</strong><small>Dashboard + {{ $periodLabel }} analytics</small></span>
+                        <i class="ph-light ph-files"></i><span><strong>Full PDF report</strong><small>Dashboard + {{ $periodLabel }} analytics</small></span>
                     </a>
                 </div>
             </details>

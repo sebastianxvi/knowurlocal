@@ -41,7 +41,7 @@ return [
     // Same model currently used by the public chatbot.
     'model' => env(
         'OPENROUTER_MODEL',
-        'deepseek/deepseek-chat'
+        'openrouter/free'
     ),
 ],
 

@@ -46,7 +46,7 @@
             <div class="support-filter-field support-search-field">
                 <label for="user-search" class="sr-only">Search users</label>
                 <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
-                <input type="search" id="user-search" name="search" placeholder="Search user..." value="{{ request('search') }}" autocomplete="off">
+                <input type="search" id="user-search" name="search" placeholder="Search name or email..." value="{{ request('search') }}" autocomplete="off">
             </div>
 
             <div class="support-filter-field">

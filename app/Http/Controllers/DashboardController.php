@@ -41,7 +41,9 @@ class DashboardController extends Controller
      */
     public function exportDashboardPdf()
     {
-        $pdf = Pdf::loadView('admin.reports.dashboard', $this->dashboardData());
+        $pdf = $this->prepareReportPdf(
+            Pdf::loadView('admin.reports.dashboard', $this->dashboardData())
+        );
 
         return $pdf->download(
             'KNOWURLOCAL_Dashboard_Summary_' . now()->format('Y-m-d') . '.pdf'
@@ -57,7 +59,9 @@ class DashboardController extends Controller
         $month = request()->query('month');
         $data = $this->analyticsData($period, $month);
 
-        $pdf = Pdf::loadView('admin.reports.analytics', $data);
+        $pdf = $this->prepareReportPdf(
+            Pdf::loadView('admin.reports.analytics', $data)
+        );
 
         return $pdf->download(
             'KNOWURLOCAL_Analytics_' . ($data['period'] === 'month' ? $data['selectedMonth'] : $data['period']) . '_' . now()->format('Y-m-d') . '.pdf'
@@ -76,11 +80,48 @@ class DashboardController extends Controller
         );
 
         $data = array_merge($this->dashboardData(), $analytics);
-        $pdf = Pdf::loadView('admin.reports.full', $data);
+        $pdf = $this->prepareReportPdf(
+            Pdf::loadView('admin.reports.full', $data)
+        );
 
         return $pdf->download(
             'KNOWURLOCAL_Full_Report_' . now()->format('Y-m-d') . '.pdf'
         );
+    }
+
+    /**
+     * Apply consistent print settings and a lightweight page footer to every
+     * administrative PDF. Keeping this in one place prevents the dashboard,
+     * analytics, and full reports from drifting visually.
+     */
+    private function prepareReportPdf($pdf)
+    {
+        $pdf->setPaper('a4', 'portrait');
+
+        $dompdf = $pdf->getDomPDF();
+        $font = $dompdf->getFontMetrics()->getFont('DejaVu Sans', 'normal');
+
+        $dompdf->render();
+
+        $canvas = $dompdf->getCanvas();
+        $canvas->page_text(
+            32,
+            815,
+            'KNOWURLOCAL  ·  Administrative report',
+            $font,
+            6.5,
+            [0.48, 0.54, 0.63]
+        );
+        $canvas->page_text(
+            500,
+            815,
+            'Page {PAGE_NUM} of {PAGE_COUNT}',
+            $font,
+            6.5,
+            [0.48, 0.54, 0.63]
+        );
+
+        return $pdf;
     }
 
     /**
@@ -621,6 +662,7 @@ class DashboardController extends Controller
             'clarificationQuestions',
             'ruleMatches',
             'semanticMatches',
+            'similarityMatches',
             'popularFaqs',
             'popularAgencies',
             'collaborationOpen',

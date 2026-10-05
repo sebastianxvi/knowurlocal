@@ -155,6 +155,7 @@
 </script>
 
 <script src="{{ asset('jsfiles/admin/admin-shell.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/admin-filter-bar.js') }}?v={{ file_exists(public_path('jsfiles/admin/admin-filter-bar.js')) ? filemtime(public_path('jsfiles/admin/admin-filter-bar.js')) : time() }}"></script>
 <script src="{{ asset('jsfiles/admin/admin-notifications.js') }}?v={{ file_exists(public_path('jsfiles/admin/admin-notifications.js')) ? filemtime(public_path('jsfiles/admin/admin-notifications.js')) : time() }}"></script>
 
 

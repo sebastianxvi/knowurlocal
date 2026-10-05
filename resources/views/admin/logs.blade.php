@@ -44,7 +44,7 @@
             <div class="support-filter-field support-search-field">
                 <label for="logs-search" class="sr-only">Search logs</label>
                 <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
-                <input type="search" id="logs-search" name="search" value="{{ request('search') }}" placeholder="Search user or action..." autocomplete="off">
+                <input type="search" id="logs-search" name="search" value="{{ request('search') }}" placeholder="Search user, agency, action, or details..." autocomplete="off">
             </div>
 
             <div class="support-filter-field">

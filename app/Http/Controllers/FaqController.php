@@ -541,22 +541,23 @@ public function index(Request $request)
      */
     if ($request->filled('search')) {
 
-        $search = $request->input('search');
+        $search = trim((string) $request->input('search'));
 
-        $query->where(function ($q) use ($search) {
+        if ($search !== '') {
+            $like = '%' . $search . '%';
 
-            $q->where(
-                'question',
-                'LIKE',
-                "%{$search}%"
-            )
+            $query->where(function ($q) use ($like) {
 
-            ->orWhere(
-                'answer',
-                'LIKE',
-                "%{$search}%"
-            );
-        });
+                $q->where('question', 'LIKE', $like)
+                    ->orWhere('answer', 'LIKE', $like)
+                    ->orWhere('keywords', 'LIKE', $like)
+                    ->orWhereHas('agency', function ($agencyQuery) use ($like) {
+                        $agencyQuery
+                            ->where('agency_name', 'LIKE', $like)
+                            ->orWhere('agency_abbreviation', 'LIKE', $like);
+                    });
+            });
+        }
     }
 
 

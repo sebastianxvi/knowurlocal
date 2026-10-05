@@ -133,21 +133,33 @@ if ($statusFilter !== '') {
 
 /*
  * =====================================================
- * 🔎 QUESTION SEARCH
+ * 🔎 SUPPORT REQUEST SEARCH
  * =====================================================
  *
- * Search only the Support Request question.
+ * Search across the request question, answer, user, and agency.
  */
 $search = trim(
-    $request->input('search', '')
+    (string) $request->input('search', '')
 );
 
 if ($search !== '') {
-    $query->where(
-        'question',
-        'like',
-        '%' . $search . '%'
-    );
+    $like = '%' . $search . '%';
+
+    $query->where(function ($q) use ($like) {
+        $q->where('question', 'LIKE', $like)
+            ->orWhere('answer', 'LIKE', $like)
+            ->orWhereHas('user', function ($userQuery) use ($like) {
+                $userQuery
+                    ->where('first_name', 'LIKE', $like)
+                    ->orWhere('last_name', 'LIKE', $like)
+                    ->orWhere('email', 'LIKE', $like);
+            })
+            ->orWhereHas('agency', function ($agencyQuery) use ($like) {
+                $agencyQuery
+                    ->where('agency_name', 'LIKE', $like)
+                    ->orWhere('agency_abbreviation', 'LIKE', $like);
+            });
+    });
 }
 
        /*

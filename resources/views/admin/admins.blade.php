@@ -54,7 +54,7 @@
             <div class="support-filter-field support-search-field">
                 <label for="admin-search" class="sr-only">Search administrators</label>
                 <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
-                <input type="search" id="admin-search" name="search" placeholder="Search admin..." value="{{ request('search') }}" autocomplete="off">
+                <input type="search" id="admin-search" name="search" placeholder="Search name or email..." value="{{ request('search') }}" autocomplete="off">
             </div>
 
             <div class="support-filter-field">

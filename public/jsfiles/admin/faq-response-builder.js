@@ -77,8 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             return (
-                url.pathname.startsWith('/admin/support-requests/')
-                || url.pathname.startsWith('/faqs/')
+                /^\/admin\/support-requests\/[^/]+\/responses\/[^/]+\/components\/[^/]+\/attachment$/.test(url.pathname)
+                || /^\/admin\/faqs\/\d+\/response-attachments\/\d+$/.test(url.pathname)
                 || url.pathname.startsWith('/storage/')
             );
         } catch {
@@ -182,6 +182,18 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(item);
     };
 
+    const buildFaqAttachmentUrl = (faqId, componentIndex) => {
+        const template = window.FAQ_ATTACHMENT_URL_TEMPLATE;
+
+        if (!template || faqId === null || componentIndex === null) {
+            return '';
+        }
+
+        return template
+            .replace('__FAQ_ID__', encodeURIComponent(String(faqId)))
+            .replace('__COMPONENT_INDEX__', encodeURIComponent(String(componentIndex)));
+    };
+
     const createAttachment = (type, values = {}, readonly = false, faqId = null) => {
         const index = counter++;
         const componentIndex = Number.isInteger(values.componentIndex)
@@ -192,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const label = values.label ?? '';
         const attachmentUrl = values.attachment_url
             || (faqId && ['image', 'file'].includes(type)
-                ? `/faqs/${encodeURIComponent(faqId)}/response-attachments/${componentIndex}`
+                ? buildFaqAttachmentUrl(faqId, componentIndex)
                 : '');
         const hasExistingAttachment = Boolean(
             content

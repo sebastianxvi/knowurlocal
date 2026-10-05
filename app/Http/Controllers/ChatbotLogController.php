@@ -186,6 +186,11 @@ class ChatbotLogController extends Controller
                                 'last_name',
                                 'LIKE',
                                 "%{$search}%"
+                            )
+                            ->orWhere(
+                                'email',
+                                'LIKE',
+                                "%{$search}%"
                             );
                     })
 
@@ -194,11 +199,9 @@ class ChatbotLogController extends Controller
                      */
                     ->orWhereHas('agency', function ($agencyQuery) use ($search) {
 
-                        $agencyQuery->where(
-                            'agency_name',
-                            'LIKE',
-                            "%{$search}%"
-                        );
+                        $agencyQuery
+                            ->where('agency_name', 'LIKE', "%{$search}%")
+                            ->orWhere('agency_abbreviation', 'LIKE', "%{$search}%");
                     })
 
                     /*

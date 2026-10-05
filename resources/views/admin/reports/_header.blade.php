@@ -3,7 +3,7 @@
         <tr>
             <td class="report-brand-cell">
                 <div class="brand">KNOWURLOCAL</div>
-                <div class="brand-subtitle">ADMIN WORKSPACE</div>
+                <div class="brand-subtitle">ADMINISTRATIVE REPORT</div>
             </td>
             <td class="report-meta-cell">
                 <div class="report-type">{{ $reportTitle }}</div>

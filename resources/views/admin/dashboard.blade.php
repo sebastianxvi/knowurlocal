@@ -2,302 +2,259 @@
 
 @section('title', 'KNOWURLOCAL | ' . ucfirst(auth()->user()->role) . ' Module')
 @section('page-title', 'Dashboard')
-@section('page-subtitle', 'A brief operational report for KNOWURLOCAL')
+@section('page-subtitle', 'A clearer view of what is happening across KNOWURLOCAL')
 
 @section('content')
 
 @push('styles')
-<link
-    rel="stylesheet"
-    href="{{ asset('cssfiles/admin/dashboard.css') }}"
->
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/dashboard.css') }}">
 @endpush
+
+@php
+    $agencyCompleteness = $totalAgencies > 0 ? round(($completeAgencies / $totalAgencies) * 100) : 0;
+    $faqCompleteness = $totalFaqs > 0 ? round(($completeFaqs / $totalFaqs) * 100) : 0;
+    $feedbackTotal = $faqFeedbackHelpful + $faqFeedbackNotHelpful;
+    $feedbackPositiveRate = $feedbackTotal > 0 ? round(($faqFeedbackHelpful / $feedbackTotal) * 100) : 0;
+@endphp
 
 <div class="dashboard-content" data-collaboration-realtime="true" data-admin-id="{{ auth()->id() }}">
 
     {{-- =====================================================
-         REPORT HEADER
+         WELCOME / SNAPSHOT
          ===================================================== --}}
-    <section class="dashboard-report-header">
-        <div class="dashboard-report-heading">
-            <span class="eyebrow">Operational report</span>
-            <h2>System at a glance</h2>
+    <section class="dashboard-hero">
+        <div class="dashboard-hero-copy">
+            <span class="eyebrow">ADMIN WORKSPACE</span>
+            <h2>Know what needs attention.</h2>
             <p>
-                A concise view of the directory, knowledge base, citizens,
-                and work that needs attention.
+                A simple snapshot of your directory, FAQs, citizen requests, and shared team work.
+                Use the cards below to jump straight to the area that needs you.
             </p>
         </div>
 
         <details class="admin-export-menu">
-            <summary class="dashboard-export-button" aria-label="Export report">
+            <summary class="dashboard-export-button" aria-label="Export dashboard report">
                 <i class="ph-light ph-export" aria-hidden="true"></i>
                 <span>Export</span>
                 <i class="ph-light ph-caret-down export-caret" aria-hidden="true"></i>
             </summary>
             <div class="admin-export-dropdown">
                 <a href="{{ route('admin.dashboard.export') }}" target="_blank" rel="noopener">
-                    <i class="ph-light ph-file-pdf"></i>
+                    <i class="ph-light ph-file-pdf" aria-hidden="true"></i>
                     <span><strong>Dashboard summary</strong><small>Current operational snapshot</small></span>
                 </a>
                 <a href="{{ route('admin.report.full') }}" target="_blank" rel="noopener">
-                    <i class="ph-light ph-files"></i>
-                    <span><strong>Full administrative report</strong><small>Dashboard + 7-day analytics</small></span>
+                    <i class="ph-light ph-files" aria-hidden="true"></i>
+                    <span><strong>Full PDF report</strong><small>Dashboard + analytics</small></span>
                 </a>
             </div>
         </details>
     </section>
 
-
     {{-- =====================================================
-         CORE SNAPSHOT
+         CORE METRICS
          ===================================================== --}}
-    <section class="dashboard-section dashboard-snapshot-section">
-        <div class="dashboard-snapshot-grid">
+    <section class="dashboard-kpi-grid" aria-label="System overview">
 
-            <a
-                href="{{ route('admin.nga') }}"
-                class="dashboard-metric dashboard-metric-agencies"
-            >
-                <span class="dashboard-metric-icon">
-                    <i class="ph-light ph-buildings" aria-hidden="true"></i>
-                </span>
+        <a href="{{ route('admin.support.requests', ['status' => 'pending']) }}"
+           class="dashboard-kpi dashboard-kpi-support {{ $pendingInquiries > 0 ? 'is-attention' : '' }}"
+           title="Open support requests to see which citizens are still waiting for a response.">
+            <span class="dashboard-kpi-icon"><i class="ph-light ph-chat-circle-text" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy">
+                <span class="dashboard-kpi-label">Citizen requests</span>
+                <strong>{{ number_format($totalInquiries) }}</strong>
+                <small>
+                    @if($pendingInquiries > 0)
+                        {{ number_format($pendingInquiries) }} still waiting for a response
+                    @else
+                        No requests currently waiting for a response
+                    @endif
+                </small>
+            </span>
+            <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
 
-                <span class="dashboard-metric-copy">
-                    <span class="dashboard-metric-label">Agencies</span>
-                    <strong>{{ number_format($totalAgencies) }}</strong>
-                    <small>
-                        {{ number_format($totalNGA) }} NGA ·
-                        {{ number_format($totalNGO) }} NGO
-                    </small>
-                </span>
+        <a href="{{ route('admin.nga') }}"
+           class="dashboard-kpi"
+           title="Open agency management to review the directory and agency information.">
+            <span class="dashboard-kpi-icon is-blue"><i class="ph-light ph-buildings" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy">
+                <span class="dashboard-kpi-label">Agencies</span>
+                <strong>{{ number_format($totalAgencies) }}</strong>
+                <small>{{ number_format($agencyCompleteness) }}% of agency profiles are complete</small>
+            </span>
+            <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
 
-                <i class="ph-light ph-arrow-up-right dashboard-metric-arrow" aria-hidden="true"></i>
-            </a>
+        <a href="{{ route('faqs.index') }}"
+           class="dashboard-kpi"
+           title="Open FAQs to maintain answers used by citizens and the chatbot.">
+            <span class="dashboard-kpi-icon is-violet"><i class="ph-light ph-book-open-text" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy">
+                <span class="dashboard-kpi-label">FAQs</span>
+                <strong>{{ number_format($totalFaqs) }}</strong>
+                <small>{{ number_format($faqCompleteness) }}% complete · {{ number_format($incompleteFaqs) }} need attention</small>
+            </span>
+            <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
 
+        <a href="{{ route('admin.users') }}"
+           class="dashboard-kpi"
+           title="Open user management to view registered citizen accounts.">
+            <span class="dashboard-kpi-icon is-teal"><i class="ph-light ph-users" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy">
+                <span class="dashboard-kpi-label">Citizen accounts</span>
+                <strong>{{ number_format($totalUsers) }}</strong>
+                <small>Registered public users</small>
+            </span>
+            <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
 
-            <a
-                href="{{ route('faqs.index') }}"
-                class="dashboard-metric dashboard-metric-faqs"
-            >
-                <span class="dashboard-metric-icon">
-                    <i class="ph-light ph-book-open-text" aria-hidden="true"></i>
-                </span>
-
-                <span class="dashboard-metric-copy">
-                    <span class="dashboard-metric-label">FAQs</span>
-                    <strong>{{ number_format($totalFaqs) }}</strong>
-                    <small>
-                        {{ number_format($completeFaqs) }} complete ·
-                        {{ number_format($incompleteFaqs) }} need attention
-                    </small>
-                </span>
-
-                <i class="ph-light ph-arrow-up-right dashboard-metric-arrow" aria-hidden="true"></i>
-            </a>
-
-
-            <a
-                href="{{ route('admin.users') }}"
-                class="dashboard-metric dashboard-metric-users"
-            >
-                <span class="dashboard-metric-icon">
-                    <i class="ph-light ph-users" aria-hidden="true"></i>
-                </span>
-
-                <span class="dashboard-metric-copy">
-                    <span class="dashboard-metric-label">Public users</span>
-                    <strong>{{ number_format($totalUsers) }}</strong>
-                    <small>Registered citizen accounts</small>
-                </span>
-
-                <i class="ph-light ph-arrow-up-right dashboard-metric-arrow" aria-hidden="true"></i>
-            </a>
-
-
-            <a
-                href="{{ route('admin.support.requests', ['status' => 'pending']) }}"
-                class="dashboard-metric dashboard-metric-support {{ $pendingInquiries > 0 ? 'is-attention' : '' }}"
-            >
-                <span class="dashboard-metric-icon">
-                    <i class="ph-light ph-chat-circle-text" aria-hidden="true"></i>
-                </span>
-
-                <span class="dashboard-metric-copy">
-                    <span class="dashboard-metric-label">Pending inquiries</span>
-                    <strong>{{ number_format($pendingInquiries) }}</strong>
-                    <small>
-                        {{ number_format($answeredInquiries) }} answered
-                    </small>
-                </span>
-
-                <i class="ph-light ph-arrow-up-right dashboard-metric-arrow" aria-hidden="true"></i>
-            </a>
-
-        </div>
     </section>
 
-
     {{-- =====================================================
-         NEEDS ATTENTION
+         ATTENTION + HEALTH
          ===================================================== --}}
-    <section class="dashboard-section">
+    <section class="dashboard-section dashboard-priority-section">
 
-        <div class="section-heading">
-            <div class="section-heading-main">
-                <div class="section-heading-icon attention">
-                    <i class="ph-light ph-warning-circle" aria-hidden="true"></i>
+        <div class="dashboard-section-heading">
+            <div>
+                <span class="eyebrow">WHAT NEEDS YOUR ATTENTION?</span>
+                <h2>Priority items</h2>
+                <p>Start here when you want to know what may need action.</p>
+            </div>
+            <span class="dashboard-count-badge">
+                {{ number_format($totalNeedsAttention) }} {{ $totalNeedsAttention === 1 ? 'item' : 'items' }}
+            </span>
+        </div>
+
+        <div class="dashboard-priority-layout">
+
+            <div class="dashboard-priority-card">
+                <div class="dashboard-card-heading">
+                    <div class="dashboard-card-heading-icon is-warning">
+                        <i class="ph-light ph-warning-circle" aria-hidden="true"></i>
+                    </div>
+                    <div>
+                        <h3>Needs action</h3>
+                        <p>These items may be waiting for an administrator.</p>
+                    </div>
                 </div>
 
-                <div class="section-heading-copy">
-                    <span class="eyebrow">Attention</span>
-                    <h2>Needs attention</h2>
-                    <p>Items that may require an administrator's action.</p>
+                <div class="dashboard-attention-list">
+                    @if($pendingInquiries > 0)
+                        <a href="{{ route('admin.support.requests', ['status' => 'pending']) }}" class="dashboard-attention-item is-warning">
+                            <span class="dashboard-attention-icon"><i class="ph-light ph-clock" aria-hidden="true"></i></span>
+                            <span class="dashboard-attention-copy">
+                                <strong>{{ number_format($pendingInquiries) }} {{ $pendingInquiries === 1 ? 'citizen request is' : 'citizen requests are' }} waiting</strong>
+                                <small>Someone has submitted a request and has not received an answer yet.</small>
+                            </span>
+                            <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    @endif
+
+                    @if($incompleteAgencies > 0)
+                        <a href="{{ route('admin.nga', ['filter' => 'incomplete']) }}" class="dashboard-attention-item is-info">
+                            <span class="dashboard-attention-icon"><i class="ph-light ph-buildings" aria-hidden="true"></i></span>
+                            <span class="dashboard-attention-copy">
+                                <strong>{{ number_format($incompleteAgencies) }} {{ $incompleteAgencies === 1 ? 'agency profile is' : 'agency profiles are' }} incomplete</strong>
+                                <small>Some directory information is missing or not yet filled in.</small>
+                            </span>
+                            <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    @endif
+
+                    @if($faqFeedbackOutstanding > 0)
+                        <a href="{{ route('faqs.index', ['feedback' => 'needs_review']) }}" class="dashboard-attention-item is-warning">
+                            <span class="dashboard-attention-icon"><i class="ph-light ph-thumbs-down" aria-hidden="true"></i></span>
+                            <span class="dashboard-attention-copy">
+                                <strong>{{ number_format($faqFeedbackOutstanding) }} {{ $faqFeedbackOutstanding === 1 ? 'FAQ needs' : 'FAQs need' }} review</strong>
+                                <small>Citizen feedback suggests these answers may need another look.</small>
+                            </span>
+                            <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    @endif
+
+                    @if($incompleteFaqs > 0)
+                        <a href="{{ route('faqs.index', ['filter' => 'missing_translation']) }}" class="dashboard-attention-item is-info">
+                            <span class="dashboard-attention-icon"><i class="ph-light ph-translate" aria-hidden="true"></i></span>
+                            <span class="dashboard-attention-copy">
+                                <strong>{{ number_format($incompleteFaqs) }} {{ $incompleteFaqs === 1 ? 'FAQ needs' : 'FAQs need' }} completion</strong>
+                                <small>Some required answer or Filipino/Taglish content is missing.</small>
+                            </span>
+                            <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    @endif
+
+                    @if($totalNeedsAttention === 0)
+                        <div class="dashboard-attention-empty">
+                            <span class="dashboard-attention-icon is-success"><i class="ph-light ph-check-circle" aria-hidden="true"></i></span>
+                            <div>
+                                <strong>Nothing urgent right now</strong>
+                                <small>No immediate support or data-quality issues were detected.</small>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
 
-            <span class="dashboard-section-count">
-                {{ number_format($totalNeedsAttention) }} items
-            </span>
-        </div>
-
-
-        <div class="dashboard-attention-list">
-
-            @if($pendingInquiries > 0)
-                <a
-                    href="{{ route('admin.support.requests', ['status' => 'pending']) }}"
-                    class="dashboard-attention-item is-warning"
-                >
-                    <span class="dashboard-attention-icon">
-                        <i class="ph-light ph-clock" aria-hidden="true"></i>
-                    </span>
-
-                    <span class="dashboard-attention-copy">
-                        <strong>
-                            {{ number_format($pendingInquiries) }}
-                            {{ $pendingInquiries === 1 ? 'inquiry' : 'inquiries' }}
-                            awaiting response
-                        </strong>
-                        <small>Citizens are waiting for an administrator.</small>
-                    </span>
-
-                    <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
-                </a>
-            @endif
-
-
-            @if($incompleteAgencies > 0)
-                <a
-                    href="{{ route('admin.nga', ['filter' => 'incomplete']) }}"
-                    class="dashboard-attention-item is-info"
-                >
-                    <span class="dashboard-attention-icon">
-                        <i class="ph-light ph-buildings" aria-hidden="true"></i>
-                    </span>
-
-                    <span class="dashboard-attention-copy">
-                        <strong>
-                            {{ number_format($incompleteAgencies) }}
-                            {{ $incompleteAgencies === 1 ? 'agency record' : 'agency records' }}
-                            need attention
-                        </strong>
-                        <small>Required directory information is incomplete.</small>
-                    </span>
-
-                    <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
-                </a>
-            @endif
-
-
-            @if($faqFeedbackOutstanding > 0)
-                <a
-                    href="{{ route('faqs.index', ['feedback' => 'needs_review']) }}"
-                    class="dashboard-attention-item is-warning"
-                >
-                    <span class="dashboard-attention-icon">
-                        <i class="ph-light ph-thumbs-down" aria-hidden="true"></i>
-                    </span>
-                    <span class="dashboard-attention-copy">
-                        <strong>{{ number_format($faqFeedbackOutstanding) }} {{ $faqFeedbackOutstanding === 1 ? 'FAQ needs' : 'FAQs need' }} review</strong>
-                        <small>Ratings are aggregated per FAQ; individual ratings do not create separate tasks.</small>
-                    </span>
-                    <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
-                </a>
-            @endif
-
-            @if($incompleteFaqs > 0)
-                <a
-                    href="{{ route('faqs.index', ['filter' => 'missing_translation']) }}"
-                    class="dashboard-attention-item is-warning"
-                >
-                    <span class="dashboard-attention-icon">
-                        <i class="ph-light ph-translate" aria-hidden="true"></i>
-                    </span>
-
-                    <span class="dashboard-attention-copy">
-                        <strong>
-                            {{ number_format($incompleteFaqs) }}
-                            {{ $incompleteFaqs === 1 ? 'FAQ needs' : 'FAQs need' }}
-                            translation
-                        </strong>
-                        <small>Filipino or Taglish content is incomplete.</small>
-                    </span>
-
-                    <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
-                </a>
-            @endif
-
-
-            @if($totalNeedsAttention === 0)
-                <div class="dashboard-attention-item is-success">
-                    <span class="dashboard-attention-icon">
-                        <i class="ph-light ph-check-circle" aria-hidden="true"></i>
-                    </span>
-
-                    <span class="dashboard-attention-copy">
-                        <strong>Everything looks good</strong>
-                        <small>No immediate data-management issues were detected.</small>
-                    </span>
+            <div class="dashboard-health-card">
+                <div class="dashboard-card-heading">
+                    <div class="dashboard-card-heading-icon is-blue">
+                        <i class="ph-light ph-chart-donut" aria-hidden="true"></i>
+                    </div>
+                    <div>
+                        <h3>Information health</h3>
+                        <p>How complete the information is behind the public service.</p>
+                    </div>
                 </div>
-            @endif
+
+                <div class="dashboard-health-list">
+                    <a href="{{ route('admin.nga') }}" class="dashboard-health-row" title="Agency profiles that contain the required directory information.">
+                        <span class="dashboard-health-row-top">
+                            <span>Agency profiles</span>
+                            <strong>{{ number_format($agencyCompleteness) }}%</strong>
+                        </span>
+                        <span class="dashboard-progress"><span style="width: {{ $agencyCompleteness }}%"></span></span>
+                        <small>{{ number_format($completeAgencies) }} complete · {{ number_format($incompleteAgencies) }} need attention</small>
+                    </a>
+
+                    <a href="{{ route('faqs.index') }}" class="dashboard-health-row" title="FAQs with the required question, answer, agency, and language information.">
+                        <span class="dashboard-health-row-top">
+                            <span>FAQ information</span>
+                            <strong>{{ number_format($faqCompleteness) }}%</strong>
+                        </span>
+                        <span class="dashboard-progress is-violet"><span style="width: {{ $faqCompleteness }}%"></span></span>
+                        <small>{{ number_format($completeFaqs) }} complete · {{ number_format($incompleteFaqs) }} need attention</small>
+                    </a>
+
+                    <a href="{{ route('faqs.index') }}" class="dashboard-health-row" title="How citizens have rated FAQ answers that received feedback.">
+                        <span class="dashboard-health-row-top">
+                            <span>Positive FAQ feedback</span>
+                            <strong>{{ number_format($feedbackPositiveRate) }}%</strong>
+                        </span>
+                        <span class="dashboard-progress is-teal"><span style="width: {{ $feedbackPositiveRate }}%"></span></span>
+                        <small>{{ number_format($faqFeedbackHelpful) }} helpful · {{ number_format($faqFeedbackNotHelpful) }} not helpful</small>
+                    </a>
+                </div>
+            </div>
 
         </div>
-
-        <a href="{{ route('faqs.index') }}" class="dashboard-feedback-summary">
-            <span class="dashboard-feedback-summary-icon"><i class="ph-light ph-chat-centered-text" aria-hidden="true"></i></span>
-            <span class="dashboard-feedback-summary-copy">
-                <strong>FAQ answer feedback</strong>
-                <small>{{ number_format($faqFeedbackHelpful) }} likes · {{ number_format($faqFeedbackNotHelpful) }} dislikes · {{ number_format($faqFeedbackNeedsReview) }} FAQs need review</small>
-            </span>
-            <span class="dashboard-feedback-summary-action">Manage FAQs <i class="ph-light ph-arrow-right" aria-hidden="true"></i></span>
-        </a>
     </section>
-
 
     {{-- =====================================================
          TEAM COLLABORATION
          ===================================================== --}}
     <section class="dashboard-section" id="team-collaboration">
 
-        <div class="section-heading">
-            <div class="section-heading-main">
-                <div class="section-heading-icon">
-                    <i class="ph-light ph-users-three" aria-hidden="true"></i>
-                </div>
-
-                <div class="section-heading-copy">
-                    <span class="eyebrow">Team collaboration</span>
-                    <h2>Shared work</h2>
-                    <p>Handoffs and review requests between administrators.</p>
-                </div>
+        <div class="dashboard-section-heading">
+            <div>
+                <span class="eyebrow">TEAM WORK</span>
+                <h2>What your team is working on</h2>
+                <p>Handoffs, reviews, and assistance requests between administrators.</p>
             </div>
 
-            <button
-                type="button"
-                class="dashboard-collaboration-add"
-                id="open-collaboration-modal"
-                title="Create collaboration task"
-            >
+            <button type="button" class="dashboard-collaboration-add" id="open-collaboration-modal" title="Create a shared task">
                 <i class="ph-light ph-plus" aria-hidden="true"></i>
                 <span>New task</span>
             </button>
@@ -306,7 +263,7 @@
         <div class="dashboard-collaboration-summary">
             <div class="dashboard-collaboration-stat">
                 <strong>{{ number_format($collaborationOpenCount) }}</strong>
-                <span>open</span>
+                <span>open tasks</span>
             </div>
             <div class="dashboard-collaboration-stat is-primary">
                 <strong>{{ number_format($collaborationYourActionCount) }}</strong>
@@ -339,8 +296,7 @@
                     <div class="dashboard-collaboration-item-copy">
                         <strong>{{ $task->title }}</strong>
                         <small>
-                            {{ $task->task_type_label }} ·
-                            {{ $creatorName }} → {{ $assigneeName }}
+                            {{ $task->task_type_label }} · {{ $creatorName }} → {{ $assigneeName }}
                             @if($task->target_label_snapshot)
                                 · {{ $task->target_module_label }}: {{ $task->target_label }}
                             @endif
@@ -473,29 +429,22 @@
     </div>
 
     {{-- =====================================================
-         ANALYTICS LINK
+         ANALYTICS
          ===================================================== --}}
     <section class="dashboard-section dashboard-analytics-section">
-
-        <a
-            href="{{ route('admin.analytics') }}"
-            class="dashboard-analytics-link"
-        >
+        <a href="{{ route('admin.analytics') }}" class="dashboard-analytics-link">
             <span class="dashboard-analytics-icon">
                 <i class="ph-light ph-chart-line-up" aria-hidden="true"></i>
             </span>
-
             <span class="dashboard-analytics-copy">
-                <span class="eyebrow">Detailed analytics</span>
-                <strong>Open the full operational report</strong>
-                <small>
-                    Trends, response performance, chatbot metrics, and knowledge gaps.
-                </small>
+                <span class="eyebrow">GO DEEPER</span>
+                <strong>Explore detailed analytics</strong>
+                <small>See trends, response performance, chatbot coverage, and where the knowledge base may need improvement.</small>
             </span>
-
-            <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
+            <span class="dashboard-analytics-action">
+                Open analytics <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
+            </span>
         </a>
-
     </section>
 
 </div>

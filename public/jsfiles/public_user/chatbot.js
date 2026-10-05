@@ -604,7 +604,7 @@ function addMessage(
     isHTML = false
 ){
 
-    let message =
+    const message =
         document.createElement("div");
 
     message.classList.add(
@@ -620,7 +620,7 @@ function addMessage(
 
     }
 
-    let bubble =
+    const bubble =
         document.createElement("div");
 
     bubble.classList.add(
@@ -661,6 +661,91 @@ function addMessage(
 
     return message;
 
+}
+
+
+/*
+ * Show the assistant's loading state without putting it inside a message
+ * bubble. Only actual user and assistant responses receive bubble styling.
+ */
+function addTypingIndicator(){
+
+    const message =
+        document.createElement("div");
+
+    message.classList.add(
+        "message",
+        "bot",
+        "is-loading"
+    );
+
+    message.setAttribute(
+        "role",
+        "status"
+    );
+
+    message.setAttribute(
+        "aria-live",
+        "polite"
+    );
+
+    message.innerHTML = `
+        <div class="chatbot-typing-indicator">
+            <span class="chatbot-typing-dots" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+            </span>
+            <span class="chatbot-typing-label">Matching FAQs</span>
+        </div>
+    `;
+
+    chatbox.appendChild(
+        message
+    );
+
+    chatbox.scrollTo({
+        top: chatbox.scrollHeight,
+        behavior: "smooth"
+    });
+
+    return message;
+}
+
+
+/*
+ * Turn a standalone loading row into a normal assistant response bubble.
+ */
+function setBotMessageContent(message, html){
+
+    message.classList.remove(
+        "is-loading"
+    );
+
+    message.removeAttribute(
+        "role"
+    );
+
+    message.removeAttribute(
+        "aria-live"
+    );
+
+    message.replaceChildren();
+
+    const bubble =
+        document.createElement("div");
+
+    bubble.className =
+        "bubble";
+
+    bubble.innerHTML =
+        html;
+
+    message.appendChild(
+        bubble
+    );
+
+    return bubble;
 }
 
 
@@ -858,21 +943,8 @@ function sendMessage(){
     /*
      * Show the typing animation.
      */
-    let typingMessage =
-        addMessage(
-            `
-            <div class="typing-status" role="status" aria-live="polite">
-                <span class="typing-status-label">Checking the FAQ library</span>
-                <span class="typing" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </span>
-            </div>
-            `,
-            "bot",
-            true
-        );
+    const typingMessage =
+        addTypingIndicator();
 
 
     fetch('/chat', {
@@ -1030,11 +1102,10 @@ function sendMessage(){
          * chatbot's text response.
          */
         const bubble =
-            typingMessage.querySelector(
-                ".bubble"
+            setBotMessageContent(
+                typingMessage,
+                html
             );
-
-        bubble.innerHTML = html;
 
         // QR pixels are rendered only after their containers exist in the DOM.
         renderFaqQRCodes(bubble);
@@ -1072,14 +1143,17 @@ function sendMessage(){
         );
 
         /*
-         * Show a generic error instead of exposing
-         * internal server details to the user.
+         * Never expose provider/server failure text to the user. The backend
+         * may include operational details in its JSON response for logging,
+         * but the public chatbot should always show a stable recovery action.
          */
-        typingMessage
-            .querySelector(".bubble")
-            .textContent =
-                error?.serverMessage ||
-                "Sorry, something went wrong. Please try again.";
+        setBotMessageContent(
+            typingMessage,
+            `Sorry, I couldn't process that question right now. Please try again.
+                <div class="chat-fallback">
+                    <button type="button" class="fallback-human-btn">Send a ticket</button>
+                </div>`
+        );
 
         /*
          * Always restore the input after failure.

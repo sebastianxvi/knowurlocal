@@ -153,7 +153,7 @@
                         id="support-search"
                         name="search"
                         value="{{ $search ?? '' }}"
-                        placeholder="Search questions, users, or agencies..."
+                        placeholder="Search questions, users, agencies, or answers..."
                         autocomplete="off"
                     >
 
@@ -219,36 +219,13 @@
 
 
                 {{-- AGENCY --}}
-                <div class="support-filter-field">
-
-                    <label
-                        for="support-agency-filter"
-                        class="sr-only"
-                    >
-                        Filter by agency
-                    </label>
-
-                    <i
-                        class="ph-light ph-buildings"
-                        aria-hidden="true"
-                    ></i>
-
-                    <select name="agency" id="support-agency-filter">
-    <option value="">
-        All Agencies
-    </option>
-
-    @foreach ($agencies as $agency)
-        <option
-            value="{{ $agency->id }}"
-            {{ (string) $agencyFilter === (string) $agency->id ? 'selected' : '' }}
-        >
-            {{ $agency->agency_name }}
-        </option>
-    @endforeach
-</select>
-
-                </div>
+                @include('admin.components.searchable-agency-filter', [
+                    'id' => 'support-agency-filter',
+                    'name' => 'agency',
+                    'value' => $agencyFilter,
+                    'agencies' => $agencies,
+                    'label' => 'Filter by agency',
+                ])
 
                 {{-- SORT ORDER --}}
 <div class="support-filter-field">
@@ -298,9 +275,9 @@
 
                 {{-- CLEAR --}}
                 @if(
-                    request()->has('search') ||
-                    request()->has('status_filter') ||
-                    request()->has('agency') ||
+                    request()->filled('search') ||
+                    request()->filled('status_filter') ||
+                    request()->filled('agency') ||
                     $sort !== 'newest'
                 )
 
