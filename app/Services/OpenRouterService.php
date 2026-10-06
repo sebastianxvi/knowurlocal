@@ -83,13 +83,13 @@ class OpenRouterService
             ->withHeaders([
                 'X-Title' => 'KNOWURLOCAL FAQ Assistant',
             ])
-            ->connectTimeout(10)
-            ->timeout(45);
+            ->connectTimeout(3)
+            ->timeout(10);
 
         $response = null;
         $responseFormatRemoved = false;
 
-        for ($attempt = 1; $attempt <= 3; $attempt++) {
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
             $response = $request->post(
                 'https://openrouter.ai/api/v1/chat/completions',
                 $payload
@@ -124,7 +124,7 @@ class OpenRouterService
                     [408, 409, 425, 429, 500, 502, 503, 504],
                     true
                 )
-                && $attempt < 3
+                && $attempt < 2
             ) {
                 usleep(500000 * $attempt);
                 continue;
