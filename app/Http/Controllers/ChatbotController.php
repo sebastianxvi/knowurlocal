@@ -484,7 +484,7 @@ class ChatbotController extends Controller
                 'agency_id' => $agencyId,
             ]);
 
-            $reply = 'I couldn’t access the FAQ database right now. Please try again or send a ticket.';
+            $reply = 'The FAQ matching service is temporarily unavailable. Please try again or send a ticket.';
 
             $this->logChat(
                 $question,
