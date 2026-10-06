@@ -16,9 +16,9 @@ use RuntimeException;
  * Flow:
  *   user question
  *      -> active FAQ catalog
-     *      -> database-derived candidate retrieval
-     *      -> one AI semantic selector
-     *      -> validate selected FAQ id against that candidate set
+ *      -> database-derived candidate retrieval
+ *      -> one AI semantic selector
+ *      -> validate selected FAQ id against that candidate set
  *      -> return the selected FAQ
  *      -> controller renders the stored/published FAQ response
  *
@@ -30,7 +30,7 @@ class FaqChatbotService
 {
     private const AI_MIN_CONFIDENCE = 0.45;
     private const MAX_FAQ_FIELD_LENGTH = 700;
-    private const AI_MAX_CANDIDATES = 30;
+    private const AI_MAX_CANDIDATES = 40;
     private const FALLBACK_MIN_CONFIDENCE = 0.50;
 
     public function __construct(
@@ -84,7 +84,28 @@ class FaqChatbotService
             );
         }
 
-        $candidates = $this->rankCandidates($question, $agencyId, $eligible);
+        try {
+            $candidates = $this->rankCandidates($question, $agencyId, $eligible);
+        } catch (\Throwable $e) {
+            /*
+             * Candidate ranking is an optimization layer, not a prerequisite
+             * for answering from the FAQ database. If a malformed legacy value
+             * or runtime capability prevents ranking, send a small live FAQ
+             * catalog to the AI instead of converting the request into a
+             * database-access error.
+             */
+            Log::warning('KNOWURLOCAL FAQ candidate ranking failed; using live FAQ catalog.', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'question' => $question,
+                'agency_id' => $agencyId,
+            ]);
+
+            $candidates = $eligible
+                ->sortByDesc('id')
+                ->take(self::AI_MAX_CANDIDATES)
+                ->values();
+        }
 
         try {
             /*
@@ -116,8 +137,25 @@ class FaqChatbotService
             ]);
         }
 
-        // Provider outage / unusable model response only.
-        $fallback = $this->deterministicFallback($question, $eligible);
+        /*
+         * Provider outage / unusable model response only.
+         *
+         * Keep this fallback isolated as well. A failure in the optional
+         * similarity calculation must never be reported to the browser as a
+         * database outage.
+         */
+        try {
+            $fallback = $this->deterministicFallback($question, $eligible);
+        } catch (\Throwable $e) {
+            Log::warning('KNOWURLOCAL deterministic FAQ fallback failed.', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'question' => $question,
+                'agency_id' => $agencyId,
+            ]);
+
+            return null;
+        }
 
         if ($fallback === null) {
             return null;
@@ -236,10 +274,29 @@ class FaqChatbotService
 
     private function loadFaqCatalog(): Collection
     {
-        return Faq::query()
-            ->with('agency:id,agency_name,agency_abbreviation')
-            ->orderBy('id')
-            ->get();
+        /*
+         * The agency abbreviation is useful metadata but it is not required
+         * to retrieve an FAQ. Some older production databases may predate the
+         * abbreviation column even though the current application can operate
+         * without it. Retry the catalog without that optional field rather than
+         * turning a valid FAQ lookup into a generic database error.
+         */
+        try {
+            return Faq::query()
+                ->with('agency:id,agency_name,agency_abbreviation')
+                ->orderBy('id')
+                ->get();
+        } catch (\Throwable $e) {
+            Log::warning('KNOWURLOCAL FAQ catalog agency metadata query failed; retrying without abbreviation.', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+            ]);
+
+            return Faq::query()
+                ->with('agency:id,agency_name')
+                ->orderBy('id')
+                ->get();
+        }
     }
 
     private function retrieveWithAi(string $question, ?int $agencyId, Collection $faqs): array
@@ -251,10 +308,17 @@ class FaqChatbotService
             'faq_candidates' => $this->buildCandidates($faqs),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
-        return $this->decodeResponse($this->ai->chat([
-            ['role' => 'system', 'content' => $this->retrievalPrompt()],
-            ['role' => 'user', 'content' => $payload],
-        ], 0.0, null));
+        return $this->decodeResponse($this->ai->chat(
+            [
+                ['role' => 'system', 'content' => $this->retrievalPrompt()],
+                ['role' => 'user', 'content' => $payload],
+            ],
+            0.0,
+            null,
+            7,
+            2,
+            1
+        ));
     }
 
     private function resolveAiDecision(array $decision, string $question, Collection $faqs): ?array
@@ -503,20 +567,38 @@ PROMPT;
     {
         $value = trim($value);
 
-        return mb_strlen($value, 'UTF-8') > $max
+        $length = function_exists('mb_strlen')
+            ? mb_strlen($value, 'UTF-8')
+            : strlen($value);
+
+        if ($length <= $max) {
+            return $value;
+        }
+
+        return function_exists('mb_substr')
             ? mb_substr($value, 0, $max, 'UTF-8') . '…'
-            : $value;
+            : substr($value, 0, $max) . '…';
     }
 
     private function normalize(string $value): string
     {
-        $value = mb_strtolower(trim($value), 'UTF-8');
-        $value = function_exists('transliterator_transliterate')
-            ? (transliterator_transliterate('Any-Latin; Latin-ASCII', $value) ?: $value)
-            : $value;
-        $value = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $value) ?? '';
+        $value = trim(
+            function_exists('mb_strtolower')
+                ? mb_strtolower($value, 'UTF-8')
+                : strtolower($value)
+        );
 
-        return trim(preg_replace('/\s+/u', ' ', $value) ?? '');
+        if (function_exists('transliterator_transliterate')) {
+            $value = transliterator_transliterate(
+                'Any-Latin; Latin-ASCII',
+                $value
+            ) ?: $value;
+        }
+
+        $value = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $value) ?? '';
+        $value = preg_replace('/\s+/u', ' ', $value) ?? '';
+
+        return trim($value);
     }
 
     private function tokens(string $value): array
@@ -532,7 +614,13 @@ PROMPT;
         ];
 
         $tokens = preg_split('/\s+/u', $normalized) ?: [];
-        $tokens = array_filter($tokens, static fn (string $token): bool => mb_strlen($token, 'UTF-8') >= 3 && !in_array($token, $stop, true));
+        $tokens = array_filter($tokens, function (string $token) use ($stop): bool {
+            $length = function_exists('mb_strlen')
+                ? mb_strlen($token, 'UTF-8')
+                : strlen($token);
+
+            return $length >= 3 && !in_array($token, $stop, true);
+        });
 
         return array_values(array_unique($tokens));
     }
@@ -548,23 +636,23 @@ PROMPT;
 
         $intersection = count(array_intersect($left, $right));
         $union = count(array_unique(array_merge($left, $right)));
-        $jaccard = $union > 0 ? $intersection / $union : 0.0;
 
-        $fuzzy = 0.0;
-        foreach ($left as $token) {
-            $best = 0.0;
-            foreach ($right as $candidateToken) {
-                $max = max(strlen($token), strlen($candidateToken));
-                if ($max === 0) {
-                    continue;
-                }
-                $best = max($best, 1 - levenshtein($token, $candidateToken) / $max);
-            }
-            $fuzzy += $best;
+        if ($union === 0) {
+            return 0.0;
         }
 
-        $fuzzy /= count($left);
+        /*
+         * Keep the local retrieval path intentionally cheap and portable.
+         *
+         * The previous implementation performed a Levenshtein comparison
+         * between every pair of tokens for every FAQ. On a serverless
+         * function that can become surprisingly expensive as the FAQ catalog
+         * grows. AI remains responsible for semantic matching; this score only
+         * narrows the live database catalog to a reasonable candidate set.
+         */
+        $jaccard = $intersection / $union;
+        $coverage = $intersection / max(1, count($left));
 
-        return max($jaccard, $fuzzy * 0.8 + $jaccard * 0.2);
+        return min(1.0, ($jaccard * 0.55) + ($coverage * 0.45));
     }
 }

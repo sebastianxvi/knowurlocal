@@ -18,7 +18,10 @@ class OpenRouterService
     public function chat(
         array $messages,
         float $temperature = 0.3,
-        ?array $responseFormat = null
+        ?array $responseFormat = null,
+        ?int $timeout = null,
+        ?int $connectTimeout = null,
+        ?int $maxAttempts = null
     ): array {
         $apiKey = trim((string) config('services.openrouter.api_key'));
         $model = trim((string) config('services.openrouter.model'));
@@ -59,7 +62,7 @@ class OpenRouterService
         $payload = [
             'messages' => $messages,
             'temperature' => $temperature,
-            'max_tokens' => 700,
+            'max_tokens' => 160,
         ];
 
         /*
@@ -83,13 +86,15 @@ class OpenRouterService
             ->withHeaders([
                 'X-Title' => 'KNOWURLOCAL FAQ Assistant',
             ])
-            ->connectTimeout(3)
-            ->timeout(10);
+            ->connectTimeout($connectTimeout ?? 3)
+            ->timeout($timeout ?? 10);
+
+        $attemptLimit = max(1, $maxAttempts ?? 2);
 
         $response = null;
         $responseFormatRemoved = false;
 
-        for ($attempt = 1; $attempt <= 2; $attempt++) {
+        for ($attempt = 1; $attempt <= $attemptLimit; $attempt++) {
             $response = $request->post(
                 'https://openrouter.ai/api/v1/chat/completions',
                 $payload
@@ -124,7 +129,7 @@ class OpenRouterService
                     [408, 409, 425, 429, 500, 502, 503, 504],
                     true
                 )
-                && $attempt < 2
+                && $attempt < $attemptLimit
             ) {
                 usleep(500000 * $attempt);
                 continue;
