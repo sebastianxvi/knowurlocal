@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
- * AI-first FAQ retrieval.
+ * Hybrid FAQ retrieval.
  *
  * The model is ONLY a selector. It never receives FAQ answers and therefore
  * cannot rewrite, summarize, or invent the response shown to the user.
@@ -16,22 +16,30 @@ use RuntimeException;
  * Flow:
  *   user question
  *      -> active FAQ catalog
- *      -> database-derived candidate retrieval
- *      -> one AI semantic selector
- *      -> validate selected FAQ id against that candidate set
- *      -> return the selected FAQ
- *      -> controller renders the stored/published FAQ response
+ *      -> normalized local relevance retrieval
+ *      -> bounded candidate set
+ *      -> one AI semantic tie-breaker
+ *      -> local-evidence guard
+ *      -> stored/published FAQ response
  *
- * Deterministic matching exists only as a failure fallback when the AI
- * provider is unavailable or returns unusable output. It is never the normal
- * matching path and it is not used to pre-filter the AI catalog.
+ * The local matcher is intentionally generic: it normalizes common language
+ * and scores the live question, Filipino question, keywords, and agency
+ * metadata. It contains no FAQ/program/agency-specific rules.
  */
 class FaqChatbotService
 {
     private const AI_MIN_CONFIDENCE = 0.45;
     private const MAX_FAQ_FIELD_LENGTH = 700;
-    private const AI_MAX_CANDIDATES = 40;
+    private const AI_MAX_CANDIDATES = 60;
     private const FALLBACK_MIN_CONFIDENCE = 0.50;
+
+    /*
+     * The AI is a semantic tie-breaker, not an unconditional override.
+     * When the local evidence clearly favors another FAQ, accepting the
+     * model's choice would make generic provider/model behavior capable of
+     * returning the wrong approved answer.
+     */
+    private const AI_LOCAL_OVERRIDE_MARGIN = 0.10;
 
     public function __construct(
         private OpenRouterService $ai
@@ -177,52 +185,15 @@ class FaqChatbotService
     ): Collection {
         return $faqs
             ->map(function (Faq $faq) use ($question, $agencyId): array {
-                $questionScore = max(
-                    $this->fieldSimilarity($question, (string) ($faq->question ?? '')),
-                    $this->fieldSimilarity($question, (string) ($faq->question_fil ?? ''))
-                );
-
-                $keywordScore = $this->fieldSimilarity(
+                $score = $this->relevanceScore(
                     $question,
-                    (string) ($faq->keywords ?? '')
+                    $faq,
+                    $agencyId
                 );
-
-                $agencyScore = max(
-                    $this->fieldSimilarity(
-                        $question,
-                        (string) ($faq->agency?->agency_name ?? '')
-                    ),
-                    $this->fieldSimilarity(
-                        $question,
-                        (string) ($faq->agency?->agency_abbreviation ?? '')
-                    )
-                );
-
-                /*
-                 * Question meaning is the strongest local signal. Keywords and
-                 * agency metadata help retrieve paraphrases without becoming
-                 * hard-coded FAQ rules.
-                 */
-                $score = ($questionScore * 0.72)
-                    + ($keywordScore * 0.20)
-                    + ($agencyScore * 0.08);
-
-                /*
-                 * A clearly named agency should receive a small bonus, but
-                 * never enough to override a substantially better question
-                 * match from another agency.
-                 */
-                if (
-                    $agencyId !== null
-                    && $faq->agency_id !== null
-                    && (int) $faq->agency_id === $agencyId
-                ) {
-                    $score += 0.05;
-                }
 
                 return [
                     'faq' => $faq,
-                    'score' => min(1.0, $score),
+                    'score' => $score,
                 ];
             })
             ->sortByDesc('score')
@@ -353,6 +324,43 @@ class FaqChatbotService
         }
 
         /*
+         * Hybrid retrieval guard:
+         *
+         * AI is the semantic tie-breaker, not an unconditional override.
+         * If the live database evidence clearly favors another candidate,
+         * reject the model choice and let the deterministic path select the
+         * stronger FAQ. This prevents provider/model variance from returning
+         * a generic FAQ simply because it shares the same program name.
+         */
+        $selectedScore = $this->relevanceScore(
+            $question,
+            $faq,
+            null
+        );
+
+        $bestLocalScore = $faqs->max(
+            fn (Faq $candidate): float => $this->relevanceScore(
+                $question,
+                $candidate,
+                null
+            )
+        );
+
+        if (
+            $bestLocalScore > $selectedScore
+            && ($bestLocalScore - $selectedScore) >= self::AI_LOCAL_OVERRIDE_MARGIN
+        ) {
+            Log::info('KNOWURLOCAL AI FAQ choice rejected by stronger local evidence.', [
+                'selected_faq_id' => $faq->id,
+                'selected_score' => round($selectedScore, 4),
+                'best_local_score' => round($bestLocalScore, 4),
+                'question' => $question,
+            ]);
+
+            return null;
+        }
+
+        /*
          * If the model provides a runner-up, require a meaningful semantic
          * margin unless the top score is extremely strong. This prevents a
          * generic FAQ from winning simply because it is the closest topic.
@@ -393,30 +401,11 @@ class FaqChatbotService
         $bestScore = 0.0;
 
         foreach ($faqs as $faq) {
-            $questionScore = max(
-                $this->fieldSimilarity($question, (string) ($faq->question ?? '')),
-                $this->fieldSimilarity($question, (string) ($faq->question_fil ?? ''))
-            );
-
-            $keywordScore = $this->fieldSimilarity(
+            $score = $this->relevanceScore(
                 $question,
-                (string) ($faq->keywords ?? '')
+                $faq,
+                null
             );
-
-            $agencyScore = max(
-                $this->fieldSimilarity(
-                    $question,
-                    (string) ($faq->agency?->agency_name ?? '')
-                ),
-                $this->fieldSimilarity(
-                    $question,
-                    (string) ($faq->agency?->agency_abbreviation ?? '')
-                )
-            );
-
-            $score = ($questionScore * 0.78)
-                + ($keywordScore * 0.17)
-                + ($agencyScore * 0.05);
 
             if ($score > $bestScore) {
                 $bestScore = $score;
@@ -495,9 +484,17 @@ Understand:
 - specific program/service names
 - important qualifiers
 
-Do not match merely because of shared words such as "documents", "registration", "government", or an agency name.
-A question about SEnA must not be matched to RSBSA just because both have document requirements.
-A duration question must not be matched to a requirements question merely because both mention the same program.
+Do not match merely because of shared topic words such as "documents",
+"registration", "government", or an agency name.
+
+Prioritize the user's actual intent and qualifiers. For example, distinguish:
+- requirements/documents from eligibility/application
+- processing time/duration from requirements
+- appointment/scheduling from application
+- fees/cost from general service information
+
+The candidate's keywords are retrieval metadata and should be treated as
+strong evidence when they contain the user's specific intent or service term.
 
 Read ALL candidates. If no FAQ genuinely answers the question, return null.
 
@@ -588,6 +585,93 @@ PROMPT;
                 : strtolower($value)
         );
 
+        /*
+         * Normalize common public-service language before tokenization.
+         *
+         * These are language/intent equivalences, not FAQ-specific rules.
+         * They allow a future FAQ such as "What documents are needed?" to
+         * match a user saying "What are the requirements?" without knowing
+         * anything about the agency or program in advance.
+         */
+        $replacements = [
+            // Requirements / needed / required
+            '/\\brequirements?\\b/u' => 'requirement',
+            '/\\brequired\\b/u' => 'requirement',
+            '/\\bneeded\\b/u' => 'requirement',
+            '/\\bneed\\b/u' => 'requirement',
+            '/\\brequire\\b/u' => 'requirement',
+            '/\\bkailangan\\b/u' => 'requirement',
+            '/\\bkinakailangan\\b/u' => 'requirement',
+
+            // Documents / papers
+            '/\\bdocuments?\\b/u' => 'document',
+            '/\\bdocumentary\\b/u' => 'document',
+            '/\\bdokumento(?:ng)?\\b/u' => 'document',
+            '/\\bdokumentos?\\b/u' => 'document',
+            '/\\bpapeles?\\b/u' => 'document',
+
+            // Application / apply
+            '/\\bapplications?\\b/u' => 'application',
+            '/\\bapplying\\b/u' => 'application',
+            '/\\bapply\\b/u' => 'application',
+            '/\\bmag[-\\s]?apply\\b/u' => 'application',
+            '/\\bpag[-\\s]?apply\\b/u' => 'application',
+
+            // Assistance / help
+            '/\\bassistance\\b/u' => 'assistance',
+            '/\\bhelp\\b/u' => 'assistance',
+            '/\\btulong\\b/u' => 'assistance',
+
+            // Registration
+            '/\\bregistrations?\\b/u' => 'registration',
+            '/\\bregister\\b/u' => 'registration',
+            '/\\bregistered\\b/u' => 'registration',
+            '/\\bmag[-\\s]?register\\b/u' => 'registration',
+            '/\\bpag[-\\s]?register\\b/u' => 'registration',
+
+            // Processing / duration
+            '/\\bprocessing\\b/u' => 'processing',
+            '/\\bprocess(?:ing)?\\b/u' => 'processing',
+            '/\\bhow[-\\s]+long\\b/u' => 'duration',
+            '/\\bhow[-\\s]+many[-\\s]+days?\\b/u' => 'duration',
+            '/\\bduration\\b/u' => 'duration',
+            '/\\btagal\\b/u' => 'duration',
+            '/\\bgaano[-\\s]+katagal\\b/u' => 'duration',
+
+            // Fees / cost
+            '/\\bfees?\\b/u' => 'fee',
+            '/\\bcosts?\\b/u' => 'fee',
+            '/\\bprice\\b/u' => 'fee',
+            '/\\bmagkano\\b/u' => 'fee',
+
+            // Appointment / scheduling
+            '/\\bappointments?\\b/u' => 'appointment',
+            '/\\bscheduling\\b/u' => 'appointment',
+            '/\\bschedule\\b/u' => 'appointment',
+            '/\\bmag[-\\s]?pa[-\\s]?appointment\\b/u' => 'appointment',
+
+            // Eligibility / qualification
+            '/\\beligibility\\b/u' => 'eligibility',
+            '/\\beligible\\b/u' => 'eligibility',
+            '/\\bqualified\\b/u' => 'eligibility',
+            '/\\bqualifications?\\b/u' => 'eligibility',
+            '/\\bkwalipikado\\b/u' => 'eligibility',
+            '/\\bkarapat[-\\s]?dapat\\b/u' => 'eligibility',
+
+            // Obtain / get
+            '/\\bobtain(?:ed|ing)?\\b/u' => 'obtain',
+            '/\\bget\\b/u' => 'obtain',
+            '/\\bkuha(?:n|hin)?\\b/u' => 'obtain',
+            '/\\bkumuha\\b/u' => 'obtain',
+            '/\\bmakakuha\\b/u' => 'obtain',
+        ];
+
+        $value = preg_replace(
+            array_keys($replacements),
+            array_values($replacements),
+            $value
+        ) ?? $value;
+
         if (function_exists('transliterator_transliterate')) {
             $value = transliterator_transliterate(
                 'Any-Latin; Latin-ASCII',
@@ -595,8 +679,8 @@ PROMPT;
             ) ?: $value;
         }
 
-        $value = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $value) ?? '';
-        $value = preg_replace('/\s+/u', ' ', $value) ?? '';
+        $value = preg_replace('/[^\\p{L}\\p{N}]+/u', ' ', $value) ?? '';
+        $value = preg_replace('/\\s+/u', ' ', $value) ?? '';
 
         return trim($value);
     }
@@ -623,6 +707,60 @@ PROMPT;
         });
 
         return array_values(array_unique($tokens));
+    }
+
+    private function relevanceScore(
+        string $question,
+        Faq $faq,
+        ?int $agencyId = null
+    ): float {
+        $questionScore = max(
+            $this->fieldSimilarity(
+                $question,
+                (string) ($faq->question ?? '')
+            ),
+            $this->fieldSimilarity(
+                $question,
+                (string) ($faq->question_fil ?? '')
+            )
+        );
+
+        $keywordScore = $this->fieldSimilarity(
+            $question,
+            (string) ($faq->keywords ?? '')
+        );
+
+        /*
+         * Question intent gets the largest weight. Keywords are still
+         * important because administrators deliberately enter them as
+         * retrieval metadata (for example "requirements", "documents",
+         * "processing time", etc.). Agency metadata disambiguates otherwise
+         * similar services.
+         */
+        $agencyScore = max(
+            $this->fieldSimilarity(
+                $question,
+                (string) ($faq->agency?->agency_name ?? '')
+            ),
+            $this->fieldSimilarity(
+                $question,
+                (string) ($faq->agency?->agency_abbreviation ?? '')
+            )
+        );
+
+        $score = ($questionScore * 0.68)
+            + ($keywordScore * 0.24)
+            + ($agencyScore * 0.08);
+
+        if (
+            $agencyId !== null
+            && $faq->agency_id !== null
+            && (int) $faq->agency_id === $agencyId
+        ) {
+            $score += 0.05;
+        }
+
+        return min(1.0, $score);
     }
 
     private function fieldSimilarity(string $source, string $candidate): float
