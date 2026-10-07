@@ -38,11 +38,29 @@ return [
     'openrouter' => [
     'api_key' => env('OPENROUTER_API_KEY'),
 
-    // Same model currently used by the public chatbot.
+    // Primary router for the public FAQ retriever.
+    // Keep the fallback chain on independent free providers so a single
+    // provider's shared pool cannot take the chatbot down.
     'model' => env(
         'OPENROUTER_MODEL',
-        'openrouter/free'
+        'qwen/qwen3.8-27b:free'
     ),
+    'fallback_models' => env(
+        'OPENROUTER_FALLBACK_MODELS',
+        'inclusionai/ling-3.0-flash-fin:free,poolside/laguna-s-2.1:free,nvidia/nemotron-3.5-lightning:free'
+    ),
+    'retrieval_models' => array_values(array_filter(
+        array_map(
+            'trim',
+            explode(',', env(
+                'OPENROUTER_RETRIEVAL_MODELS',
+                'qwen/qwen3.8-27b:free,inclusionai/ling-3.0-flash-fin:free,poolside/laguna-s-2.1:free,nvidia/nemotron-3.5-lightning:free,google/gemma-4-26b-a4b-it:free'
+            ))
+        ),
+        static fn (string $value): bool => $value !== ''
+    )),
+    'cache_store' => env('OPENROUTER_CACHE_STORE', 'file'),
+    'max_tokens' => (int) env('OPENROUTER_MAX_TOKENS', 192),
 ],
 
 ];

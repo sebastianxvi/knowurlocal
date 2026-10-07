@@ -4,37 +4,58 @@ namespace App\Services;
 
 use App\Models\Faq;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
- * AI-first FAQ retrieval.
+ * AI-only FAQ retrieval.
  *
- * The FAQ database is the knowledge base. The model is responsible for
- * matching the user's question to that live knowledge base.
+ * PHP does not decide which FAQ matches a question. It only:
+ * - loads the live FAQ catalogue,
+ * - applies an explicit agency filter selected by the user,
+ * - gives the AI a compact representation of each FAQ,
+ * - validates the ID returned by the AI,
+ * - loads the canonical FAQ response from the database.
  *
- * The AI receives the searchable metadata for every eligible FAQ:
- *   - agency
- *   - agency abbreviation
- *   - English question
- *   - Filipino/Taglish question
- *   - administrator-provided keywords
- *
- * The AI never receives the approved answer. After it selects an FAQ, Laravel
- * resolves the published FAQ version and returns the stored response.
- *
- * There are intentionally NO FAQ-, agency-, program-, or intent-specific
- * matching rules in this service. Adding a new FAQ therefore requires no code
- * change.
+ * The matching itself remains entirely inside the AI model.
  */
 class FaqChatbotService
 {
-    private const MAX_FAQ_FIELD_LENGTH = 700;
+    /**
+     * Infrastructure-only batch size. This is not a semantic rule.
+     */
+    private const AI_BATCH_SIZE = 100;
 
     /**
-     * The provider only needs to return one small JSON decision.
+     * Short retrieval-catalogue cache. The final answer is always fetched
+     * from the live FAQ/version rows, so this cache only avoids rebuilding the
+     * compact AI input on every request.
      */
-    private const AI_MIN_CONFIDENCE = 0.35;
+    private const CATALOG_CACHE_SECONDS = 30;
+
+    /**
+     * Keep only the fields that help the AI identify the FAQ.
+     *
+     * Answers are intentionally NOT sent to the model. The database remains
+     * the source of truth for the answer and the model only selects the FAQ ID.
+     */
+    private const MAX_FIELD_LENGTH = 800;
+
+    /**
+     * Pin the retrieval path to currently available free models instead of
+     * letting `openrouter/free` randomly select a reasoning-heavy model.
+     *
+     * Keep this list short: the first healthy model should answer this tiny
+     * classification task, while the remaining entries are true failovers.
+     */
+    private const RETRIEVAL_MODELS = [
+        'qwen/qwen3.8-27b:free',
+        'inclusionai/ling-3.0-flash-fin:free',
+        'poolside/laguna-s-2.1:free',
+        'nvidia/nemotron-3.5-lightning:free',
+        'google/gemma-4-26b-a4b-it:free',
+    ];
 
     public function __construct(
         private OpenRouterService $ai
@@ -42,217 +63,322 @@ class FaqChatbotService
     }
 
     /**
-     * Find the FAQ that best matches the user's question.
+     * Let the AI select the best FAQ.
      *
-     * Normal operation is AI-first: there is no local semantic ranking,
-     * intent dictionary, keyword weighting, or hardcoded FAQ map.
+     * There is deliberately no local semantic fallback, score threshold,
+     * keyword scoring, token overlap, or FAQ-specific rule.
      */
     public function findMatch(string $question, ?int $agencyId = null): ?array
     {
-        $question = $this->clean($question);
+        $question = trim(preg_replace('/\s+/u', ' ', $question) ?? '');
 
         if ($question === '') {
             return null;
         }
 
-        $faqs = $this->loadFaqCatalog();
+        $faqs = $this->loadFaqCatalog()
+            ->filter(fn (Faq $faq): bool => $this->agencyAllowed($faq, $agencyId))
+            ->values();
 
         if ($faqs->isEmpty()) {
             return null;
         }
 
-        /*
-         * An agency selected by the user is an explicit application constraint,
-         * not a matching heuristic. When supplied, only that agency's FAQs are
-         * presented to the model.
-         */
-        $eligible = $faqs
-            ->filter(fn (Faq $faq): bool => $this->agencyAllowed($faq, $agencyId))
-            ->values();
+        $winner = $this->selectBestFaqWithAi(
+            $question,
+            $agencyId,
+            $faqs
+        );
 
-        if ($eligible->isEmpty()) {
+        if (!$winner) {
             return null;
         }
 
-        /*
-         * Give the AI the complete eligible FAQ catalogue.
-         *
-         * This is deliberately NOT pre-ranked. Pre-ranking would mean that
-         * local code decides which FAQs are "relevant" before the model sees
-         * them, which is exactly what causes closely related FAQs to compete
-         * incorrectly.
-         */
-        try {
-            $decision = $this->retrieveWithAi(
-                $question,
-                $agencyId,
-                $eligible
-            );
-
-            return $this->resolveAiDecision(
-                $decision,
-                $question,
-                $eligible
-            );
-        } catch (\Throwable $e) {
-            /*
-             * AI matching is optional from an availability perspective. Do not
-             * invent a semantic match when the provider is unavailable.
-             *
-             * The only safe fallback is an exact normalized question match.
-             * It is not used during normal AI retrieval and contains no
-             * program/agency/intent-specific rules.
-             */
-            Log::warning('KNOWURLOCAL FAQ AI matching failed; attempting exact-question recovery.', [
-                'exception' => get_class($e),
-                'message' => $e->getMessage(),
-                'question' => $question,
-                'agency_id' => $agencyId,
-            ]);
-
-            $exact = $this->findExactMatch($question, $eligible);
-
-            if (!$exact) {
-                return null;
-            }
-
-            return $this->formatMatch(
-                $exact,
-                1.0,
-                'exact-recovery'
-            );
-        }
+        return [
+            'faq' => $winner['faq'],
+            'confidence' => $winner['score'] / 100,
+            'language' => $winner['language'],
+            'method' => 'ai-semantic',
+        ];
     }
 
     /**
-     * Load the complete live FAQ catalogue.
+     * Load only the fields required for semantic retrieval.
      *
-     * Soft-deleted FAQs are automatically excluded by the Faq model's
-     * SoftDeletes trait.
+     * The full answer/attachment payload is intentionally not loaded here.
+     * That keeps the model input small and makes the FAQ catalogue much more
+     * "mobile" while preserving the complete response in the database.
      */
     private function loadFaqCatalog(): Collection
     {
-        try {
-            return Faq::query()
-                ->with('agency:id,agency_name,agency_abbreviation')
-                ->orderBy('id')
-                ->get();
-        } catch (\Throwable $e) {
-            /*
-             * agency_abbreviation was added later than agency_name. Keep the
-             * chatbot compatible with an older production schema without
-             * changing the matching algorithm.
-             */
-            Log::warning('KNOWURLOCAL FAQ catalog agency metadata query failed; retrying without abbreviation.', [
-                'exception' => get_class($e),
-                'message' => $e->getMessage(),
-            ]);
+        return Cache::store(config('services.openrouter.cache_store', 'file'))->remember(
+            'knowurlocal:chatbot:faq-catalog:v3',
+            now()->addSeconds(self::CATALOG_CACHE_SECONDS),
+            function (): Collection {
+                try {
+                    return Faq::query()
+                        ->select([
+                            'id',
+                            'agency_id',
+                            'question',
+                            'question_fil',
+                            'keywords',
+                        ])
+                        ->with('agency:id,agency_name,agency_abbreviation')
+                        ->orderBy('id')
+                        ->get();
+                } catch (\Throwable $e) {
+                    // Compatibility with deployments where the abbreviation column
+                    // has not been migrated yet.
+                    Log::warning('KNOWURLOCAL FAQ agency metadata fallback used.', [
+                        'exception' => get_class($e),
+                        'message' => $e->getMessage(),
+                    ]);
 
-            return Faq::query()
-                ->with('agency:id,agency_name')
-                ->orderBy('id')
-                ->get();
-        }
+                    return Faq::query()
+                        ->select([
+                            'id',
+                            'agency_id',
+                            'question',
+                            'question_fil',
+                            'keywords',
+                        ])
+                        ->with('agency:id,agency_name')
+                        ->orderBy('id')
+                        ->get();
+                }
+            }
+        );
     }
 
     /**
-     * Ask the AI to choose from the entire eligible FAQ catalogue.
+     * AI selects the best FAQ from the supplied catalogue.
+     *
+     * With the current catalogue this is normally one call. If the catalogue
+     * becomes too large for one model context, infrastructure batches are
+     * ranked by the model and a final model call compares those winners.
      */
-    private function retrieveWithAi(
+    private function selectBestFaqWithAi(
         string $question,
         ?int $agencyId,
         Collection $faqs
-    ): array {
+    ): ?array {
+        $batches = $faqs->chunk(self::AI_BATCH_SIZE)->values();
+        $batchWinners = [];
+
+        foreach ($batches as $batchIndex => $batch) {
+            $winner = $this->askAiToChoose(
+                question: $question,
+                agencyId: $agencyId,
+                faqs: $batch,
+                stage: $batches->count() === 1
+                    ? 'final'
+                    : 'batch_' . ($batchIndex + 1)
+            );
+
+            if ($winner === null) {
+                throw new RuntimeException('FAQ AI did not return a valid winner.');
+            }
+
+            $batchWinners[] = $winner;
+        }
+
+        if (count($batchWinners) === 1) {
+            return $this->resolveWinner($batchWinners[0]);
+        }
+
+        $finalCandidates = collect($batchWinners)
+            ->map(function (array $winner): array {
+                return [
+                    'faq_id' => $winner['faq_id'],
+                    'score_from_batch' => $winner['score'],
+                    'faq' => $winner['faq'],
+                ];
+            })
+            ->values()
+            ->all();
+
+        $finalWinner = $this->askAiToChoose(
+            question: $question,
+            agencyId: $agencyId,
+            faqs: collect($finalCandidates)->pluck('faq'),
+            stage: 'final'
+        );
+
+        if ($finalWinner === null) {
+            throw new RuntimeException('FAQ AI did not return a valid final winner.');
+        }
+
+        return $this->resolveWinner($finalWinner);
+    }
+
+    /**
+     * Ask the model to choose ONE winner from the supplied records.
+     */
+    private function askAiToChoose(
+        string $question,
+        ?int $agencyId,
+        Collection $faqs,
+        string $stage
+    ): ?array {
+        $catalog = $this->buildCatalog($faqs);
+
+        if ($catalog === []) {
+            return null;
+        }
+
         $payload = json_encode([
-            'task' => 'select_the_single_best_existing_faq',
             'user_question' => $question,
             'selected_agency_id' => $agencyId,
-            'faq_catalog' => $this->buildCatalog($faqs),
+            'faq_catalog' => $catalog,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
-        return $this->decodeResponse($this->ai->chat(
+        Log::debug('KNOWURLOCAL FAQ AI retrieval request prepared.', [
+            'stage' => $stage,
+            'catalog_size' => count($catalog),
+            'payload_bytes' => strlen($payload),
+        ]);
+
+        /*
+         * We intentionally do not require provider-specific structured output.
+         * The system prompt requires JSON and decodeResponse() safely extracts
+         * the JSON object. This keeps the chatbot compatible with models routed
+         * through OpenRouter's free/variable model pool.
+         */
+        $response = $this->ai->chat(
             [
                 ['role' => 'system', 'content' => $this->retrievalPrompt()],
                 ['role' => 'user', 'content' => $payload],
             ],
             0.0,
-            ['type' => 'json_object'],
-            8,
-            2,
-            1
-        ));
-    }
+            null,
+            6,
+            3,
+            1,
+            function (array $candidate): bool {
+                try {
+                    $decision = $this->decodeResponse($candidate);
 
-    /**
-     * Convert and validate the model's selection.
-     *
-     * The only authoritative identifier is an FAQ ID that actually exists in
-     * the catalogue sent to the model. The model cannot provide arbitrary text
-     * that becomes a chatbot answer.
-     */
-    private function resolveAiDecision(
-        array $decision,
-        string $question,
-        Collection $faqs
-    ): ?array {
+                    return is_numeric($decision['faq_id'] ?? null)
+                        && is_numeric($decision['score'] ?? null)
+                        && is_string($decision['language'] ?? null);
+                } catch (\Throwable) {
+                    return false;
+                }
+            },
+            $this->retrievalModels(),
+            [
+                // Retrieval only needs a tiny JSON decision. Spending the
+                // completion budget on hidden reasoning is what caused the
+                // previous free-router responses to finish with `length`
+                // before emitting the JSON object.
+                'max_tokens' => 192,
+                'reasoning' => [
+                    'effort' => 'none',
+                ],
+            ]
+        );
+
+        $decision = $this->decodeResponse($response);
+
         $faqId = $decision['faq_id'] ?? null;
+        $score = $decision['score'] ?? null;
 
-        if (!is_numeric($faqId)) {
-            return null;
-        }
-
-        $faq = $faqs->firstWhere('id', (int) $faqId);
-
-        if (!$faq) {
-            Log::warning('KNOWURLOCAL AI selected an FAQ outside the supplied catalogue.', [
-                'faq_id' => $faqId,
+        if (!is_numeric($faqId) || !is_numeric($score)) {
+            Log::warning('KNOWURLOCAL FAQ AI returned an invalid winner.', [
+                'stage' => $stage,
                 'question' => $question,
+                'response' => $decision,
             ]);
 
             return null;
         }
 
-        $matched = $decision['matched'] ?? true;
+        $faq = $faqs->firstWhere('id', (int) $faqId);
 
-        if ($matched === false || $matched === 'false' || $matched === 0 || $matched === '0') {
+        /*
+         * ID integrity validation only. This is not semantic matching.
+         */
+        if (!$faq) {
+            Log::warning('KNOWURLOCAL FAQ AI selected an ID outside its catalogue.', [
+                'stage' => $stage,
+                'question' => $question,
+                'faq_id' => (int) $faqId,
+            ]);
+
             return null;
         }
 
-        $confidence = $decision['confidence'] ?? 1.0;
-
-        if (!is_numeric($confidence)) {
-            $confidence = 0.0;
+        $numericScore = (float) $score;
+        if ($numericScore <= 1) {
+            $numericScore *= 100;
         }
 
-        $confidence = (float) $confidence;
-
-        if ($confidence > 1 && $confidence <= 100) {
-            $confidence /= 100;
-        }
-
-        if ($confidence < self::AI_MIN_CONFIDENCE) {
-            return null;
-        }
+        // No minimum score. The highest-scoring FAQ always wins.
+        $numericScore = max(0.0, min(100.0, $numericScore));
 
         $language = strtolower(trim((string) ($decision['language'] ?? 'en')));
-
         if (!in_array($language, ['en', 'fil'], true)) {
             $language = 'en';
         }
 
-        return $this->formatMatch(
-            $faq,
-            $confidence,
-            'ai',
-            $language
-        );
+        Log::info('KNOWURLOCAL AI FAQ winner.', [
+            'stage' => $stage,
+            'question' => $question,
+            'faq_id' => $faq->id,
+            'score' => $numericScore,
+            'catalog_size' => count($catalog),
+            'payload_bytes' => strlen($payload),
+        ]);
+
+        return [
+            'faq_id' => (int) $faq->id,
+            'score' => $numericScore,
+            'language' => $language,
+            'faq' => $faq,
+        ];
     }
 
     /**
-     * Build the searchable metadata supplied to the model.
+     * Resolve the AI-selected ID against the live database record.
      *
-     * No answers are included. The model selects the FAQ; Laravel supplies the
-     * approved answer only after the selection is validated.
+     * This second query is intentional: the compact retrieval object does not
+     * contain answers or attachments. The database remains authoritative for
+     * the final response.
+     */
+    private function resolveWinner(array $winner): ?array
+    {
+        $faqId = (int) ($winner['faq_id'] ?? 0);
+
+        if ($faqId <= 0) {
+            return null;
+        }
+
+        $faq = Faq::query()
+            ->with([
+                'agency:id,agency_name,agency_abbreviation',
+                'currentVersion',
+            ])
+            ->find($faqId);
+
+        if (!$faq) {
+            return null;
+        }
+
+        return [
+            'faq' => $faq,
+            'score' => (float) ($winner['score'] ?? 0),
+            'language' => $winner['language'] ?? 'en',
+        ];
+    }
+
+    /**
+     * Build the compact semantic catalogue sent to the AI.
+     *
+     * IMPORTANT:
+     * - keywords are context for the AI, not a PHP matching algorithm;
+     * - answers are not sent because the AI only needs to identify the FAQ;
+     * - the selected ID is later used to fetch the approved stored response.
      */
     private function buildCatalog(Collection $faqs): array
     {
@@ -264,85 +390,81 @@ class FaqChatbotService
                     : null,
                 'agency' => $this->limit(
                     (string) ($faq->agency?->agency_name ?? ''),
-                    220
+                    300
                 ),
                 'agency_abbreviation' => $this->limit(
                     (string) ($faq->agency?->agency_abbreviation ?? ''),
-                    80
+                    100
                 ),
                 'keywords' => $this->limit(
                     (string) ($faq->keywords ?? ''),
-                    self::MAX_FAQ_FIELD_LENGTH
+                    self::MAX_FIELD_LENGTH
                 ),
                 'question_en' => $this->limit(
                     (string) ($faq->question ?? ''),
-                    self::MAX_FAQ_FIELD_LENGTH
+                    self::MAX_FIELD_LENGTH
                 ),
                 'question_fil' => $this->limit(
                     (string) ($faq->question_fil ?? ''),
-                    self::MAX_FAQ_FIELD_LENGTH
+                    self::MAX_FIELD_LENGTH
                 ),
             ];
         })->all();
     }
 
-    /**
-     * The model is explicitly told to reason over the complete catalogue.
-     *
-     * There are deliberately no hardcoded examples such as "requirements
-     * means documents" or agency/program-specific matching rules. The model
-     * itself must understand the user's language and compare it to the actual
-     * FAQ records.
-     */
     private function retrievalPrompt(): string
     {
         return <<<'PROMPT'
-You are KNOWURLOCAL's FAQ retrieval engine.
+You are the semantic retrieval engine for KNOWURLOCAL.
 
-Your ONLY job is to select the single existing FAQ record that best matches the user's question.
+Your ONLY job is to determine which ONE FAQ record in the supplied catalogue is the best match for the user's question.
 
-The application provides the complete eligible FAQ catalogue. Every record contains:
-- faq_id
-- agency
-- agency abbreviation
-- administrator-provided keywords
+The catalogue is the complete set of records you are allowed to choose from.
+
+You must perform the matching yourself using your language understanding and the actual information contained in each supplied FAQ record.
+
+Each record may contain:
 - English question
 - Filipino/Taglish question
+- administrator-provided keywords
+- agency name and abbreviation
 
-You must reason semantically over the user's actual question and compare it against the complete catalogue.
+Treat keywords as contextual hints, not as a fixed matching rule.
 
-Important rules:
-1. Read the entire catalogue before selecting a FAQ.
-2. Match the user's actual meaning, not merely shared words.
-3. Understand natural paraphrases, spelling mistakes, Filipino, English, Taglish, abbreviations, and conversational wording yourself.
-4. Pay attention to the complete request and all qualifiers in it.
-5. Distinguish closely related FAQs by what the user is actually asking.
-6. Use agency and program/service information as contextual evidence, not as sufficient evidence by themselves.
-7. Treat administrator-provided keywords as supporting evidence, not as a substitute for understanding the question.
-8. Never invent an FAQ ID.
-9. Never create, rewrite, summarize, or answer the user's question.
-10. If none of the supplied FAQs genuinely answers the user's question, return matched=false and faq_id=null.
-11. If several FAQs are related, select the one whose stored question most directly answers the user's specific request.
-12. The selected FAQ ID MUST come from the supplied catalogue.
+Do NOT use a fixed keyword-matching algorithm.
+Do NOT assume that shared words mean shared intent.
+Do NOT require exact wording.
+Do NOT rely on word overlap alone.
+Understand what information the user is actually asking for and determine which FAQ most directly represents that intent.
 
-Return ONLY valid JSON in this exact shape:
+This must work for:
+- English
+- Filipino
+- Taglish
+- misspellings
+- paraphrases
+- abbreviations
+- incomplete questions
+- conversational wording
+
+IMPORTANT:
+1. Compare ALL supplied FAQ records semantically before choosing.
+2. Select the single HIGHEST-relevance record.
+3. There is NO minimum score; always choose the best available record.
+4. Never return "no match".
+5. Never invent an FAQ ID.
+6. Never generate or rewrite an answer.
+7. Do not explain your reasoning.
+8. Return only the winning FAQ ID, its score, and the user's language.
+
+Output exactly one JSON object and nothing else. Do not use Markdown or code fences:
 {
-  "matched": true,
   "faq_id": 123,
-  "confidence": 0.94,
-  "language": "en"
+  "score": 87,
+  "language": "fil"
 }
 
-If no supplied FAQ genuinely matches:
-{
-  "matched": false,
-  "faq_id": null,
-  "confidence": 0,
-  "language": "en"
-}
-
-confidence must be a number from 0 to 1.
-language must be "en" or "fil".
+The language field describes the language of the user's question and must be "en" or "fil".
 PROMPT;
     }
 
@@ -368,26 +490,13 @@ PROMPT;
         $content = trim($content);
 
         try {
-            $json = json_decode(
-                $content,
-                true,
-                512,
-                JSON_THROW_ON_ERROR
-            );
+            $json = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
-            /*
-             * Some providers wrap JSON in a short amount of prose despite the
-             * requested response format. Recover only a JSON object.
-             */
             $start = strpos($content, '{');
             $end = strrpos($content, '}');
 
             if ($start === false || $end === false || $end <= $start) {
-                throw new RuntimeException(
-                    'FAQ AI returned invalid JSON.',
-                    0,
-                    $e
-                );
+                throw new RuntimeException('FAQ AI returned invalid JSON.', 0, $e);
             }
 
             try {
@@ -398,11 +507,7 @@ PROMPT;
                     JSON_THROW_ON_ERROR
                 );
             } catch (\JsonException $inner) {
-                throw new RuntimeException(
-                    'FAQ AI returned invalid JSON.',
-                    0,
-                    $inner
-                );
+                throw new RuntimeException('FAQ AI returned invalid JSON.', 0, $inner);
             }
         }
 
@@ -413,11 +518,27 @@ PROMPT;
         return $json;
     }
 
-    private function clean(string $value): string
+    private function retrievalModels(): array
     {
-        return trim(
-            preg_replace('/\s+/u', ' ', $value) ?? ''
-        );
+        $configured = config('services.openrouter.retrieval_models', self::RETRIEVAL_MODELS);
+
+        if (!is_array($configured)) {
+            return self::RETRIEVAL_MODELS;
+        }
+
+        $knownUnavailable = [
+            'thinkingmachines/inkling-small:free',
+            'qwen/qwen3.8-27b:free',
+            'inclusionai/ling-3.0-flash-fin:free',
+        ];
+
+        $models = array_values(array_unique(array_filter(
+            array_merge(self::RETRIEVAL_MODELS, array_map('trim', $configured)),
+            static fn (string $model): bool =>
+                $model !== '' && !in_array($model, $knownUnavailable, true)
+        )));
+
+        return $models !== [] ? $models : self::RETRIEVAL_MODELS;
     }
 
     private function limit(string $value, int $max): string
@@ -437,72 +558,10 @@ PROMPT;
             : substr($value, 0, $max) . '…';
     }
 
-    private function normalizeExact(string $value): string
-    {
-        $value = trim(
-            function_exists('mb_strtolower')
-                ? mb_strtolower($value, 'UTF-8')
-                : strtolower($value)
-        );
-
-        /*
-         * This is ONLY for emergency exact-question recovery when the AI
-         * provider is unavailable. It intentionally performs no semantic
-         * normalization or intent mapping.
-         */
-        $value = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $value) ?? '';
-        $value = preg_replace('/\s+/u', ' ', $value) ?? '';
-
-        return trim($value);
-    }
-
-    private function findExactMatch(
-        string $question,
-        Collection $faqs
-    ): ?Faq {
-        $needle = $this->normalizeExact($question);
-
-        if ($needle === '') {
-            return null;
-        }
-
-        return $faqs->first(function (Faq $faq) use ($needle): bool {
-            foreach ([
-                $faq->question,
-                $faq->question_fil,
-            ] as $variant) {
-                if (
-                    $variant !== null
-                    && $this->normalizeExact((string) $variant) === $needle
-                ) {
-                    return true;
-                }
-            }
-
-            return false;
-        });
-    }
-
     private function agencyAllowed(Faq $faq, ?int $agencyId): bool
     {
         return $agencyId === null
             || $faq->agency_id === null
             || (int) $faq->agency_id === $agencyId;
-    }
-
-    private function formatMatch(
-        Faq $faq,
-        float $confidence,
-        string $method,
-        string $language = 'en'
-    ): array {
-        return [
-            'faq' => $faq,
-            'confidence' => max(0.0, min(1.0, $confidence)),
-            'language' => in_array($language, ['en', 'fil'], true)
-                ? $language
-                : 'en',
-            'method' => $method,
-        ];
     }
 }

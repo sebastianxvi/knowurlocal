@@ -69,7 +69,7 @@ class ChatbotController extends Controller
         $attachments = collect($components)
             ->filter(fn ($component) => is_array($component)
                 && in_array(($component['type'] ?? null), ['image', 'file', 'link', 'qr_code'], true))
-            ->map(function ($component, $index) use ($faq) {
+            ->map(function ($component, $index) use ($faq, $version) {
                 $type = $component['type'];
 
                 if (in_array($type, ['image', 'file'], true)) {
@@ -370,8 +370,8 @@ class ChatbotController extends Controller
      * cannot turn an otherwise valid chatbot match into a 503.
      *
      * Preference order:
-     * 1. The newest non-superseded version.
-     * 2. The FAQ's explicit current_version_id.
+     * 1. The FAQ's explicit current_version_id/publication pointer.
+     * 2. The newest non-superseded version when no valid pointer exists.
      * 3. The newest version as a final historical recovery path.
      *
      * Returning null is intentional: faqResponsePayload() can use the FAQ row
@@ -381,21 +381,17 @@ class ChatbotController extends Controller
     {
         try {
             /*
-             * The newest non-superseded version is the published response.
-             * Prefer it over the pointer because a stale current_version_id
-             * should never make the chatbot show an older answer.
+             * The explicit current_version_id is the publication pointer and
+             * therefore the authoritative response version. Using it first
+             * prevents a stray non-superseded historical row from being shown.
              */
-            $published = FaqVersion::query()
-                ->where('faq_id', $faq->id)
-                ->whereNull('superseded_at')
-                ->orderByDesc('version_number')
-                ->first();
+            if ($faq->relationLoaded('currentVersion')) {
+                $current = $faq->currentVersion;
 
-            if ($published) {
-                return $published;
-            }
-
-            if ($faq->current_version_id) {
+                if ($current) {
+                    return $current;
+                }
+            } elseif ($faq->current_version_id) {
                 $current = FaqVersion::query()
                     ->whereKey((int) $faq->current_version_id)
                     ->where('faq_id', $faq->id)
@@ -404,6 +400,16 @@ class ChatbotController extends Controller
                 if ($current) {
                     return $current;
                 }
+            }
+
+            $published = FaqVersion::query()
+                ->where('faq_id', $faq->id)
+                ->whereNull('superseded_at')
+                ->orderByDesc('version_number')
+                ->first();
+
+            if ($published) {
+                return $published;
             }
 
             return FaqVersion::query()
@@ -430,14 +436,14 @@ class ChatbotController extends Controller
      * The complete flow is intentionally simple:
      *
      * browser question
-     *     -> exact / strong local FAQ retrieval
-     *     -> AI semantic retrieval only for ambiguous questions
+     *     -> AI scores/ranks the eligible FAQ catalogue
+     *     -> highest AI score
      *     -> validated FAQ ID
      *     -> database FAQ
      *     -> stored response
      *
-     * The AI never writes the answer. It only helps select an existing FAQ
-     * when deterministic retrieval is not already confident enough.
+     * The AI never writes the answer. It performs the semantic FAQ matching;
+     * Laravel only validates the winning FAQ ID and returns its stored answer.
      */
     /**
      * Return a chatbot response with a lightweight version header. This makes
