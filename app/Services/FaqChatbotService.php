@@ -9,16 +9,17 @@ use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
- * AI-only FAQ retrieval.
+ * FAQ retrieval.
  *
- * PHP does not decide which FAQ matches a question. It only:
- * - loads the live FAQ catalogue,
- * - applies an explicit agency filter selected by the user,
- * - gives the AI a compact representation of each FAQ,
- * - validates the ID returned by the AI,
- * - loads the canonical FAQ response from the database.
+ * AI is the primary semantic matcher. PHP never competes with the AI when
+ * the AI path succeeds. A conservative, database-driven lexical matcher is
+ * used only when the AI transport/retrieval path is unavailable, so an
+ * OpenRouter outage does not make an otherwise answerable FAQ unavailable.
  *
- * The matching itself remains entirely inside the AI model.
+ * The fallback is built from the live FAQ catalogue; it contains no
+ * FAQ-specific IDs, hard-coded phrases, or manually maintained synonyms.
+ * Regardless of which matcher selects the FAQ, the final response is always
+ * loaded from the canonical FAQ/version data in the database.
  */
 class FaqChatbotService
 {
@@ -33,6 +34,12 @@ class FaqChatbotService
      * compact AI input on every request.
      */
     private const CATALOG_CACHE_SECONDS = 30;
+
+    /**
+     * The emergency matcher must be conservative. It is never used when AI
+     * successfully returns a valid FAQ decision.
+     */
+    private const LOCAL_FALLBACK_MIN_SCORE = 64.0;
 
     /**
      * Keep only the fields that help the AI identify the FAQ.
@@ -50,8 +57,6 @@ class FaqChatbotService
      * classification task, while the remaining entries are true failovers.
      */
     private const RETRIEVAL_MODELS = [
-        'qwen/qwen3.8-27b:free',
-        'inclusionai/ling-3.0-flash-fin:free',
         'poolside/laguna-s-2.1:free',
         'nvidia/nemotron-3.5-lightning:free',
         'google/gemma-4-26b-a4b-it:free',
@@ -84,22 +89,72 @@ class FaqChatbotService
             return null;
         }
 
-        $winner = $this->selectBestFaqWithAi(
-            $question,
-            $agencyId,
-            $faqs
-        );
+        try {
+            /*
+             * AI is deliberately the first and only normal matching path.
+             * This preserves semantic handling of paraphrases, Taglish,
+             * misspellings, abbreviations, and natural conversational wording.
+             */
+            $winner = $this->selectBestFaqWithAi(
+                $question,
+                $agencyId,
+                $faqs
+            );
 
-        if (!$winner) {
-            return null;
+            if (!$winner) {
+                return null;
+            }
+
+            return [
+                'faq' => $winner['faq'],
+                'confidence' => $winner['score'] / 100,
+                'language' => $winner['language'],
+                'method' => 'ai-semantic',
+            ];
+        } catch (\Throwable $e) {
+            /*
+             * OpenRouter is an enhancement to retrieval, not the source of
+             * truth for the answer. If transport/model availability fails,
+             * fall back to the SAME live FAQ catalogue already loaded above.
+             *
+             * Do not fall back for a database/catalogue failure because a
+             * partial catalogue would make a deterministic match unsafe.
+             */
+            Log::warning('KNOWURLOCAL FAQ AI unavailable; using dynamic local fallback.', [
+                'question' => $question,
+                'agency_id' => $agencyId,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'catalog_size' => $faqs->count(),
+            ]);
+
+            $fallback = $this->findDynamicLocalFallback($question, $faqs);
+
+            if ($fallback === null) {
+                Log::warning('KNOWURLOCAL dynamic FAQ fallback found no sufficiently strong match.', [
+                    'question' => $question,
+                    'agency_id' => $agencyId,
+                    'catalog_size' => $faqs->count(),
+                ]);
+
+                return null;
+            }
+
+            Log::info('KNOWURLOCAL dynamic FAQ fallback winner.', [
+                'question' => $question,
+                'agency_id' => $agencyId,
+                'faq_id' => $fallback['faq']->id,
+                'score' => $fallback['score'],
+                'catalog_size' => $faqs->count(),
+            ]);
+
+            return [
+                'faq' => $fallback['faq'],
+                'confidence' => $fallback['score'] / 100,
+                'language' => $this->detectQuestionLanguage($question),
+                'method' => 'dynamic-local-fallback',
+            ];
         }
-
-        return [
-            'faq' => $winner['faq'],
-            'confidence' => $winner['score'] / 100,
-            'language' => $winner['language'],
-            'method' => 'ai-semantic',
-        ];
     }
 
     /**
@@ -412,6 +467,298 @@ class FaqChatbotService
         })->all();
     }
 
+    /**
+     * Conservative emergency matcher built entirely from the current FAQ
+     * catalogue. It is intentionally weaker than AI and therefore is only
+     * called after the AI retrieval path throws/fails.
+     *
+     * The matcher combines:
+     * - normalized token overlap,
+     * - keyword overlap,
+     * - phrase similarity,
+     * - typo-tolerant token similarity.
+     *
+     * No FAQ ID, agency, phrase, or synonym is hard-coded here.
+     */
+    private function findDynamicLocalFallback(string $question, Collection $faqs): ?array
+    {
+        $questionTokens = $this->meaningfulTokens($question);
+
+        if ($questionTokens === []) {
+            return null;
+        }
+
+        $ranked = $faqs->map(function (Faq $faq) use ($question, $questionTokens): array {
+            $questionFields = array_filter([
+                (string) ($faq->question ?? ''),
+                (string) ($faq->question_fil ?? ''),
+            ]);
+
+            $keywordFields = $this->keywordFragments((string) ($faq->keywords ?? ''));
+            $agencyFields = array_filter([
+                (string) ($faq->agency?->agency_name ?? ''),
+                (string) ($faq->agency?->agency_abbreviation ?? ''),
+            ]);
+
+            $questionText = implode(' ', $questionFields);
+            $keywordText = implode(' ', $keywordFields);
+            $agencyText = implode(' ', $agencyFields);
+
+            $questionScore = $this->textMatchScore(
+                $question,
+                $questionTokens,
+                $questionText
+            );
+
+            $keywordScore = $this->tokenOverlapScore(
+                $questionTokens,
+                $this->meaningfulTokens($keywordText)
+            );
+
+            $agencyScore = $this->tokenOverlapScore(
+                $questionTokens,
+                $this->meaningfulTokens($agencyText)
+            );
+
+            /*
+             * The FAQ question is the strongest evidence. Keywords provide
+             * additional context, while agency names are only a small boost.
+             */
+            $score = ($questionScore * 0.78)
+                + ($keywordScore * 0.18)
+                + ($agencyScore * 0.04);
+
+            return [
+                'faq' => $faq,
+                'score' => max(0.0, min(100.0, $score)),
+            ];
+        })
+            ->sortByDesc('score')
+            ->values();
+
+        $best = $ranked->first();
+        $second = $ranked->get(1);
+
+        if (!$best || $best['score'] < self::LOCAL_FALLBACK_MIN_SCORE) {
+            return null;
+        }
+
+        /*
+         * Avoid selecting a weakly distinguishable FAQ when two records are
+         * nearly tied. AI would normally resolve that ambiguity; the emergency
+         * matcher should prefer a safe no-match instead.
+         */
+        if (
+            $second !== null
+            && ($best['score'] - $second['score']) < 5.0
+            && $best['score'] < 82.0
+        ) {
+            return null;
+        }
+
+        return $best;
+    }
+
+    /**
+     * Compare a user's normalized question against an FAQ question.
+     *
+     * The full-string similarity catches close paraphrases while token
+     * similarity catches reordered words. Per-token fuzzy comparison handles
+     * common typos without requiring a manually maintained typo dictionary.
+     */
+    private function textMatchScore(
+        string $question,
+        array $questionTokens,
+        string $faqQuestion
+    ): float {
+        $faqTokens = $this->meaningfulTokens($faqQuestion);
+
+        if ($faqTokens === []) {
+            return 0.0;
+        }
+
+        $normalizedQuestion = $this->normalizeForMatching($question);
+        $normalizedFaq = $this->normalizeForMatching($faqQuestion);
+
+        if ($normalizedQuestion !== '' && $normalizedQuestion === $normalizedFaq) {
+            return 100.0;
+        }
+
+        $questionTokenScore = $this->tokenOverlapScore($questionTokens, $faqTokens);
+        $phraseScore = 0.0;
+
+        if ($normalizedQuestion !== '' && $normalizedFaq !== '') {
+            similar_text($normalizedQuestion, $normalizedFaq, $phraseScore);
+        }
+
+        $fuzzyTokenScore = $this->fuzzyTokenScore($questionTokens, $faqTokens);
+
+        /*
+         * Token overlap is deliberately strongest because users often reorder
+         * words. Phrase similarity adds context; fuzzy matching absorbs typos.
+         */
+        return min(
+            100.0,
+            ($questionTokenScore * 0.50)
+            + ($fuzzyTokenScore * 0.30)
+            + ($phraseScore * 0.20)
+        );
+    }
+
+    /**
+     * Directional overlap: every meaningful user token gets an opportunity to
+     * match an FAQ token. This makes shorter user paraphrases work naturally.
+     */
+    private function tokenOverlapScore(array $sourceTokens, array $targetTokens): float
+    {
+        if ($sourceTokens === [] || $targetTokens === []) {
+            return 0.0;
+        }
+
+        $target = array_values(array_unique($targetTokens));
+        $matched = 0;
+
+        foreach (array_unique($sourceTokens) as $sourceToken) {
+            if (in_array($sourceToken, $target, true)) {
+                $matched++;
+            }
+        }
+
+        return ($matched / max(1, count(array_unique($sourceTokens)))) * 100;
+    }
+
+    /**
+     * Typo-tolerant directional token matching.
+     *
+     * Only short edit distances are accepted, and very short tokens require
+     * an exact match to avoid turning generic words into false positives.
+     */
+    private function fuzzyTokenScore(array $sourceTokens, array $targetTokens): float
+    {
+        if ($sourceTokens === [] || $targetTokens === []) {
+            return 0.0;
+        }
+
+        $target = array_values(array_unique($targetTokens));
+        $matched = 0;
+
+        foreach (array_unique($sourceTokens) as $sourceToken) {
+            if (strlen($sourceToken) <= 3) {
+                if (in_array($sourceToken, $target, true)) {
+                    $matched++;
+                }
+                continue;
+            }
+
+            foreach ($target as $targetToken) {
+                if ($sourceToken === $targetToken) {
+                    $matched++;
+                    break;
+                }
+
+                $maxDistance = strlen($sourceToken) >= 8 ? 2 : 1;
+
+                if (
+                    abs(strlen($sourceToken) - strlen($targetToken)) <= $maxDistance
+                    && levenshtein($sourceToken, $targetToken) <= $maxDistance
+                ) {
+                    $matched++;
+                    break;
+                }
+            }
+        }
+
+        return ($matched / max(1, count(array_unique($sourceTokens)))) * 100;
+    }
+
+    /**
+     * Normalize only for emergency matching. This is not used to decide which
+     * FAQ to select while AI is healthy.
+     */
+    private function normalizeForMatching(string $value): string
+    {
+        $value = mb_strtolower(trim($value), 'UTF-8');
+        $value = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $value) ?? $value;
+        $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+
+        return trim($value);
+    }
+
+    /**
+     * Remove high-frequency function words so overlap reflects the subject of
+     * the question rather than words such as "ba", "ng", "the", or "do".
+     */
+    private function meaningfulTokens(string $value): array
+    {
+        $normalized = $this->normalizeForMatching($value);
+
+        if ($normalized === '') {
+            return [];
+        }
+
+        $stopWords = [
+            'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'can', 'do',
+            'does', 'for', 'from', 'how', 'i', 'if', 'in', 'is', 'it', 'me',
+            'my', 'of', 'on', 'or', 'the', 'to', 'what', 'when', 'where',
+            'which', 'who', 'with', 'you', 'your',
+            'ang', 'ba', 'bago', 'bilang', 'dahil', 'din', 'dito', 'doon',
+            'gusto', 'ikaw', 'ito', 'ko', 'kung', 'may', 'mo', 'na', 'ng',
+            'nga', 'ni', 'nito', 'para', 'po', 'sa', 'saan', 'si', 'sila',
+            'sinong', 'tatak', 'the', 'yung',
+        ];
+
+        $tokens = preg_split('/\s+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY);
+
+        return array_values(array_filter(
+            $tokens ?: [],
+            static fn (string $token): bool =>
+                mb_strlen($token, 'UTF-8') >= 2
+                && !in_array($token, $stopWords, true)
+        ));
+    }
+
+    /**
+     * FAQ keyword fields have historically been stored as comma/semicolon/
+     * newline-separated text. Treat all common separators as boundaries.
+     */
+    private function keywordFragments(string $keywords): array
+    {
+        $parts = preg_split('/[,;|\n\r]+/u', $keywords);
+
+        return array_values(array_filter(
+            array_map('trim', $parts ?: []),
+            static fn (string $value): bool => $value !== ''
+        ));
+    }
+
+    private function detectQuestionLanguage(string $question): string
+    {
+        /*
+         * This is only used for choosing between the already-stored English
+         * and Filipino response variants after the emergency matcher wins.
+         * It is intentionally conservative.
+         */
+        $tokens = $this->meaningfulTokens($question);
+
+        if ($tokens === []) {
+            return 'en';
+        }
+
+        $filipinoMarkers = [
+            'kailangan', 'magpa', 'para', 'kumuha', 'kuha', 'saan', 'paano',
+            'mag', 'mga', 'ng', 'ba', 'po', 'pwede', 'puwede', 'ano', 'may',
+        ];
+
+        $hits = 0;
+        foreach ($tokens as $token) {
+            if (in_array($token, $filipinoMarkers, true)) {
+                $hits++;
+            }
+        }
+
+        return $hits >= 2 ? 'fil' : 'en';
+    }
+
     private function retrievalPrompt(): string
     {
         return <<<'PROMPT'
@@ -526,17 +873,26 @@ PROMPT;
             return self::RETRIEVAL_MODELS;
         }
 
-        $knownUnavailable = [
-            'thinkingmachines/inkling-small:free',
+        // Prefer an explicitly configured retrieval chain. Do not merge it with
+        // stale defaults: doing so can silently reintroduce retired/free-only
+        // model slugs that OpenRouter now rejects with HTTP 404.
+        $models = array_values(array_unique(array_filter(
+            array_map('trim', $configured),
+            static fn (string $model): bool => $model !== ''
+        )));
+
+        // These exact :free slugs are confirmed by OpenRouter to be retired
+        // / paid-only. Do not let stale .env values reintroduce them into the
+        // FAQ failover chain. Paid slugs without :free remain valid overrides.
+        $retiredFreeModels = [
             'qwen/qwen3.8-27b:free',
             'inclusionai/ling-3.0-flash-fin:free',
         ];
 
-        $models = array_values(array_unique(array_filter(
-            array_merge(self::RETRIEVAL_MODELS, array_map('trim', $configured)),
-            static fn (string $model): bool =>
-                $model !== '' && !in_array($model, $knownUnavailable, true)
-        )));
+        $models = array_values(array_filter(
+            $models,
+            static fn (string $model): bool => !in_array($model, $retiredFreeModels, true)
+        ));
 
         return $models !== [] ? $models : self::RETRIEVAL_MODELS;
     }

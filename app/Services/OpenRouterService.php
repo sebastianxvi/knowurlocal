@@ -66,13 +66,51 @@ class OpenRouterService
             throw new RuntimeException('No OpenRouter candidate models are configured.');
         }
 
+        $cacheStore = Cache::store(config('services.openrouter.cache_store', 'file'));
+
+        // Health quarantine is only a short optimization. It must never turn
+        // into a hard outage when every *temporarily* unhealthy candidate is
+        // marked unavailable. Permanent 404/unavailable candidates are kept
+        // out of recovery; retrying them only wastes latency.
+        $healthKeys = array_map(
+            fn (string $candidate): string => $this->candidateHealthKey($candidate),
+            $candidateModels
+        );
+
+        $availableCandidates = array_values(array_filter(
+            $candidateModels,
+            fn (string $candidate): bool =>
+                !$cacheStore->has($this->candidateHealthKey($candidate))
+                && !$cacheStore->has($this->candidateUnavailableKey($candidate))
+        ));
+
+        $hasTemporaryHealthQuarantine = collect($candidateModels)->contains(
+            fn (string $candidate): bool =>
+                $cacheStore->has($this->candidateHealthKey($candidate))
+                && !$cacheStore->has($this->candidateUnavailableKey($candidate))
+        );
+
+        if ($availableCandidates === [] && $hasTemporaryHealthQuarantine) {
+            Log::warning('OPENROUTER ALL CANDIDATES TEMPORARILY QUARANTINED; STARTING RECOVERY PASS', [
+                'requested_model' => $model,
+                'candidate_models' => $candidateModels,
+            ]);
+
+            foreach ($healthKeys as $healthKey) {
+                $cacheStore->forget($healthKey);
+            }
+        }
+
         $basePayload = [
             'messages' => $messages,
             'temperature' => $temperature,
             'max_tokens' => (int) config('services.openrouter.max_tokens', 768),
-            // Let OpenRouter fail over between providers for the selected model.
+            // Candidates are our application-level failover chain. Do not let
+            // OpenRouter silently route candidate A through candidate B's
+            // provider pool, otherwise a timeout/429 can be attributed to the
+            // wrong candidate and the final error becomes misleading.
             'provider' => [
-                'allow_fallbacks' => true,
+                'allow_fallbacks' => (bool) config('services.openrouter.allow_provider_fallbacks', false),
             ],
         ];
 
@@ -104,11 +142,22 @@ class OpenRouterService
         $response = null;
         $attempt = 0;
         $lastModel = $model;
+        $lastFailureStatus = null;
+        $lastFailureBody = null;
 
         foreach ($candidateModels as $candidateIndex => $candidateModel) {
             $healthKey = $this->candidateHealthKey($candidateModel);
 
-            if (Cache::store(config('services.openrouter.cache_store', 'file'))->has($healthKey)) {
+            if ($cacheStore->has($this->candidateUnavailableKey($candidateModel))) {
+                Log::debug('OPENROUTER CANDIDATE PERMANENTLY UNAVAILABLE; SKIPPED', [
+                    'requested_model' => $model,
+                    'candidate_model' => $candidateModel,
+                    'candidate_index' => $candidateIndex,
+                ]);
+                continue;
+            }
+
+            if ($cacheStore->has($healthKey)) {
                 Log::debug('OPENROUTER CANDIDATE TEMPORARILY SKIPPED', [
                     'requested_model' => $model,
                     'candidate_model' => $candidateModel,
@@ -128,6 +177,9 @@ class OpenRouterService
                         $payload
                     );
                 } catch (\Throwable $e) {
+                    $lastFailureStatus = null;
+                    $lastFailureBody = $e->getMessage();
+
                     Log::warning('OPENROUTER REQUEST EXCEPTION', [
                         'requested_model' => $model,
                         'candidate_model' => $candidateModel,
@@ -145,13 +197,15 @@ class OpenRouterService
                     // A connect/read timeout is a candidate-health problem for
                     // this request path. Temporarily quarantine the model so the
                     // next chat request does not repeat the same slow failure.
-                    Cache::store(config('services.openrouter.cache_store', 'file'))->put($healthKey, true, now()->addSeconds(30));
+                    $cacheStore->put($healthKey, true, now()->addSeconds(30));
                     break;
                 }
 
                 if (!$response->successful()) {
                     $status = $response->status();
                     $body = $response->body();
+                    $lastFailureStatus = $status;
+                    $lastFailureBody = $body;
                     $candidateUnavailable = $status === 403
                         && (
                             str_contains($body, 'only available on agentic harnesses')
@@ -187,7 +241,7 @@ class OpenRouterService
                             default => 20,
                         };
 
-                        Cache::store(config('services.openrouter.cache_store', 'file'))->put($healthKey, true, now()->addSeconds($quarantineSeconds));
+                        $cacheStore->put($healthKey, true, now()->addSeconds($quarantineSeconds));
                         break;
                     }
 
@@ -198,7 +252,16 @@ class OpenRouterService
                      * failover chain.
                      */
                     if ($status === 404) {
-                        Cache::store(config('services.openrouter.cache_store', 'file'))->put($healthKey, true, now()->addMinutes(10));
+                        // A 404 for a model slug is not a transient provider
+                        // outage. In particular, OpenRouter can return 404 when
+                        // a :free slug has moved to paid-only. Keep this model
+                        // out of all later recovery passes for a longer period.
+                        $cacheStore->put(
+                            $this->candidateUnavailableKey($candidateModel),
+                            true,
+                            now()->addHours(6)
+                        );
+                        $cacheStore->forget($healthKey);
                         break;
                     }
 
@@ -207,7 +270,12 @@ class OpenRouterService
                      * rather than account authentication failures.
                      */
                     if ($candidateUnavailable) {
-                        Cache::store(config('services.openrouter.cache_store', 'file'))->put($healthKey, true, now()->addMinutes(10));
+                        $cacheStore->put(
+                            $this->candidateUnavailableKey($candidateModel),
+                            true,
+                            now()->addHours(6)
+                        );
+                        $cacheStore->forget($healthKey);
                         break;
                     }
 
@@ -234,7 +302,7 @@ class OpenRouterService
                         continue;
                     }
 
-                    Cache::store(config('services.openrouter.cache_store', 'file'))->put($healthKey, true, now()->addSeconds(20));
+                    $cacheStore->put($healthKey, true, now()->addSeconds(20));
                     break;
                 }
 
@@ -287,7 +355,7 @@ class OpenRouterService
                              * A short quarantine prevents an immediately repeated
                              * malformed/truncated response from dominating the chain.
                              */
-                            Cache::store(config('services.openrouter.cache_store', 'file'))->put($healthKey, true, now()->addSeconds(20));
+                            $cacheStore->put($healthKey, true, now()->addSeconds(20));
                             break;
                         }
                     }
@@ -327,21 +395,22 @@ class OpenRouterService
 
                 // Empty output is treated as a failed candidate so the next
                 // independent model can answer the same retrieval request.
-                Cache::store(config('services.openrouter.cache_store', 'file'))->put($healthKey, true, now()->addSeconds(20));
+                $cacheStore->put($healthKey, true, now()->addSeconds(20));
                 break;
             }
         }
 
         if (!$response || $response->failed()) {
-            $status = $response?->status();
+            $status = $lastFailureStatus;
+            $body = $lastFailureBody;
 
             Log::error('OPENROUTER REQUEST FAILED', [
                 'status' => $status,
                 'model' => $lastModel,
                 'requested_model' => $model,
                 'attempts' => $attempt,
-                'body' => $response
-                    ? mb_substr($response->body(), 0, 2000)
+                'body' => is_string($body)
+                    ? mb_substr($body, 0, 2000)
                     : null,
             ]);
 
@@ -366,6 +435,18 @@ class OpenRouterService
     private function candidateHealthKey(string $candidateModel): string
     {
         return 'knowurlocal:openrouter:candidate-unhealthy:' . sha1($candidateModel);
+    }
+
+    /**
+     * Longer-lived quarantine for model slugs that OpenRouter says are no
+     * longer available for the requested tier (for example a free slug that
+     * has moved to paid-only). Recovery passes must not immediately retry these
+     * candidates, otherwise every all-quarantined recovery burns time on known
+     * 404s before reaching usable providers.
+     */
+    private function candidateUnavailableKey(string $candidateModel): string
+    {
+        return 'knowurlocal:openrouter:candidate-unavailable:' . sha1($candidateModel);
     }
 
     /**
