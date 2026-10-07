@@ -54,7 +54,7 @@ return [
             'trim',
             explode(',', env(
                 'OPENROUTER_RETRIEVAL_MODELS',
-                'qwen/qwen3.8-27b:free,inclusionai/ling-3.0-flash-fin:free,poolside/laguna-s-2.1:free,nvidia/nemotron-3.5-lightning:free'
+                'qwen/qwen3.8-27b:free,inclusionai/ling-3.0-flash-fin:free,poolside/laguna-s-2.1:free,nvidia/nemotron-3.5-lightning:free,google/gemma-4-26b-a4b-it:free'
             ))
         ),
         static fn (string $value): bool => $value !== ''

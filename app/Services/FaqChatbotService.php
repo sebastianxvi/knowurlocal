@@ -54,6 +54,7 @@ class FaqChatbotService
         'inclusionai/ling-3.0-flash-fin:free',
         'poolside/laguna-s-2.1:free',
         'nvidia/nemotron-3.5-lightning:free',
+        'google/gemma-4-26b-a4b-it:free',
     ];
 
     public function __construct(
