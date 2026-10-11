@@ -177,7 +177,15 @@ class ChatbotController extends Controller
         );
 
         $disk = Storage::disk('private');
-        abort_unless($disk->exists($path), 404);
+        if (!$disk->exists($path)) {
+            Log::warning('Chatbot FAQ version attachment is missing from configured storage.', [
+                'faq_id' => $faq->id,
+                'faq_version_id' => $version->id,
+                'component_index' => $componentIndex,
+                'storage_disk' => config('filesystems.disks.private.driver'),
+            ]);
+            abort(404);
+        }
 
         $filename = basename($path);
         $disposition = $component['type'] === 'file' ? 'attachment' : 'inline';
@@ -221,12 +229,21 @@ class ChatbotController extends Controller
             404
         );
 
-        abort_unless(Storage::disk('private')->exists($path), 404);
+        $disk = Storage::disk('private');
+        if (!$disk->exists($path)) {
+            Log::warning('Chatbot FAQ attachment is missing from configured storage.', [
+                'faq_id' => $faq->id,
+                'faq_version_id' => $version->id,
+                'component_index' => $componentIndex,
+                'storage_disk' => config('filesystems.disks.private.driver'),
+            ]);
+            abort(404);
+        }
 
         $filename = basename($path);
         $disposition = $component['type'] === 'file' ? 'attachment' : 'inline';
 
-        return Storage::disk('private')->response(
+        return $disk->response(
             $path,
             $filename,
             [

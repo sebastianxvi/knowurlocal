@@ -170,6 +170,16 @@ function isSafeUrl(value){
 }
 
 
+function describeLinkUrl(value) {
+    try {
+        const parsed = new URL(value, window.location.origin);
+        if (!['http:', 'https:'].includes(parsed.protocol)) return 'Open website';
+        return parsed.hostname.replace(/^www\\./i, '');
+    } catch {
+        return 'Open website';
+    }
+}
+
 /*
  * Convert chatbot text into safe HTML.
  *
@@ -202,7 +212,8 @@ function allowSafeHTML(str){
                 return rawUrl;
             }
 
-            return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chatbot-link">Open link <i class="ph-light ph-arrow-up-right"></i></a>${punctuation}`;
+            const linkTitle = escapeHTML(describeLinkUrl(url));
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="chatbot-link" aria-label="Open ${linkTitle}">${linkTitle} <i class="ph-light ph-arrow-up-right"></i></a>${punctuation}`;
 
         }
     );
@@ -288,6 +299,11 @@ function renderFaqImages(attachments) {
                             loading="lazy"
                             referrerpolicy="no-referrer"
                         >
+                        <span class="chat-faq-image-fallback" aria-live="polite">
+                            <i class="ph-light ph-image-broken"></i>
+                            <span>Image unavailable</span>
+                            <span class="chat-faq-image-fallback-label">${label}</span>
+                        </span>
                     </button>
                     ${label !== 'FAQ image' ? `<figcaption>${label}</figcaption>` : ''}
                 </figure>
@@ -309,32 +325,29 @@ function renderFaqFilesAndLinks(attachments) {
             if (!url || !isSafeUrl(url)) return '';
 
             const safeUrl = escapeHTML(url);
-            const visibleText = label !== 'Attachment' ? label : url;
-
-            if (type === 'file') {
-                return `
-                    <a
-                        class="chat-faq-file-link"
-                        href="${safeUrl}"
-                        download
-                        aria-label="Download ${label}"
-                    >
-                        <i class="ph-light ph-file-arrow-down"></i>
-                        <span>${visibleText}</span>
-                        <i class="ph-light ph-download-simple"></i>
-                    </a>
-                `;
-            }
+            const isFile = type === 'file';
+            const linkTitle = label !== 'Attachment'
+                ? label
+                : (isFile ? 'Download attachment' : describeLinkUrl(url));
+            const detail = isFile
+                ? 'File attachment'
+                : describeLinkUrl(url);
 
             return `
                 <a
-                    class="chat-faq-plain-link"
+                    class="chat-faq-resource-card ${isFile ? 'is-file' : 'is-link'}"
                     href="${safeUrl}"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    ${isFile ? 'download' : 'target="_blank" rel="noopener noreferrer"'}
+                    aria-label="${isFile ? 'Download' : 'Open'} ${linkTitle}"
                 >
-                    ${visibleText}
-                    <i class="ph-light ph-arrow-up-right"></i>
+                    <span class="chat-faq-resource-icon">
+                        <i class="ph-light ${isFile ? 'ph-file-arrow-down' : 'ph-globe'}"></i>
+                    </span>
+                    <span class="chat-faq-resource-copy">
+                        <span class="chat-faq-resource-title">${linkTitle}</span>
+                        <span class="chat-faq-resource-detail">${escapeHTML(detail)}</span>
+                    </span>
+                    <i class="ph-light ${isFile ? 'ph-download-simple' : 'ph-arrow-up-right'} chat-faq-resource-action"></i>
                 </a>
             `;
         })
@@ -1682,6 +1695,18 @@ if(drag_to_close){
 
 }
 
+
+// Show a useful, non-broken placeholder when a deployed/private image cannot load.
+document.addEventListener('error', function (event) {
+    const image = event.target;
+    if (!(image instanceof HTMLImageElement) || !image.classList.contains('chat-faq-inline-image')) return;
+    const button = image.closest('.chat-faq-image-button');
+    if (!button) return;
+    button.classList.add('is-image-unavailable');
+    button.removeAttribute('data-image-url');
+    button.setAttribute('aria-label', 'FAQ image unavailable');
+    image.style.display = 'none';
+}, true);
 
 /*
  * FAQ image modal.
