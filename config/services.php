@@ -36,6 +36,9 @@ return [
     ],
 
     'chatbot_ai' => [
+        // Set to fallback_only to test the dynamic local matcher without any AI requests.
+        // Keep the default as ai for normal operation.
+        'mode' => env('CHATBOT_AI_MODE', 'ai'),
         // Use Groq for FAQ matching after its credentials have been configured.
         'provider' => env('CHATBOT_AI_PROVIDER', 'groq'),
         // FAQ matching only returns a small JSON decision, but reasoning models

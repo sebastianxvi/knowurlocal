@@ -2,6 +2,92 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
+    // Sharing exposes only this public agency URL, never the sender's GPS
+    // coordinates or current route. The recipient calculates their own route.
+    const shareButton = document.getElementById('shareNavigationLink');
+    const navMapElement = document.getElementById('navMap');
+
+    if (shareButton && navMapElement) {
+        const originalShareMarkup = shareButton.innerHTML;
+        let shareFeedbackTimer = null;
+
+        const showShareFeedback = (message, state = 'success') => {
+            shareButton.innerHTML = state === 'success'
+                ? '<i class="ph-light ph-check" aria-hidden="true"></i><span class="pill-share-label"></span>'
+                : '<i class="ph-light ph-warning-circle" aria-hidden="true"></i><span class="pill-share-label"></span>';
+            const label = shareButton.querySelector('.pill-share-label');
+            if (label) label.textContent = message;
+            shareButton.classList.toggle('is-success', state === 'success');
+            shareButton.classList.toggle('is-error', state !== 'success');
+            shareButton.setAttribute('aria-label', message);
+            window.clearTimeout(shareFeedbackTimer);
+            shareFeedbackTimer = window.setTimeout(() => {
+                shareButton.innerHTML = originalShareMarkup;
+                shareButton.classList.remove('is-success', 'is-error');
+                shareButton.setAttribute('aria-label', "Share this agency's navigation link");
+            }, 2400);
+        };
+
+        const copyShareUrl = async (url) => {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(url);
+                return true;
+            }
+
+            // Clipboard API may be unavailable on older browsers or HTTP dev hosts.
+            const temporaryInput = document.createElement('textarea');
+            temporaryInput.value = url;
+            temporaryInput.setAttribute('readonly', '');
+            temporaryInput.style.position = 'fixed';
+            temporaryInput.style.opacity = '0';
+            document.body.appendChild(temporaryInput);
+            temporaryInput.select();
+            let copied = false;
+            try {
+                copied = document.execCommand('copy');
+            } finally {
+                temporaryInput.remove();
+            }
+            return copied;
+        };
+
+        shareButton.addEventListener('click', async () => {
+            const url = window.location.href;
+            const agencyName = navMapElement.dataset.name || 'this agency';
+            const shareData = {
+                title: `Navigate to ${agencyName} | KnowUrLocal`,
+                text: `View the location and directions to ${agencyName} on KnowUrLocal.`,
+                url
+            };
+
+            shareButton.disabled = true;
+            try {
+                if (navigator.share) {
+                    await navigator.share(shareData);
+                    showShareFeedback('Ready to share');
+                } else if (await copyShareUrl(url)) {
+                    showShareFeedback('Link copied');
+                } else {
+                    throw new Error('Clipboard is unavailable');
+                }
+            } catch (error) {
+                // Closing the native share sheet is a normal user action.
+                if (error && error.name === 'AbortError') return;
+                try {
+                    if (await copyShareUrl(url)) {
+                        showShareFeedback('Link copied');
+                    } else {
+                        throw new Error('Clipboard is unavailable');
+                    }
+                } catch (_) {
+                    showShareFeedback('Could not share link', 'error');
+                }
+            } finally {
+                shareButton.disabled = false;
+            }
+        });
+    }
+
     /*
      * Find the navigation map.
      *

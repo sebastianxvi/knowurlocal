@@ -45,10 +45,11 @@
 
     <button
         class="pill-back"
-        onclick="window.location.href='/map'"
-        aria-label="Back to map"
+        onclick="window.location.href='{{ auth()->check() ? route('map') : route('landing') }}'"
+        aria-label="{{ auth()->check() ? 'Back to map' : 'Back to KnowUrLocal home' }}"
+        type="button"
     >
-        <i class="ph-light ph-arrow-left"></i>
+        <i class="ph-light ph-arrow-left" aria-hidden="true"></i>
     </button>
 
 
@@ -63,6 +64,17 @@
         </span>
 
     </div>
+
+    <button
+        class="pill-share"
+        id="shareNavigationLink"
+        type="button"
+        aria-label="Share this agency's navigation link"
+        title="Share destination"
+    >
+        <i class="ph-light ph-share-network" aria-hidden="true"></i>
+        <span class="pill-share-label">Share</span>
+    </button>
 
 </div>
 

@@ -349,11 +349,16 @@ public function getAll()
      * Load all information required by the navigation page,
      * including the agency's contact information.
      */
-    $agency = Agency::with([
-        'type',
-        'category',
-        'contacts.contactType',
-    ])
+    // The public navigation page only needs a destination label and coordinates.
+    // Keep its query minimal and avoid loading contact or other unrelated data.
+    $agency = Agency::query()
+        ->select([
+            'id',
+            'agency_name',
+            'agency_abbreviation',
+            'lat',
+            'lng',
+        ])
         ->findOrFail($id);
 
     if (auth()->check() && auth()->user()->role === 'user') {

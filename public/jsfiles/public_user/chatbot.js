@@ -332,12 +332,25 @@ function renderFaqFilesAndLinks(attachments) {
             const detail = isFile
                 ? 'File attachment'
                 : describeLinkUrl(url);
+            // Agency navigation is part of this app; keep it in the current tab.
+            // External FAQ links continue opening in a separate tab.
+            let isAgencyNavigation = false;
+            try {
+                const parsedUrl = new URL(url, window.location.href);
+                isAgencyNavigation = parsedUrl.origin === window.location.origin
+                    && /^\/navigate\/[^/]+\/?$/.test(parsedUrl.pathname);
+            } catch (_) {
+                isAgencyNavigation = false;
+            }
+            const linkTarget = !isFile && !isAgencyNavigation
+                ? 'target="_blank" rel="noopener noreferrer"'
+                : '';
 
             return `
                 <a
                     class="chat-faq-resource-card ${isFile ? 'is-file' : 'is-link'}"
                     href="${safeUrl}"
-                    ${isFile ? 'download' : 'target="_blank" rel="noopener noreferrer"'}
+                    ${isFile ? 'download' : linkTarget}
                     aria-label="${isFile ? 'Download' : 'Open'} ${linkTitle}"
                 >
                     <span class="chat-faq-resource-icon">

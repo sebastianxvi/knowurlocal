@@ -8,7 +8,9 @@ use App\Models\Faq;
 use App\Models\FaqVersion;
 use App\Models\SupportRequest;
 use App\Services\AuditLogService;
+use App\Services\AgencyChatbotService;
 use App\Services\FaqChatbotService;
+use App\Services\QuestionClarificationDetector;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -17,7 +19,9 @@ use Illuminate\Support\Facades\Storage;
 class ChatbotController extends Controller
 {
     public function __construct(
-        private FaqChatbotService $chatbot
+        private FaqChatbotService $chatbot,
+        private QuestionClarificationDetector $clarificationDetector,
+        private AgencyChatbotService $agencyChatbot
     ) {
     }
 
@@ -493,12 +497,149 @@ class ChatbotController extends Controller
             : null;
 
         /*
+         * Avoid an AI request for clearly incomplete, subject-less questions.
+         * If the user has just discussed an FAQ in this session, reuse that
+         * context instead of asking them to repeat it. Context is short-lived
+         * and scoped to the selected agency to avoid stale/cross-scope matches.
+         */
+        $clarificationPrompt = $this->clarificationDetector->promptFor($question);
+        $lastContext = session('chatbot.last_faq_context');
+        $contextFaq = null;
+
+        if (
+            $clarificationPrompt !== null
+            && is_array($lastContext)
+            && isset($lastContext['faq_id'], $lastContext['created_at'])
+            && (int) $lastContext['created_at'] >= now()->subMinutes(10)->timestamp
+            && ($lastContext['agency_id'] ?? null) === $agencyId
+        ) {
+            $contextFaq = Faq::query()->find((int) $lastContext['faq_id']);
+        }
+
+        if ($clarificationPrompt !== null && !$contextFaq) {
+            $this->logChat(
+                $question,
+                $clarificationPrompt,
+                'clarification',
+                'clarification',
+                $agencyId
+            );
+
+            return $this->chatbotJson([
+                'choices' => [[
+                    'message' => [
+                        'content' => $clarificationPrompt,
+                        'attachments' => [],
+                        'image' => null,
+                        'clarification' => true,
+                    ],
+                ]],
+            ], 200, 'clarification');
+        }
+
+        /*
+         * Prefer exact, database-backed agency retrieval for clear agency
+         * information questions. This path never invokes an AI provider.
+         * If it cannot confidently identify an agency, continue through the
+         * existing FAQ matcher without changing its behavior.
+         */
+        try {
+            $agencyAnswer = $this->agencyChatbot->answer($question);
+        } catch (\Throwable $e) {
+            Log::warning('KNOWURLOCAL agency information retrieval failed; continuing to FAQ matching.', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'question' => $question,
+            ]);
+            $agencyAnswer = null;
+        }
+
+        if ($agencyAnswer !== null) {
+            session()->forget('chatbot.last_faq_context');
+
+            $chatLogId = $this->logChat(
+                $question,
+                (string) $agencyAnswer['content'],
+                'answered',
+                (string) ($agencyAnswer['match_method'] ?? 'agency_database'),
+                isset($agencyAnswer['agency_id']) ? (int) $agencyAnswer['agency_id'] : null,
+                null,
+                null,
+                100,
+                'en'
+            );
+
+            return $this->chatbotJson([
+                'choices' => [[
+                    'message' => [
+                        'content' => $agencyAnswer['content'],
+                        'attachments' => $agencyAnswer['attachments'] ?? [],
+                        'image' => $agencyAnswer['image'] ?? null,
+                    ],
+                ]],
+            ], 200, (string) ($agencyAnswer['match_method'] ?? 'agency_database'));
+        }
+
+        /*
+         * Prefer database-backed agency retrieval for clear agency questions.
+         * This path never calls an AI provider. If it cannot confidently
+         * identify a relevant agency, preserve the existing FAQ pipeline.
+         */
+        try {
+            $agencyAnswer = $this->agencyChatbot->answer($question);
+        } catch (\Throwable $e) {
+            Log::warning('KNOWURLOCAL agency information retrieval failed; continuing to FAQ matching.', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'question' => $question,
+            ]);
+            $agencyAnswer = null;
+        }
+
+        if ($agencyAnswer !== null) {
+            session()->forget('chatbot.last_faq_context');
+
+            $chatLogId = $this->logChat(
+                $question,
+                (string) $agencyAnswer['content'],
+                'answered',
+                (string) ($agencyAnswer['match_method'] ?? 'agency_database'),
+                isset($agencyAnswer['agency_id']) ? (int) $agencyAnswer['agency_id'] : null,
+                null,
+                null,
+                100,
+                'en'
+            );
+
+            return $this->chatbotJson([
+                'choices' => [[
+                    'message' => [
+                        'content' => $agencyAnswer['content'],
+                        'attachments' => $agencyAnswer['attachments'] ?? [],
+                        'image' => $agencyAnswer['image'] ?? null,
+                    ],
+                ]],
+            ], 200, (string) ($agencyAnswer['match_method'] ?? 'agency_database'));
+        }
+
+        // A generic follow-up can inherit the immediately preceding FAQ topic.
+        $retrievalQuestion = $contextFaq
+            ? $question . "\n\nConversation context: The user was just asking about this FAQ: "
+                . (string) ($contextFaq->question ?? '')
+            : $question;
+
+        if ($clarificationPrompt === null) {
+            // A complete new question supersedes the previous conversational topic.
+            session()->forget('chatbot.last_faq_context');
+        }
+
+        /*
          * Retrieval and response rendering are intentionally separate failure
          * boundaries. A problem resolving historical FAQ versions must NEVER
          * turn a valid FAQ match into the generic "couldn't verify" message.
          */
         try {
-            $match = $this->chatbot->findMatch($question, $agencyId);
+            $match = $this->chatbot->findMatch($retrievalQuestion, $agencyId);
         } catch (\Throwable $e) {
             Log::error('KNOWURLOCAL chatbot retrieval failed.', [
                 'exception' => get_class($e),
@@ -528,6 +669,7 @@ class ChatbotController extends Controller
         }
 
         if ($match === null) {
+            session()->forget('chatbot.last_faq_context');
             $reply = "I couldn’t find a matching FAQ for your question.";
 
             $this->logChat(
@@ -550,6 +692,11 @@ class ChatbotController extends Controller
 
         /** @var Faq $faq */
         $faq = $match['faq'];
+        session()->put('chatbot.last_faq_context', [
+            'faq_id' => (int) $faq->id,
+            'agency_id' => $agencyId,
+            'created_at' => now()->timestamp,
+        ]);
         $faqVersion = $this->resolvePublishedFaqVersion($faq);
 
         try {

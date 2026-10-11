@@ -102,6 +102,46 @@ class FaqChatbotService
         }
 
         /*
+         * Explicit fallback-only mode for local testing. This branch is
+         * intentionally before cache lookup and every provider call, so the
+         * test cannot accidentally consume AI requests or reuse AI decisions.
+         * Default mode preserves the existing AI-first behavior.
+         */
+        $matchingMode = strtolower(trim((string) config('services.chatbot_ai.mode', 'ai')));
+
+        if ($matchingMode === 'fallback_only') {
+            Log::info('KNOWURLOCAL FAQ fallback-only mode enabled; skipping AI provider.', [
+                'agency_id' => $agencyId,
+                'catalog_size' => $faqs->count(),
+            ]);
+
+            $fallback = $this->findDynamicLocalFallback($question, $faqs);
+
+            if ($fallback === null) {
+                Log::info('KNOWURLOCAL dynamic FAQ fallback found no sufficiently strong match in fallback-only mode.', [
+                    'agency_id' => $agencyId,
+                    'catalog_size' => $faqs->count(),
+                ]);
+
+                return null;
+            }
+
+            Log::info('KNOWURLOCAL dynamic FAQ fallback winner in fallback-only mode.', [
+                'agency_id' => $agencyId,
+                'faq_id' => $fallback['faq']->id,
+                'score' => $fallback['score'],
+                'catalog_size' => $faqs->count(),
+            ]);
+
+            return [
+                'faq' => $fallback['faq'],
+                'confidence' => $fallback['score'] / 100,
+                'language' => $this->detectQuestionLanguage($question),
+                'method' => 'dynamic-local-fallback-only',
+            ];
+        }
+
+        /*
          * Reuse successful semantic decisions for repeated questions. The key
          * includes the effective catalogue fingerprint and agency scope, so
          * edits to FAQ questions/keywords or agency assignment naturally
@@ -123,6 +163,15 @@ class FaqChatbotService
                         ? $cachedDecision['language']
                         : 'en',
                 ]);
+
+                if ($cachedWinner !== null && !$this->faqMatchesQuestionIntent($question, $cachedWinner['faq'])) {
+                    Log::info('KNOWURLOCAL FAQ cached winner rejected by intent guard.', [
+                        'agency_id' => $agencyId,
+                        'faq_id' => (int) $cachedDecision['faq_id'],
+                    ]);
+                    $matchCache->forget($matchCacheKey);
+                    $cachedWinner = null;
+                }
 
                 if ($cachedWinner !== null) {
                     Log::debug('KNOWURLOCAL FAQ AI match cache hit.', [
@@ -159,8 +208,39 @@ class FaqChatbotService
                 $faqs
             );
 
+            if ($winner && !$this->faqMatchesQuestionIntent($question, $winner['faq'])) {
+                Log::info('KNOWURLOCAL FAQ AI winner rejected by intent guard.', [
+                    'agency_id' => $agencyId,
+                    'faq_id' => (int) $winner['faq']->id,
+                ]);
+                $winner = null;
+            }
+
             if (!$winner) {
-                return null;
+                Log::info('KNOWURLOCAL FAQ AI returned no winner; trying dynamic local fallback.', [
+                    'agency_id' => $agencyId,
+                    'catalog_size' => $faqs->count(),
+                ]);
+
+                $fallback = $this->findDynamicLocalFallback($question, $faqs);
+
+                if ($fallback === null) {
+                    return null;
+                }
+
+                Log::info('KNOWURLOCAL dynamic FAQ fallback winner after AI no-match.', [
+                    'agency_id' => $agencyId,
+                    'faq_id' => $fallback['faq']->id,
+                    'score' => $fallback['score'],
+                    'catalog_size' => $faqs->count(),
+                ]);
+
+                return [
+                    'faq' => $fallback['faq'],
+                    'confidence' => $fallback['score'] / 100,
+                    'language' => $this->detectQuestionLanguage($question),
+                    'method' => 'dynamic-local-fallback',
+                ];
             }
 
             $matchCache->put($matchCacheKey, [
@@ -585,6 +665,29 @@ class FaqChatbotService
      * contain answers or attachments. The database remains authoritative for
      * the final response.
      */
+    /**
+     * Reject obvious answer-type mismatches before returning/caching a FAQ.
+     * This is deliberately generic and does not depend on specific FAQ IDs.
+     */
+    private function faqMatchesQuestionIntent(string $question, Faq $faq): bool
+    {
+        $q = $this->normalizeForMatching($question);
+        $faqText = $this->normalizeForMatching(implode(' ', array_filter([
+            (string) ($faq->question ?? ''),
+            (string) ($faq->question_fil ?? ''),
+            (string) ($faq->keywords ?? ''),
+        ])));
+
+        $asksCost = preg_match('/\\b(how much|cost|price|fee|fees|payment|magkano|presyo|bayad|magkano ang)\\b/u', $q) === 1;
+        if ($asksCost) {
+            // A fee question must match FAQ metadata that actually addresses
+            // cost/payment; a requirements FAQ is not a safe substitute.
+            return preg_match('/\\b(cost|price|fee|fees|payment|amount|peso|php|magkano|presyo|bayad|singil|halaga)\\b/u', $faqText) === 1;
+        }
+
+        return true;
+    }
+
     private function resolveWinner(array $winner): ?array
     {
         $faqId = (int) ($winner['faq_id'] ?? 0);
@@ -672,7 +775,26 @@ class FaqChatbotService
             return null;
         }
 
-        $ranked = $faqs->map(function (Faq $faq) use ($question, $questionTokens): array {
+        /*
+         * Compute term rarity from the current catalogue. Distinctive terms
+         * such as a specific document or process carry more weight than words
+         * that occur in many FAQs. This is rebuilt from live FAQ content, so
+         * new/edited FAQs need no manually maintained vocabulary or IDs.
+         */
+        $documentFrequency = [];
+        foreach ($faqs as $catalogFaq) {
+            $documentTokens = array_unique($this->meaningfulTokens(implode(' ', array_filter([
+                (string) ($catalogFaq->question ?? ''),
+                (string) ($catalogFaq->question_fil ?? ''),
+                implode(' ', $this->keywordFragments((string) ($catalogFaq->keywords ?? ''))),
+            ]))));
+
+            foreach ($documentTokens as $token) {
+                $documentFrequency[$token] = ($documentFrequency[$token] ?? 0) + 1;
+            }
+        }
+
+        $ranked = $faqs->map(function (Faq $faq) use ($question, $questionTokens, $documentFrequency, $faqs): array {
             $questionFields = array_filter([
                 (string) ($faq->question ?? ''),
                 (string) ($faq->question_fil ?? ''),
@@ -704,12 +826,25 @@ class FaqChatbotService
                 $this->meaningfulTokens($agencyText)
             );
 
+            $faqTokens = $this->meaningfulTokens(implode(' ', array_filter([
+                $questionText,
+                $keywordText,
+            ])));
+            $rarityScore = $this->weightedTokenOverlapScore(
+                $questionTokens,
+                $faqTokens,
+                $documentFrequency,
+                $faqs->count()
+            );
+
             /*
-             * The FAQ question is the strongest evidence. Keywords provide
-             * additional context, while agency names are only a small boost.
+             * The FAQ question remains the strongest evidence. Keyword overlap
+             * and catalogue-derived term rarity improve recall for short,
+             * natural questions without introducing FAQ-specific rules.
              */
-            $score = ($questionScore * 0.78)
-                + ($keywordScore * 0.18)
+            $score = ($questionScore * 0.66)
+                + ($keywordScore * 0.14)
+                + ($rarityScore * 0.16)
                 + ($agencyScore * 0.04);
 
             return [
@@ -741,6 +876,54 @@ class FaqChatbotService
         }
 
         return $best;
+    }
+
+    /**
+     * Weighted overlap using inverse document frequency from the live FAQ
+     * catalogue. Rare terms contribute more than generic terms. This is a
+     * lightweight local retrieval signal, not a calibrated probability.
+     */
+    private function weightedTokenOverlapScore(
+        array $sourceTokens,
+        array $targetTokens,
+        array $documentFrequency,
+        int $documentCount
+    ): float {
+        $sourceTokens = array_values(array_unique($sourceTokens));
+        $targetTokens = array_values(array_unique($targetTokens));
+
+        if ($sourceTokens === [] || $targetTokens === []) {
+            return 0.0;
+        }
+
+        $totalWeight = 0.0;
+        $matchedWeight = 0.0;
+
+        foreach ($sourceTokens as $sourceToken) {
+            $frequency = max(0, (int) ($documentFrequency[$sourceToken] ?? 0));
+            $weight = log(1 + (($documentCount + 1) / ($frequency + 1))) + 1;
+            $totalWeight += $weight;
+
+            if (in_array($sourceToken, $targetTokens, true)) {
+                $matchedWeight += $weight;
+                continue;
+            }
+
+            // Permit a small edit distance for longer misspelled terms.
+            if (mb_strlen($sourceToken, 'UTF-8') >= 5) {
+                foreach ($targetTokens as $targetToken) {
+                    if (
+                        abs(strlen($sourceToken) - strlen($targetToken)) <= 1
+                        && levenshtein($sourceToken, $targetToken) <= 1
+                    ) {
+                        $matchedWeight += $weight * 0.75;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return $totalWeight > 0 ? ($matchedWeight / $totalWeight) * 100 : 0.0;
     }
 
     /**

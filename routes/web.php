@@ -140,6 +140,13 @@ Route::post('/resend-otp', [AuthController::class, 'resendOtp'])
 Route::view('/privacy', 'privacy');
 Route::view('/terms', 'terms');
 
+// Public, read-only destination page so shared agency navigation links work
+// for recipients who are not signed in. Protected map/account actions remain
+// inside the authenticated route group below.
+Route::get('/navigate/{agency}', [AgencyController::class, 'navigate'])
+    ->middleware('throttle:60,1')
+    ->name('navigate');
+
 Route::middleware(['auth', 'no.cache'])->group(function () {
 
     Route::get('/map', [PageController::class, 'map'])->name('map');
@@ -214,7 +221,6 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     Route::get('/about', fn() => view('public_user.about'))->name('about');
 
     Route::get('/agency/{id}', [AgencyController::class, 'show'])->name('agency.show');
-    Route::get('/navigate/{agency}', [AgencyController::class, 'navigate'])->name('navigate');
 
     // API
     Route::get('/api/agencies', [AgencyController::class, 'getAll']);
