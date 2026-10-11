@@ -35,6 +35,20 @@ return [
         ],
     ],
 
+    'chatbot_ai' => [
+        // Use Groq for FAQ matching after its credentials have been configured.
+        'provider' => env('CHATBOT_AI_PROVIDER', 'groq'),
+        // FAQ matching only returns a small JSON decision, but reasoning models
+        // need room for internal reasoning plus that final decision.
+        'retrieval_max_tokens' => (int) env('CHATBOT_AI_RETRIEVAL_MAX_TOKENS', 256),
+    ],
+    'groq' => [
+        'api_key' => env('GROQ_API_KEY'),
+        'model' => env('GROQ_MODEL', 'openai/gpt-oss-20b'),
+        'base_url' => env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
+        'max_tokens' => (int) env('GROQ_MAX_TOKENS', 512),
+    ],
+
     'openrouter' => [
     'api_key' => env('OPENROUTER_API_KEY'),
 
@@ -43,25 +57,25 @@ return [
     // provider's shared pool cannot take the chatbot down.
     'model' => env(
         'OPENROUTER_MODEL',
-        'poolside/laguna-s-2.1:free'
+        'openrouter/free'
     ),
     'fallback_models' => env(
         'OPENROUTER_FALLBACK_MODELS',
-        'nvidia/nemotron-3.5-lightning:free,google/gemma-4-26b-a4b-it:free'
+        'nvidia/nemotron-3-ultra-550b-a55b:free,poolside/laguna-s-2.1:free,nvidia/nemotron-3.5-lightning:free'
     ),
     'retrieval_models' => array_values(array_filter(
         array_map(
             'trim',
             explode(',', env(
                 'OPENROUTER_RETRIEVAL_MODELS',
-                'poolside/laguna-s-2.1:free,nvidia/nemotron-3.5-lightning:free,google/gemma-4-26b-a4b-it:free'
+                'openrouter/free,nvidia/nemotron-3-ultra-550b-a55b:free,poolside/laguna-s-2.1:free,nvidia/nemotron-3.5-lightning:free'
             ))
         ),
         static fn (string $value): bool => $value !== ''
     )),
     'cache_store' => env('OPENROUTER_CACHE_STORE', 'file'),
     'allow_provider_fallbacks' => filter_var(env('OPENROUTER_ALLOW_PROVIDER_FALLBACKS', 'false'), FILTER_VALIDATE_BOOLEAN),
-    'max_tokens' => (int) env('OPENROUTER_MAX_TOKENS', 192),
+    'max_tokens' => (int) env('OPENROUTER_MAX_TOKENS', 512),
 ],
 
 ];

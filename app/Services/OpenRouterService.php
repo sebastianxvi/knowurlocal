@@ -365,6 +365,12 @@ class OpenRouterService
                         'candidate_model' => $candidateModel,
                         'candidate_index' => $candidateIndex,
                         'served_model' => $json['model'] ?? null,
+                        'generation_id' => $json['id'] ?? null,
+                        'usage' => is_array($json['usage'] ?? null) ? [
+                            'prompt_tokens' => $json['usage']['prompt_tokens'] ?? null,
+                            'completion_tokens' => $json['usage']['completion_tokens'] ?? null,
+                            'total_tokens' => $json['usage']['total_tokens'] ?? null,
+                        ] : null,
                     ]);
                     return $json;
                 }

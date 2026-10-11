@@ -28,12 +28,18 @@ class FaqChatbotService
      */
     private const AI_BATCH_SIZE = 100;
 
+    /** Maximum locally ranked candidates sent to the semantic model per question. */
+    private const AI_CANDIDATE_LIMIT = 20;
+
     /**
      * Short retrieval-catalogue cache. The final answer is always fetched
      * from the live FAQ/version rows, so this cache only avoids rebuilding the
      * compact AI input on every request.
      */
     private const CATALOG_CACHE_SECONDS = 30;
+
+    /** Cache only successful AI FAQ selections; answers are always reloaded live. */
+    private const MATCH_CACHE_SECONDS = 600;
 
     /**
      * The emergency matcher must be conservative. It is never used when AI
@@ -57,13 +63,19 @@ class FaqChatbotService
      * classification task, while the remaining entries are true failovers.
      */
     private const RETRIEVAL_MODELS = [
+        // Let OpenRouter choose a healthy free model first. This keeps the
+        // AI path broad instead of pinning the chatbot to a single provider.
+        'openrouter/free',
+        // Multiple providers currently serve this free model, giving the AI
+        // path another independent recovery option.
+        'nvidia/nemotron-3-ultra-550b-a55b:free',
         'poolside/laguna-s-2.1:free',
         'nvidia/nemotron-3.5-lightning:free',
-        'google/gemma-4-26b-a4b-it:free',
     ];
 
     public function __construct(
-        private OpenRouterService $ai
+        private OpenRouterService $openRouter,
+        private GroqService $groq
     ) {
     }
 
@@ -89,6 +101,52 @@ class FaqChatbotService
             return null;
         }
 
+        /*
+         * Reuse successful semantic decisions for repeated questions. The key
+         * includes the effective catalogue fingerprint and agency scope, so
+         * edits to FAQ questions/keywords or agency assignment naturally
+         * invalidate old decisions. Only the FAQ ID/score/language are cached;
+         * the approved answer is still loaded from the database.
+         */
+        $matchCache = Cache::store(config('services.openrouter.cache_store', 'file'));
+        $matchCacheKey = $this->matchCacheKey($question, $agencyId, $faqs);
+        $cachedDecision = $matchCache->get($matchCacheKey);
+
+        if (is_array($cachedDecision) && is_numeric($cachedDecision['faq_id'] ?? null)) {
+            $cachedFaq = $faqs->firstWhere('id', (int) $cachedDecision['faq_id']);
+
+            if ($cachedFaq !== null) {
+                $cachedWinner = $this->resolveWinner([
+                    'faq_id' => (int) $cachedDecision['faq_id'],
+                    'score' => (float) ($cachedDecision['score'] ?? 0),
+                    'language' => in_array($cachedDecision['language'] ?? null, ['en', 'fil'], true)
+                        ? $cachedDecision['language']
+                        : 'en',
+                ]);
+
+                if ($cachedWinner !== null) {
+                    Log::debug('KNOWURLOCAL FAQ AI match cache hit.', [
+                        'agency_id' => $agencyId,
+                        'faq_id' => (int) $cachedDecision['faq_id'],
+                    ]);
+
+                    return [
+                        'faq' => $cachedWinner['faq'],
+                        'confidence' => $cachedWinner['score'] / 100,
+                        'language' => $cachedWinner['language'],
+                        'method' => 'ai-semantic-cache',
+                    ];
+                }
+            }
+
+            $matchCache->forget($matchCacheKey);
+        }
+
+        Log::debug('KNOWURLOCAL FAQ AI match cache miss.', [
+            'agency_id' => $agencyId,
+            'catalog_size' => $faqs->count(),
+        ]);
+
         try {
             /*
              * AI is deliberately the first and only normal matching path.
@@ -104,6 +162,14 @@ class FaqChatbotService
             if (!$winner) {
                 return null;
             }
+
+            $matchCache->put($matchCacheKey, [
+                'faq_id' => (int) $winner['faq']->id,
+                'score' => (float) $winner['score'],
+                'language' => in_array($winner['language'] ?? null, ['en', 'fil'], true)
+                    ? $winner['language']
+                    : 'en',
+            ], now()->addSeconds(self::MATCH_CACHE_SECONDS));
 
             return [
                 'faq' => $winner['faq'],
@@ -155,6 +221,31 @@ class FaqChatbotService
                 'method' => 'dynamic-local-fallback',
             ];
         }
+    }
+
+    /**
+     * Build a context-aware cache key for successful FAQ match decisions.
+     */
+    private function matchCacheKey(string $question, ?int $agencyId, Collection $faqs): string
+    {
+        $catalogFingerprint = $faqs->map(static fn (Faq $faq): array => [
+            'id' => (int) $faq->id,
+            'agency_id' => $faq->agency_id !== null ? (int) $faq->agency_id : null,
+            'question' => (string) ($faq->question ?? ''),
+            'question_fil' => (string) ($faq->question_fil ?? ''),
+            'keywords' => (string) ($faq->keywords ?? ''),
+            'agency' => (string) ($faq->agency?->agency_name ?? ''),
+            'agency_abbreviation' => (string) ($faq->agency?->agency_abbreviation ?? ''),
+        ])->all();
+
+        $fingerprint = hash('sha256', serialize($catalogFingerprint));
+        $normalizedQuestion = $this->normalizeForMatching($question);
+
+        return 'knowurlocal:chatbot:match:v1:' . hash('sha256', serialize([
+            'question' => $normalizedQuestion,
+            'agency_id' => $agencyId,
+            'catalog' => $fingerprint,
+        ]));
     }
 
     /**
@@ -218,6 +309,25 @@ class FaqChatbotService
         ?int $agencyId,
         Collection $faqs
     ): ?array {
+        /*
+         * Do not send the entire FAQ catalogue to Groq. Rank the live catalogue
+         * locally using general text/keyword similarity, then let AI make the
+         * semantic decision among a generous shortlist. This keeps the prompt
+         * small without hard-coding FAQ IDs or agency-specific rules.
+         */
+        $allFaqCount = $faqs->count();
+        $faqs = $this->selectAiCandidates($question, $faqs);
+
+        Log::debug('KNOWURLOCAL FAQ AI candidate shortlist prepared.', [
+            'agency_id' => $agencyId,
+            'catalog_size' => $allFaqCount,
+            'candidate_count' => $faqs->count(),
+        ]);
+
+        if ($faqs->isEmpty()) {
+            return null;
+        }
+
         $batches = $faqs->chunk(self::AI_BATCH_SIZE)->values();
         $batchWinners = [];
 
@@ -268,6 +378,73 @@ class FaqChatbotService
     }
 
     /**
+     * Reduce the model input to the strongest general-purpose lexical candidates.
+     *
+     * This is candidate generation, not the final match decision: Groq still
+     * compares the question's meaning against both language variants and FAQ
+     * keywords before choosing the canonical record. No FAQ IDs or topics are
+     * hard-coded. When the catalogue is already small, all records are kept.
+     */
+    private function selectAiCandidates(string $question, Collection $faqs): Collection
+    {
+        if ($faqs->count() <= self::AI_CANDIDATE_LIMIT) {
+            return $faqs->values();
+        }
+
+        $questionTokens = $this->meaningfulTokens($question);
+        if ($questionTokens === []) {
+            return $faqs->take(self::AI_CANDIDATE_LIMIT)->values();
+        }
+
+        $rankedCandidates = $faqs
+            ->map(function (Faq $faq) use ($question, $questionTokens): array {
+                $questionText = trim(implode(' ', array_filter([
+                    (string) ($faq->question ?? ''),
+                    (string) ($faq->question_fil ?? ''),
+                ])));
+                $keywordText = implode(
+                    ' ',
+                    $this->keywordFragments((string) ($faq->keywords ?? ''))
+                );
+                $agencyText = trim(implode(' ', array_filter([
+                    (string) ($faq->agency?->agency_name ?? ''),
+                    (string) ($faq->agency?->agency_abbreviation ?? ''),
+                ])));
+
+                $questionScore = $this->textMatchScore(
+                    $question,
+                    $questionTokens,
+                    $questionText
+                );
+                $keywordScore = $this->tokenOverlapScore(
+                    $questionTokens,
+                    $this->meaningfulTokens($keywordText)
+                );
+                $agencyScore = $this->tokenOverlapScore(
+                    $questionTokens,
+                    $this->meaningfulTokens($agencyText)
+                );
+
+                return [
+                    'faq' => $faq,
+                    'score' => ($questionScore * 0.78)
+                        + ($keywordScore * 0.18)
+                        + ($agencyScore * 0.04),
+                ];
+            })
+            ->sortByDesc('score')
+            ->take(self::AI_CANDIDATE_LIMIT)
+            ->pluck('faq')
+            ->values()
+            ->all();
+
+        // Keep the declared Eloquent Collection contract: plucking model
+        // instances from a mapped collection otherwise produces a Support
+        // Collection and throws a TypeError before the AI request is sent.
+        return new Collection($rankedCandidates);
+    }
+
+    /**
      * Ask the model to choose ONE winner from the supplied records.
      */
     private function askAiToChoose(
@@ -289,6 +466,7 @@ class FaqChatbotService
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
 
         Log::debug('KNOWURLOCAL FAQ AI retrieval request prepared.', [
+            'provider' => config('services.chatbot_ai.provider', 'groq'),
             'stage' => $stage,
             'catalog_size' => count($catalog),
             'payload_bytes' => strlen($payload),
@@ -300,14 +478,21 @@ class FaqChatbotService
          * the JSON object. This keeps the chatbot compatible with models routed
          * through OpenRouter's free/variable model pool.
          */
-        $response = $this->ai->chat(
+        $aiProvider = strtolower(trim((string) config('services.chatbot_ai.provider', 'groq')));
+        $ai = $aiProvider === 'openrouter' ? $this->openRouter : $this->groq;
+
+        if (!in_array($aiProvider, ['groq', 'openrouter'], true)) {
+            throw new RuntimeException('Unsupported chatbot AI provider configured.');
+        }
+
+        $response = $ai->chat(
             [
                 ['role' => 'system', 'content' => $this->retrievalPrompt()],
                 ['role' => 'user', 'content' => $payload],
             ],
             0.0,
             null,
-            6,
+            8,
             3,
             1,
             function (array $candidate): bool {
@@ -323,14 +508,13 @@ class FaqChatbotService
             },
             $this->retrievalModels(),
             [
-                // Retrieval only needs a tiny JSON decision. Spending the
-                // completion budget on hidden reasoning is what caused the
-                // previous free-router responses to finish with `length`
-                // before emitting the JSON object.
-                'max_tokens' => 192,
-                'reasoning' => [
-                    'effort' => 'none',
-                ],
+                // Reasoning-capable models can consume a significant portion
+                // of the completion budget before emitting the compact JSON.
+                // Keep this independently configurable from normal chatbot output.
+                'max_tokens' => max(
+                    128,
+                    (int) config('services.chatbot_ai.retrieval_max_tokens', 256)
+                ),
             ]
         );
 
@@ -762,56 +946,14 @@ class FaqChatbotService
     private function retrievalPrompt(): string
     {
         return <<<'PROMPT'
-You are the semantic retrieval engine for KNOWURLOCAL.
+You are KNOWURLOCAL's FAQ retrieval selector. Select the ONE supplied FAQ that best answers the user's intent.
 
-Your ONLY job is to determine which ONE FAQ record in the supplied catalogue is the best match for the user's question.
+Each FAQ has an ID, agency, English/Filipino questions, and keywords. Understand meaning, not just shared words. Handle English, Filipino, Taglish, typos, abbreviations, paraphrases, and incomplete questions. Keywords are hints only.
 
-The catalogue is the complete set of records you are allowed to choose from.
+Choose only an ID present in the supplied catalogue. Always choose the closest available match; do not invent IDs, write an answer, or explain reasoning. Infer whether the user's question is English ("en") or Filipino/Taglish ("fil").
 
-You must perform the matching yourself using your language understanding and the actual information contained in each supplied FAQ record.
-
-Each record may contain:
-- English question
-- Filipino/Taglish question
-- administrator-provided keywords
-- agency name and abbreviation
-
-Treat keywords as contextual hints, not as a fixed matching rule.
-
-Do NOT use a fixed keyword-matching algorithm.
-Do NOT assume that shared words mean shared intent.
-Do NOT require exact wording.
-Do NOT rely on word overlap alone.
-Understand what information the user is actually asking for and determine which FAQ most directly represents that intent.
-
-This must work for:
-- English
-- Filipino
-- Taglish
-- misspellings
-- paraphrases
-- abbreviations
-- incomplete questions
-- conversational wording
-
-IMPORTANT:
-1. Compare ALL supplied FAQ records semantically before choosing.
-2. Select the single HIGHEST-relevance record.
-3. There is NO minimum score; always choose the best available record.
-4. Never return "no match".
-5. Never invent an FAQ ID.
-6. Never generate or rewrite an answer.
-7. Do not explain your reasoning.
-8. Return only the winning FAQ ID, its score, and the user's language.
-
-Output exactly one JSON object and nothing else. Do not use Markdown or code fences:
-{
-  "faq_id": 123,
-  "score": 87,
-  "language": "fil"
-}
-
-The language field describes the language of the user's question and must be "en" or "fil".
+Return only this compact JSON object:
+{"faq_id":123,"score":87,"language":"en"}
 PROMPT;
     }
 
