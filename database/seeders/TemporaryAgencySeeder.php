@@ -9,6 +9,7 @@ use App\Models\ContactType;
 use App\Models\Category;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 class TemporaryAgencySeeder extends Seeder
@@ -112,6 +113,70 @@ foreach (
 }
 
         /*
+         * Reuse the agency images already bundled in public/images/NGA.
+         *
+         * The public folder is the source of truth; files are copied to
+         * the configured public Storage disk so the existing controller's
+         * Storage::disk('public')->url() logic continues to work without
+         * changing any controller or frontend code.
+         *
+         * Only agencies with an explicitly matching filename are mapped.
+         * Agencies without a matching image keep their existing image.
+         */
+        $agencyImageFiles = [
+            'PNP' => 'pnp.jpg',
+            'DTI' => 'DTI.jpg',
+            'DENR' => 'DENR-CENRO.webp',
+            'DILG' => 'DILG.jpg',
+            'DOJ' => 'DOJ.jpg',
+            'Pag-IBIG' => 'PAGIBIG.jpg',
+            'DOLE' => 'DOLE.webp',
+            'BuCor' => 'bucor.jpg',
+            'PCG' => 'pcg.jpg',
+            'DBP' => 'DBP.webp',
+            'LANDBANK' => 'landbank.jpg',
+            'COMELEC' => 'COMELEC.jpg',
+            'PPA' => 'port.webp',
+            'DAR' => 'DAR.jpeg',
+            'CAAP' => 'san jose airport.jpg',
+            'RTC / SC' => 'RTC.jpg',
+            'BIR' => 'BIR.webp',
+            'NBI' => 'NBI.jpg',
+            'NIA' => 'NIA.webp',
+            'CSC' => 'csc.jpg',
+            'PhilPost' => 'Philpost.jpg',
+        ];
+
+        $agencyImagePaths = [];
+
+        foreach ($agencyImageFiles as $abbreviation => $filename) {
+            $sourcePath = public_path('images/NGA/' . $filename);
+
+            // Skip missing files instead of assigning broken image paths.
+            if (!is_file($sourcePath) || !is_readable($sourcePath)) {
+                continue;
+            }
+
+            $extension = pathinfo($filename, PATHINFO_EXTENSION);
+            $destinationPath = 'agencies/nga-' . strtolower(
+                preg_replace('/[^a-z0-9]+/i', '-', $abbreviation)
+            ) . '.' . strtolower($extension);
+
+            $imageContents = file_get_contents($sourcePath);
+
+            if ($imageContents === false) {
+                continue;
+            }
+
+            Storage::disk('public')->put(
+                $destinationPath,
+                $imageContents
+            );
+
+            $agencyImagePaths[$abbreviation] = $destinationPath;
+        }
+
+        /*
          * Temporary test dataset.
          *
          * Coordinates are practical map points within San Jose,
@@ -153,7 +218,13 @@ foreach (
         'label' => 'MIMAROPA Regional Office',
         'value' => 'mimaropa@mail.da.gov.ph',
     ],
-],
+
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.da.gov.ph/',
+            ],
+        ],
             ],
 
           
@@ -191,6 +262,12 @@ foreach (
                 'type' => 'email',
                 'label' => 'Provincial Office',
                 'value' => 'records_om@yahoo.com.ph',
+            ],
+        
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.dar.gov.ph/',
             ],
         ],
     ],
@@ -232,6 +309,12 @@ foreach (
     'label' => 'Official Office Email',
     'value' => 'r4b.occmindoro-imo@nia.gov.ph',
 ],
+        
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://nia.gov.ph/',
+            ],
         ],
     ],
 
@@ -268,12 +351,13 @@ foreach (
         'label' => 'DepEd Action Center',
         'value' => 'action@deped.gov.ph',
     ],
-    [
-        'type' => 'facebook',
-        'label' => 'Official Facebook Page',
-        'value' => 'DepEd Occidental Mindoro',
-    ],
-],
+
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.deped.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -307,6 +391,12 @@ foreach (
                 'label' => 'National Headquarters',
                 'value' => 'nhq@bfp.gov.ph',
             ],
+        
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://bfp.gov.ph/',
+            ],
         ],
     ],
 
@@ -328,7 +418,13 @@ foreach (
         'label' => 'Police Emergency Hotline',
         'value' => '911',
     ],
-],
+
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://pnp.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -354,7 +450,13 @@ foreach (
                         'label' => 'AFP Public Contact',
                         'value' => 'paoafp@gmail.com',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://army.mil.ph/',
+            ],
+        ],
             ],
 
             [
@@ -400,7 +502,13 @@ foreach (
     'label' => 'CAAP Operations Center',
     'value' => 'opcen@caap.gov.ph',
 ],
-],
+
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://caap.gov.ph/',
+            ],
+        ],
     ],
 
             [
@@ -435,12 +543,13 @@ Barangay Pag-asa, San Jose, Occidental Mindoro',
         'label' => 'PSTO Occidental Mindoro',
         'value' => 'pstc.occimindoro@mimaropa.dost.gov.ph',
     ],
-    [
-        'type' => 'facebook',
-        'label' => 'Official Facebook Page',
-        'value' => 'DOST Occidental Mindoro',
-    ],
-],
+
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.dost.gov.ph/',
+            ],
+        ],
     ],
 
             [
@@ -484,7 +593,13 @@ Barangay Pag-asa, San Jose, Occidental Mindoro',
         'label' => 'Provincial Director Email',
         'value' => 'NoelFlores@dti.gov.ph',
     ],
-],
+
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.dti.gov.ph/',
+            ],
+        ],
     ],
 
             [
@@ -519,7 +634,13 @@ Barangay VI, San Jose, Occidental Mindoro',
         'label' => 'San Jose Mindoro Branch',
         'value' => 'SanJoseMindoroBranch@landbank.com',
     ],
-],
+
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.landbank.com/',
+            ],
+        ],
     ],
 
             [
@@ -553,6 +674,12 @@ Barangay VI, San Jose, Occidental Mindoro',
                 'label' => 'Branch Email',
                 'value' => 'sanjose@dbp.ph',
             ],
+        
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.dbp.ph/',
+            ],
         ],
     ],
 
@@ -579,7 +706,13 @@ Barangay VI, San Jose, Occidental Mindoro',
                         'label' => 'Provincial Election Office',
                         'value' => 'opes_occmindoro@comelec.gov.ph',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://comelec.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -605,7 +738,13 @@ Barangay VI, San Jose, Occidental Mindoro',
         'label' => 'San Jose DILG Office',
         'value' => 'dilgsanjoseocmin@gmail.com',
     ],
-],
+
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.dilg.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -638,6 +777,12 @@ Barangay VI, San Jose, Occidental Mindoro',
                 'type' => 'email',
                 'label' => 'Official SWAD Email',
                 'value' => 'ocmindoroswadt.fomimaropa@dswd.gov.ph',
+            ],
+        
+            [
+                'type' => 'website',
+                'label' => 'Official local office page',
+                'value' => 'https://fo4b.dswd.gov.ph/occidental-mindoro-swad-t/',
             ],
         ],
     ],
@@ -678,7 +823,13 @@ Barangay VI, San Jose, Occidental Mindoro',
         'label' => 'Provincial Office',
         'value' => 'ro4b_ocmindoro@dole.gov.ph',
     ],
-],
+
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.dole.gov.ph/',
+            ],
+        ],
     ],
 
             [
@@ -707,7 +858,13 @@ Barangay VI, San Jose, Occidental Mindoro',
         'label' => 'Member Services Office',
         'value' => '(02) 8422-3000 local 6562',
     ],
-],
+
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.pagibigfund.gov.ph/',
+            ],
+        ],
     ],
 
             [
@@ -736,7 +893,13 @@ Barangay VI, San Jose, Occidental Mindoro',
         'label' => 'San Jose Branch',
         'value' => '(043) 457-0093',
     ],
-],
+
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.sss.gov.ph/',
+            ],
+        ],
     ],
 
             [
@@ -770,6 +933,12 @@ Barangay VI, San Jose, Occidental Mindoro',
                 'label' => 'Field Office',
                 'value' => 'ro04.fo_occidentalmindoro@csc.gov.ph',
             ],
+        
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.csc.gov.ph/',
+            ],
         ],
     ],
 
@@ -796,7 +965,13 @@ Barangay VI, San Jose, Occidental Mindoro',
                         'label' => 'Judiciary Public Assistance',
                         'value' => 'chiefjusticehelpdesk@judiciary.gov.ph',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://sc.judiciary.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -822,7 +997,13 @@ Barangay VI, San Jose, Occidental Mindoro',
                         'label' => 'MIMAROPA NBI',
                         'value' => 'mimaropa@nbi.gov.ph',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://nbi.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -848,7 +1029,13 @@ Barangay VI, San Jose, Occidental Mindoro',
                         'label' => 'PAO Email',
                         'value' => 'pao@pao.gov.ph',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://pao.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -874,7 +1061,13 @@ Barangay VI, San Jose, Occidental Mindoro',
                         'label' => 'BJMP General Contact',
                         'value' => 'bjmp@bjmp.gov.ph',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://bjmp.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -900,7 +1093,13 @@ Barangay VI, San Jose, Occidental Mindoro',
                         'label' => 'DOJ Action Center',
                         'value' => 'dojac@doj.gov.ph',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.doj.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -926,7 +1125,13 @@ Barangay VI, San Jose, Occidental Mindoro',
                         'label' => 'Branch Email',
                         'value' => 'occidentalmindorobranch@pcso.gov.ph',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.pcso.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -960,6 +1165,12 @@ Barangay VI, San Jose, Occidental Mindoro',
                 'label' => 'DENR Action Center',
                 'value' => 'aksyonkalikasan@denr.gov.ph',
             ],
+        
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://denr.gov.ph/',
+            ],
         ],
     ],
 
@@ -986,7 +1197,13 @@ Barangay VI, San Jose, Occidental Mindoro',
                         'label' => 'DOH Action Center',
                         'value' => 'actioncenter@doh.gov.ph',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://doh.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -1020,6 +1237,12 @@ Barangay VI, San Jose, Occidental Mindoro',
                 'label' => 'Postmaster',
                 'value' => 'ronalynancheta10@yahoo.com.ph',
             ],
+        
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://phlpost.gov.ph/',
+            ],
         ],
     ],
 
@@ -1046,7 +1269,13 @@ Barangay VI, San Jose, Occidental Mindoro',
                         'label' => 'CDA Helpdesk',
                         'value' => 'helpdesk@cda.gov.ph',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://cda.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -1072,7 +1301,13 @@ Barangay VI, San Jose, Occidental Mindoro',
                         'label' => 'NCIP ICTD',
                         'value' => 'ictd@ncip.gov.ph',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://ncip.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -1098,7 +1333,13 @@ Barangay VI, San Jose, Occidental Mindoro',
                         'label' => 'Office of the Director General',
                         'value' => 'odg@bucor.gov.ph',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://bucor.gov.ph/',
+            ],
+        ],
             ],
 
             [
@@ -1132,6 +1373,12 @@ Barangay VI, San Jose, Occidental Mindoro',
                 'label' => 'PCG Command Center',
                 'value' => 'cgcommandcenter@coastguard.gov.ph',
             ],
+        
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://coastguard.gov.ph/',
+            ],
         ],
     ],
 
@@ -1158,7 +1405,13 @@ Barangay VI, San Jose, Occidental Mindoro',
                         'label' => 'PPA Helpdesk',
                         'value' => 'helpdesk_official@ppa.com.ph',
                     ],
-                ],
+                
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.ppa.com.ph/',
+            ],
+        ],
             ],
 
             [
@@ -1192,6 +1445,12 @@ Barangay VI, San Jose, Occidental Mindoro',
                 'label' => 'RDO 37 Customer Service',
                 'value' => 'rdo_37css@bir.gov.ph',
             ],
+        
+            [
+                'type' => 'website',
+                'label' => 'Official agency website',
+                'value' => 'https://www.bir.gov.ph/',
+            ],
         ],
     ],
         ];
@@ -1217,6 +1476,7 @@ DB::transaction(function () use (
     $ngaTypeId,
     $categoryIds,
     $contactTypeIds,
+    $agencyImagePaths,
     &$inserted,
     &$updated,
     &$restored,
@@ -1256,6 +1516,15 @@ DB::transaction(function () use (
             'lat' => $data['lat'],
             'lng' => $data['lng'],
         ];
+
+        /*
+         * Assign an image only when a matching bundled image exists.
+         * Do not clear or overwrite images for agencies without a match.
+         */
+        if (isset($agencyImagePaths[$data['agency_abbreviation']])) {
+            $agencyData['agency_image'] =
+                $agencyImagePaths[$data['agency_abbreviation']];
+        }
 
         /*
  * Tracks whether anything belonging to this agency

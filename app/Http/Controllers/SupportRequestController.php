@@ -104,9 +104,11 @@ public function index(Request $request)
  * historical statuses unless the administrator explicitly
  * chooses a status filter.
  */
+// Active requests default to pending, but the trash must show every
+// historical status unless the administrator explicitly filters it.
 $statusFilter = $request->has('status_filter')
     ? $request->input('status_filter')
-    : 'pending';
+    : ($status === 'active' ? 'pending' : '');
 
 $allowedStatusFilters = [
     '',

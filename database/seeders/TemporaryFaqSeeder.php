@@ -1072,6 +1072,10 @@ DB::transaction(function () use (
             'answer_fil' => $data['answer_fil'],
             'keywords' => $data['keywords'],
             'image' => null,
+            // The current FAQ composer uses language-specific text blocks
+            // and optional attachment components. Keep these in sync with
+            // the legacy answer columns so both current and older consumers work.
+            'response_components' => $this->buildSeededResponseComponents($data),
         ];
 
         /*
@@ -1171,6 +1175,119 @@ $this->command->info(
 $this->command->info(
     "Unchanged: {$unchanged}"
 );
+    }
+
+    /**
+     * Build FAQ response components in the format used by the current
+     * admin FAQ response composer.
+     *
+     * Source links are deliberately allowlisted below and use only URLs
+     * verified against official government sources. No URL is synthesized
+     * from an agency name or guessed from a URL pattern.
+     */
+    private function buildSeededResponseComponents(array $data): array
+    {
+        $components = [
+            [
+                'type' => 'text',
+                'language' => 'en',
+                'content' => trim((string) ($data['answer'] ?? '')),
+                'label' => null,
+                'sort_order' => 0,
+            ],
+            [
+                'type' => 'text',
+                'language' => 'fil',
+                'content' => trim((string) ($data['answer_fil'] ?? '')),
+                'label' => null,
+                'sort_order' => 1,
+            ],
+        ];
+
+        $source = $this->verifiedSourceForFaq(
+            (string) ($data['agency'] ?? ''),
+            (string) ($data['question'] ?? '')
+        );
+
+        if ($source !== null) {
+            $components[] = [
+                'type' => 'link',
+                'language' => 'attachment',
+                'content' => $source['url'],
+                'label' => $source['label'],
+                'sort_order' => count($components),
+            ];
+        }
+
+        return $components;
+    }
+
+    /**
+     * Verified official references for seeded FAQs.
+     *
+     * The links are service references, not claims that the linked office
+     * handles every case. Users should confirm local implementation details
+     * with the San Jose office where requirements can vary by transaction.
+     */
+    private function verifiedSourceForFaq(string $agency, string $question): ?array
+    {
+        // The policy link below does not substantiate the separate processing-time
+        // figures attributed to DepEd's Citizen's Charter, so do not attach it to
+        // that answer unless the precise charter source is verified.
+        if (
+            $agency === 'Department of Education - San Jose Sub-office'
+            && stripos($question, 'How long does enrollment processing take') === 0
+        ) {
+            return null;
+        }
+
+        $sources = [
+            'Department of Agriculture' => [
+                'url' => 'https://www.da.gov.ph/rsbsa-registration-and-updating/',
+                'label' => 'Official DA RSBSA registration, form, and FAQ',
+            ],
+            'Department of Education - San Jose Sub-office' => [
+                'url' => 'https://www.deped.gov.ph/2025/06/13/june-13-2025-do-017-s-2025-revised-basic-education-enrollment-policy/',
+                'label' => 'DepEd Revised Basic Education Enrollment Policy (2025)',
+            ],
+            'Department of Social Welfare and Development - Occidental Mindoro SWAD' => [
+                'url' => 'https://crisis-intervention.dswd.gov.ph/about-us/faqs/',
+                'label' => 'Official DSWD crisis assistance FAQs and requirements',
+            ],
+            'Department of Labor and Employment - Occidental Mindoro Provincial Office' => [
+                'url' => 'https://ncr.dole.gov.ph/single-entry-approach-sena/',
+                'label' => 'Official DOLE SEnA process and 30-calendar-day period',
+            ],
+            'Department of Trade and Industry - Occidental Mindoro Provincial Office' => [
+                'url' => 'https://bnrs.dti.gov.ph/',
+                'label' => 'Official DTI Business Name Registration System',
+            ],
+            'Commission on Elections - San Jose Office' => [
+                'url' => 'https://www.comelec.gov.ph/index.html?r=VoterRegistration%2FWhatisVoterRegistration%2FRegistrationRequirements',
+                'label' => 'Official COMELEC voter registration requirements',
+            ],
+            'National Bureau of Investigation - San Jose Satellite Office' => [
+                'url' => 'https://clearance.nbi.gov.ph/',
+                'label' => 'Official NBI Clearance online application portal',
+            ],
+            'Bureau of Internal Revenue - Revenue District Office No. 37' => [
+                'url' => 'https://orus.bir.gov.ph/',
+                'label' => 'Official BIR Online Registration and Update System (ORUS)',
+            ],
+        ];
+
+        // The BFP portal is relevant specifically to the seeded FSIC questions.
+        if (
+            $agency === 'Bureau of Fire Protection - San Jose Fire Station'
+            && stripos($question, 'FSIC') !== false
+        ) {
+            return [
+                'url' => 'https://fsis.e-bfp.com/',
+                'label' => 'Official BFP Fire Safety Inspection System',
+            ];
+        }
+
+        return $sources[$agency] ?? null;
     }
 
     /**
