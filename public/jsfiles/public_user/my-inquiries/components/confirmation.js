@@ -51,21 +51,36 @@ function initializeConfirmation() {
     |--------------------------------------------------------------------------
     */
 
-    const setBusy = (container, busy) => {
+    const setBusy = (container, busy, activeButton = null, loadingLabel = "Submitting...") => {
         if (!container) {
             return;
         }
 
-        container.setAttribute(
-            "aria-busy",
-            busy ? "true" : "false"
-        );
+        container.setAttribute("aria-busy", busy ? "true" : "false");
+        container.setAttribute("data-submission-state", busy ? "processing" : "idle");
 
-        container
-            .querySelectorAll("button, textarea")
-            .forEach((element) => {
-                element.disabled = busy;
-            });
+        container.querySelectorAll("button, textarea").forEach((element) => {
+            if (busy && element === activeButton) {
+                if (!element.dataset.originalMarkup) {
+                    element.dataset.originalMarkup = element.innerHTML;
+                }
+                element.classList.add("is-loading");
+                element.setAttribute("aria-label", loadingLabel);
+                element.innerHTML = "";
+                const spinner = document.createElement("i");
+                spinner.className = "ph-light ph-circle-notch confirmation-spinner";
+                spinner.setAttribute("aria-hidden", "true");
+                const text = document.createElement("span");
+                text.textContent = loadingLabel;
+                element.append(spinner, text);
+            } else if (!busy && element.dataset.originalMarkup) {
+                element.innerHTML = element.dataset.originalMarkup;
+                delete element.dataset.originalMarkup;
+                element.classList.remove("is-loading");
+                element.removeAttribute("aria-label");
+            }
+            element.disabled = busy;
+        });
     };
 
 
@@ -214,7 +229,11 @@ function initializeConfirmation() {
 
         setBusy(
             container,
-            true
+            true,
+            button,
+            button.hasAttribute("data-confirm-response")
+                ? "Submitting confirmation..."
+                : "Submitting follow-up..."
         );
 
         try {
@@ -435,7 +454,9 @@ function initializeConfirmation() {
 
         setBusy(
             container,
-            true
+            true,
+            form.querySelector('button[type="submit"]'),
+            "Sending follow-up..."
         );
 
         try {

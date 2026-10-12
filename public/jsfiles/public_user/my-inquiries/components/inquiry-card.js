@@ -177,42 +177,57 @@ function createResponseComponent(component) {
         return wrapper;
     }
 
-    /**
-     * File response: render as a simple inline download link, matching the chatbot.
-     */
+    /** File and link resources use the same card hierarchy as chatbot resources. */
     if (type === 'file') {
         if (!component.attachment_url) return null;
-
         const link = document.createElement('a');
-        link.className = 'response-attachment-link response-file-link';
+        link.className = 'response-resource-card is-file';
         link.href = component.attachment_url;
         link.setAttribute('download', '');
-
-        const icon = createIcon('ph-file-arrow-down');
-        const text = document.createElement('span');
-        text.textContent = label || 'Download file';
-        const trailing = createIcon('ph-download-simple');
-        trailing.classList.add('response-attachment-trailing');
-
-        link.append(icon, text, trailing);
+        link.setAttribute('aria-label', `Download ${label || 'attachment'}`);
+        const iconWrap = createElement('span', 'response-resource-icon');
+        iconWrap.appendChild(createIcon('ph-file-arrow-down'));
+        const copy = createElement('span', 'response-resource-copy');
+        const title = createElement('span', 'response-resource-title');
+        title.textContent = label || 'Download attachment';
+        const detail = createElement('span', 'response-resource-detail');
+        detail.textContent = 'File attachment';
+        copy.append(title, detail);
+        const action = createIcon('ph-download-simple');
+        action.classList.add('response-resource-action');
+        link.append(iconWrap, copy, action);
         return link;
     }
 
-    /**
-     * External link response: plain text link without a card/container.
-     */
     if (type === 'link') {
         if (!isSafeHttpUrl(content)) return null;
-
         const link = document.createElement('a');
-        link.className = 'response-attachment-link response-plain-link';
+        link.className = 'response-resource-card is-link';
         link.href = content;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-
-        const text = document.createElement('span');
-        text.textContent = label || content;
-        link.append(text, createIcon('ph-arrow-up-right'));
+        // Internal agency navigation stays in this tab, matching chatbot behavior.
+        let internalAgencyNavigation = false;
+        try {
+            const parsed = new URL(content, window.location.href);
+            internalAgencyNavigation = parsed.origin === window.location.origin
+                && /^\/navigate\/[^/]+\/?$/.test(parsed.pathname);
+        } catch (_) {}
+        if (!internalAgencyNavigation) {
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+        }
+        link.setAttribute('aria-label', `Open ${label || content}`);
+        const iconWrap = createElement('span', 'response-resource-icon');
+        iconWrap.appendChild(createIcon('ph-globe'));
+        const copy = createElement('span', 'response-resource-copy');
+        const title = createElement('span', 'response-resource-title');
+        title.textContent = label || content;
+        const detail = createElement('span', 'response-resource-detail');
+        try { detail.textContent = new URL(content).hostname.replace(/^www\./, ''); }
+        catch (_) { detail.textContent = content; }
+        copy.append(title, detail);
+        const action = createIcon('ph-arrow-up-right');
+        action.classList.add('response-resource-action');
+        link.append(iconWrap, copy, action);
         return link;
     }
 

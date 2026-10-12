@@ -210,10 +210,13 @@
                         <div class="response-attachment-links" aria-label="Response files and links">
                             @foreach ($latestResponse->components->where('type', 'file') as $component)
                                 @if ($component->attachment_url)
-                                    <a class="response-attachment-link response-file-link" href="{{ $component->attachment_url }}" download>
-                                        <i class="ph-light ph-file-arrow-down" aria-hidden="true"></i>
-                                        <span>{{ $component->label ?: 'Download file' }}</span>
-                                        <i class="ph-light ph-download-simple response-attachment-trailing" aria-hidden="true"></i>
+                                    <a class="response-resource-card is-file" href="{{ $component->attachment_url }}" download aria-label="Download {{ $component->label ?: 'attachment' }}">
+                                        <span class="response-resource-icon"><i class="ph-light ph-file-arrow-down" aria-hidden="true"></i></span>
+                                        <span class="response-resource-copy">
+                                            <span class="response-resource-title">{{ $component->label ?: 'Download attachment' }}</span>
+                                            <span class="response-resource-detail">File attachment</span>
+                                        </span>
+                                        <i class="ph-light ph-download-simple response-resource-action" aria-hidden="true"></i>
                                     </a>
                                 @endif
                             @endforeach
@@ -221,9 +224,13 @@
                             @foreach ($latestResponse->components->where('type', 'link') as $component)
                                 @php $linkScheme = strtolower((string) parse_url((string) $component->content, PHP_URL_SCHEME)); @endphp
                                 @if (in_array($linkScheme, ['http', 'https'], true))
-                                    <a class="response-attachment-link response-plain-link" href="{{ $component->content }}" target="_blank" rel="noopener noreferrer">
-                                        <span>{{ $component->label ?: $component->content }}</span>
-                                        <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i>
+                                    <a class="response-resource-card is-link" href="{{ $component->content }}" target="_blank" rel="noopener noreferrer" aria-label="Open {{ $component->label ?: $component->content }}">
+                                        <span class="response-resource-icon"><i class="ph-light ph-globe" aria-hidden="true"></i></span>
+                                        <span class="response-resource-copy">
+                                            <span class="response-resource-title">{{ $component->label ?: $component->content }}</span>
+                                            <span class="response-resource-detail">{{ parse_url($component->content, PHP_URL_HOST) ?: $component->content }}</span>
+                                        </span>
+                                        <i class="ph-light ph-arrow-up-right response-resource-action" aria-hidden="true"></i>
                                     </a>
                                 @endif
                             @endforeach

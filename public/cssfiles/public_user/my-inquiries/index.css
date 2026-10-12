@@ -827,6 +827,32 @@
     transform: translateY(1px);
 }
 
+/* Immediate, accessible feedback while a confirmation request is in flight. */
+.confirmation-btn.is-loading,
+.confirmation-btn:disabled {
+    cursor: wait;
+    opacity: 0.88;
+    transform: none;
+}
+
+.confirmation-btn.is-loading {
+    min-width: 190px;
+    pointer-events: none;
+}
+
+.confirmation-spinner {
+    display: inline-block;
+    animation: confirmation-spin 850ms linear infinite;
+}
+
+@keyframes confirmation-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .confirmation-spinner { animation-duration: 2.5s; }
+}
+
 .confirmation-btn-primary {
     border: 1px solid var(--primary-color, #2563eb);
     background: var(--primary-color, #2563eb);
@@ -3556,4 +3582,98 @@ body {
 .inquiries-filter-drawer .inquiries-filter-tab[data-filter="needs_attention"]::before,
 .inquiries-filter-drawer .inquiries-filter-tab[data-filter="needs_attention"]::after {
     content: none !important;
+}
+
+
+/* Resource cards aligned with the KNOWURLOCAL chatbot attachment UI. */
+.response-attachment-links {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 7px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-top: 9px;
+}
+.response-resource-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 10px 11px;
+    border: 1px solid #e3e8f2;
+    border-radius: 12px;
+    background: rgba(255,255,255,.92);
+    color: #202938;
+    text-align: left;
+    text-decoration: none;
+    transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.response-resource-card:hover {
+    border-color: #5272c9;
+    background: #f8faff;
+    color: #202938;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+.response-resource-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: #edf2ff;
+    color: #5272c9;
+    font-size: 18px;
+}
+.response-resource-copy {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+.response-resource-title {
+    display: block;
+    color: #202938;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.response-resource-detail {
+    display: block;
+    color: #667085;
+    font-size: 10px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.response-resource-action {
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: #667085;
+    font-size: 15px;
+}
+.response-component-qr {
+    align-items: center;
+    text-align: center;
+}
+.response-component-qr .response-qr-heading {
+    align-self: stretch;
+    text-align: left;
+}
+.response-component-qr .response-qr-open { align-self: center; }
+@media (max-width: 600px) {
+    .response-resource-card { padding: 9px; gap: 9px; }
+    .response-resource-icon { flex-basis: 34px; width: 34px; height: 34px; }
+    .response-resource-title { font-size: 12px; }
+    .response-resource-detail { font-size: 10px; }
 }
