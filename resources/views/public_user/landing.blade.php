@@ -2,6 +2,9 @@
 <html lang="en">
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/knowurlocal-kyl-logo.svg') }}?v=3" sizes="any">
+    <link rel="alternate icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=3">
+
 
     {{-- =========================================================
          DOCUMENT META
@@ -89,7 +92,14 @@
                     class="landing-brand"
                     aria-label="KNOWURLOCAL home"
                 >
-                    KNOWURLOCAL
+                    <img
+                        src="{{ asset('images/knowurlocal-kyl-logo.svg') }}"
+                        alt=""
+                        class="landing-brand-icon"
+                        aria-hidden="true"
+                        onerror="this.hidden=true; this.parentElement.classList.add('landing-brand-logo-missing');"
+                    >
+                    <span class="landing-brand-fallback">KNOWURLOCAL</span>
                 </a>
 
 

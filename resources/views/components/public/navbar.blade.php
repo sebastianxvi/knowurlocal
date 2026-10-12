@@ -15,8 +15,15 @@
                     class="header-brand"
                     aria-label="KNOWURLOCAL Map"
                 >
-                    <span class="logo-short">KYL</span>
-                    <span class="logo-full">KNOWURLOCAL</span>
+                    <img
+                        src="{{ asset('images/knowurlocal-kyl-logo.svg') }}"
+                        alt=""
+                        class="header-brand-icon"
+                        aria-hidden="true"
+                        onerror="this.hidden=true; this.parentElement.classList.add('header-brand-logo-missing');"
+                    >
+                    <span class="logo-short header-brand-fallback">KYL</span>
+                    <span class="logo-full header-brand-fallback">KNOWURLOCAL</span>
                 </a>
 
 

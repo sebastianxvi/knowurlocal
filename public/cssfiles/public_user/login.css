@@ -926,23 +926,7 @@ body {
 
     color: #ffffff;
 
-    background:
-        radial-gradient(
-            circle at 15% 20%,
-            rgba(
-                255,
-                255,
-                255,
-                0.10
-            ),
-            transparent 30%
-        ),
-        linear-gradient(
-            145deg,
-            #435fa8,
-            #5272c9 58%,
-            #6a83d0
-        );
+    background: #1769E0;
 
     clip-path:
         ellipse(
@@ -1028,34 +1012,13 @@ body {
     border: 1px solid rgba(255,255,255,0.10);
     border-radius: 50%;
 
-    background:
-        radial-gradient(circle at center, rgba(255,255,255,0.07), transparent 62%);
+    background: rgba(255,255,255,0.025);
 
     pointer-events: none;
 }
 
-.panel-logo-art {
-
-    position: absolute;
-
-    right: 42px;
-    top: 38px;
-
-    width: 118px;
-    height: 118px;
-
-    object-fit: contain;
-
-    opacity: 0.065;
-
-    filter: brightness(0) invert(1);
-
-    transform: rotate(7deg);
-
-    pointer-events: none;
-
-    user-select: none;
-}
+/* The old raster-logo accessory was removed. The panel now uses
+   restrained CSS-only geometry so it remains independent of image files. */
 
 .panel-route-art {
 
@@ -1286,6 +1249,23 @@ body {
 
     line-height: 1.65;
 
+}
+
+
+.auth-brand-icon {
+    display: block;
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+.auth-brand-fallback {
+    display: none;
+}
+
+.auth-brand-logo-missing .auth-brand-fallback {
+    display: inline;
 }
 
 
@@ -1634,7 +1614,8 @@ body {
      */
     .overlay-panel {
 
-        height: 225px;
+        /* Extra height keeps feature labels fully above the curved edge. */
+        height: 260px;
 
     }
 
@@ -1647,7 +1628,7 @@ body {
 
         min-height:
             calc(
-                100vh - 225px
+                100vh - 260px
             );
 
         padding:
@@ -1687,10 +1668,11 @@ body {
      */
     .panel-content {
 
+        /* Keep the complete brand introduction inside the curved panel. */
         padding:
-            20px
+            8px
             18px
-            28px;
+            18px;
 
         justify-content: flex-start;
 
@@ -1707,7 +1689,7 @@ body {
 
         height: 32px;
 
-        margin-bottom: 8px;
+        margin-bottom: 5px;
 
         border-radius: 8px;
 
@@ -1735,7 +1717,7 @@ body {
 
         max-width: 250px;
 
-        margin-bottom: 7px;
+        margin-bottom: 5px;
 
         font-size: 1.35rem;
 
@@ -1752,7 +1734,7 @@ body {
 
         max-width: 270px;
 
-        margin-bottom: 12px;
+        margin-bottom: 8px;
 
         font-size: 0.68rem;
 

@@ -237,6 +237,7 @@ body {
     display: flex;
 
     align-items: center;
+    gap: 8px;
 
     color:
         var(--nav-text);
@@ -254,9 +255,25 @@ body {
 }
 
 
+.header-brand-icon {
+    display: block;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    object-fit: contain;
+}
+
+.header-brand-fallback {
+    display: none;
+    color: inherit;
+}
+
+.header-brand-logo-missing .header-brand-fallback {
+    display: inline;
+}
+
 .logo-short,
 .logo-full {
-
     color: inherit;
 }
 
@@ -1521,14 +1538,11 @@ mark {
      * Keep the compact KYL mark on mobile.
      */
 
-    .logo-short {
-
+    .header-brand-logo-missing .logo-short {
         display: inline;
     }
 
-
-    .logo-full {
-
+    .header-brand-logo-missing .logo-full {
         display: none;
     }
 
@@ -2175,14 +2189,11 @@ mark {
      * Desktop uses the complete KNOWURLOCAL wordmark.
      */
 
-    .logo-short {
-
+    .header-brand-logo-missing .logo-short {
         display: none;
     }
 
-
-    .logo-full {
-
+    .header-brand-logo-missing .logo-full {
         display: inline;
     }
 

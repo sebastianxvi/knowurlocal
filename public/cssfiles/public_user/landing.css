@@ -394,6 +394,9 @@ svg {
 
 .landing-brand {
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
 
     color: var(--color-text);
 
@@ -408,6 +411,22 @@ svg {
         opacity var(--transition-fast);
 }
 
+
+.landing-brand-icon {
+    display: block;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    object-fit: contain;
+}
+
+.landing-brand-fallback {
+    display: none;
+}
+
+.landing-brand-logo-missing .landing-brand-fallback {
+    display: inline;
+}
 
 .landing-brand:hover {
     color: var(--color-brand);

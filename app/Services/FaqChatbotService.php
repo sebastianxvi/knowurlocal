@@ -321,7 +321,7 @@ class FaqChatbotService
         $fingerprint = hash('sha256', serialize($catalogFingerprint));
         $normalizedQuestion = $this->normalizeForMatching($question);
 
-        return 'knowurlocal:chatbot:match:v1:' . hash('sha256', serialize([
+        return 'knowurlocal:chatbot:match:v2:' . hash('sha256', serialize([
             'question' => $normalizedQuestion,
             'agency_id' => $agencyId,
             'catalog' => $fingerprint,
@@ -338,7 +338,7 @@ class FaqChatbotService
     private function loadFaqCatalog(): Collection
     {
         return Cache::store(config('services.openrouter.cache_store', 'file'))->remember(
-            'knowurlocal:chatbot:faq-catalog:v3',
+            'knowurlocal:chatbot:faq-catalog:v4',
             now()->addSeconds(self::CATALOG_CACHE_SECONDS),
             function (): Collection {
                 try {
@@ -579,7 +579,8 @@ class FaqChatbotService
                 try {
                     $decision = $this->decodeResponse($candidate);
 
-                    return is_numeric($decision['faq_id'] ?? null)
+                    return (array_key_exists('faq_id', $decision)
+                            && ($decision['faq_id'] === null || is_numeric($decision['faq_id'])))
                         && is_numeric($decision['score'] ?? null)
                         && is_string($decision['language'] ?? null);
                 } catch (\Throwable) {
@@ -602,6 +603,17 @@ class FaqChatbotService
 
         $faqId = $decision['faq_id'] ?? null;
         $score = $decision['score'] ?? null;
+
+        if ($faqId === null && is_numeric($score)) {
+            Log::info('KNOWURLOCAL FAQ AI abstained; no supplied FAQ directly answers the question.', [
+                'stage' => $stage,
+                'agency_id' => $agencyId,
+                'question' => $question,
+                'catalog_size' => count($catalog),
+            ]);
+
+            return null;
+        }
 
         if (!is_numeric($faqId) || !is_numeric($score)) {
             Log::warning('KNOWURLOCAL FAQ AI returned an invalid winner.', [
@@ -769,6 +781,17 @@ class FaqChatbotService
      */
     private function findDynamicLocalFallback(string $question, Collection $faqs): ?array
     {
+        // Apply the same generic answer-intent guard to the emergency matcher.
+        // Otherwise a provider outage could reintroduce the exact false positive
+        // that the AI path rejected (for example, requirements for a fee query).
+        $faqs = $faqs
+            ->filter(fn (Faq $faq): bool => $this->faqMatchesQuestionIntent($question, $faq))
+            ->values();
+
+        if ($faqs->isEmpty()) {
+            return null;
+        }
+
         $questionTokens = $this->meaningfulTokens($question);
 
         if ($questionTokens === []) {
@@ -1048,6 +1071,16 @@ class FaqChatbotService
         $value = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $value) ?? $value;
         $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
 
+        // Filipino affixes are frequently typed either attached or separated
+        // (for example, "pagkuha" / "pag kuha", "mag-apply" / "mag apply").
+        // Canonicalize this productive spelling variation generically instead
+        // of adding aliases for individual FAQs.
+        $value = preg_replace_callback(
+            '/\b(pag|mag|nag|ipa|ipag|pagpa|pagka|makaka|nakaka)\s+([\p{L}]{3,})\b/u',
+            static fn (array $match): string => $match[1] . $match[2],
+            $value
+        ) ?? $value;
+
         return trim($value);
     }
 
@@ -1068,7 +1101,7 @@ class FaqChatbotService
             'does', 'for', 'from', 'how', 'i', 'if', 'in', 'is', 'it', 'me',
             'my', 'of', 'on', 'or', 'the', 'to', 'what', 'when', 'where',
             'which', 'who', 'with', 'you', 'your',
-            'ang', 'ba', 'bago', 'bilang', 'dahil', 'din', 'dito', 'doon',
+            'ang', 'ba', 'bago', 'bilang', 'dahil', 'din', 'dito', 'doon', 'mga',
             'gusto', 'ikaw', 'ito', 'ko', 'kung', 'may', 'mo', 'na', 'ng',
             'nga', 'ni', 'nito', 'para', 'po', 'sa', 'saan', 'si', 'sila',
             'sinong', 'tatak', 'the', 'yung',
@@ -1076,8 +1109,22 @@ class FaqChatbotService
 
         $tokens = preg_split('/\s+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY);
 
+        $tokens = array_map(static function (string $token): string {
+            // Compare common attached/separated Filipino verb-noun forms on a
+            // shared stem. This is language normalization, not FAQ-specific
+            // synonym logic. Require a substantial remaining stem to avoid
+            // damaging short or ambiguous words.
+            foreach (['pagpa', 'ipag', 'makaka', 'nakaka', 'pagka', 'pag', 'mag', 'nag', 'ipa'] as $prefix) {
+                if (str_starts_with($token, $prefix) && mb_strlen($token, 'UTF-8') - mb_strlen($prefix, 'UTF-8') >= 3) {
+                    return mb_substr($token, mb_strlen($prefix, 'UTF-8'), null, 'UTF-8');
+                }
+            }
+
+            return $token;
+        }, $tokens ?: []);
+
         return array_values(array_filter(
-            $tokens ?: [],
+            $tokens,
             static fn (string $token): bool =>
                 mb_strlen($token, 'UTF-8') >= 2
                 && !in_array($token, $stopWords, true)
@@ -1133,10 +1180,10 @@ You are KNOWURLOCAL's FAQ retrieval selector. Select the ONE supplied FAQ that b
 
 Each FAQ has an ID, agency, English/Filipino questions, and keywords. Understand meaning, not just shared words. Handle English, Filipino, Taglish, typos, abbreviations, paraphrases, and incomplete questions. Keywords are hints only.
 
-Choose only an ID present in the supplied catalogue. Always choose the closest available match; do not invent IDs, write an answer, or explain reasoning. Infer whether the user's question is English ("en") or Filipino/Taglish ("fil").
+Choose an FAQ only when it directly answers the requested information. Shared subject words alone are insufficient. If no supplied FAQ answers the request, abstain using faq_id null and score 0. Do not force the closest FAQ. Do not invent IDs, write an answer, or explain reasoning. Infer whether the user's question is English ("en") or Filipino/Taglish ("fil").
 
-Return only this compact JSON object:
-{"faq_id":123,"score":87,"language":"en"}
+Return only this compact JSON object (faq_id may be null):
+{"faq_id":123,"score":87,"language":"fil"}
 PROMPT;
     }
 

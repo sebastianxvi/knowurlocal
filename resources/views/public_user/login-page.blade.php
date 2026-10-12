@@ -13,9 +13,12 @@
     >
 
     {{-- Browser/page title. --}}
-    <title>
-        KNOWURLOCAL | Access Portal
-    </title>
+    <title>KNOWURLOCAL | Access Portal</title>
+
+    {{-- Brand favicon: visible in browser tabs and bookmarks. --}}
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/knowurlocal-kyl-logo.svg') }}?v=3" sizes="any">
+    <link rel="alternate icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=3">
+    <meta name="theme-color" content="#1769E0">
 
 
     {{-- =====================================================
@@ -525,14 +528,7 @@
 
     <aside class="overlay-panel">
 
-        {{-- Subtle brand/map details keep the original layout while
-             tying the auth screen into KNOWURLOCAL's location-first theme. --}}
-        <img
-            src="{{ asset('images/logo.png') }}"
-            alt=""
-            class="panel-logo-art"
-            aria-hidden="true"
-        >
+        {{-- Lightweight CSS-only brand atmosphere; no legacy image assets. --}}
 
         <span
             class="panel-route-art"
@@ -547,7 +543,14 @@
         <div class="panel-content login-content active">
 
             <span class="brand-mark">
-                KYL
+                <img
+                    src="{{ asset('images/knowurlocal-kyl-logo.svg') }}"
+                    alt=""
+                    class="auth-brand-icon"
+                    aria-hidden="true"
+                    onerror="this.hidden=true; this.parentElement.classList.add('auth-brand-logo-missing');"
+                >
+                <span class="auth-brand-fallback">KYL</span>
             </span>
 
             <span class="panel-eyebrow">
@@ -633,7 +636,14 @@
         <div class="panel-content register-content">
 
             <span class="brand-mark">
-                KYL
+                <img
+                    src="{{ asset('images/knowurlocal-kyl-logo.svg') }}"
+                    alt=""
+                    class="auth-brand-icon"
+                    aria-hidden="true"
+                    onerror="this.hidden=true; this.parentElement.classList.add('auth-brand-logo-missing');"
+                >
+                <span class="auth-brand-fallback">KYL</span>
             </span>
 
             <span class="panel-eyebrow">
