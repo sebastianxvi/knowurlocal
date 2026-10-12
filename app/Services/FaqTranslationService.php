@@ -61,7 +61,8 @@ class FaqTranslationService
             if (trim((string) ($translations[$key] ?? '')) === '') {
                 $translations[$key] = $this->translateSingle(
                     $source,
-                    'Filipino/Taglish'
+                    'Filipino/Taglish',
+                    true
                 );
             }
         }
@@ -69,6 +70,85 @@ class FaqTranslationService
         return [
             'question_fil' => $translations['question_fil'],
             'answer_fil' => $translations['answer_fil'],
+        ];
+    }
+
+    /**
+     * Translate an FAQ question and each English text-response block separately.
+     *
+     * @return array{question_fil:string,responses_fil:array<int,string>}
+     */
+    public function translateResponses(string $question, array $responses): array
+    {
+        $question = trim($question);
+        $responses = array_values(array_map(
+            static fn ($response): string => trim((string) $response),
+            $responses
+        ));
+
+        if ($question === '') {
+            throw new RuntimeException('The English FAQ question is required for translation.');
+        }
+
+        if ($responses === [] || count($responses) > 10) {
+            throw new RuntimeException('Provide between one and ten English response fields.');
+        }
+
+        foreach ($responses as $response) {
+            if ($response === '') {
+                throw new RuntimeException('Empty response fields must be removed before translation.');
+            }
+        }
+
+        $items = [[
+            'id' => 'question_fil',
+            'source_text' => $question,
+            'source_language' => 'English',
+            'target_language' => 'Filipino/Taglish',
+        ]];
+
+        foreach ($responses as $index => $response) {
+            $items[] = [
+                'id' => 'response_' . $index,
+                'source_text' => $response,
+                'source_language' => 'English',
+                'target_language' => 'Filipino/Taglish',
+            ];
+        }
+
+        $translations = $this->translateBatch($items);
+
+        // Recover missing items independently instead of losing the whole batch.
+        foreach ($items as $item) {
+            $id = (string) $item['id'];
+            if (trim((string) ($translations[$id] ?? '')) !== '') {
+                continue;
+            }
+
+            $translations[$id] = $this->translateSingle(
+                (string) $item['source_text'],
+                'Filipino/Taglish',
+                true
+            );
+        }
+
+        $translatedResponses = [];
+        foreach ($responses as $index => $_response) {
+            $value = trim((string) ($translations['response_' . $index] ?? ''));
+            if ($value === '') {
+                throw new RuntimeException('A response field could not be translated.');
+            }
+            $translatedResponses[] = $value;
+        }
+
+        $questionTranslation = trim((string) ($translations['question_fil'] ?? ''));
+        if ($questionTranslation === '') {
+            throw new RuntimeException('The FAQ question could not be translated.');
+        }
+
+        return [
+            'question_fil' => $questionTranslation,
+            'responses_fil' => $translatedResponses,
         ];
     }
 
@@ -228,7 +308,8 @@ public function prepareSupportRequestFaq(
                         $item['source'],
                         $item['language'] === 'en'
                             ? 'Filipino/Taglish'
-                            : 'English'
+                            : 'English',
+                        true
                     );
                 } catch (\Throwable $e) {
                     \Log::warning('FAQ batch item translation failed.', [
@@ -273,6 +354,54 @@ public function prepareSupportRequestFaq(
      * cannot accidentally change when the model returns the translations.
      */
     private function translateBatch(array $items): array
+    {
+        if ($items === []) {
+            return [];
+        }
+
+        /*
+         * Keep each provider response small enough to avoid output truncation
+         * when an FAQ has several long response blocks. One oversized batch
+         * previously made every translation depend on a single completion
+         * fitting inside the model's output-token limit.
+         */
+        $chunks = [];
+        $chunk = [];
+        $chunkCharacters = 0;
+
+        foreach ($items as $item) {
+            $itemCharacters = mb_strlen((string) ($item['source_text'] ?? ''), 'UTF-8');
+            if (
+                $chunk !== [] &&
+                (count($chunk) >= 4 || $chunkCharacters + $itemCharacters > 8000)
+            ) {
+                $chunks[] = $chunk;
+                $chunk = [];
+                $chunkCharacters = 0;
+            }
+
+            $chunk[] = $item;
+            $chunkCharacters += $itemCharacters;
+        }
+
+        if ($chunk !== []) {
+            $chunks[] = $chunk;
+        }
+
+        $translations = [];
+        foreach ($chunks as $chunkItems) {
+            // Keep valid translations from successful chunks even if another
+            // chunk fails; callers recover only the missing IDs.
+            $translations += $this->translateBatchChunk($chunkItems);
+        }
+
+        return $translations;
+    }
+
+    /**
+     * Translate one bounded batch through the configured model failover chain.
+     */
+    private function translateBatchChunk(array $items): array
     {
         if ($items === []) {
             return [];
@@ -332,19 +461,32 @@ PROMPT,
                         return false;
                     }
 
+                    /*
+                     * Accept a structurally valid partial batch. Rejecting the
+                     * whole response because one item is missing/invalid used
+                     * to discard good translations and trigger recovery for
+                     * every field. The caller repairs only missing IDs.
+                     */
                     $found = [];
                     foreach ($decoded['translations'] as $row) {
                         if (!is_array($row)) {
-                            return false;
+                            continue;
                         }
+
                         $id = (string) ($row['id'] ?? '');
                         $translation = trim((string) ($row['translation'] ?? ''));
-                        if (!isset($expectedIds[$id]) || $translation === '' ||
-                            $this->looksLikeConversationInsteadOfTranslation($translation)) {
-                            return false;
+
+                        if (
+                            !isset($expectedIds[$id]) ||
+                            isset($found[$id]) ||
+                            $translation === '' ||
+                            $this->looksLikeConversationInsteadOfTranslation($translation)
+                        ) {
+                            continue;
                         }
 
                         $source = '';
+                        $targetLanguage = '';
                         foreach ($items as $item) {
                             if ((string) $item['id'] === $id) {
                                 $source = (string) $item['source_text'];
@@ -352,21 +494,35 @@ PROMPT,
                                 break;
                             }
                         }
+
                         if (
                             $source !== '' &&
-                            ($targetLanguage ?? '') === 'Filipino/Taglish' &&
+                            $targetLanguage === 'Filipino/Taglish' &&
                             $this->normalizeComparableText($translation) === $this->normalizeComparableText($source) &&
                             preg_match('/[A-Za-z]/', $source)
                         ) {
-                            return false;
+                            continue;
                         }
+
                         $found[$id] = true;
                     }
 
-                    return count($found) === count($expectedIds) && count($decoded['translations']) === count($expectedIds);
+                    return $found !== [];
                 },
                 $this->translationCandidateModels(),
-                ['max_tokens' => 2048]
+                [
+                    // Output size grows with the number and length of response blocks.
+                    'max_tokens' => min(
+                        8192,
+                        max(
+                            2048,
+                            (int) ceil(array_sum(array_map(
+                                static fn (array $item): int => mb_strlen((string) ($item['source_text'] ?? ''), 'UTF-8'),
+                                $items
+                            )) / 2)
+                        )
+                    ),
+                ]
             );
 
             $content = $this->cleanJsonResponse(
@@ -377,15 +533,37 @@ PROMPT,
             $translations = [];
 
             foreach (($result['translations'] ?? []) as $row) {
-                $id = isset($row['id']) ? (string) $row['id'] : '';
-                $translation = trim((string) ($row['translation'] ?? ''));
-
-                if ($id === '' || $translation === '') {
+                if (!is_array($row)) {
                     continue;
                 }
 
-                if ($this->looksLikeConversationInsteadOfTranslation($translation)) {
+                $id = isset($row['id']) ? (string) $row['id'] : '';
+                $translation = trim((string) ($row['translation'] ?? ''));
+
+                if (
+                    !isset($expectedIds[$id]) ||
+                    isset($translations[$id]) ||
+                    $translation === '' ||
+                    $this->looksLikeConversationInsteadOfTranslation($translation)
+                ) {
                     continue;
+                }
+
+                foreach ($items as $item) {
+                    if ((string) $item['id'] !== $id) {
+                        continue;
+                    }
+
+                    $source = (string) ($item['source_text'] ?? '');
+                    if (
+                        ($item['target_language'] ?? '') === 'Filipino/Taglish' &&
+                        $this->normalizeComparableText($translation) === $this->normalizeComparableText($source) &&
+                        preg_match('/[A-Za-z]/', $source)
+                    ) {
+                        continue 2;
+                    }
+
+                    break;
                 }
 
                 $translations[$id] = $translation;
@@ -467,7 +645,7 @@ private function translateToEnglish(string $text): string
     return $this->translateSingle($text, 'English');
 }
 
-private function translateSingle(string $text, string $target): string
+private function translateSingle(string $text, string $target, bool $boundedRecovery = false): string
 {
     $source = trim($text);
 
@@ -515,10 +693,21 @@ PROMPT,
     $lastError = null;
 
     /*
-     * Two tightly bounded attempts dramatically reduce failures caused by
-     * models returning a conversational answer instead of a translation.
+     * Normal standalone translations get one corrective retry. Per-field
+     * recovery after a batch failure gets one bounded pass to avoid amplifying
+     * provider outages into a large number of repeated requests.
      */
-    for ($attempt = 0; $attempt < 2; $attempt++) {
+    $attemptLimit = $boundedRecovery ? 1 : 2;
+    $candidateModels = $this->translationCandidateModels();
+
+    // Recovery is deliberately smaller than the primary attempt: when a
+    // provider is rate-limited, retrying every missing field across every
+    // model compounds the outage. Use at most two candidates once per field.
+    if ($boundedRecovery) {
+        $candidateModels = array_slice($candidateModels, 0, 2);
+    }
+
+    for ($attempt = 0; $attempt < $attemptLimit; $attempt++) {
         try {
             $response = $this->ai->chat(
                 $messages,
@@ -546,7 +735,7 @@ PROMPT,
                         preg_match('/[A-Za-z]/', $source)
                     );
                 },
-                $this->translationCandidateModels(),
+                $candidateModels,
                 ['max_tokens' => 2048]
             );
 

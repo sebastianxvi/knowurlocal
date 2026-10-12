@@ -34,17 +34,12 @@ class FaqController extends Controller
          * sending anything to the external AI service.
          */
         $validated = $request->validate([
-            'question' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-
-            'answer' => [
-                'required',
-                'string',
-                'max:10000',
-            ],
+            'question' => ['required', 'string', 'max:255'],
+            // New clients submit each response block independently.
+            'responses' => ['sometimes', 'array', 'min:1', 'max:10'],
+            'responses.*' => ['required', 'string', 'max:5000'],
+            // Backward compatibility for older clients.
+            'answer' => ['required_without:responses', 'nullable', 'string', 'max:10000'],
         ]);
 
         try {
@@ -53,19 +48,29 @@ class FaqController extends Controller
              * Send the validated English FAQ to
              * our translation service.
              */
+            if (isset($validated['responses'])) {
+                $translation = $translator->translateResponses(
+                    $validated['question'],
+                    $validated['responses']
+                );
+
+                return response()->json([
+                    'success' => true,
+                    'translation' => [
+                        'question_fil' => $translation['question_fil'],
+                        'responses_fil' => $translation['responses_fil'],
+                    ],
+                ]);
+            }
+
+            // Backward-compatible path for older clients sending one answer.
             $translation = $translator->translate(
                 $validated['question'],
-                $validated['answer']
+                (string) $validated['answer']
             );
 
-            /*
-             * Return only the generated translation.
-             *
-             * Nothing has been saved to the database yet.
-             */
             return response()->json([
                 'success' => true,
-
                 'translation' => [
                     'question_fil' => $translation['question_fil'],
                     'answer_fil' => $translation['answer_fil'],

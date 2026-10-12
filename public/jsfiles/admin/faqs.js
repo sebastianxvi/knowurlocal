@@ -1368,8 +1368,6 @@ if (supportRequestIdInput) {
                     .map(field => field.value.trim())
                     .filter(Boolean);
 
-                const answer = englishResponseTexts.join("\n\n");
-
 
                 /*
                  * English content is required before
@@ -1377,7 +1375,7 @@ if (supportRequestIdInput) {
                  */
                 if (
                     !question ||
-                    !answer
+                    englishResponseTexts.length === 0
                 ) {
 
                     showAlertModal({
@@ -1458,7 +1456,7 @@ if (supportRequestIdInput) {
                                 },
                                 body: JSON.stringify({
                                     question,
-                                    answer
+                                    responses: englishResponseTexts
                                 })
                             }
                         );
@@ -1493,19 +1491,53 @@ if (supportRequestIdInput) {
 
 
                     /*
-                     * Fill Filipino fields.
+                     * Validate the complete result before touching the form.
+                     * A partial/misaligned response must never overwrite the
+                     * admin's existing Filipino draft or silently lose blocks.
                      */
-                    questionFilInput.value =
-                        result.translation
-                            .question_fil ||
-                        "";
+                    const translatedQuestion =
+                        typeof result.translation?.question_fil === "string"
+                            ? result.translation.question_fil.trim()
+                            : "";
 
-                    if (window.FaqResponseBuilder) {
-                        window.FaqResponseBuilder.replaceLanguageTexts(
-                            'fil',
-                            [result.translation.answer_fil || '']
+                    const translatedResponses =
+                        Array.isArray(result.translation?.responses_fil)
+                            ? result.translation.responses_fil
+                            : (typeof result.translation?.answer_fil === "string"
+                                ? [result.translation.answer_fil]
+                                : []);
+
+                    if (
+                        !translatedQuestion ||
+                        translatedResponses.length !== englishResponseTexts.length ||
+                        translatedResponses.some(
+                            value => typeof value !== "string" || !value.trim()
+                        )
+                    ) {
+                        throw new Error(
+                            "The translation service returned incomplete or mismatched fields. Your existing Filipino content was left unchanged."
                         );
                     }
+
+                    if (
+                        englishResponseTexts.length > 0 &&
+                        typeof window.FaqResponseBuilder?.replaceLanguageTexts !== "function"
+                    ) {
+                        throw new Error(
+                            "The response editor is unavailable. Please reload the page and try again."
+                        );
+                    }
+
+                    /*
+                     * Apply only after all fields pass validation. This keeps
+                     * the question and every response aligned by index.
+                     */
+                    questionFilInput.value = translatedQuestion;
+
+                    window.FaqResponseBuilder.replaceLanguageTexts(
+                        'fil',
+                        translatedResponses
+                    );
 
                     /*
                      * JavaScript changing .value does not fire the input
