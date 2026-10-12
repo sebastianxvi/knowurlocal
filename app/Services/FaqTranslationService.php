@@ -35,15 +35,40 @@ class FaqTranslationService
          * Keeping one translation path prevents the manual FAQ button and the
          * support conversion modal from behaving differently.
          */
+        // Translate both fields together to reduce provider calls and keep
+        // terminology consistent between the question and answer.
+        $translations = $this->translateBatch([
+            [
+                'id' => 'question_fil',
+                'source_text' => $question,
+                'source_language' => 'English',
+                'target_language' => 'Filipino/Taglish',
+            ],
+            [
+                'id' => 'answer_fil',
+                'source_text' => $answer,
+                'source_language' => 'English',
+                'target_language' => 'Filipino/Taglish',
+            ],
+        ]);
+
+        // If the provider cannot produce a complete valid batch, recover each
+        // field independently rather than returning a partial translation.
+        foreach ([
+            'question_fil' => $question,
+            'answer_fil' => $answer,
+        ] as $key => $source) {
+            if (trim((string) ($translations[$key] ?? '')) === '') {
+                $translations[$key] = $this->translateSingle(
+                    $source,
+                    'Filipino/Taglish'
+                );
+            }
+        }
+
         return [
-            'question_fil' => $this->translateSingle(
-                $question,
-                'Filipino/Taglish'
-            ),
-            'answer_fil' => $this->translateSingle(
-                $answer,
-                'Filipino/Taglish'
-            ),
+            'question_fil' => $translations['question_fil'],
+            'answer_fil' => $translations['answer_fil'],
         ];
     }
 
@@ -286,10 +311,62 @@ PROMPT,
         ];
 
         try {
+            $expectedIds = array_fill_keys(
+                array_map(static fn (array $item): string => (string) $item['id'], $items),
+                true
+            );
+
             $response = $this->ai->chat(
                 $messages,
                 0.0,
-                ['type' => 'json_object']
+                ['type' => 'json_object'],
+                25,
+                5,
+                1,
+                function (array $candidate) use ($expectedIds, $items): bool {
+                    $content = $this->cleanJsonResponse(
+                        (string) data_get($candidate, 'choices.0.message.content', '')
+                    );
+                    $decoded = json_decode($content, true);
+                    if (!is_array($decoded) || !is_array($decoded['translations'] ?? null)) {
+                        return false;
+                    }
+
+                    $found = [];
+                    foreach ($decoded['translations'] as $row) {
+                        if (!is_array($row)) {
+                            return false;
+                        }
+                        $id = (string) ($row['id'] ?? '');
+                        $translation = trim((string) ($row['translation'] ?? ''));
+                        if (!isset($expectedIds[$id]) || $translation === '' ||
+                            $this->looksLikeConversationInsteadOfTranslation($translation)) {
+                            return false;
+                        }
+
+                        $source = '';
+                        foreach ($items as $item) {
+                            if ((string) $item['id'] === $id) {
+                                $source = (string) $item['source_text'];
+                                $targetLanguage = (string) ($item['target_language'] ?? '');
+                                break;
+                            }
+                        }
+                        if (
+                            $source !== '' &&
+                            ($targetLanguage ?? '') === 'Filipino/Taglish' &&
+                            $this->normalizeComparableText($translation) === $this->normalizeComparableText($source) &&
+                            preg_match('/[A-Za-z]/', $source)
+                        ) {
+                            return false;
+                        }
+                        $found[$id] = true;
+                    }
+
+                    return count($found) === count($expectedIds) && count($decoded['translations']) === count($expectedIds);
+                },
+                $this->translationCandidateModels(),
+                ['max_tokens' => 2048]
             );
 
             $content = $this->cleanJsonResponse(
@@ -446,7 +523,31 @@ PROMPT,
             $response = $this->ai->chat(
                 $messages,
                 0.0,
-                ['type' => 'json_object']
+                ['type' => 'json_object'],
+                25,
+                5,
+                1,
+                function (array $candidate) use ($source, $target): bool {
+                    $content = $this->cleanJsonResponse(
+                        (string) data_get($candidate, 'choices.0.message.content', '')
+                    );
+                    $decoded = json_decode($content, true);
+                    $translation = trim((string) ($decoded['translation'] ?? ''));
+
+                    if ($translation === '' ||
+                        $this->looksLikeConversationInsteadOfTranslation($translation) ||
+                        mb_strlen($translation) > 10000) {
+                        return false;
+                    }
+
+                    return !(
+                        $target === 'Filipino/Taglish' &&
+                        $this->normalizeComparableText($translation) === $this->normalizeComparableText($source) &&
+                        preg_match('/[A-Za-z]/', $source)
+                    );
+                },
+                $this->translationCandidateModels(),
+                ['max_tokens' => 2048]
             );
 
             $content = $this->cleanJsonResponse(
@@ -514,6 +615,28 @@ PROMPT,
         0,
         $lastError
     );
+}
+
+/**
+ * Translation requires reliable JSON output, so prefer concrete configured
+ * models over the generic OpenRouter free router where possible. The same
+ * model chain is used for both batched and single-field recovery.
+ */
+private function translationCandidateModels(): array
+{
+    $primary = trim((string) config('services.openrouter.model', ''));
+    $fallbacks = array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) config('services.openrouter.fallback_models', ''))
+    ), static fn (string $model): bool => $model !== ''));
+
+    $models = array_values(array_unique(array_filter(
+        [$primary, ...$fallbacks],
+        static fn (string $model): bool => $model !== '' && strtolower($model) !== 'openrouter/free'
+    )));
+
+    // Keep a configured primary as a last resort if it is the only model.
+    return $models !== [] ? $models : array_values(array_filter([$primary]));
 }
 
 private function deterministicTranslationFallback(string $source, string $target): ?string

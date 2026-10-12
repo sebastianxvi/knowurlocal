@@ -89,6 +89,12 @@
         href="{{ asset('cssfiles/admin/admin-design-system.css') }}"
     >
 
+    {{-- Mobile-only admin layout and modal refinements. --}}
+    <link
+        rel="stylesheet"
+        href="{{ asset('cssfiles/admin/admin-mobile-polish.css') }}?v={{ file_exists(public_path('cssfiles/admin/admin-mobile-polish.css')) ? filemtime(public_path('cssfiles/admin/admin-mobile-polish.css')) : time() }}"
+    >
+
 
 </head>
 

@@ -2186,3 +2186,128 @@ select[readonly]:hover{
         flex: 1 1 100%;
     }
 }
+
+
+/* Definitive FAQ modal mobile header fix.
+   Keep this in faqs.css (the page-specific stylesheet), so it wins over the
+   FAQ's own compact-action rules regardless of the global mobile stylesheet. */
+@media (max-width: 680px) {
+    #modal-back.back {
+        box-sizing: border-box !important;
+        padding: 7px !important;
+        overflow: hidden !important;
+    }
+
+    #modal-back.back > .modal {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        height: calc(100dvh - 14px) !important;
+        max-height: calc(100dvh - 14px) !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+
+    #modal-back.back > .modal > header.modal-header.admin-modal-header {
+        position: relative !important;
+        inset: auto !important;
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        grid-template-rows: auto auto !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+        gap: 10px !important;
+        flex: 0 0 auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        box-sizing: border-box !important;
+        padding: 13px 12px 12px !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        background: #fff !important;
+        border-bottom: 1px solid #e8edf5 !important;
+        z-index: 5 !important;
+    }
+
+    #modal-back.back > .modal > header.modal-header.admin-modal-header > .admin-modal-heading {
+        display: flex !important;
+        align-items: center !important;
+        position: static !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    #modal-back.back > .modal > header.modal-header.admin-modal-header > .modal-actions {
+        position: static !important;
+        inset: auto !important;
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+        gap: 8px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        transform: none !important;
+        justify-self: stretch !important;
+    }
+
+    #modal-back.back > .modal > header.modal-header.admin-modal-header > .modal-actions > button,
+    #modal-back.back > .modal > header.modal-header.admin-modal-header > .modal-actions > button.btn-save,
+    #modal-back.back > .modal > header.modal-header.admin-modal-header > .modal-actions > button.btn-cancel {
+        position: static !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        min-height: 38px !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 8px 6px !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+        white-space: nowrap !important;
+        font-size: 11px !important;
+        line-height: 1.2 !important;
+    }
+
+    #modal-back.back > .modal > header.modal-header.admin-modal-header > .modal-actions > button > span {
+        display: inline !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: auto !important;
+        height: auto !important;
+        position: static !important;
+        clip: auto !important;
+        overflow: visible !important;
+        font-size: 11px !important;
+        line-height: 1.2 !important;
+    }
+
+    #modal-back.back > .modal > header.modal-header.admin-modal-header > .modal-actions > button > i {
+        display: inline-block !important;
+        flex: 0 0 auto !important;
+        font-size: 14px !important;
+    }
+
+    #modal-back.back > .modal > form#faqForm {
+        display: block !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        width: 100% !important;
+        max-height: none !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+}

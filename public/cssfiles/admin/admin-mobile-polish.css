@@ -1,0 +1,832 @@
+/* KNOWURLOCAL admin — mobile-only layout and modal refinements.
+   Loaded after the design system; desktop layouts remain unchanged. */
+@media (max-width: 900px) {
+  html, body { max-width: 100%; overflow-x: clip; }
+  .layout, .main, .content { min-width: 0; width: 100%; }
+  .main { min-height: 100dvh; }
+  .topbar {
+    min-height: 66px !important;
+    height: auto !important;
+    padding: 10px 14px !important;
+    gap: 10px;
+  }
+  .header-left { min-width: 0; gap: 10px !important; }
+  .header-heading { min-width: 0; }
+  .page-title {
+    max-width: min(66vw, 460px);
+    overflow-wrap: anywhere;
+    line-height: 1.25 !important;
+  }
+  .page-subtitle {
+    max-width: 68vw;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  .header-right { flex: 0 0 auto; }
+  .content { padding: 16px 14px 28px !important; }
+
+  /* Keep wide datasets usable without making the entire page scroll sideways. */
+  .table-wrapper, .logs-table-wrapper, .admin-table-wrapper, .data-table-wrapper,
+  .table-responsive, .request-table-wrap {
+    max-width: 100%;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table, .logs-table, .admin-table, .data-table { max-width: none; }
+  .table-wrapper table, .logs-table-wrapper table, .admin-table-wrapper table,
+  .data-table-wrapper table, .table-responsive table { white-space: normal; }
+  .filter-bar, .support-filter-form, .admin-filter-toolbar,
+  .filter-toolbar, .toolbar, .page-toolbar { min-width: 0; max-width: 100%; }
+  input, select, textarea, button { max-width: 100%; }
+
+  /* Notification popover stays inside the viewport. */
+  .admin-notification-panel {
+    position: fixed !important;
+    top: 74px !important;
+    right: 10px !important;
+    left: auto !important;
+    width: min(420px, calc(100vw - 20px)) !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: calc(100dvh - 90px) !important;
+    overflow: auto !important;
+    z-index: 1200;
+  }
+}
+
+@media (max-width: 680px) {
+  .content { padding: 13px 11px 24px !important; }
+  .topbar { min-height: 62px !important; padding: 9px 11px !important; }
+  .admin-mobile-menu { flex: 0 0 38px; width: 38px; height: 38px; }
+  .page-title { font-size: clamp(15px, 4.2vw, 19px) !important; }
+  .page-subtitle { font-size: 11px; }
+
+  /* Cards and section headings should wrap naturally instead of clipping. */
+  .dashboard-hero, .section-header, .page-heading, .page-header,
+  .admin-page-header, .support-page-header, .faq-page-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .dashboard-hero > *, .section-header > *, .page-heading > *, .page-header > *,
+  .admin-page-header > *, .support-page-header > *, .faq-page-header > * { min-width: 0; }
+  .dashboard-kpi-grid, .analytics-kpi-grid, .analytics-kpi-grid-3,
+  .analytics-grid, .analytics-grid-2, .analytics-health-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .dashboard-kpi { min-height: 0; padding: 12px; }
+  .dashboard-section { margin-bottom: 20px; }
+
+  /* Search, filters, tabs and action groups become compact stacked controls. */
+  .filter-bar, .support-filter-form, .support-filter-toolbar,
+  .admin-filter-toolbar, .filter-toolbar, .page-toolbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 9px !important;
+    width: 100%;
+  }
+  .filter-bar > *, .support-filter-form > *, .support-filter-toolbar > *,
+  .admin-filter-toolbar > *, .filter-toolbar > *, .page-toolbar > * {
+    width: 100%; min-width: 0; max-width: 100%;
+  }
+  .admin-status-tabs, .faq-status-tabs, .agency-status-tabs, .category-status-tabs,
+  .admin-filter-tabs, .support-dataset-tabs, .faq-feedback-modal-tabs {
+    max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .admin-status-tab, .faq-status-tab, .agency-status-tab, .category-status-tab { flex: 0 0 auto; }
+  .add-agencybtn, .dashboard-export-button, .support-filter-submit,
+  .support-filter-clear { min-height: 42px; }
+  .table-wrapper, .logs-table-wrapper, .admin-table-wrapper, .data-table-wrapper {
+    border-radius: 12px;
+  }
+  .table { min-width: 680px; }
+
+  /* Global alert/confirm modal: usable bottom sheet with safe-area padding. */
+  #alert-modal {
+    align-items: flex-end;
+    padding: 10px 10px max(10px, env(safe-area-inset-bottom));
+  }
+  #alert-modal .modal {
+    width: 100%; max-width: 520px; max-height: min(84dvh, 720px);
+    padding: 20px 17px 16px; border-radius: 20px 20px 14px 14px;
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  #alert-modal .message-box { gap: 10px; padding: 12px; }
+  #alert-modal .message-box p { max-height: 30dvh; font-size: 13px; }
+  #alert-modal .actions { display: flex; flex-direction: column-reverse; gap: 8px; }
+  #alert-modal .actions .btn { width: 100%; min-height: 44px; }
+
+  /* Common custom modal patterns across admin pages. */
+  .dashboard-collaboration-modal-backdrop,
+  .faq-feedback-modal-backdrop,
+  .support-modal-back,
+  .back {
+    padding: 10px !important;
+    align-items: flex-end !important;
+  }
+  .dashboard-collaboration-modal,
+  .dashboard-collaboration-modal-card,
+  .faq-feedback-modal,
+  .support-modal,
+  .support-modal-faq-modal,
+  .category-agencies-modal,
+  .log-modal,
+  .chatbot-detail-modal,
+  .user-details-modal,
+  .modal-content {
+    width: min(100%, 560px) !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - 20px - env(safe-area-inset-top)) !important;
+    margin: auto 0 0 !important;
+    overflow: hidden;
+    border-radius: 18px 18px 12px 12px !important;
+  }
+  .dashboard-collaboration-modal-header,
+  .faq-feedback-modal-header,
+  .support-modal-header,
+  .modal-header, .admin-modal-header {
+    gap: 10px; padding: 15px !important;
+  }
+  .dashboard-collaboration-modal-body,
+  .faq-feedback-modal-body,
+  .support-modal-body,
+  .modal-body, .user-modal-body {
+    min-width: 0; padding: 14px !important;
+    overflow-wrap: anywhere;
+  }
+  .dashboard-collaboration-modal-actions,
+  .faq-feedback-modal-footer,
+  .support-modal-footer,
+  .modal-actions, .modal-footer {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 12px 14px max(12px, env(safe-area-inset-bottom)) !important;
+  }
+  .dashboard-collaboration-modal-actions > *,
+  .faq-feedback-modal-footer > *, .support-modal-footer > *,
+  .modal-actions > *, .modal-footer > * { flex: 1 1 120px; min-height: 42px; }
+  .modal input, .modal select, .modal textarea,
+  .support-modal input, .support-modal select, .support-modal textarea {
+    width: 100%; min-width: 0; font-size: 16px;
+  }
+  .dashboard-form-grid, .user-meta-grid, .log-detail-grid,
+  .chatbot-detail-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .admin-notification-panel { top: 68px !important; }
+}
+
+@media (max-width: 420px) {
+  .content { padding-inline: 9px !important; }
+  .topbar { padding-inline: 9px !important; }
+  .header-left { gap: 7px !important; }
+  .page-title { max-width: 62vw; }
+  .page-subtitle { max-width: 62vw; }
+  .dashboard-kpi-grid, .analytics-kpi-grid, .analytics-kpi-grid-3,
+  .analytics-grid, .analytics-grid-2, .analytics-health-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .table { min-width: 620px; }
+  #alert-modal { padding-inline: 7px; }
+  #alert-modal .modal { padding: 18px 14px 14px; }
+  .dashboard-collaboration-modal, .dashboard-collaboration-modal-card,
+  .faq-feedback-modal, .support-modal, .log-modal, .modal-content {
+    border-radius: 16px 16px 10px 10px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-notification-panel, #alert-modal, #alert-modal .modal,
+  .dashboard-collaboration-modal, .faq-feedback-modal, .support-modal {
+    scroll-behavior: auto !important; transition-duration: .01ms !important;
+  }
+}
+
+
+/* Targeted mobile fixes: NGA/NGO, FAQs, and Support Requests.
+   Keep wide data tables inside their own horizontal scrollers; turn desktop-sized
+   edit/manage dialogs into viewport-fitted, internally scrollable mobile sheets. */
+@media (max-width: 767px) {
+  /* These pages use .table-wrapper with the shared .table class. */
+  body:has(.agency-management-page) .table-wrapper,
+  body:has(#filterSearch) .table-wrapper,
+  body:has(.faq-page-header) .table-wrapper,
+  body:has(.support-filter-toolbar) .table-wrapper,
+  .table-wrapper:has(> table.table) {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  .table-wrapper > table.table,
+  .table-wrapper > .table {
+    width: max-content !important;
+    min-width: 760px !important;
+    max-width: none !important;
+    table-layout: auto;
+  }
+  .table-wrapper th, .table-wrapper td { white-space: nowrap; }
+
+  /* Filter rows: prevent the desktop multi-column toolbar from overflowing. */
+  .support-filter-toolbar,
+  .support-filter-toolbar .support-filter-form,
+  .support-filter-form,
+  .admin-filter-toolbar {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .support-filter-form {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: stretch !important;
+    gap: 9px !important;
+  }
+  .support-filter-form > *,
+  .support-filter-field,
+  .support-filter-field input,
+  .support-filter-field select,
+  .support-filter-form .searchable-agency-filter,
+  .support-filter-form .searchable-agency-filter button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .support-filter-form .admin-icon-button,
+  .support-filter-form .add-agencybtn { min-height: 42px; }
+
+  /* NGA/NGO agency editor and FAQ editor share #modal-back / .back. */
+  #modal-back.back,
+  .back#modal-back,
+  .back:has(> .modal) {
+    box-sizing: border-box;
+    padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)) !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    overflow-y: auto !important;
+  }
+  #modal-back.back > .modal,
+  .back#modal-back > .modal,
+  .back:has(> .modal) > .modal {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 620px !important;
+    height: auto !important;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    margin: auto 0 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    border-radius: 18px 18px 12px 12px !important;
+  }
+  #modal-back .modal-header,
+  #modal-back .admin-modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    padding: 14px !important;
+  }
+  #modal-back .modal-header h2,
+  #modal-back .admin-modal-header h2 {
+    font-size: 18px !important;
+    line-height: 1.3 !important;
+    overflow-wrap: anywhere;
+  }
+  #modal-back .modal-actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    min-width: 0;
+  }
+  #modal-back .modal-actions > button { min-height: 42px; }
+  #modal-back .modal-body,
+  #modal-back .form-body,
+  #modal-back .modal-content-body {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 14px !important;
+  }
+  #modal-back input, #modal-back select, #modal-back textarea {
+    box-sizing: border-box;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    font-size: 16px !important;
+  }
+  #modal-back .form-row,
+  #modal-back .form-grid,
+  #modal-back .admin-form-grid { grid-template-columns: minmax(0, 1fr) !important; }
+
+  /* Support-request manage modal and nested FAQ/response dialogs. */
+  .support-modal-back,
+  .support-modal-faq-backdrop,
+  .similar-faq-modal-backdrop {
+    box-sizing: border-box;
+    padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)) !important;
+    align-items: flex-end !important;
+    overflow-y: auto !important;
+  }
+  .support-modal,
+  .support-modal-faq-modal,
+  .similar-faq-modal,
+  .response-builder-modal {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 620px !important;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    height: auto !important;
+    margin: auto 0 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    border-radius: 18px 18px 12px 12px !important;
+  }
+  .support-modal-header,
+  .support-modal .modal-header,
+  .support-modal-faq-modal .modal-header {
+    gap: 10px !important;
+    padding: 14px !important;
+  }
+  .support-modal-body,
+  .support-modal .modal-body,
+  .support-modal-faq-modal .modal-body {
+    min-width: 0 !important;
+    padding: 14px !important;
+    overflow-wrap: anywhere;
+  }
+  .support-modal-footer,
+  .support-modal .modal-footer,
+  .support-modal .modal-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 8px !important;
+    padding: 12px 14px max(12px, env(safe-area-inset-bottom)) !important;
+  }
+  .support-modal-footer > *,
+  .support-modal .modal-footer > *,
+  .support-modal .modal-actions > * { width: 100%; min-height: 42px; }
+  .support-modal input, .support-modal select, .support-modal textarea,
+  .support-modal-faq-modal input, .support-modal-faq-modal select,
+  .support-modal-faq-modal textarea { width: 100% !important; min-width: 0 !important; font-size: 16px !important; }
+}
+
+/* Focused compact layouts for the three complex admin editors. */
+@media (max-width: 680px) {
+  /* Agency contact controls: keep checkbox intrinsic instead of stretching it
+     to the full input width via the modal's general field rule. */
+  #modal-back .contact-primary {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    width: auto !important;
+    min-height: 30px;
+    margin: 2px 0 0 !important;
+    padding: 4px 0 !important;
+    font-size: 12px !important;
+    cursor: pointer;
+  }
+  #modal-back .contact-primary-checkbox,
+  #modal-back input.contact-primary-checkbox {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    display: inline-grid !important;
+    place-content: center !important;
+    flex: 0 0 17px !important;
+    width: 17px !important;
+    min-width: 17px !important;
+    max-width: 17px !important;
+    height: 17px !important;
+    min-height: 17px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+  }
+
+  /* Use a denser, phone-first modal rather than scaling the desktop form down. */
+  #modal-back.back > .modal,
+  .back#modal-back > .modal,
+  .back:has(> .modal) > .modal {
+    max-height: calc(100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    border-radius: 14px 14px 10px 10px !important;
+  }
+  #modal-back .modal-header,
+  #modal-back .admin-modal-header {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+  #modal-back .modal-header h2,
+  #modal-back .admin-modal-header h2 { font-size: 16px !important; }
+  #modal-back .modal-body,
+  #modal-back .form-body,
+  #modal-back .modal-content-body { padding: 10px 12px !important; }
+  #modal-back .modal-actions { gap: 6px !important; }
+  #modal-back .modal-actions > button { min-height: 36px !important; padding: 8px 12px !important; }
+  #modal-back .agency-contact-row,
+  #modal-back .contact-row,
+  #modal-back .agency-contact-card {
+    padding: 9px !important;
+    gap: 8px !important;
+  }
+  #modal-back .agency-contact-row .floating-group { margin-bottom: 7px !important; }
+  #modal-back .agency-contact-row .floating-group input,
+  #modal-back .agency-contact-row .floating-group select {
+    min-height: 40px !important;
+    padding: 10px !important;
+    font-size: 14px !important;
+  }
+  #modal-back .agency-contact-row .floating-group label { font-size: 10px !important; }
+  #modal-back .section-title,
+  #modal-back .form-section-title { margin-bottom: 8px !important; font-size: 12px !important; }
+
+  /* FAQ editor: tighten card and attachment sections while retaining readable fields. */
+  #modal-back .faq-response-item,
+  #modal-back .response-item,
+  #modal-back .faq-attachment-item,
+  #modal-back .attachment-item { padding: 9px !important; gap: 8px !important; }
+  #modal-back .faq-editor-section,
+  #modal-back .form-section { margin-bottom: 12px !important; }
+
+  /* Support request management modal: compact chrome, preserve independent scrolling. */
+  .support-modal,
+  .support-modal-faq-modal,
+  .similar-faq-modal,
+  .response-builder-modal {
+    max-height: calc(100dvh - 12px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    border-radius: 14px 14px 10px 10px !important;
+  }
+  .support-modal-header,
+  .support-modal .modal-header,
+  .support-modal-faq-modal .modal-header { padding: 10px 12px !important; }
+  .support-modal-body,
+  .support-modal .modal-body,
+  .support-modal-faq-modal .modal-body { padding: 10px 12px !important; }
+  .support-modal-footer,
+  .support-modal .modal-footer,
+  .support-modal .modal-actions { padding: 9px 12px max(9px, env(safe-area-inset-bottom)) !important; gap: 6px !important; }
+  .support-modal-footer > *,
+  .support-modal .modal-footer > *,
+  .support-modal .modal-actions > * { min-height: 38px !important; }
+}
+
+/* Final mobile modal corrections: visible contact selection, aligned editor actions,
+   and a viewport-anchored support-request sheet. */
+@media (max-width: 680px) {
+  /* Native checkbox was visually erased by appearance:none without a checked mark. */
+  #modal-back input.contact-primary-checkbox {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    position: relative !important;
+    border: 1.5px solid #94a3b8 !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    transition: border-color .12s ease, background-color .12s ease, box-shadow .12s ease;
+  }
+  #modal-back input.contact-primary-checkbox:checked {
+    border-color: #2563eb !important;
+    background: #2563eb !important;
+    box-shadow: inset 0 0 0 4px #fff !important;
+  }
+  #modal-back input.contact-primary-checkbox:focus-visible {
+    outline: 2px solid rgba(37, 99, 235, .35) !important;
+    outline-offset: 2px !important;
+  }
+
+  /* Keep Save and Cancel together and out of the title/content area. */
+  #modal-back .modal-header,
+  #modal-back .admin-modal-header {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+  }
+  #modal-back .modal-header > :first-child,
+  #modal-back .admin-modal-header > :first-child { min-width: 0; flex: 1 1 55% !important; }
+  #modal-back .modal-header .modal-actions,
+  #modal-back .admin-modal-header .modal-actions {
+    display: flex !important;
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin: 2px 0 0 !important;
+  }
+  #modal-back .modal-header .modal-actions > button,
+  #modal-back .admin-modal-header .modal-actions > button {
+    flex: 1 1 0 !important;
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 38px !important;
+    padding: 8px 10px !important;
+    white-space: nowrap !important;
+  }
+
+  /* The support modal must be anchored to the phone viewport, not scaled/centered
+     as a desktop dialog. Its body scrolls while header/footer remain visible. */
+  .support-modal-back,
+  .support-modal-faq-backdrop,
+  .similar-faq-modal-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)) !important;
+    overflow: hidden !important;
+    z-index: 1200 !important;
+  }
+  .support-modal,
+  .support-modal-faq-modal,
+  .similar-faq-modal {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 0 1 auto !important;
+    width: 100% !important;
+    max-width: 560px !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    margin: auto 0 0 !important;
+    overflow: hidden !important;
+    transform: none !important;
+    border-radius: 16px 16px 10px 10px !important;
+  }
+  .support-modal-header { flex: 0 0 auto !important; }
+  .support-modal-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .support-modal-footer { flex: 0 0 auto !important; }
+}
+
+
+/* Final refinement from mobile review: give modal headers room for actions,
+   reduce support-response density, and center the Invite Admin dialog. */
+@media (max-width: 680px) {
+  /* Slightly roomier header lets title and action row breathe without crowding
+     the first form field. */
+  #modal-back .modal-header,
+  #modal-back .admin-modal-header {
+    padding: 13px 14px 11px !important;
+    row-gap: 9px !important;
+    min-height: 0 !important;
+  }
+  #modal-back .modal-header .modal-actions,
+  #modal-back .admin-modal-header .modal-actions {
+    margin-top: 3px !important;
+    padding-top: 1px !important;
+  }
+
+  /* Invite Admin is a short, focused form: center it on the screen instead
+     of treating it like a tall bottom sheet. */
+  #invite-modal.back {
+    position: fixed !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)) !important;
+    overflow-y: auto !important;
+  }
+  #invite-modal.back > .modal {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 420px !important;
+    min-width: 0 !important;
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+    height: auto !important;
+    margin: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    border-radius: 16px !important;
+    transform: none !important;
+  }
+
+  /* Compact the support request's content blocks, not just the outer shell.
+     Keep form controls comfortably tappable while reducing decorative gaps. */
+  .support-modal-header {
+    padding: 11px 13px !important;
+    gap: 8px !important;
+  }
+  .support-modal-heading { gap: 7px !important; }
+  .support-modal-icon {
+    width: 32px !important;
+    height: 32px !important;
+    flex-basis: 32px !important;
+  }
+  .support-modal-heading h2 { font-size: 14px !important; line-height: 1.3 !important; }
+  .support-modal-body {
+    padding: 11px 13px !important;
+    font-size: 12px !important;
+  }
+  .support-modal-body > * + * { margin-top: 10px !important; }
+  .support-question-display {
+    gap: 8px !important;
+    padding: 10px !important;
+    border-radius: 9px !important;
+  }
+  #sr-question { font-size: 12px !important; line-height: 1.45 !important; }
+  .support-modal-official-response { margin-top: 14px !important; }
+  .support-response-new {
+    margin-top: 14px !important;
+    padding-top: 13px !important;
+  }
+  .support-modal-section-heading > div > span { font-size: 12px !important; }
+  .support-modal-section-heading small { font-size: 10px !important; }
+  .support-modal-footer {
+    padding: 8px 13px max(8px, env(safe-area-inset-bottom)) !important;
+    gap: 7px !important;
+  }
+  .support-modal-button {
+    min-height: 36px !important;
+    padding: 0 10px !important;
+    font-size: 11px !important;
+  }
+}
+
+
+/* Follow-up mobile fix: the NGA/NGO and FAQ action rows were still overlapping
+   the first form fields. Reserve real header space and keep actions in-flow. */
+@media (max-width: 680px) {
+  /* Shared modal header: title on its own row, actions on a dedicated row below. */
+  #modal-back .modal-header,
+  #modal-back .admin-modal-header {
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    min-height: 112px !important;
+    padding: 13px 13px 12px !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 30 !important;
+    background: #fff !important;
+    border-bottom: 1px solid #e8edf5 !important;
+  }
+
+  #modal-back .modal-header > :first-child,
+  #modal-back .admin-modal-header > :first-child {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+  }
+
+  #modal-back .modal-header .modal-actions,
+  #modal-back .admin-modal-header .modal-actions {
+    box-sizing: border-box !important;
+    position: static !important;
+    inset: auto !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 8px !important;
+  }
+
+  #modal-back .modal-header .modal-actions > button,
+  #modal-back .admin-modal-header .modal-actions > button {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 38px !important;
+    margin: 0 !important;
+    padding: 8px 9px !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+  }
+
+  /* Some FAQ modal variants place action buttons directly in the header rather
+     than wrapping them in .modal-actions. Keep those buttons in the action row. */
+  #modal-back .modal-header > button,
+  #modal-back .admin-modal-header > button {
+    box-sizing: border-box !important;
+    position: static !important;
+    inset: auto !important;
+    align-self: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 38px !important;
+    margin: 0 !important;
+  }
+
+  /* Keep the editor body below the expanded header; avoid content sliding under it. */
+  #modal-back .modal-body,
+  #modal-back .admin-modal-body,
+  #modal-back .modal-content-body {
+    min-height: 0 !important;
+    scroll-margin-top: 112px !important;
+  }
+}
+
+
+/* FAQ-specific mobile header correction.
+   Root cause: faqs.css has later, more specific compact-action rules that hide
+   button labels and force each action to a 36px icon-only button. Combined with
+   the shared modal header override, this leaves the actions pushed/clipped at
+   the right edge instead of forming a visible row below the title. */
+@media (max-width: 680px) {
+  #modal-back > .modal > header.modal-header.admin-modal-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 13px 13px 12px !important;
+    overflow: visible !important;
+  }
+
+  #modal-back > .modal > header.modal-header.admin-modal-header > .admin-modal-heading {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+  }
+
+  #modal-back > .modal > header.modal-header.admin-modal-header > .modal-actions {
+    position: static !important;
+    inset: auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
+
+  #modal-back > .modal > header.modal-header.admin-modal-header > .modal-actions > button {
+    display: inline-flex !important;
+    position: static !important;
+    inset: auto !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 38px !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 8px 6px !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+  }
+
+  #modal-back > .modal > header.modal-header.admin-modal-header > .modal-actions > button span {
+    display: inline !important;
+    visibility: visible !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+  }
+
+  #modal-back > .modal > header.modal-header.admin-modal-header > .modal-actions > button i {
+    display: inline-block !important;
+    flex: 0 0 auto !important;
+    font-size: 14px !important;
+  }
+
+  /* Ensure the FAQ form begins after the complete header, never underneath it. */
+  #modal-back > .modal > #faqForm {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: hidden !important;
+  }
+}

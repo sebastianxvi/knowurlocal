@@ -396,30 +396,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
 
-                /*
-                 * Check whether a primary still exists.
-                 */
-                const hasPrimary =
-                    contacts.some(
-                        contact =>
-                            contact.checkbox.checked
-                    );
-
-
-                /*
-                 * If none exists, automatically assign
-                 * the first contact as primary.
-                 */
-                if (
-                    !hasPrimary &&
-                    contacts.length > 0
-                ) {
-
-                    contacts[0]
-                        .checkbox
-                        .checked = true;
-
-                }
+                // A primary contact is optional. Do not silently re-check
+                // the first checkbox when an administrator intentionally
+                // unchecks it; this made the control appear unresponsive.
 
             }
         );

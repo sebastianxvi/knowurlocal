@@ -197,10 +197,12 @@
 .support-component-menu {
     position: absolute;
 
-    top: calc(100% + 7px);
+    /* Match the FAQ response builder: keep the picker floating above its
+       trigger so opening it does not push or visually extend the form. */
+    bottom: calc(100% + 7px);
     left: 0;
 
-    z-index: 20;
+    z-index: 30;
 
     display: flex;
     flex-direction: column;
