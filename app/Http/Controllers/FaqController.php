@@ -1101,9 +1101,15 @@ elseif ($request->filled('support_request_id')) {
          * Copy the original Support Request image into
          * the FAQ storage directory.
          */
-        Storage::disk('public')->copy(
-            $support->answer_image,
-            $newImagePath
+        abort_unless(
+            $this->copyStorageFileAsStream(
+                'public',
+                $support->answer_image,
+                'public',
+                $newImagePath
+            ),
+            422,
+            'The Support Request image could not be copied into the FAQ.'
         );
 
         /*
@@ -1967,7 +1973,12 @@ public function forceDestroy($id)
                         . ($extension ? '.' . strtolower($extension) : '');
 
                     abort_unless(
-                        Storage::disk('private')->copy($source->content, $destination),
+                        $this->copyStorageFileAsStream(
+                            'private',
+                            $source->content,
+                            'private',
+                            $destination
+                        ),
                         422,
                         'The Support Request attachment could not be copied into the FAQ.'
                     );
@@ -1993,10 +2004,13 @@ public function forceDestroy($id)
                     $destination = 'faqs/responses/faq-response-' . Str::uuid()
                         . ($extension ? '.' . strtolower($extension) : '');
 
-                    $contents = Storage::disk('public')->get($support->answer_image);
-
                     abort_unless(
-                        Storage::disk('private')->put($destination, $contents),
+                        $this->copyStorageFileAsStream(
+                            'public',
+                            $support->answer_image,
+                            'private',
+                            $destination
+                        ),
                         422,
                         'The Support Request image could not be copied into the FAQ.'
                     );
@@ -2077,6 +2091,84 @@ public function forceDestroy($id)
      * case-insensitively. This prevents entries such as
      * "police clearance, police, clearance" from being stored.
      */
+    /**
+     * Copy an object using streams instead of Flysystem's copy operation.
+     *
+     * Some S3-compatible storage providers do not implement GetObjectAcl
+     * responses in the format expected by Flysystem. Its native copy()
+     * operation reads source visibility first, which can make valid stored
+     * attachments fail to copy. Streaming the bytes avoids that ACL lookup
+     * and also avoids loading potentially large attachments into memory.
+     */
+    private function copyStorageFileAsStream(
+        string $sourceDiskName,
+        string $sourcePath,
+        string $destinationDiskName,
+        string $destinationPath
+    ): bool {
+        $sourceDisk = Storage::disk($sourceDiskName);
+        $destinationDisk = Storage::disk($destinationDiskName);
+        $stream = null;
+
+        try {
+            $stream = $sourceDisk->readStream($sourcePath);
+
+            if (!is_resource($stream)) {
+                Log::warning('Storage attachment copy could not open source stream.', [
+                    'source_disk' => $sourceDiskName,
+                    'source_path' => $sourcePath,
+                    'destination_disk' => $destinationDiskName,
+                    'destination_path' => $destinationPath,
+                ]);
+
+                return false;
+            }
+
+            $copied = $destinationDisk->writeStream($destinationPath, $stream);
+
+            if (!$copied) {
+                try {
+                    $destinationDisk->delete($destinationPath);
+                } catch (\Throwable $cleanupException) {
+                    Log::warning('Failed to clean up an incomplete attachment copy.', [
+                        'destination_disk' => $destinationDiskName,
+                        'destination_path' => $destinationPath,
+                        'exception_class' => get_class($cleanupException),
+                    ]);
+                }
+
+                return false;
+            }
+
+            return true;
+        } catch (\Throwable $exception) {
+            try {
+                $destinationDisk->delete($destinationPath);
+            } catch (\Throwable $cleanupException) {
+                Log::warning('Failed to clean up an incomplete attachment copy.', [
+                    'destination_disk' => $destinationDiskName,
+                    'destination_path' => $destinationPath,
+                    'exception_class' => get_class($cleanupException),
+                ]);
+            }
+
+            Log::error('Storage attachment copy failed.', [
+                'source_disk' => $sourceDiskName,
+                'source_path' => $sourcePath,
+                'destination_disk' => $destinationDiskName,
+                'destination_path' => $destinationPath,
+                'exception_class' => get_class($exception),
+                'exception_message' => mb_substr($exception->getMessage(), 0, 500),
+            ]);
+
+            return false;
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }
+    }
+
     private function normalizeKeywords(?string $keywords): string
     {
         $seen = [];
