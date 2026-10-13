@@ -51,6 +51,16 @@ return [
         'base_url' => env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
         'max_tokens' => (int) env('GROQ_MAX_TOKENS', 512),
     ],
+    'gemini_translation' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-3.1-flash-lite'),
+        // Conservative application-level caps; keep below the model's displayed quota.
+        'requests_per_minute' => (int) env('GEMINI_TRANSLATION_RPM_LIMIT', 8),
+        'requests_per_day' => (int) env('GEMINI_TRANSLATION_RPD_LIMIT', 50),
+        'max_input_characters' => (int) env('GEMINI_TRANSLATION_MAX_INPUT_CHARS', 12000),
+        'max_output_tokens' => (int) env('GEMINI_TRANSLATION_MAX_OUTPUT_TOKENS', 4096),
+        'cache_days' => (int) env('GEMINI_TRANSLATION_CACHE_DAYS', 30),
+    ],
 
     'openrouter' => [
     'api_key' => env('OPENROUTER_API_KEY'),

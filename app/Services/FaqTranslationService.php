@@ -3,11 +3,12 @@
 namespace App\Services;
 
 use RuntimeException;
+use Illuminate\Support\Facades\Cache;
 
 class FaqTranslationService
 {
     public function __construct(
-        private OpenRouterService $ai
+        private GeminiTranslationService $ai
     ) {
     }
 
@@ -52,19 +53,29 @@ class FaqTranslationService
             ],
         ]);
 
-        // If the provider cannot produce a complete valid batch, recover each
-        // field independently rather than returning a partial translation.
+        // One grouped recovery pass only. Retrying each missing field separately
+        // can multiply provider calls during an outage and burn through quota.
+        $missingItems = [];
         foreach ([
             'question_fil' => $question,
             'answer_fil' => $answer,
         ] as $key => $source) {
             if (trim((string) ($translations[$key] ?? '')) === '') {
-                $translations[$key] = $this->translateSingle(
-                    $source,
-                    'Filipino/Taglish',
-                    true
-                );
+                $missingItems[] = [
+                    'id' => $key,
+                    'source_text' => $source,
+                    'source_language' => 'English',
+                    'target_language' => 'Filipino/Taglish',
+                ];
             }
+        }
+        if ($missingItems !== []) {
+            $translations += $this->translateBatch($missingItems);
+        }
+
+        if (trim((string) ($translations['question_fil'] ?? '')) === '' ||
+            trim((string) ($translations['answer_fil'] ?? '')) === '') {
+            throw new RuntimeException('Unable to translate all FAQ fields. Please try again later.');
         }
 
         return [
@@ -118,18 +129,13 @@ class FaqTranslationService
 
         $translations = $this->translateBatch($items);
 
-        // Recover missing items independently instead of losing the whole batch.
-        foreach ($items as $item) {
-            $id = (string) $item['id'];
-            if (trim((string) ($translations[$id] ?? '')) !== '') {
-                continue;
-            }
-
-            $translations[$id] = $this->translateSingle(
-                (string) $item['source_text'],
-                'Filipino/Taglish',
-                true
-            );
+        // Retry missing fields together once; avoid one API call per failed item.
+        $missingItems = array_values(array_filter(
+            $items,
+            static fn (array $item): bool => trim((string) ($translations[(string) $item['id']] ?? '')) === ''
+        ));
+        if ($missingItems !== []) {
+            $translations += $this->translateBatch($missingItems);
         }
 
         $translatedResponses = [];
@@ -292,33 +298,21 @@ public function prepareSupportRequestFaq(
             ];
         }
 
-        $translations = $this->translateBatch($needsTranslation);
+        $translations = $this->translateBatch($needsTranslation, false);
+
+        // A single grouped recovery pass is the maximum retry fan-out per
+        // support-request conversion. If it fails, preserve the original text
+        // rather than making an unbounded number of one-item requests.
+        $missingItems = array_values(array_filter(
+            $needsTranslation,
+            static fn (array $item): bool => trim((string) ($translations[(string) $item['id']] ?? '')) === ''
+        ));
+        if ($missingItems !== []) {
+            $translations += $this->translateBatch($missingItems, false);
+        }
 
         foreach ($items as $key => &$item) {
             $translated = trim((string) ($translations[(string) $key] ?? ''));
-
-            if ($translated === '') {
-                /*
-                 * A single bad item must never destroy an otherwise valid
-                 * FAQ conversion. Retry this item through the hardened
-                 * single-text path.
-                 */
-                try {
-                    $translated = $this->translateSingle(
-                        $item['source'],
-                        $item['language'] === 'en'
-                            ? 'Filipino/Taglish'
-                            : 'English',
-                        true
-                    );
-                } catch (\Throwable $e) {
-                    \Log::warning('FAQ batch item translation failed.', [
-                        'item_id' => (string) $key,
-                        'exception' => get_class($e),
-                        'message' => $e->getMessage(),
-                    ]);
-                }
-            }
 
             /*
              * Preserve the original language even when translation is
@@ -348,28 +342,56 @@ public function prepareSupportRequestFaq(
     }
 
     /**
-     * Translate all requested items in one structured OpenRouter call.
+     * Translate all requested items in one structured Gemini call.
      *
      * The result is intentionally keyed by the caller's IDs so ordering
      * cannot accidentally change when the model returns the translations.
      */
-    private function translateBatch(array $items): array
+    private function translateBatch(array $items, bool $useCache = true): array
     {
         if ($items === []) {
             return [];
         }
 
+        // Cache by source text + target language, not the caller's temporary ID.
+        // Reopening the same FAQ draft should not spend another Gemini request.
+        $translations = [];
+        $uncachedItems = [];
+
+        foreach ($items as $item) {
+            $id = (string) ($item['id'] ?? '');
+            $source = trim((string) ($item['source_text'] ?? ''));
+            $target = trim((string) ($item['target_language'] ?? ''));
+
+            if ($id === '' || $source === '' || $target === '') {
+                continue;
+            }
+
+            if ($useCache) {
+                $cached = Cache::get($this->translationCacheKey($source, $target));
+                if (is_string($cached) && trim($cached) !== '') {
+                    $translations[$id] = $cached;
+                    continue;
+                }
+            }
+
+            $uncachedItems[] = $item;
+        }
+
+        if ($uncachedItems === []) {
+            return $translations;
+        }
+
         /*
-         * Keep each provider response small enough to avoid output truncation
-         * when an FAQ has several long response blocks. One oversized batch
-         * previously made every translation depend on a single completion
-         * fitting inside the model's output-token limit.
+         * Bound prompt size to keep request and output usage predictable.
+         * Four items / 8,000 source characters per call is intentionally
+         * conservative for this translation workload.
          */
         $chunks = [];
         $chunk = [];
         $chunkCharacters = 0;
 
-        foreach ($items as $item) {
+        foreach ($uncachedItems as $item) {
             $itemCharacters = mb_strlen((string) ($item['source_text'] ?? ''), 'UTF-8');
             if (
                 $chunk !== [] &&
@@ -388,18 +410,41 @@ public function prepareSupportRequestFaq(
             $chunks[] = $chunk;
         }
 
-        $translations = [];
         foreach ($chunks as $chunkItems) {
-            // Keep valid translations from successful chunks even if another
-            // chunk fails; callers recover only the missing IDs.
-            $translations += $this->translateBatchChunk($chunkItems);
+            // Preserve good partial results; only missing IDs may use recovery.
+            $chunkTranslations = $this->translateBatchChunk($chunkItems);
+            $translations += $chunkTranslations;
+
+            foreach ($chunkItems as $item) {
+                $id = (string) $item['id'];
+                $value = trim((string) ($chunkTranslations[$id] ?? ''));
+                if ($useCache && $value !== '') {
+                    Cache::put(
+                        $this->translationCacheKey(
+                            (string) $item['source_text'],
+                            (string) $item['target_language']
+                        ),
+                        $value,
+                        now()->addDays((int) config('services.gemini_translation.cache_days', 30))
+                    );
+                }
+            }
         }
 
         return $translations;
     }
 
+    private function translationCacheKey(string $source, string $target): string
+    {
+        return 'faq_translation:v1:' . hash('sha256', json_encode([
+            'model' => (string) config('services.gemini_translation.model', 'gemini-3.1-flash-lite'),
+            'target' => mb_strtolower(trim($target), 'UTF-8'),
+            'source' => trim($source),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
     /**
-     * Translate one bounded batch through the configured model failover chain.
+     * Translate one bounded batch through the configured Gemini model.
      */
     private function translateBatchChunk(array $items): array
     {
@@ -449,7 +494,7 @@ PROMPT,
                 $messages,
                 0.0,
                 ['type' => 'json_object'],
-                25,
+                20,
                 5,
                 1,
                 function (array $candidate) use ($expectedIds, $items): bool {
@@ -513,13 +558,13 @@ PROMPT,
                 [
                     // Output size grows with the number and length of response blocks.
                     'max_tokens' => min(
-                        8192,
+                        4096,
                         max(
-                            2048,
+                            512,
                             (int) ceil(array_sum(array_map(
                                 static fn (array $item): int => mb_strlen((string) ($item['source_text'] ?? ''), 'UTF-8'),
                                 $items
-                            )) / 2)
+                            )) / 2) + 256
                         )
                     ),
                 ]
@@ -571,7 +616,7 @@ PROMPT,
 
             return $translations;
         } catch (\Throwable $e) {
-            \Log::warning('FAQ batch translation failed; falling back to item translation.', [
+            \Log::warning('FAQ batch translation failed; bounded grouped recovery may be attempted.', [
                 'count' => count($items),
                 'exception' => get_class($e),
                 'message' => $e->getMessage(),
@@ -713,7 +758,7 @@ PROMPT,
                 $messages,
                 0.0,
                 ['type' => 'json_object'],
-                25,
+                20,
                 5,
                 1,
                 function (array $candidate) use ($source, $target): bool {
@@ -736,7 +781,7 @@ PROMPT,
                     );
                 },
                 $candidateModels,
-                ['max_tokens' => 2048]
+                ['max_tokens' => min(2048, max(256, (int) ceil(mb_strlen($source, 'UTF-8') / 2) + 128))]
             );
 
             $content = $this->cleanJsonResponse(
@@ -779,6 +824,19 @@ PROMPT,
         } catch (\Throwable $e) {
             $lastError = $e;
 
+            // Quota, rate-limit, and configuration errors will not be fixed by
+            // repeating the same call. Stop immediately to conserve requests.
+            $errorMessage = mb_strtolower($e->getMessage(), 'UTF-8');
+            if (
+                str_contains($errorMessage, 'quota') ||
+                str_contains($errorMessage, 'rate limit') ||
+                str_contains($errorMessage, 'temporarily paused') ||
+                str_contains($errorMessage, 'configuration is incomplete') ||
+                str_contains($errorMessage, 'api key or project access')
+            ) {
+                break;
+            }
+
             /*
              * The second attempt uses a more explicit user payload so a
              * provider/model that ignored the first instruction gets another
@@ -807,25 +865,15 @@ PROMPT,
 }
 
 /**
- * Translation requires reliable JSON output, so prefer concrete configured
- * models over the generic OpenRouter free router where possible. The same
- * model chain is used for both batched and single-field recovery.
+ * Keep the dedicated Gemini model as the only translation provider.
+ * Groq remains reserved for the chatbot; translation must not silently
+ * consume its separate request/token quota as a fallback.
  */
 private function translationCandidateModels(): array
 {
-    $primary = trim((string) config('services.openrouter.model', ''));
-    $fallbacks = array_values(array_filter(array_map(
-        'trim',
-        explode(',', (string) config('services.openrouter.fallback_models', ''))
-    ), static fn (string $model): bool => $model !== ''));
-
-    $models = array_values(array_unique(array_filter(
-        [$primary, ...$fallbacks],
-        static fn (string $model): bool => $model !== '' && strtolower($model) !== 'openrouter/free'
-    )));
-
-    // Keep a configured primary as a last resort if it is the only model.
-    return $models !== [] ? $models : array_values(array_filter([$primary]));
+    // Gemini is the dedicated FAQ translation provider. Groq remains reserved
+    // for chatbot matching and is deliberately not used as a translation fallback.
+    return [trim((string) config('services.gemini_translation.model', 'gemini-3.1-flash-lite'))];
 }
 
 private function deterministicTranslationFallback(string $source, string $target): ?string

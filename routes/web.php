@@ -371,6 +371,7 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
         ->only(['index', 'store', 'update', 'destroy']);
 
     Route::post('/faqs/translate', [FaqController::class, 'translate'])
+        ->middleware('throttle:8,1')
         ->name('faqs.translate');
 
     Route::get(
@@ -555,7 +556,8 @@ Route::post(
 Route::post(
     '/faqs/prepare-from-support/{id}',
     [FaqController::class, 'prepareFromSupport']
-)->name('admin.faqs.prepareFromSupport');
+)->middleware('throttle:8,1')
+  ->name('admin.faqs.prepareFromSupport');
 
     // INVITE SYSTEM
     Route::post('/invite', [AdminInviteController::class, 'sendInvite'])
