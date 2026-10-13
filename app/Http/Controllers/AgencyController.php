@@ -85,21 +85,30 @@ class AgencyController extends Controller
          * SEARCH
          * =====================================================
          */
-        if ($request->filled('search')) {
+        $search = preg_replace(
+            '/\\s+/u',
+            ' ',
+            trim((string) $request->query('search', ''))
+        );
 
-    $search = trim($request->search);
+        /*
+         * LOWER(... ) LIKE is intentional here instead of plain LIKE:
+         * PostgreSQL deployments can perform case-sensitive LIKE matching,
+         * unlike common MySQL collations. Normalize the search term too so
+         * agency names and abbreviations match regardless of letter case.
+         */
+        if ($search !== '') {
+            $searchTerm = '%' . mb_strtolower($search, 'UTF-8') . '%';
 
-    $query->where(function ($query) use ($search) {
-
-        $query
-            ->where('agency_name', 'LIKE', '%' . $search . '%')
-            ->orWhere(
-                'agency_abbreviation',
-                'LIKE',
-                '%' . $search . '%'
-            );
-    });
-}
+            $query->where(function ($query) use ($searchTerm) {
+                $query
+                    ->whereRaw('LOWER(agency_name) LIKE ?', [$searchTerm])
+                    ->orWhereRaw(
+                        'LOWER(agency_abbreviation) LIKE ?',
+                        [$searchTerm]
+                    );
+            });
+        }
 
 
         /*
