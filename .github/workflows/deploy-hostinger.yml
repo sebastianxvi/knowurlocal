@@ -1,0 +1,26 @@
+name: Hostinger Deployment
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-connection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test SSH connection
+        env:
+          HOST: ${{ secrets.HOSTINGER_HOST }}
+          PORT: ${{ secrets.HOSTINGER_PORT }}
+          USER: ${{ secrets.HOSTINGER_USER }}
+          SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$PORT" "$HOST" >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key 
+            -p "$PORT" 
+            -o BatchMode=yes 
+            "$USER@$HOST" 
+            'test -d "$HOME/domains/knowurlocal.site/laravel_app" && test -d "$HOME/domains/knowurlocal.site/public_html" && echo "SSH connection successful; deployment directories verified."' 
