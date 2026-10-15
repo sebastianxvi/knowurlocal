@@ -7,10 +7,14 @@ on:
       - main
 
 jobs:
-  test-connection:
+  prepare-deployment:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Test SSH connection
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify Hostinger environment
         env:
           HOST: ${{ secrets.HOSTINGER_HOST }}
           PORT: ${{ secrets.HOSTINGER_PORT }}
@@ -23,10 +27,18 @@ jobs:
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p "$PORT" "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
           ssh -i ~/.ssh/deploy_key \
             -p "$PORT" \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             "$USER@$HOST" \
-            'test -d "$HOME/domains/knowurlocal.site/laravel_app" && test -d "$HOME/domains/knowurlocal.site/public_html" && echo "SSH connection successful; deployment directories verified."'
-
+            'set -e
+             APP="$HOME/domains/knowurlocal.site/laravel_app"
+             WEB="$HOME/domains/knowurlocal.site/public_html"
+             test -d "$APP"
+             test -d "$WEB"
+             test -f "$APP/.env"
+             test -f "$WEB/index.php"
+             command -v php
+             echo "Production files and PHP are present. No live files changed."'
