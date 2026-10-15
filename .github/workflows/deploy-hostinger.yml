@@ -1,7 +1,6 @@
 ```yaml
 name: Hostinger Deployment
 
-
 on:
   workflow_dispatch:
   push:
