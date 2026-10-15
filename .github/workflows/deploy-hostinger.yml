@@ -23,8 +23,10 @@ jobs:
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p "$PORT" "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          ssh -i ~/.ssh/deploy_key 
-            -p "$PORT" 
-            -o BatchMode=yes 
-            "$USER@$HOST" 
+          ssh -i ~/.ssh/deploy_key \
+            -p "$PORT" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$USER@$HOST" \
             'test -d "$HOME/domains/knowurlocal.site/laravel_app" && test -d "$HOME/domains/knowurlocal.site/public_html" && echo "SSH connection successful; deployment directories verified."'
+
