@@ -7,14 +7,14 @@ on:
       - main
 
 jobs:
-  prepare-deployment:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Verify Hostinger environment
+      - name: Prepare SSH
         env:
           HOST: ${{ secrets.HOSTINGER_HOST }}
           PORT: ${{ secrets.HOSTINGER_PORT }}
@@ -27,18 +27,51 @@ jobs:
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p "$PORT" "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "HOST=$HOST" >> "$GITHUB_ENV"
+          echo "PORT=$PORT" >> "$GITHUB_ENV"
+          echo "USER=$USER" >> "$GITHUB_ENV"
 
+      - name: Install rsync
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rsync
+
+      - name: Verify deployment prerequisites
+        run: |
+          set -e
+          test -f artisan
+          test -f composer.json
+          test -d public
+          test -f public/index.php || true
+          echo "Repository structure verified."
+
+      - name: Deploy application files
+        run: |
+          set -e
+          export RSYNC_RSH="ssh -i $HOME/.ssh/deploy_key -p $PORT -o BatchMode=yes -o StrictHostKeyChecking=yes"
+
+          rsync -az \
+            --exclude='/.env' \
+            --exclude='/vendor/' \
+            --exclude='/node_modules/' \
+            --exclude='/storage/' \
+            --exclude='/public/storage' \
+            --exclude='/public/build/' \
+            --exclude='/public/hot' \
+            --exclude='/public_html/' \
+            --exclude='/.git/' \
+            --exclude='/.github/' \
+            --exclude='/.vercel/' \
+            --exclude='/certs/' \
+            --exclude='/.vscode/' \
+            --exclude='*.backup-*' \
+            ./ "$USER@$HOST:domains/knowurlocal.site/laravel_app/"
+
+      - name: Clear Laravel configuration cache
+        run: |
           ssh -i ~/.ssh/deploy_key \
             -p "$PORT" \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             "$USER@$HOST" \
-            'set -e
-             APP="$HOME/domains/knowurlocal.site/laravel_app"
-             WEB="$HOME/domains/knowurlocal.site/public_html"
-             test -d "$APP"
-             test -d "$WEB"
-             test -f "$APP/.env"
-             test -f "$WEB/index.php"
-             command -v php
-             echo "Production files and PHP are present. No live files changed."'
+            'cd "$HOME/domains/knowurlocal.site/laravel_app" && php artisan config:clear'
