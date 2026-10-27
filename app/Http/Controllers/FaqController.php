@@ -121,7 +121,7 @@ public function prepareFromSupport(
      */
     $user = auth()->user();
     abort_unless(
-        $user && in_array($user->role, ['superadmin', 'agency_admin'], true),
+        $user && in_array($user->role, ['admin', 'superadmin', 'agency_admin'], true),
         403,
         'Unauthorized action.'
     );

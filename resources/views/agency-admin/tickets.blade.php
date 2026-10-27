@@ -382,22 +382,14 @@
                             </section>
                         </div>
                 <?php } ?>
-                @if($selectedTicket->trashed())
-                    <details class="ai-ticket-actions">
-                        <summary class="ai-icon-btn" aria-label="Ticket actions" title="Ticket actions"><i class="ph ph-dots-three-vertical" aria-hidden="true"></i></summary>
-                        <div class="ai-ticket-actions-menu">
-                            <form method="POST" action="{{ route('agency-admin.tickets.restore', $selectedTicket->id) }}">@csrf @method('PATCH')<button type="submit"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore ticket</button></form>
-                            <form method="POST" action="{{ route('agency-admin.tickets.force-delete', $selectedTicket->id) }}" onsubmit="return confirm('Permanently delete ticket #{{ $selectedTicket->id }}? This cannot be undone and removes its response history and attachments.');">@csrf @method('DELETE')<button class="is-danger" type="submit"><i class="ph ph-trash" aria-hidden="true"></i> Delete permanently</button></form>
-                        </div>
-                    </details>
-                @else
+                @if(!$selectedTicket->trashed())
                     <button type="button" class="ai-icon-btn ai-trash-ticket-button" data-open-trash-modal aria-label="Move ticket to trash" title="Move ticket to trash"><i class="ph ph-trash" aria-hidden="true"></i></button>
                 @endif
             </div>
         </header>
         <div class="ai-messages">
             @if($selectedTicket->trashed())
-                <section class="ai-trashed-banner" role="status"><i class="ph ph-trash" aria-hidden="true"></i><div><strong>{{ $selectedTicket->user_deleted_at ? 'Trashed by citizen' : 'Trashed by administration' }}</strong><p>{{ $selectedTicket->user_deleted_at ? 'The citizen removed this ticket from their own inquiries.' : ($selectedTicket->trash_reason ?: 'No reason was recorded.') }}</p><small>{{ $selectedTicket->user_deleted_at ? 'Trashed by citizen' : 'Moved to trash by administration' }} {{ ($selectedTicket->user_deleted_at ?: $selectedTicket->deleted_at)?->format('M j, Y · g:i A') }}</small></div></section>
+                <section class="ai-trashed-banner" role="status"><i class="ph ph-trash" aria-hidden="true"></i><div><strong>{{ $selectedTicket->user_deleted_at ? 'Trashed by citizen' : 'Trashed by administration' }}</strong><p>{{ $selectedTicket->user_deleted_at ? 'The citizen removed this ticket from their own inquiries.' : ($selectedTicket->trash_reason ?: 'No reason was recorded.') }}</p><small>{{ $selectedTicket->user_deleted_at ? 'Trashed by citizen' : 'Moved to trash by administration' }} {{ ($selectedTicket->user_deleted_at ?: $selectedTicket->deleted_at)?->format('M j, Y · g:i A') }}</small><small>Recovery and permanent deletion are restricted to the System Superadmin.</small></div></section>
             @endif
             <article class="ai-ticket-intro"><small>Citizen's original question · Ticket #{{ $selectedTicket->id }}</small><h3>{{ $selectedTicket->question }}</h3><p>{{ $selectedTicket->created_at?->format('M j, Y · g:i A') }}</p></article>
             @php($reopenMessageRendered = false)
@@ -492,7 +484,7 @@
 <div class="ai-ticket-modal-backdrop" data-trash-modal hidden>
     <section class="ai-ticket-modal" role="dialog" aria-modal="true" aria-labelledby="ai-trash-modal-title" aria-describedby="ai-trash-modal-description">
         <h2 id="ai-trash-modal-title">Move ticket #{{ $selectedTicket->id }} to trash?</h2>
-        <p id="ai-trash-modal-description">The ticket will remain visible to the citizen with a notice and the reason you provide. You can restore it later from this inbox.</p>
+        <p id="ai-trash-modal-description">The ticket will remain visible to the citizen with a notice and the reason you provide. Only the System Superadmin can restore or permanently delete it.</p>
         <form method="POST" action="{{ route('agency-admin.tickets.trash', $selectedTicket->id) }}" data-trash-ticket-form>
             @csrf
             <input type="hidden" name="search" value="{{ $search }}">

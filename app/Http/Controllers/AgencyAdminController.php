@@ -318,6 +318,7 @@ class AgencyAdminController extends Controller
     /** Restore only a ticket trashed by/for this agency. */
     public function restoreTicket(int $ticketId, AuditLogService $auditLog)
     {
+        abort(403, 'Only a Superadmin may restore deleted tickets.');
         $agency = $this->agency();
         $ticket = SupportRequest::onlyTrashed()
             ->where('agency_id', $agency->id)
@@ -352,6 +353,7 @@ class AgencyAdminController extends Controller
     /** Permanently delete a ticket that is already in this agency's trash. */
     public function permanentlyDeleteTicket(int $ticketId, AuditLogService $auditLog)
     {
+        abort(403, 'Only a Superadmin may permanently delete tickets.');
         $agency = $this->agency();
         $ticket = SupportRequest::onlyTrashed()
             ->where('agency_id', $agency->id)

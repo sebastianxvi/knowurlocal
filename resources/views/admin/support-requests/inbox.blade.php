@@ -337,7 +337,7 @@
             <span class="ai-avatar">{{ strtoupper(substr($agency->agency_name ?? 'A',0,2)) }}</span>
             <div class="ai-chat-head-copy"><h2>{{ $agency->agency_name ?? 'Selected agency' }}</h2><p>Ticket #{{ $selectedTicket->id }} · {{ $selectedTicket->trashed() ? ($selectedTicket->user_deleted_at ? 'Trashed by citizen' : 'Trashed by administration') : str_replace('_',' ',ucfirst($selectedTicket->status)) }}</p></div>
             <div class="ai-chat-head-actions">
-                @if(auth()->user()->role === 'superadmin')
+                @if(in_array(auth()->user()->role, ['admin', 'superadmin'], true))
                 @php($faqEligibleResponses = $selectedTicket->responses->where('status', 'accepted')->sortBy('responded_at')->values())
                 @php($canAddToFaq = !$selectedTicket->trashed() && $selectedTicket->status === 'answered' && ($faqEligibleResponses->isNotEmpty() || ($selectedTicket->responses->isEmpty() && (filled($selectedTicket->answer) || filled($selectedTicket->answer_image)))))
                 <?php if ($canAddToFaq) { ?>
@@ -392,6 +392,7 @@
                         </div>
                 <?php } ?>
                 @if($selectedTicket->trashed())
+                    @if(auth()->user()->role === 'superadmin')
                     <details class="ai-ticket-actions">
                         <summary class="ai-icon-btn" aria-label="Ticket actions" title="Ticket actions"><i class="ph ph-dots-three-vertical" aria-hidden="true"></i></summary>
                         <div class="ai-ticket-actions-menu">
@@ -399,6 +400,8 @@
                             <form method="POST" action="{{ route('admin.support.forceDelete', $selectedTicket->id) }}" onsubmit="return confirm('Permanently delete ticket #{{ $selectedTicket->id }}? This cannot be undone and removes its response history and attachments.');">@csrf @method('DELETE')<button class="is-danger" type="submit"><i class="ph ph-trash" aria-hidden="true"></i> Delete permanently</button></form>
                         </div>
                     </details>
+                    @else
+                    @endif
                 @else
                     <button type="button" class="ai-icon-btn ai-trash-ticket-button" data-open-trash-modal aria-label="Move ticket to trash" title="Move ticket to trash"><i class="ph ph-trash" aria-hidden="true"></i></button>
                 @endif
@@ -498,13 +501,14 @@
     @else <div class="ai-empty">Select a citizen from the left to review their tickets.</div>@endif
     </section>
 </div>
-@if(auth()->user()->role === 'superadmin' && $selectedTicket && !$selectedTicket->trashed())
+@if(in_array(auth()->user()->role, ['admin', 'superadmin'], true) && $selectedTicket && !$selectedTicket->trashed())
 <div class="ai-ticket-modal-backdrop" data-trash-modal hidden>
     <section class="ai-ticket-modal" role="dialog" aria-modal="true" aria-labelledby="ai-trash-modal-title" aria-describedby="ai-trash-modal-description">
         <h2 id="ai-trash-modal-title">Move ticket #{{ $selectedTicket->id }} to trash?</h2>
         <p id="ai-trash-modal-description">The ticket will remain visible to the citizen with a notice and the reason you provide. You can restore it later from this inbox.</p>
         <form method="POST" action="{{ route('admin.support.delete', $selectedTicket->id) }}" data-trash-ticket-form>
             @csrf
+            @method('DELETE')
             <input type="hidden" name="search" value="{{ $search }}">
             <label for="ai-trash-reason">Reason for moving this ticket to trash</label>
             <textarea id="ai-trash-reason" name="reason" required minlength="3" maxlength="1000" placeholder="Explain why this ticket is being moved to trash...">{{ old('reason') }}</textarea>

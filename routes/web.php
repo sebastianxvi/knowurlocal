@@ -461,6 +461,23 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
 
 
 
+    // FAQ preparation from answered support tickets is available to both System Admins and Superadmins.
+    Route::post(
+        '/support-requests/{id}/similar-faqs',
+        [SupportRequestController::class, 'findSimilarFaqs']
+    )->name('admin.support.similarFaqs');
+
+    Route::get(
+        '/support-requests/{id}/to-faq',
+        [SupportRequestController::class, 'toFaq']
+    )->name('admin.support.toFaq');
+
+    Route::post(
+        '/faqs/prepare-from-support/{id}',
+        [FaqController::class, 'prepareFromSupport']
+    )->middleware('throttle:8,1')
+      ->name('admin.faqs.prepareFromSupport');
+
 });
 
 
@@ -567,34 +584,6 @@ Route::post(
         [SupportRequestController::class, 'forceDestroy']
     )->name('admin.support.forceDelete');
 
-    
-    Route::post(
-        '/support-requests/{id}/similar-faqs',
-        [SupportRequestController::class, 'findSimilarFaqs']
-    )->name('admin.support.similarFaqs');
-
-
-    Route::get(
-        '/support-requests/{id}/to-faq',
-        [SupportRequestController::class, 'toFaq']
-    )->name('admin.support.toFaq');
-
-/*
- * Generate the bilingual FAQ draft.
- *
- * This is a POST request because it performs an
- * AI-powered processing operation.
- *
- * IMPORTANT:
- * This still does NOT save the FAQ.
- * The administrator must review and save it
- * through the normal FAQ creation flow.
- */
-Route::post(
-    '/faqs/prepare-from-support/{id}',
-    [FaqController::class, 'prepareFromSupport']
-)->middleware('throttle:8,1')
-  ->name('admin.faqs.prepareFromSupport');
 
     // INVITE SYSTEM
     Route::post('/invite', [AdminInviteController::class, 'sendInvite'])
@@ -669,10 +658,6 @@ Route::prefix('agency-admin')
             ->name('tickets');
         Route::post('/tickets/{ticketId}/trash', [\App\Http\Controllers\AgencyAdminController::class, 'trashTicket'])
             ->whereNumber('ticketId')->middleware('throttle:20,1')->name('tickets.trash');
-        Route::patch('/tickets/{ticketId}/restore', [\App\Http\Controllers\AgencyAdminController::class, 'restoreTicket'])
-            ->whereNumber('ticketId')->middleware('throttle:20,1')->name('tickets.restore');
-        Route::delete('/tickets/{ticketId}/permanent', [\App\Http\Controllers\AgencyAdminController::class, 'permanentlyDeleteTicket'])
-            ->whereNumber('ticketId')->middleware('throttle:10,1')->name('tickets.force-delete');
         Route::post('/tickets/respond', [\App\Http\Controllers\AgencyAdminController::class, 'respondToTicket'])
             ->middleware('throttle:30,1')->name('tickets.respond');
         Route::get('/tickets/{ticketId}/similar-faqs', [\App\Http\Controllers\AgencyAdminController::class, 'similarFaqsForTicket'])

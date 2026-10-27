@@ -1718,8 +1718,8 @@ public function update(
      *
      * This is a SOFT DELETE.
      *
-     * The record remains in the database and can be restored
-     * by a Superadmin.
+     * System Admins and Superadmins may move active tickets to trash.
+     * Only a Superadmin may restore or permanently delete a trashed ticket.
      */
     public function destroy(Request $request, $id)
     {
@@ -1737,7 +1737,7 @@ public function update(
          */
         abort_unless(
             auth()->check() &&
-            auth()->user()->role === 'superadmin',
+            in_array(auth()->user()->role, ['admin', 'superadmin'], true),
             403
         );
 
@@ -2078,7 +2078,7 @@ public function update(
          */
         abort_unless(
             auth()->check() &&
-            auth()->user()->role === 'superadmin',
+            in_array(auth()->user()->role, ['admin', 'superadmin'], true),
             403
         );
 
@@ -2158,7 +2158,7 @@ public function update(
          */
         abort_unless(
             auth()->check() &&
-            auth()->user()->role === 'superadmin',
+            in_array(auth()->user()->role, ['admin', 'superadmin'], true),
             403
         );
 
