@@ -1,3 +1,4 @@
+
 name: Hostinger Deployment
 
 on:
@@ -5,6 +6,13 @@ on:
   push:
     branches:
       - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hostinger-production-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -21,33 +29,37 @@ jobs:
           USER: ${{ secrets.HOSTINGER_USER }}
           SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
         run: |
-          set -e
+          set -euo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p "$PORT" "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          chmod 600 ~/.ssh/known_hosts
           echo "HOST=$HOST" >> "$GITHUB_ENV"
           echo "PORT=$PORT" >> "$GITHUB_ENV"
           echo "USER=$USER" >> "$GITHUB_ENV"
 
       - name: Install rsync
         run: |
+          set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y rsync
 
       - name: Verify deployment prerequisites
         run: |
-          set -e
+          set -euo pipefail
           test -f artisan
           test -f composer.json
           test -d public
-          test -f public/index.php || true
+          test -f public/index.php
+          test -d public/cssfiles
+          test -d public/jsfiles
           echo "Repository structure verified."
 
       - name: Deploy application files
         run: |
-          set -e
+          set -euo pipefail
           export RSYNC_RSH="ssh -i $HOME/.ssh/deploy_key -p $PORT -o BatchMode=yes -o StrictHostKeyChecking=yes"
 
           rsync -az \
@@ -67,10 +79,29 @@ jobs:
             --exclude='*.backup-*' \
             ./ "$USER@$HOST:domains/knowurlocal.site/laravel_app/"
 
-      
+      - name: Synchronize public assets to Hostinger
+        run: |
+          set -euo pipefail
+          export RSYNC_RSH="ssh -i $HOME/.ssh/deploy_key -p $PORT -o BatchMode=yes -o StrictHostKeyChecking=yes"
+
+          DEST="$USER@$HOST:domains/knowurlocal.site/public_html"
+
+          # Synchronize public-facing assets without deleting
+          # existing production files.
+          for directory in cssfiles jsfiles images build; do
+            if [ -d "public/$directory" ]; then
+              echo "Synchronizing $directory..."
+              rsync -az \
+                "public/$directory/" \
+                "$DEST/$directory/"
+            fi
+          done
+
+          echo "Public asset synchronization completed."
+
       - name: Clear and rebuild Laravel caches
         run: |
-          set -e
+          set -euo pipefail
           ssh -i ~/.ssh/deploy_key \
             -p "$PORT" \
             -o BatchMode=yes \
@@ -81,4 +112,3 @@ jobs:
              php artisan optimize:clear
              php artisan view:cache
              echo "Laravel caches cleared and Blade views recompiled."'
-
