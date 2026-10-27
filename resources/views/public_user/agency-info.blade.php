@@ -37,8 +37,8 @@
 <main>
     <!-- COVER IMAGE -->
 <div class="agency-cover">
-    <img src="{{ $agency->agency_image 
-        ? Storage::disk('agency_images')->url($agency->agency_image) 
+    <img src="{{ $agency->profile_pic 
+        ? Storage::disk('public')->url($agency->profile_pic) 
         : asset('images/default-profile.png') }}">
 
     <div class="cover-text">
