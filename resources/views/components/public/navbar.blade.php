@@ -173,23 +173,25 @@
             </a>
 
 
-            {{-- =================================================
+            {{-- =====================================================
                  NOTIFICATIONS
-                 Visual placeholder; notification behavior will be
-                 connected when the backend is implemented.
-                 ================================================= --}}
+                 ===================================================== --}}
             <a
-                href="#"
-                class="nav-link notification-nav-link"
-                aria-label="Notifications (coming soon)"
+                href="{{ route('user.notifications.index') }}"
+                class="nav-link notification-nav-link {{ request()->routeIs('user.notifications.*') ? 'active' : '' }}"
+                aria-label="Notifications"
                 title="Notifications"
             >
-                <i
-                    class="ph-light ph-bell"
-                    aria-hidden="true"
-                ></i>
-
+                <i class="ph-light ph-bell" aria-hidden="true"></i>
                 <span>Notifications</span>
+                <span
+                    class="user-notification-nav-badge"
+                    data-user-notification-badge
+                    data-count="{{ $unreadNotificationCount ?? 0 }}"
+                    aria-live="polite"
+                    aria-atomic="true"
+                    @if(($unreadNotificationCount ?? 0) <= 0) hidden @endif
+                >{{ ($unreadNotificationCount ?? 0) > 99 ? '99+' : ($unreadNotificationCount ?? 0) }}</span>
             </a>
 
 

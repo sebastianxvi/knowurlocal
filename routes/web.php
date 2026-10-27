@@ -15,6 +15,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\SupportRequestController;
 use App\Http\Controllers\UserActivityController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserNotificationController;
 use App\Http\Controllers\UserLogController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -145,6 +146,14 @@ Route::get('/navigate/{agency}', [AgencyController::class, 'navigate'])
     ->name('navigate');
 
 Route::middleware(['auth', 'no.cache'])->group(function () {
+
+    Route::get('/notifications', [UserNotificationController::class, 'index'])
+        ->name('user.notifications.index');
+    Route::get('/notifications/{notificationId}/open', [UserNotificationController::class, 'open'])
+        ->whereNumber('notificationId')
+        ->name('user.notifications.open');
+    Route::post('/notifications/read-all', [UserNotificationController::class, 'markAllRead'])
+        ->name('user.notifications.read-all');
 
     Route::get('/map', [PageController::class, 'map'])->name('map');
 

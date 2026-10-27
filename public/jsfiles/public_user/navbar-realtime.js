@@ -24,7 +24,7 @@ function getCsrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content || '';
 }
 
-function updateBadges(count, trashedUnreadCount = 0, needsAttentionUnreadCount = 0) {
+function updateBadges(count, trashedUnreadCount = 0, needsAttentionUnreadCount = 0, notificationsCount = 0) {
     const safeCount = Number.isSafeInteger(Number(count))
         ? Math.max(0, Number(count))
         : 0;
@@ -57,6 +57,23 @@ function updateBadges(count, trashedUnreadCount = 0, needsAttentionUnreadCount =
                 'aria-label',
                 `${safeNeedsAttentionCount} new ${safeNeedsAttentionCount === 1 ? 'response' : 'responses'} needing attention`
             );
+        });
+
+    const safeNotificationsCount = Number.isFinite(Number(notificationsCount))
+        ? Math.max(0, Math.floor(Number(notificationsCount)))
+        : 0;
+
+    document
+        .querySelectorAll('[data-user-notification-badge]')
+        .forEach((badge) => {
+            badge.dataset.count = String(safeNotificationsCount);
+            badge.textContent = safeNotificationsCount > 99 ? '99+' : String(safeNotificationsCount);
+            badge.hidden = safeNotificationsCount <= 0;
+            if (safeNotificationsCount > 0) {
+                badge.setAttribute('aria-label', `${safeNotificationsCount} unread notifications`);
+            } else {
+                badge.removeAttribute('aria-label');
+            }
         });
 
     document
@@ -101,7 +118,7 @@ async function refreshNotificationCount() {
         throw new Error('Invalid notification count response.');
     }
 
-    updateBadges(data.count, data.trashed_unread_count, data.needs_attention_unread_count);
+    updateBadges(data.count, data.trashed_unread_count, data.needs_attention_unread_count, data.notifications_count);
     return Number(data.count) || 0;
 }
 
@@ -170,6 +187,12 @@ function handleRealtimeAnswer(payload) {
     );
 }
 
+function handleRealtimeNotificationCreated() {
+    refreshNotificationCount().catch((error) => {
+        console.warn('KNOWURLOCAL: Unable to refresh notification badge.', error);
+    });
+}
+
 function handleRealtimeSupportRequestUpdate(payload) {
     if (!payload || typeof payload !== 'object') {
         return;
@@ -215,6 +238,10 @@ function connectRealtime() {
         .listen(
             '.support.request.updated',
             handleRealtimeSupportRequestUpdate
+        )
+        .listen(
+            '.user.notification.created',
+            handleRealtimeNotificationCreated
         );
 
     initialized = true;

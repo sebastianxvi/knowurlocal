@@ -4,11 +4,13 @@ namespace App\Providers;
 
 use App\Models\SupportRequest;
 use App\Models\CollaborationTask;
+use App\Models\UserNotification;
 use App\Session\LoggingDatabaseSessionHandler;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -277,6 +279,7 @@ class AppServiceProvider extends ServiceProvider
                     $view->with([
                         'hasUnreadInquiry' => false,
                         'unreadInquiryCount' => 0,
+                        'unreadNotificationCount' => 0,
                     ]);
 
                     return;
@@ -292,33 +295,25 @@ class AppServiceProvider extends ServiceProvider
                  * answered + answer_seen_at NULL supports the legacy/simple
                  * answer workflow where the response has not yet been opened.
                  */
-                $unreadInquiryCount =
-                    SupportRequest::withTrashed()
-                    ->where(
-                        'user_id',
-                        auth()->id()
-                    )
-                    ->where(function ($query) {
-                        $query
-                            ->where(function ($query) {
-                                $query
-                                    ->whereNull('deleted_at')
-                                    ->where('status', 'awaiting_confirmation')
-                                    ->whereNull('answer_seen_at');
-                            })
-                            ->orWhere(function ($query) {
-                                $query
-                                    ->whereNull('deleted_at')
-                                    ->where('status', 'answered')
-                                    ->whereNull('answer_seen_at');
-                            })
-                            ->orWhere(function ($query) {
-                                $query
-                                    ->whereNotNull('deleted_at')
-                                    ->whereNull('trash_seen_at');
-                            });
-                    })
+                // The My Inquiries badge is only for unread official responses
+                // on active tickets. Trashed tickets are surfaced separately in
+                // the dedicated Notifications page and never inflate this badge.
+                $unreadInquiryCount = SupportRequest::query()
+                    ->where('user_id', auth()->id())
+                    ->whereNull('deleted_at')
+                    ->whereIn('status', ['awaiting_confirmation', 'answered'])
+                    ->whereNull('answer_seen_at')
                     ->count();
+
+                // The deploy may briefly publish application code before the
+                // migration runs. Keep other public pages available during that
+                // short window instead of querying a table that is not created yet.
+                $unreadNotificationCount = Schema::hasTable('user_notifications')
+                    ? UserNotification::query()
+                        ->where('user_id', auth()->id())
+                        ->whereNull('read_at')
+                        ->count()
+                    : 0;
 
                 /*
                  * Keep the boolean available for existing public views,
@@ -328,6 +323,7 @@ class AppServiceProvider extends ServiceProvider
                 $view->with([
                     'hasUnreadInquiry' => $unreadInquiryCount > 0,
                     'unreadInquiryCount' => $unreadInquiryCount,
+                    'unreadNotificationCount' => $unreadNotificationCount,
                 ]);
             }
         );

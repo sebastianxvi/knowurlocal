@@ -11,6 +11,7 @@ use App\Models\Faq;
 use App\Models\SupportRequest;
 use App\Models\SupportRequestResponse;
 use App\Services\SupportRequestResponseService;
+use App\Services\SupportRequestNotificationService;
 use App\Services\FaqSimilarityService;
 use App\Events\SupportRequestResponseCreated;
 use App\Events\SupportRequestUpdated;
@@ -183,6 +184,10 @@ class AgencyAdminController extends Controller
             \Log::warning('Agency ticket trash audit log failed.', ['ticket_id' => $ticket->id, 'error' => $e->getMessage()]);
         }
 
+        app(SupportRequestNotificationService::class)->ticketTrashed(
+            $ticket->fresh() ?? $ticket,
+            'agency_admin'
+        );
         $this->broadcastTicketLifecycle($ticket, 'trashed');
 
         return redirect()->route('agency-admin.tickets', [
@@ -363,6 +368,7 @@ class AgencyAdminController extends Controller
         }
 
         $response = $responseService->createAndForward($ticket, (int) auth()->id(), (int) $agency->id, $components);
+        app(SupportRequestNotificationService::class)->responseCreated($ticket->fresh(), (int) $response->id, 'agency_admin');
         try {
             broadcast(new SupportRequestResponseCreated((int) $ticket->user_id, (int) $ticket->id, (int) $response->id, 'awaiting_confirmation'));
         } catch (\Throwable $e) {

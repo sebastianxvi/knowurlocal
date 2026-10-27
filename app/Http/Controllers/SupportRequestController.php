@@ -4,14 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Agency;
 use App\Models\SupportRequest;
+use App\Models\UserNotification;
 use App\Models\UserLog;
 use App\Services\FaqSimilarityService;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 use App\Services\SupportRequestResponseService;
+use App\Services\SupportRequestNotificationService;
 use App\Events\SupportRequestResponseCreated;
 use App\Events\SupportRequestAnswerCreated;
 use App\Events\SupportRequestUpdated;
@@ -84,6 +87,7 @@ public function index(Request $request)
         abort_unless(!in_array($ticket->status, ['awaiting_confirmation','answered'], true), 409, 'This ticket is awaiting the citizen’s confirmation or has already been resolved.');
         $components=[]; foreach($validated['components'] as $c) { $type=$c['type']; if($type==='text' && trim((string)($c['content']??''))==='') return response()->json(['message'=>'Text responses cannot be empty.'],422); if(in_array($type,['link','qr_code'],true)) { $url=(string)($c['content']??''); if(!filter_var($url,FILTER_VALIDATE_URL)||!in_array(strtolower(parse_url($url,PHP_URL_SCHEME)??''),['http','https'],true)) return response()->json(['message'=>'Links and QR codes must use a valid HTTP or HTTPS URL.'],422); } if(in_array($type,['image','file'],true)&&empty($c['file'])) return response()->json(['message'=>ucfirst($type).' components require a file.'],422); $components[]=['type'=>$type,'content'=>$c['content']??null,'label'=>$c['label']??null,'file'=>$c['file']??null]; }
         $response=$responseService->createAndForward($ticket,(int)auth()->id(),(int)$ticket->agency_id,$components);
+        app(SupportRequestNotificationService::class)->responseCreated($ticket->fresh(), (int) $response->id, (string) (auth()->user()->role ?? 'admin'));
         try { broadcast(new SupportRequestResponseCreated((int)$ticket->user_id,(int)$ticket->id,(int)$response->id,'awaiting_confirmation')); broadcast(new SupportRequestUpdated(id:(int)$ticket->id,action:'response_created',responseId:(int)$response->id,userId:(int)$ticket->user_id)); } catch (\Throwable $e) { \Log::warning('Admin support inbox broadcast failed',['ticket_id'=>$ticket->id,'error'=>$e->getMessage()]); }
         return response()->json(['success'=>true,'message'=>'Official response sent to the citizen.','redirect'=>route('admin.support.requests',['user'=>$ticket->user_id,'agency'=>$ticket->agency_id,'ticket'=>$ticket->id])]);
     }
@@ -155,6 +159,8 @@ if ($request->hasFile('answer_image')) {
     'answer_seen_at' =>
         null,
 ]);
+
+        app(SupportRequestNotificationService::class)->responseCreated($support->fresh(), null, (string) (auth()->user()->role ?? 'admin'));
 
         $this->broadcastSupportRequestUpdated(
             $support->fresh(),
@@ -373,6 +379,8 @@ if (
         $validated['agency_id'],
         $components
     );
+
+    app(SupportRequestNotificationService::class)->responseCreated($supportRequest->fresh(), (int) $response->id, (string) (auth()->user()->role ?? 'admin'));
 
     /*
     * The response service has successfully completed its
@@ -1005,9 +1013,17 @@ public function userInquiry($id)
             ->whereNull('answer_seen_at')
             ->count();
 
+        $notificationsCount = Schema::hasTable('user_notifications')
+            ? UserNotification::query()
+                ->where('user_id', auth()->id())
+                ->whereNull('read_at')
+                ->count()
+            : 0;
+
         return response()->json([
             'success' => true,
             'count' => $count,
+            'notifications_count' => $notificationsCount,
             'trashed_unread_count' => $trashedUnreadCount,
             'needs_attention_unread_count' => $needsAttentionUnreadCount,
         ]);
@@ -1632,6 +1648,8 @@ public function update(
         'answer_seen_at' => null,
     ]);
 
+    app(SupportRequestNotificationService::class)->responseCreated($support->fresh(), null, (string) (auth()->user()->role ?? 'admin'));
+
     $this->broadcastSupportRequestUpdated(
         $support->fresh(),
         'answer_updated'
@@ -1780,6 +1798,10 @@ public function update(
          */
         $support->delete();
 
+        app(SupportRequestNotificationService::class)->ticketTrashed(
+            $support->fresh() ?? $support,
+            (string) (auth()->user()->role ?? 'superadmin')
+        );
 
         /*
          * Record the lifecycle event AFTER the database
@@ -1799,8 +1821,10 @@ public function update(
          * The helper catches broadcast failures so a realtime outage
          * can never turn a successful database mutation into a 500 error.
          */
+        // Soft-deleted models are excluded from fresh(); pass the in-memory
+        // record so the helper can safely broadcast its ID and user ownership.
         $this->broadcastSupportRequestUpdated(
-            $support->fresh(),
+            $support,
             'trashed'
         );
 

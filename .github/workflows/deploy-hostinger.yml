@@ -67,11 +67,18 @@ jobs:
             --exclude='*.backup-*' \
             ./ "$USER@$HOST:domains/knowurlocal.site/laravel_app/"
 
-      - name: Clear Laravel configuration cache
+      
+      - name: Clear and rebuild Laravel caches
         run: |
+          set -e
           ssh -i ~/.ssh/deploy_key \
             -p "$PORT" \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             "$USER@$HOST" \
-            'cd "$HOME/domains/knowurlocal.site/laravel_app" && php artisan config:clear'
+            'set -e
+             cd "$HOME/domains/knowurlocal.site/laravel_app"
+             php artisan optimize:clear
+             php artisan view:cache
+             echo "Laravel caches cleared and Blade views recompiled."'
+
