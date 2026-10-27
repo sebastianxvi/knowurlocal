@@ -318,12 +318,19 @@
                             aria-label="Update collaboration task status"
                             {{ $isAssignedToMe || auth()->user()->role === 'superadmin' || $task->created_by_id === auth()->id() ? '' : 'disabled' }}
                         >
-                            @if($task->created_by_id === auth()->id() || auth()->user()->role === 'superadmin')
-                                <option value="cancelled" {{ $task->status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                            @if($isAssignedToMe || auth()->user()->role === 'superadmin')
+                                @if($task->created_by_id === auth()->id() || auth()->user()->role === 'superadmin')
+                                    <option value="cancelled" {{ $task->status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                                @endif
+                                <option value="open" {{ $task->status === 'open' ? 'selected' : '' }}>Open</option>
+                                <option value="in_progress" {{ $task->status === 'in_progress' ? 'selected' : '' }}>In progress</option>
+                                <option value="completed" {{ $task->status === 'completed' ? 'selected' : '' }}>Completed</option>
+                            @else
+                                <option value="{{ $task->status }}" selected>{{ $task->status_label }}</option>
+                                @if($task->created_by_id === auth()->id())
+                                    <option value="cancelled">Cancel task</option>
+                                @endif
                             @endif
-                            <option value="open" {{ $task->status === 'open' ? 'selected' : '' }}>Open</option>
-                            <option value="in_progress" {{ $task->status === 'in_progress' ? 'selected' : '' }}>In progress</option>
-                            <option value="completed" {{ $task->status === 'completed' ? 'selected' : '' }}>Completed</option>
                         </select>
                     </div>
                 </article>
@@ -376,8 +383,8 @@
                         <span>Assign to</span>
                         <select name="assigned_to_id" required>
                             <option value="">Choose administrator</option>
-                            @foreach(\App\Models\User::query()->whereIn('role', ['admin', 'superadmin'])->where('status', 'active')->where('id', '<>', auth()->id())->orderBy('first_name')->orderBy('last_name')->get() as $admin)
-                                <option value="{{ $admin->id }}">{{ trim($admin->first_name . ' ' . $admin->last_name) ?: $admin->email }}</option>
+                            @foreach(\App\Models\User::query()->with('agency')->whereIn('role', ['admin', 'superadmin', 'agency_admin'])->where('status', 'active')->where('id', '<>', auth()->id())->orderBy('role')->orderBy('first_name')->orderBy('last_name')->get() as $admin)
+                                <option value="{{ $admin->id }}">{{ trim($admin->first_name . ' ' . $admin->last_name) ?: $admin->email }}{{ $admin->role === 'agency_admin' ? ' — ' . ($admin->agency?->agency_name ?? 'Agency Admin') : ' — ' . ucfirst($admin->role) }}</option>
                             @endforeach
                         </select>
                     </label>

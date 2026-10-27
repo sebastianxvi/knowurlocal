@@ -657,6 +657,14 @@ Route::prefix('agency-admin')
     ->group(function () {
         Route::get('/', [\App\Http\Controllers\AgencyAdminController::class, 'dashboard'])
             ->name('dashboard');
+        Route::post('/collaboration', [CollaborationController::class, 'store'])
+            ->middleware('throttle:30,1')->name('collaboration.store');
+        Route::patch('/collaboration/{task}/status', [CollaborationController::class, 'updateStatus'])
+            ->whereNumber('task')->middleware('throttle:30,1')->name('collaboration.status');
+        Route::get('/collaboration/targets', [CollaborationController::class, 'targets'])
+            ->name('collaboration.targets');
+        Route::get('/analytics', [\App\Http\Controllers\AgencyAdminController::class, 'analytics'])
+            ->name('analytics');
         Route::get('/tickets', [\App\Http\Controllers\AgencyAdminController::class, 'tickets'])
             ->name('tickets');
         Route::post('/tickets/{ticketId}/trash', [\App\Http\Controllers\AgencyAdminController::class, 'trashTicket'])

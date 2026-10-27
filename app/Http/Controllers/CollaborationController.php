@@ -37,8 +37,12 @@ class CollaborationController extends Controller
             'due_at' => ['nullable', 'date'],
         ]);
 
+        $assignableRoles = auth()->user()->role === 'agency_admin'
+            ? ['admin', 'superadmin']
+            : ['admin', 'superadmin', 'agency_admin'];
+
         $assignee = User::query()
-            ->whereIn('role', ['admin', 'superadmin'])
+            ->whereIn('role', $assignableRoles)
             ->where('status', 'active')
             ->findOrFail($data['assigned_to_id']);
 
@@ -110,9 +114,13 @@ class CollaborationController extends Controller
         }
 
         if ($model === User::class) {
-            $query->whereIn('role', ['admin', 'superadmin'])
+            $query->whereIn('role', auth()->user()->role === 'agency_admin'
+                    ? ['admin', 'superadmin']
+                    : ['admin', 'superadmin', 'agency_admin'])
                 ->where('status', 'active');
         }
+
+        $this->scopeAgencyTargets($query, $model);
 
         $this->applyTargetSearch($query, $model, $search);
 
@@ -149,12 +157,35 @@ class CollaborationController extends Controller
         }
 
         if ($model === User::class) {
-            $query->whereIn('role', ['admin', 'superadmin']);
+            $query->whereIn('role', auth()->user()->role === 'agency_admin'
+                ? ['admin', 'superadmin']
+                : ['admin', 'superadmin', 'agency_admin']);
         }
+
+        $this->scopeAgencyTargets($query, $model);
 
         $target = $query->findOrFail($id);
 
         return [$model, $target->id, Str::limit($this->targetLabel($model, $target), 255, '…')];
+    }
+
+    /**
+     * Agency administrators may link tasks only to records belonging to
+     * their own agency. System administrators retain cross-agency oversight.
+     */
+    private function scopeAgencyTargets($query, string $model): void
+    {
+        $user = auth()->user();
+
+        if ($user?->role !== 'agency_admin') {
+            return;
+        }
+
+        if ($model === Agency::class) {
+            $query->whereKey($user->agency_id);
+        } elseif (in_array($model, [Faq::class, SupportRequest::class], true)) {
+            $query->where('agency_id', $user->agency_id);
+        }
     }
 
     private function applyTargetSearch($query, string $model, string $search): void
@@ -195,7 +226,10 @@ class CollaborationController extends Controller
             Faq::class => Str::limit((string) ($target->question ?: 'FAQ #' . $target->id), 120),
             Category::class => (string) $target->category_name,
             SupportRequest::class => Str::limit('#' . $target->id . ' — ' . (string) $target->question, 120),
-            User::class => trim($target->first_name . ' ' . $target->last_name) ?: (string) $target->email,
+            User::class => (trim($target->first_name . ' ' . $target->last_name) ?: (string) $target->email)
+                . ($target->role === 'agency_admin' && $target->agency?->agency_name
+                    ? ' — ' . $target->agency->agency_name
+                    : ''),
             default => 'Linked record',
         };
     }

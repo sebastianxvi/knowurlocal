@@ -16,7 +16,10 @@
             <nav class="admin-nav">
                 <span class="nav-section-label">Workspace</span>
                 <a href="{{ route('agency-admin.dashboard') }}" class="{{ request()->routeIs('agency-admin.dashboard') ? 'active' : '' }}">
-                    <i class="ph-light ph-house"></i><span>Overview</span>
+                    <i class="ph-light ph-house"></i><span>Dashboard</span>
+                </a>
+                <a href="{{ route('agency-admin.analytics') }}" class="{{ request()->routeIs('agency-admin.analytics') ? 'active' : '' }}">
+                    <i class="ph-light ph-chart-line-up"></i><span>Analytics</span>
                 </a>
                 <a href="{{ route('agency-admin.tickets') }}" class="{{ request()->routeIs('agency-admin.tickets') ? 'active' : '' }}">
                     <i class="ph-light ph-chat-circle-dots" aria-hidden="true"></i><span>Support Inbox</span>

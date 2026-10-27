@@ -6,6 +6,8 @@ use App\Models\Agency;
 use App\Models\AgencyContact;
 use App\Models\AgencyType;
 use App\Models\Category;
+use App\Models\CollaborationTask;
+use App\Models\User;
 use App\Models\ContactType;
 use App\Models\Faq;
 use App\Models\SupportRequest;
@@ -49,15 +51,131 @@ class AgencyAdminController extends Controller
             'faqs' => Faq::query()->where('agency_id', $agency->id)->count(),
         ];
 
-        $recentRequests = SupportRequest::query()
-            ->with('user')
+        // Build FAQ opportunities only from this agency's non-deleted tickets.
+        // Normalize punctuation/case so minor formatting differences are grouped;
+        // require at least two occurrences to avoid noisy one-off suggestions.
+        $questionRows = SupportRequest::query()
             ->where('agency_id', $agency->id)
             ->whereNull('deleted_at')
-            ->latest()
-            ->limit(8)
+            ->whereNotNull('question')
+            ->where('question', '<>', '')
+            ->select('question')
+            ->orderByDesc('created_at')
+            ->limit(2000)
+            ->pluck('question');
+        $questionGroups = [];
+        foreach ($questionRows as $questionText) {
+            $normalized = mb_strtolower(trim(preg_replace('/[^\pL\pN]+/u', ' ', (string) $questionText)));
+            $normalized = preg_replace('/\s+/u', ' ', $normalized);
+            if (mb_strlen($normalized) < 8) continue;
+            if (!isset($questionGroups[$normalized])) {
+                $questionGroups[$normalized] = ['question' => trim((string) $questionText), 'count' => 0];
+            }
+            $questionGroups[$normalized]['count']++;
+        }
+        $popularQuestions = collect($questionGroups)
+            ->filter(fn ($item) => $item['count'] >= 2)
+            ->sortByDesc('count')->take(5)->values();
+        $agencyFaqTexts = Faq::query()->where('agency_id', $agency->id)->pluck('question')->map(fn ($q) => mb_strtolower(trim((string) $q)))->all();
+        $popularQuestions = $popularQuestions->map(function ($item) use ($agencyFaqTexts) {
+            $item['faq_match'] = collect($agencyFaqTexts)->contains(fn ($faqQuestion) => $faqQuestion === mb_strtolower(trim($item['question'])));
+            return $item;
+        });
+
+        $collaborationQuery = CollaborationTask::query()
+            ->whereIn('status', ['open', 'in_progress'])
+            ->where(function ($query) {
+                $query->where('assigned_to_id', auth()->id())
+                    ->orWhere('created_by_id', auth()->id());
+            })
+            ->with(['creator', 'assignee', 'target'])
+            ->orderByRaw('CASE WHEN due_at IS NOT NULL AND due_at < ? THEN 0 ELSE 1 END', [now()])
+            ->orderByRaw("CASE WHEN status = 'in_progress' THEN 0 ELSE 1 END")
+            ->latest('created_at');
+
+        $collaborationTasks = (clone $collaborationQuery)->limit(8)->get();
+        $collaborationOpenCount = (clone $collaborationQuery)->count();
+        $collaborationYourActionCount = CollaborationTask::query()
+            ->where('assigned_to_id', auth()->id())
+            ->whereIn('status', ['open', 'in_progress'])
+            ->count();
+        $collaborationOverdueCount = CollaborationTask::query()
+            ->where('assigned_to_id', auth()->id())
+            ->whereIn('status', ['open', 'in_progress'])
+            ->whereNotNull('due_at')
+            ->where('due_at', '<', now())
+            ->count();
+
+        $collaborationAdmins = User::query()
+            ->whereIn('role', ['admin', 'superadmin'])
+            ->where('status', 'active')
+            ->where('id', '<>', auth()->id())
+            ->orderBy('role')
+            ->orderBy('first_name')
+            ->orderBy('last_name')
             ->get();
 
-        return view('agency-admin.dashboard', compact('agency', 'counts', 'recentRequests'));
+        return view('agency-admin.dashboard', compact(
+            'agency', 'counts', 'popularQuestions', 'collaborationTasks',
+            'collaborationOpenCount', 'collaborationYourActionCount',
+            'collaborationOverdueCount', 'collaborationAdmins'
+        ));
+    }
+
+
+    /**
+     * Agency-scoped support analytics. Never accepts an agency ID from the request.
+     */
+    public function analytics()
+    {
+        $agency = $this->agency();
+        $base = SupportRequest::query()
+            ->where('agency_id', $agency->id)
+            ->whereNull('deleted_at');
+
+        $total = (clone $base)->count();
+        $statusCounts = (clone $base)->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')->pluck('aggregate', 'status');
+
+        $since = now()->subDays(29)->startOfDay();
+        $dailyRows = (clone $base)->where('created_at', '>=', $since)
+            ->selectRaw('DATE(created_at) as day, COUNT(*) as aggregate')
+            ->groupBy('day')->orderBy('day')->pluck('aggregate', 'day');
+
+        $dailyLabels = [];
+        $dailyValues = [];
+        for ($i = 0; $i < 30; $i++) {
+            $day = $since->copy()->addDays($i);
+            $key = $day->toDateString();
+            $dailyLabels[] = $day->format('M j');
+            $dailyValues[] = (int) ($dailyRows[$key] ?? 0);
+        }
+
+        $faqCount = Faq::query()->where('agency_id', $agency->id)->count();
+        $answered = (int) ($statusCounts['answered'] ?? 0);
+        $responseRate = $total > 0 ? round(($answered / $total) * 100) : 0;
+        $openCount = (int) ($statusCounts['pending'] ?? 0)
+            + (int) ($statusCounts['needs_follow_up'] ?? 0)
+            + (int) ($statusCounts['awaiting_confirmation'] ?? 0);
+
+        $topQuestions = (clone $base)->whereNotNull('question')->where('question', '<>', '')
+            ->where('created_at', '>=', now()->subDays(89))
+            ->orderByDesc('created_at')->limit(2500)->pluck('question');
+        $groups = [];
+        foreach ($topQuestions as $questionText) {
+            $normalized = mb_strtolower(trim(preg_replace('/[^\pL\pN]+/u', ' ', (string) $questionText)));
+            $normalized = preg_replace('/\s+/u', ' ', $normalized);
+            if (mb_strlen($normalized) < 8) continue;
+            if (!isset($groups[$normalized])) $groups[$normalized] = ['question' => trim((string) $questionText), 'count' => 0];
+            $groups[$normalized]['count']++;
+        }
+        $popularQuestions = collect($groups)->filter(fn ($item) => $item['count'] >= 2)
+            ->sortByDesc('count')->take(8)->values();
+
+        return view('agency-admin.analytics', compact(
+            'agency', 'total', 'statusCounts', 'dailyLabels', 'dailyValues',
+            'faqCount', 'responseRate', 'openCount', 'popularQuestions'
+        ));
     }
 
     public function tickets(Request $request)

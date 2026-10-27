@@ -39,7 +39,7 @@ Broadcast::channel('admin.support-requests', function ($user) {
 |
 */
 Broadcast::channel('admin.{id}', function ($user, $id) {
-    return in_array($user->role, ['admin', 'superadmin'], true)
+    return in_array($user->role, ['admin', 'superadmin', 'agency_admin'], true)
         && (int) $user->id === (int) $id;
 });
 
