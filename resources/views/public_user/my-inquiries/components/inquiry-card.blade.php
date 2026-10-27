@@ -35,7 +35,7 @@
         <div class="inquiry-summary">
             <div class="messenger-avatar" aria-hidden="true">
                 @if ($req->agency && $req->agency->agency_image)
-                    <img src="{{ asset('storage/' . ltrim($req->agency->agency_image, '/')) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
+                    <img src="{{ Storage::disk('agency_images')->url($req->agency->agency_image) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
                     <span class="messenger-avatar-fallback" hidden>{{ strtoupper(mb_substr($req->agency->agency_abbreviation ?: $req->agency->agency_name, 0, 2)) }}</span>
                 @else
                     <span class="messenger-avatar-fallback">{{ strtoupper(mb_substr(optional($req->agency)->agency_abbreviation ?: (optional($req->agency)->agency_name ?? 'AG'), 0, 2)) }}</span>

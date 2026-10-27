@@ -574,7 +574,7 @@ class AgencyAdminController extends Controller
         $categories = Category::query()->orderBy('category_name')->get();
         $contactTypes = ContactType::query()->where('is_active', true)->orderBy('sort_order')->get();
         $agencyImageUrl = $agency->agency_image
-            ? Storage::disk('public')->url($agency->agency_image)
+            ? Storage::disk('agency_images')->url($agency->agency_image)
             : '';
 
         // Prepare the JSON payload in PHP instead of embedding a nested array
@@ -675,7 +675,7 @@ class AgencyAdminController extends Controller
         $oldImage = $agency->agency_image;
         $newImage = null;
         if ($request->hasFile('agency_image')) {
-            $newImage = $request->file('agency_image')->store('agencies', 'public');
+            $newImage = $request->file('agency_image')->store('agencies', 'agency_images');
             $agencyFields['agency_image'] = $newImage;
         }
 
@@ -717,7 +717,7 @@ class AgencyAdminController extends Controller
             });
         } catch (\Throwable $exception) {
             if ($newImage) {
-                Storage::disk('public')->delete($newImage);
+                Storage::disk('agency_images')->delete($newImage);
             }
             throw $exception;
         }
@@ -741,7 +741,7 @@ class AgencyAdminController extends Controller
         }
 
         if ($oldImage && $newImage && $oldImage !== $newImage) {
-            Storage::disk('public')->delete($oldImage);
+            Storage::disk('agency_images')->delete($oldImage);
         }
 
         if ($changedOld) {

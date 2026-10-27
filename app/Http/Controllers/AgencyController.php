@@ -338,7 +338,7 @@ public function getAll()
         $agency->setAttribute(
             'agency_image_url',
             $agency->agency_image
-                ? Storage::disk('public')->url($agency->agency_image)
+                ? Storage::disk('agency_images')->url($agency->agency_image)
                 : null
         );
     });
@@ -714,7 +714,7 @@ public function getAll()
 
         $uploadedImage = $request
             ->file('agency_image')
-            ->store('agencies', 'public');
+            ->store('agencies', 'agency_images');
 
         $agencyData['agency_image'] = $uploadedImage;
     }
@@ -1231,7 +1231,7 @@ public function getAll()
 
         $newImage = $request
             ->file('agency_image')
-            ->store('agencies', 'public');
+            ->store('agencies', 'agency_images');
 
         $agencyData['agency_image'] = $newImage;
     }
@@ -1519,7 +1519,7 @@ public function getAll()
         $oldImage !== $agency->agency_image
     ) {
 
-        Storage::disk('public')
+        Storage::disk('agency_images')
             ->delete($oldImage);
     }
 
@@ -2118,7 +2118,7 @@ public function restore($id)
      */
     if ($agency->agency_image) {
 
-        Storage::disk('public')
+        Storage::disk('agency_images')
             ->delete($agency->agency_image);
     }
 

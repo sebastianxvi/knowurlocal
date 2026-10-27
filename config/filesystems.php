@@ -42,7 +42,7 @@ return [
             ? [
                 'driver' => 's3',
                 'key' => env('SUPABASE_STORAGE_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
-'secret' => env('SUPABASE_STORAGE_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
+                'secret' => env('SUPABASE_STORAGE_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
                 'region' => env('AWS_DEFAULT_REGION'),
                 'bucket' => env('AWS_PUBLIC_BUCKET', env('AWS_BUCKET')),
                 // Separate Supabase buckets store objects at their bucket root by default.
@@ -63,13 +63,29 @@ return [
                 'report' => false,
             ],
 
+        // Agency logos are stored in Supabase independently of the general public
+        // disk. This keeps unrelated uploads on their existing local/public disk.
+        'agency_images' => [
+            'driver' => 's3',
+            'key' => env('SUPABASE_STORAGE_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('SUPABASE_STORAGE_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('AWS_DEFAULT_REGION', 'ap-southeast-1'),
+            'bucket' => env('AWS_PUBLIC_BUCKET', 'knowurlocal-public'),
+            'root' => '',
+            'url' => env('AWS_PUBLIC_URL', 'https://vfixsuvfzsoeaeshaye.supabase.co/storage/v1/object/public/knowurlocal-public'),
+            'endpoint' => env('AWS_ENDPOINT', 'https://vfixsuvfzsoeaeshaye.storage.supabase.co/storage/v1/s3'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', true),
+            'throw' => true,
+            'report' => false,
+        ],
+
         // Private uploads are never given public object URLs; controllers authorize
         // access and stream them through Laravel routes.
         'private' => env('PRIVATE_STORAGE_DRIVER', 'local') === 's3'
             ? [
                 'driver' => 's3',
                 'key' => env('SUPABASE_STORAGE_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
-'secret' => env('SUPABASE_STORAGE_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
+                'secret' => env('SUPABASE_STORAGE_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
                 'region' => env('AWS_DEFAULT_REGION'),
                 'bucket' => env('AWS_PRIVATE_BUCKET', env('AWS_BUCKET')),
                 // Separate Supabase buckets store objects at their bucket root by default.
@@ -91,7 +107,7 @@ return [
         's3' => [
             'driver' => 's3',
             'key' => env('SUPABASE_STORAGE_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
-'secret' => env('SUPABASE_STORAGE_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
+                'secret' => env('SUPABASE_STORAGE_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
             'region' => env('AWS_DEFAULT_REGION'),
             'bucket' => env('AWS_BUCKET'),
             'url' => env('AWS_URL'),
