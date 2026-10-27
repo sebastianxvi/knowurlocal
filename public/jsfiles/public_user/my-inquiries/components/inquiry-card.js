@@ -368,27 +368,24 @@ function showQrFallback(container, value) {
  * Rebuilds the official response section.
  */
 function renderOfficialResponse(card, inquiry) {
-    const existingResponse = card.querySelector(
-        '.official-response'
-    );
-
     const response = inquiry.latest_response;
+    const existingResponse = response?.id
+        ? Array.from(card.querySelectorAll('.official-response'))
+            .find(section => String(section.dataset.responseId) === String(response.id)) || null
+        : card.querySelector('.official-response:last-of-type');
 
     /**
      * If there is no response, remove an old response section.
      */
     if (!response) {
-        existingResponse?.remove();
-
+        card.querySelectorAll('.official-response').forEach(section => section.remove());
         return;
     }
 
-    const section =
-        existingResponse ||
-        createElement(
-            'section',
-            'official-response'
-        );
+    const section = existingResponse || createElement('section', 'official-response');
+    if (response.id !== undefined && response.id !== null) {
+        section.dataset.responseId = String(response.id);
+    }
 
     /**
      * Build the response header.
@@ -498,7 +495,22 @@ function renderOfficialResponse(card, inquiry) {
         })
         .forEach(({ component }) => {
             const element = createResponseComponent(component);
-            if (element) componentsContainer.appendChild(element);
+            if (!element) return;
+
+            // Keep multiple images in a compact responsive gallery while leaving
+            // text, files, links, and QR codes in their established reading order.
+            if (component?.type === 'image') {
+                let imageGrid = componentsContainer.querySelector(':scope > .response-image-grid');
+                if (!imageGrid) {
+                    imageGrid = createElement('div', 'response-image-grid');
+                    imageGrid.setAttribute('aria-label', 'Response images');
+                    componentsContainer.appendChild(imageGrid);
+                }
+                imageGrid.appendChild(element);
+                return;
+            }
+
+            componentsContainer.appendChild(element);
         });
 
     renderInquiryQRCodes(componentsContainer);
@@ -508,15 +520,23 @@ function renderOfficialResponse(card, inquiry) {
      * did not previously exist.
      */
     if (!existingResponse) {
-        const questionSection =
-            card.querySelector(
-                '.inquiry-question-full'
-            );
+        const previousResponses = card.querySelectorAll('.official-response');
+        const lastResponse = previousResponses.length
+            ? previousResponses[previousResponses.length - 1]
+            : null;
+        const questionSection = card.querySelector('.inquiry-question-full');
 
-        questionSection?.insertAdjacentElement(
-            'afterend',
-            section
-        );
+        if (lastResponse) {
+            const followingElement = lastResponse.nextElementSibling;
+            const insertionAnchor = followingElement?.matches('.citizen-follow-up')
+                ? followingElement
+                : lastResponse;
+            insertionAnchor.insertAdjacentElement('afterend', section);
+        } else if (questionSection) {
+            questionSection.insertAdjacentElement('afterend', section);
+        } else {
+            card.querySelector('.inquiry-details-inner')?.appendChild(section);
+        }
     }
 }
 
@@ -536,13 +556,12 @@ function removePendingMessage(card) {
  */
 function updateUnreadIndicator(card, inquiry) {
     const status = inquiry?.deleted_at ? 'trashed' : inquiry?.status;
-    const isTrashUnread =
-        status === 'trashed' &&
-        !inquiry?.trash_seen_at;
+    // Trashed tickets are excluded from unread-response indicators.
+    const isTrashUnread = false;
 
-    if (inquiry?.answer_seen_at) {
-        card.dataset.answerSeen = '1';
-    }
+    // The server is authoritative in both directions: a fresh response resets
+    // answer_seen_at to null, even if this card had previously been read.
+    card.dataset.answerSeen = inquiry?.answer_seen_at ? '1' : '0';
 
     const isResponseUnread =
         status !== 'trashed' &&
@@ -612,6 +631,7 @@ function updateStatus(card, status) {
     const config = getStatusConfig(status);
 
     card.dataset.status = status;
+    card.classList.toggle('is-trashed', status === 'trashed');
 
     /**
      * Update the status icon container.
@@ -802,6 +822,13 @@ function createConfirmationSection(requestId) {
         'follow-up-form-actions'
     );
 
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.className = 'confirmation-btn confirmation-btn-secondary';
+    cancelButton.dataset.cancelFollowUp = '';
+    cancelButton.appendChild(createIcon('ph-arrow-u-up-left'));
+    cancelButton.appendChild(document.createTextNode('Cancel'));
+
     const submitButton =
         document.createElement('button');
 
@@ -820,9 +847,8 @@ function createConfirmationSection(requestId) {
         )
     );
 
-    formActions.appendChild(
-        submitButton
-    );
+    formActions.appendChild(cancelButton);
+    formActions.appendChild(submitButton);
 
     form.appendChild(label);
     form.appendChild(textarea);
@@ -839,82 +865,57 @@ function createConfirmationSection(requestId) {
  */
 function updateConfirmationState(
     card,
-    status
+    status,
+    latestResponse = null
 ) {
-    const existingConfirmation =
-        card.querySelector(
-            '.response-confirmation'
-        );
-
-    /*
-     * Only awaiting_confirmation should display
-     * the confirmation interface.
-     */
-    if (
-        status !==
-        'awaiting_confirmation'
-    ) {
-        existingConfirmation?.remove();
-
-        return;
-    }
-
-    /*
-     * If Blade already rendered the confirmation
-     * component, do not create a duplicate.
-     */
-    if (existingConfirmation) {
-        return;
-    }
-
-    /*
-     * The card's data-id is the authoritative
-     * inquiry identifier for this DOM element.
-     */
-    const requestId =
-        card.dataset.id;
-
-    if (!requestId) {
-        return;
-    }
-
-    const confirmation =
-        createConfirmationSection(
-            requestId
-        );
-
-    /*
-     * Place the confirmation interface directly
-     * after the official response.
-     */
-    const officialResponse =
-        card.querySelector(
-            '.official-response'
-        );
-
-    if (officialResponse) {
-        officialResponse.insertAdjacentElement(
-            'afterend',
-            confirmation
-        );
-
-        return;
-    }
-
-    /*
-     * Defensive fallback for an unexpected state.
-     */
-    const questionSection =
-        card.querySelector(
-            '.inquiry-question-full'
-        );
-
-    questionSection?.insertAdjacentElement(
-        'afterend',
-        confirmation
+    const confirmations = Array.from(
+        card.querySelectorAll('.response-confirmation')
     );
-}
 
+    // The confirmation UI is valid only while the ticket awaits a citizen
+    // decision. Remove it when the authoritative server status has changed.
+    if (status !== 'awaiting_confirmation') {
+        confirmations.forEach(section => section.remove());
+        return;
+    }
+
+    const requestId = card.dataset.id;
+    if (!requestId) return;
+
+    // Reuse the existing confirmation section (including any in-progress form)
+    // rather than returning early and leaving it attached to an older response.
+    let confirmation = confirmations.shift() || null;
+    confirmations.forEach(section => section.remove());
+
+    if (!confirmation) {
+        confirmation = createConfirmationSection(requestId);
+    }
+
+    // Match the authoritative latest response ID when supplied by Laravel.
+    // The last rendered response is a defensive fallback for legacy payloads.
+    const responseId = latestResponse?.id;
+    let latestSection = responseId !== undefined && responseId !== null
+        ? Array.from(card.querySelectorAll('.official-response'))
+            .find(section => String(section.dataset.responseId) === String(responseId))
+        : null;
+
+    if (!latestSection) {
+        const responseSections = card.querySelectorAll('.official-response');
+        latestSection = responseSections[responseSections.length - 1] || null;
+    }
+
+    if (latestSection) {
+        // Moving an existing node preserves its listeners and form state. This
+        // makes the live-update path converge on the same placement as Blade.
+        if (confirmation.previousElementSibling !== latestSection) {
+            latestSection.insertAdjacentElement('afterend', confirmation);
+        }
+        return;
+    }
+
+    const questionSection = card.querySelector('.inquiry-question-full');
+    questionSection?.insertAdjacentElement('afterend', confirmation);
+}
 
 
 
@@ -948,12 +949,7 @@ function updateTrashNotice(card, inquiry) {
     const isTrashed = Boolean(inquiry?.deleted_at);
     let notice = card.querySelector('[data-trash-notice]');
 
-    if (!isTrashed) {
-        notice?.remove();
-        return;
-    }
-
-    if (!notice) {
+    if (isTrashed && !notice) {
         notice = createElement('section', 'inquiry-trash-notice');
         notice.dataset.trashNotice = '';
         notice.innerHTML = `
@@ -963,10 +959,10 @@ function updateTrashNotice(card, inquiry) {
             <div class="inquiry-trash-notice-content">
                 <strong>This inquiry was moved to the trash</strong>
                 <p>The administration removed this inquiry from the active support queue. Your inquiry remains visible here for your records.</p>
-                <div class="inquiry-trash-reason" data-trash-reason-wrap>
-                    <span>Reason provided by the administration</span>
-                    <p data-trash-reason></p>
-                </div>
+                <p class="inquiry-trash-reason" data-trash-reason-wrap>
+                    <span>Reason from administration:</span>
+                    <span data-trash-reason></span>
+                </p>
                 <time data-trash-date></time>
             </div>
         `;
@@ -974,6 +970,20 @@ function updateTrashNotice(card, inquiry) {
         const detailsInner = card.querySelector('.inquiry-details-inner');
         detailsInner?.prepend(notice);
     }
+
+    if (!isTrashed) {
+        notice?.remove();
+        notice = null;
+    }
+
+    const detailsInner = card.querySelector('.inquiry-details-inner');
+    if (detailsInner) {
+        Array.from(detailsInner.children).forEach(child => {
+            if (child !== notice) child.hidden = isTrashed;
+        });
+    }
+
+    if (!notice) return;
 
     const reasonWrap = notice.querySelector('[data-trash-reason-wrap]');
     const reason = notice.querySelector('[data-trash-reason]');
@@ -997,9 +1007,6 @@ function updateTrashNotice(card, inquiry) {
         }
     }
 
-    card.querySelector('.official-response')?.remove();
-    card.querySelector('.response-confirmation')?.remove();
-    card.querySelector('.inquiry-pending-message')?.remove();
 }
 
 /**
@@ -1038,6 +1045,17 @@ export function updateInquiryCard(
         inquiry
     );
 
+    const summaryPreview = card.querySelector('.messenger-row-preview');
+    if (summaryPreview && inquiry.deleted_at) {
+        summaryPreview.textContent = 'Ticket moved to trash by administration';
+    } else if (summaryPreview && summaryPreview.textContent.trim() === 'Ticket moved to trash by administration') {
+        const responseText = (inquiry.latest_response?.components || [])
+            .filter(component => component.type === 'text' && component.content)
+            .map(component => component.content)
+            .join(' ');
+        summaryPreview.textContent = responseText || inquiry.answer || inquiry.question || 'Ticket submitted';
+    }
+
     if (!inquiry.deleted_at) {
         renderOfficialResponse(
             card,
@@ -1050,7 +1068,8 @@ export function updateInquiryCard(
 
         updateConfirmationState(
             card,
-            inquiry.status
+            inquiry.status,
+            inquiry.latest_response
         );
     }
 

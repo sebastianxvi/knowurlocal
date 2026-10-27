@@ -197,6 +197,14 @@ function initializeConfirmation() {
     */
 
     const confirmResponse = async (button) => {
+        if (typeof window.showConfirmModal === "function") {
+            const accepted = await window.showConfirmModal({
+                title: "Confirm this response",
+                text: "Mark this ticket as resolved? You can reopen it later if you need more help.",
+                variant: "info", icon: "ph-light ph-check-circle", confirmText: "Yes, resolved", cancelText: "Not yet"
+            });
+            if (!accepted) return;
+        }
         const card = getCard(button);
 
         if (!card) {
@@ -401,11 +409,41 @@ function initializeConfirmation() {
 
     /*
     |--------------------------------------------------------------------------
+    | CANCEL FOLLOW-UP
+    |--------------------------------------------------------------------------
+    */
+
+    const cancelFollowUp = (button) => {
+        const container = button.closest(".response-confirmation");
+        if (!container) return;
+        clearError(container);
+        const actions = container.querySelector(".confirmation-actions");
+        const form = container.querySelector(".follow-up-form");
+        if (form) {
+            form.hidden = true;
+            const textarea = form.querySelector('textarea[name="reason"]');
+            if (textarea) textarea.value = "";
+        }
+        if (actions) actions.hidden = false;
+    };
+
+
+    /*
+    |--------------------------------------------------------------------------
     | SUBMIT FOLLOW-UP
     |--------------------------------------------------------------------------
     */
 
     const submitFollowUp = async (form) => {
+        const draftReason = form.querySelector('textarea[name="reason"]')?.value.trim() || "";
+        if (typeof window.showConfirmModal === "function") {
+            const accepted = await window.showConfirmModal({
+                title: "Send follow-up question?",
+                text: draftReason ? "Send this clarification to the agency?" : "Request further help from the agency without adding a clarification?",
+                variant: "info", icon: "ph-light ph-paper-plane-tilt", confirmText: "Send follow-up", cancelText: "Review message"
+            });
+            if (!accepted) return;
+        }
         const card =
             form.closest(
                 ".inquiry-card"
@@ -507,6 +545,16 @@ function initializeConfirmation() {
             card.dataset.status =
                 data.status ||
                 "needs_follow_up";
+
+            // Reconcile the visible conversation with Laravel's saved state.
+            // The follow-up reason is stored on the response history, so a
+            // status-only DOM update would otherwise hide the actual message
+            // until the citizen manually reloads the page.
+            // Reload the public inquiry page after Laravel confirms the follow-up
+            // was saved. This mirrors the agency-admin refresh behavior and
+            // guarantees the conversation is rendered from persisted data.
+            window.location.reload();
+            return;
 
             updateStatusLabel(
                 card,
@@ -614,10 +662,14 @@ function initializeConfirmation() {
 
             if (followUpButton) {
                 event.preventDefault();
+                showFollowUp(followUpButton);
+                return;
+            }
 
-                showFollowUp(
-                    followUpButton
-                );
+            const cancelButton = event.target.closest("[data-cancel-follow-up]");
+            if (cancelButton) {
+                event.preventDefault();
+                cancelFollowUp(cancelButton);
             }
         }
     );

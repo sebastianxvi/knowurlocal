@@ -31,6 +31,12 @@ class Agency extends Model
     ];
 
 
+    public function administrators()
+    {
+        return $this->hasMany(User::class, 'agency_id')
+            ->where('role', 'agency_admin');
+    }
+
     public function faqs()
     {
         return $this->hasMany(Faq::class);

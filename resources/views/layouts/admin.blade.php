@@ -102,6 +102,7 @@
 <body
     data-admin-page="@yield('admin-page')"
     data-admin-user-id="{{ auth()->id() }}"
+    data-admin-role="{{ auth()->user()->role ?? '' }}"
 >
 <div class="admin-drawer-backdrop" data-admin-shell-close aria-hidden="true"></div>
 
@@ -163,7 +164,7 @@
     window.__FLASH_INFO__ = @json(session('info'));
 </script>
 
-<script src="{{ asset('jsfiles/admin/admin-shell.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/admin-shell.js') }}?v={{ file_exists(public_path('jsfiles/admin/admin-shell.js')) ? filemtime(public_path('jsfiles/admin/admin-shell.js')) : time() }}"></script>
 <script src="{{ asset('jsfiles/admin/admin-filter-bar.js') }}?v={{ file_exists(public_path('jsfiles/admin/admin-filter-bar.js')) ? filemtime(public_path('jsfiles/admin/admin-filter-bar.js')) : time() }}"></script>
 <script src="{{ asset('jsfiles/admin/admin-notifications.js') }}?v={{ file_exists(public_path('jsfiles/admin/admin-notifications.js')) ? filemtime(public_path('jsfiles/admin/admin-notifications.js')) : time() }}"></script>
 

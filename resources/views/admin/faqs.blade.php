@@ -503,6 +503,7 @@
         id="support_request_id"
         value=""
     >
+    <input type="hidden" name="source_response_id" id="source_response_id" value="">
 
             <div class="form-card">
 
@@ -861,7 +862,7 @@ window.SUPPORT_FAQ_PREPARE_URL =
 <script src="{{ asset('jsfiles/admin/faq-response-builder.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/trash-reason.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/components/action-menu.js') }}"></script>
-<script src="{{ asset('jsfiles/admin/faqs.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/faqs.js') }}?v={{ filemtime(public_path('jsfiles/admin/faqs.js')) }}"></script>
 <script src="{{ asset('jsfiles/admin/faq-feedback-modal.js') }}?v={{ filemtime(public_path('jsfiles/admin/faq-feedback-modal.js')) }}"></script>
 
 <!-- 🔥 SUCCESS HANDLER (same pattern as NGA) -->

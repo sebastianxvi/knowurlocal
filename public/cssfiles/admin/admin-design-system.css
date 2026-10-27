@@ -4633,3 +4633,62 @@ body.admin-drawer-open .sidebar:focus-within {
     font-size:11px !important;
     text-align:center !important;
 }
+
+
+/* Agency Admin / shared admin drawer reliability override.
+   Keep the toggle above the backdrop and the drawer above the page,
+   regardless of legacy admin stylesheet rules. */
+@media (max-width: 900px) {
+    :root { --admin-drawer-width: min(304px, 88vw); }
+    .topbar { position: sticky; z-index: 1101 !important; }
+    .admin-mobile-menu {
+        position: relative !important;
+        z-index: 1102 !important;
+        pointer-events: auto !important;
+        touch-action: manipulation;
+    }
+    .admin-drawer-backdrop {
+        z-index: 1090 !important;
+    }
+    .sidebar,
+    .sidebar:hover,
+    .sidebar:focus-within {
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        z-index: 1100 !important;
+        transform: translateX(-105%) !important;
+        visibility: hidden;
+        pointer-events: none;
+    }
+    body.admin-drawer-open .sidebar,
+    body.admin-drawer-open .sidebar:hover,
+    body.admin-drawer-open .sidebar:focus-within {
+        transform: translateX(0) !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+}
+
+
+/* Agency/admin hamburger drawer: never hide the Sign out label while the drawer is open.
+   This intentionally overrides older desktop rail hover-reveal rules above. */
+body.admin-drawer-open .sidebar:not(:hover):not(:focus-within) .sidebar-footer .logout-btn span,
+body.admin-drawer-open .sidebar .sidebar-footer .logout-btn span {
+    display: inline !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: auto !important;
+    max-width: none !important;
+    position: static !important;
+    clip: auto !important;
+    white-space: nowrap !important;
+}
+body.admin-drawer-open .sidebar .sidebar-footer .logout-btn {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    padding-inline: 11px !important;
+}

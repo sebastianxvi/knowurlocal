@@ -14,6 +14,7 @@ class EmailVerification extends Model
         'otp',
         'expires_at',
         'role',
+        'agency_id',
         'invite_token',
     ];
 }

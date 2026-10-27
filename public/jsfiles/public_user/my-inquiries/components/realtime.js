@@ -312,6 +312,16 @@ async function handleRealtimeStatusUpdate(payload) {
         return;
     }
 
+    if (payload.deleted === true || payload.action === 'force_deleted' || payload.action === 'citizen_deleted') {
+        card.remove();
+        window.dispatchEvent(new CustomEvent('inquiry:notification-changed'));
+        window.dispatchEvent(new CustomEvent('inquiry:updated', {
+            detail: { card: null, status: 'deleted', id: supportRequestId },
+        }));
+        refreshInquiryTabUnreadCounts();
+        return;
+    }
+
     try {
         const inquiry =
             await fetchInquiry(supportRequestId);
@@ -326,6 +336,9 @@ async function handleRealtimeStatusUpdate(payload) {
         if (inquiry.deleted_at) {
             showTrashedNotification(inquiry);
             refreshInquiryTabUnreadCounts();
+        } else if (payload.action === 'restored') {
+            window.location.reload();
+            return;
         }
 
         window.dispatchEvent(
@@ -395,6 +408,18 @@ window.addEventListener(
         refreshInquiryTabUnreadCounts();
     }
 );
+
+// Local mutations (such as submitting a follow-up) use the same authoritative
+// refresh path as Reverb events so the newly-saved message appears immediately.
+window.addEventListener('inquiry:refresh-requested', (event) => {
+    const id = Number(event.detail?.id);
+    if (Number.isSafeInteger(id) && id > 0) {
+        handleRealtimeStatusUpdate({
+            id,
+            action: event.detail?.action || 'updated',
+        });
+    }
+});
 
 function showTrashedNotification(inquiry) {
     const existing = document.querySelector('[data-inquiry-trash-toast]');

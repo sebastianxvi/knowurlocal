@@ -42,3 +42,19 @@ Broadcast::channel('admin.{id}', function ($user, $id) {
     return in_array($user->role, ['admin', 'superadmin'], true)
         && (int) $user->id === (int) $id;
 });
+
+
+/*
+|--------------------------------------------------------------------------
+| Agency ticket inbox
+|--------------------------------------------------------------------------
+|
+| Agency administrators may subscribe only to the ticket events for their
+| own assigned agency. System administrators retain their existing channel.
+|--------------------------------------------------------------------------
+*/
+Broadcast::channel('agency.{agencyId}.support-requests', function ($user, $agencyId) {
+    return $user->role === 'agency_admin'
+        && $user->agency_id !== null
+        && (int) $user->agency_id === (int) $agencyId;
+});

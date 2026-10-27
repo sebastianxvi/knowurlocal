@@ -174,6 +174,26 @@
 
 
             {{-- =================================================
+                 NOTIFICATIONS
+                 Visual placeholder; notification behavior will be
+                 connected when the backend is implemented.
+                 ================================================= --}}
+            <a
+                href="#"
+                class="nav-link notification-nav-link"
+                aria-label="Notifications (coming soon)"
+                title="Notifications"
+            >
+                <i
+                    class="ph-light ph-bell"
+                    aria-hidden="true"
+                ></i>
+
+                <span>Notifications</span>
+            </a>
+
+
+            {{-- =================================================
                  ACCOUNT
                  ================================================= --}}
             <div class="account-wrapper">

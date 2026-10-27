@@ -23,7 +23,8 @@ class User extends Authenticatable
     'email',
     'password',
     'email_verified_at',
-    'role',      // 🔥 ADD THIS
+    'role',
+    'agency_id',
     'status',    // 🔥 ADD THIS (you are using it)
     'last_login_at',
 ];
@@ -50,6 +51,11 @@ class User extends Authenticatable
             'last_login_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function agency()
+    {
+        return $this->belongsTo(Agency::class);
     }
 
     public function collaborationTasksCreated()

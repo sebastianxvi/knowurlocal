@@ -384,7 +384,7 @@
                 <input
                     type="hidden"
                     name="email"
-                    value="{{ request('email') }}"
+                    value="{{ $email ?? request('email') }}"
                 >
 
 
@@ -476,6 +476,9 @@
     </button>
 
 </p>
+            <p class="otp-help" style="margin-top:14px;line-height:1.5">
+                If this verification request is no longer available, return to the invitation link and start registration again.
+            </p>
 
             </form>
 

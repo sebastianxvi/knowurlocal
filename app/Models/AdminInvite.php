@@ -11,6 +11,8 @@ class AdminInvite extends Model
      */
     protected $fillable = [
         'email',
+        'role',
+        'agency_id',
         'token',
         'created_by',
         'expires_at',
@@ -28,6 +30,11 @@ class AdminInvite extends Model
     /**
      * 🔗 Who created the invite (superadmin/admin)
      */
+    public function agency()
+    {
+        return $this->belongsTo(Agency::class);
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

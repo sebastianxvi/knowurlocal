@@ -78,7 +78,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             return (
                 /^\/admin\/support-requests\/[^/]+\/responses\/[^/]+\/components\/[^/]+\/attachment$/.test(url.pathname)
+                || /^\/agency-admin\/tickets\/[^/]+\/responses\/[^/]+\/components\/[^/]+\/attachment$/.test(url.pathname)
                 || /^\/admin\/faqs\/\d+\/response-attachments\/\d+$/.test(url.pathname)
+                || /^\/agency-admin\/faqs\/\d+\/response-attachments\/\d+$/.test(url.pathname)
                 || url.pathname.startsWith('/storage/')
             );
         } catch {

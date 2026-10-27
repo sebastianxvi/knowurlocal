@@ -13,6 +13,8 @@ class Faq extends Model
 
     protected $fillable = [
         'agency_id',
+        'source_support_request_id',
+        'source_response_id',
 
         // English source content.
         'question',

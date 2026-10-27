@@ -12,7 +12,7 @@
 
         <div class="header-heading">
             <div class="header-context">
-                KNOWURLOCAL <span aria-hidden="true">/</span> Admin Workspace
+                KNOWURLOCAL <span aria-hidden="true">/</span> {{ auth()->user()->role === 'agency_admin' ? 'Agency Workspace' : 'Admin Workspace' }}
             </div>
 
             <h1 class="page-title">@yield('page-title')</h1>
@@ -67,10 +67,9 @@
                         @foreach($adminNotificationSupportRequests as $request)
                             <a
                                 class="admin-notification-item"
-                                href="{{ route('admin.support.requests', [
-                                    'status' => 'active',
-                                    'status_filter' => $request->status,
-                                ]) }}"
+                                href="{{ auth()->user()->role === 'agency_admin'
+                                    ? route('agency-admin.tickets', ['status' => $request->status])
+                                    : route('admin.support.requests', ['status' => 'active', 'status_filter' => $request->status]) }}"
                                 data-notification-kind="support"
                                 data-notification-id="{{ $request->id }}"
                                 data-notification-status="{{ $request->status }}"

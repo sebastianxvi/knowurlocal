@@ -41,257 +41,53 @@ class SupportRequestController extends Controller
  */
 public function index(Request $request)
     {
-        /*
-         * Determine which dataset should be displayed.
-         *
-         * Only "active" and "trashed" are accepted.
-         *
-         * Anything else safely falls back to "active".
-         */
-        $status = $request->input('status', 'active');
-
-        if (!in_array($status, ['active', 'trashed'], true)) {
-            $status = 'active';
-        }
-
-
-        /*
-         * Start the Support Request query.
-         *
-         * Because SupportRequest uses SoftDeletes,
-         * normal queries automatically exclude trashed records.
-         */
-        $query = SupportRequest::with([
-            'user',
-            'agency',
-        ]);
-
-
-        /*
-         * =====================================================
-         * 🔐 RECOVERY ACCESS
-         * =====================================================
-         *
-         * Trashed Support Requests contain potentially sensitive
-         * user-submitted questions and answers.
-         *
-         * Therefore only Superadmins may access them.
-         */
-        if ($status === 'trashed') {
-
-            abort_unless(
-                auth()->check() &&
-                auth()->user()->role === 'superadmin',
-                403
-            );
-
-            /*
-             * onlyTrashed() returns exclusively soft-deleted
-             * Support Requests.
-             */
-            $query->onlyTrashed();
-        }
-
-
-        /*
- * =====================================================
- * 🔍 STATUS FILTER
- * =====================================================
- *
- * Active Support Requests default to "pending".
- *
- * Trashed Support Requests default to showing all
- * historical statuses unless the administrator explicitly
- * chooses a status filter.
- */
-// Active requests default to pending, but the trash must show every
-// historical status unless the administrator explicitly filters it.
-$statusFilter = $request->has('status_filter')
-    ? $request->input('status_filter')
-    : ($status === 'active' ? 'pending' : '');
-
-$allowedStatusFilters = [
-    '',
-    'pending',
-    'awaiting_confirmation',
-    'needs_follow_up',
-    'answered',
-];
-
-if (!in_array($statusFilter, $allowedStatusFilters, true)) {
-    $statusFilter = '';
-}
-
-/*
- * Apply the status filter only when a specific status
- * has been selected.
- */
-if ($statusFilter !== '') {
-    $query->where(
-        'status',
-        $statusFilter
-    );
-}
-
-/*
- * =====================================================
- * 🔎 SUPPORT REQUEST SEARCH
- * =====================================================
- *
- * Search across the request question, answer, user, and agency.
- */
-$search = trim(
-    (string) $request->input('search', '')
-);
-
-if ($search !== '') {
-    $like = '%' . $search . '%';
-
-    $query->where(function ($q) use ($like) {
-        $q->where('question', 'LIKE', $like)
-            ->orWhere('answer', 'LIKE', $like)
-            ->orWhereHas('user', function ($userQuery) use ($like) {
-                $userQuery
-                    ->where('first_name', 'LIKE', $like)
-                    ->orWhere('last_name', 'LIKE', $like)
-                    ->orWhere('email', 'LIKE', $like);
-            })
-            ->orWhereHas('agency', function ($agencyQuery) use ($like) {
-                $agencyQuery
-                    ->where('agency_name', 'LIKE', $like)
-                    ->orWhere('agency_abbreviation', 'LIKE', $like);
-            });
-    });
-}
-
-       /*
- * =====================================================
- * 🏢 AGENCY FILTER
- * =====================================================
- *
- * Only apply the agency condition when the administrator
- * actually selected an agency.
- *
- * Laravel's filled() treats null and empty strings as
- * empty, preventing an accidental:
- *
- *     where('agency_id', null)
- *
- * which becomes:
- *
- *     agency_id IS NULL
- */
-$agencyFilter = $request->input('agency');
-
-if ($request->filled('agency')) {
-    $query->where(
-        'agency_id',
-        $agencyFilter
-    );
-}
-
-        /*
-|--------------------------------------------------------------------------
-| 🔃 SORT ORDER
-|--------------------------------------------------------------------------
-|
-| The administrator can choose whether Support Requests
-| should be displayed from newest to oldest or oldest
-| to newest.
-|
-| Only explicitly allowed values are accepted.
-| This prevents arbitrary request input from reaching
-| the database ORDER BY clause.
-*/
-
-$sort = $request->input('sort', 'newest');
-
-$allowedSorts = [
-    'newest',
-    'oldest',
-];
-
-if (!in_array($sort, $allowedSorts, true)) {
-    $sort = 'newest';
-}
-
-/*
-|--------------------------------------------------------------------------
-| 📄 PAGINATION
-|--------------------------------------------------------------------------
-|
-| The selected sort order is applied at the database level.
-|
-| This is important because the table is paginated.
-| Sorting only the rows already loaded into the browser
-| would produce incorrect ordering across multiple pages.
-|
-| withQueryString() preserves the active filters and
-| sort order when the administrator changes pages.
-*/
-
-$requests = $query
-    ->orderBy(
-        'created_at',
-        $sort === 'oldest' ? 'asc' : 'desc'
-    )
-    ->paginate(10)
-    ->withQueryString();
-    
-
-
-        /*
- * Retrieve agencies for the filter dropdown
- * and searchable agency selector.
- *
- * agency_abbreviation must be included because
- * the Blade view uses it for abbreviation searching.
- */
-$agencies = Agency::select(
-    'id',
-    'agency_name',
-    'agency_abbreviation'
-)
-->orderBy('agency_name')
-->get();
-
-
-        /*
-         * Count active and trashed records separately.
-         *
-         * Normal count() excludes soft-deleted records.
-         */
-        $activeCount =
-            SupportRequest::count();
-
-        $trashedCount =
-            SupportRequest::onlyTrashed()->count();
-
-
-        return view(
-            'admin.support-requests.index',
-            compact(
-                'requests',
-                'agencies',
-                'status',
-                'statusFilter',
-                'agencyFilter',
-                'search',
-                'sort',
-                'activeCount',
-                'trashedCount'
-            )
-        );
+        return $this->inbox($request);
     }
 
+    /** Modern support inbox shared visually with the agency inbox, with an agency-selection stage. */
+    private function inbox(Request $request)
+    {
+        $search = trim((string) $request->query('search', ''));
+        $ticketsQuery = SupportRequest::withTrashed()->with(['user', 'agency', 'latestResponse.components', 'responses.admin', 'responses.components'])->orderByDesc('updated_at');
+        if ($search !== '') {
+            $ticketsQuery->where(function ($q) use ($search) {
+                $q->where('question', 'like', '%'.$search.'%')->orWhere('id', ctype_digit($search) ? (int)$search : -1)->orWhereHas('user', function ($u) use ($search) { $u->where('first_name','like','%'.$search.'%')->orWhere('last_name','like','%'.$search.'%')->orWhere('email','like','%'.$search.'%'); })->orWhereHas('agency', function ($a) use ($search) { $a->where('agency_name','like','%'.$search.'%'); });
+            });
+        }
+        $tickets = $ticketsQuery->get();
+        $conversations = $tickets->groupBy('user_id')->map(fn($items) => $items->sortByDesc('updated_at')->values())->sortByDesc(fn($items) => $items->first()?->updated_at)->values();
+        $requestedTicketId = (int)$request->query('ticket', 0);
+        $requestedUserId = (int)$request->query('user', 0);
+        $ticketFromList = $requestedTicketId ? $tickets->firstWhere('id', $requestedTicketId) : null;
+        $selectedUserId = $ticketFromList?->user_id ?? $requestedUserId;
+        $selectedConversation = $selectedUserId ? $conversations->first(fn($items) => (int)$items->first()?->user_id === $selectedUserId) : null;
+        $selectedUser = $selectedConversation?->first()?->user;
+        $selectedAgencyId = (int)$request->query('agency', 0);
+        if ($ticketFromList && $selectedUser && (int)$ticketFromList->user_id === (int)$selectedUser->id) $selectedAgencyId = (int)$ticketFromList->agency_id;
+        $selectedAgencies = $selectedConversation ? $selectedConversation->filter(fn($t) => $t->agency)->groupBy('agency_id')->map(fn($items) => (object)['agency' => $items->first()->agency, 'tickets' => $items->sortByDesc('updated_at')->values()])->values() : collect();
+        $selectedAgencyGroup = $selectedAgencies->first(fn($g) => (int)$g->agency->id === $selectedAgencyId);
+        $selectedAgencyId = $selectedAgencyGroup ? (int)$selectedAgencyGroup->agency->id : 0;
+        $selectedTickets = $selectedAgencyGroup?->tickets ?? collect();
+        $selectedTicket = $ticketFromList && $selectedTickets->contains('id', $ticketFromList->id) ? $ticketFromList : null;
+        $agency = $selectedAgencyGroup?->agency;
+        $selectedTicket?->load(['responses.admin','responses.components']);
+        $agencies = Agency::orderBy('agency_name')->get();
+        return view('admin.support-requests.inbox', compact('tickets','conversations','selectedUser','selectedUserId','selectedTickets','selectedTicket','selectedAgencies','selectedAgencyId','agency','search'));
+    }
 
-    /**
-     * =========================================================
-     * 📩 ADMIN REPLY
-     * =========================================================
-     *
-     * Answers an active Support Request.
-     */
+    /** Admin/superadmin official response using the same component-based response lifecycle as the agency inbox. */
+    public function inboxReply(Request $request, SupportRequestResponseService $responseService)
+    {
+        $validated = $request->validate(['request_id'=>['required','integer'], 'components'=>['required','array','min:1','max:10'], 'components.*.type'=>['required','in:text,image,file,link,qr_code'], 'components.*.content'=>['nullable','string','max:5000'], 'components.*.label'=>['nullable','string','max:255'], 'components.*.file'=>['nullable','file','max:5120','mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx']]);
+        $ticket = SupportRequest::query()->whereNull('deleted_at')->findOrFail($validated['request_id']);
+        abort_unless(in_array(auth()->user()->role, ['admin','superadmin'], true), 403);
+        abort_unless(!in_array($ticket->status, ['awaiting_confirmation','answered'], true), 409, 'This ticket is awaiting the citizen’s confirmation or has already been resolved.');
+        $components=[]; foreach($validated['components'] as $c) { $type=$c['type']; if($type==='text' && trim((string)($c['content']??''))==='') return response()->json(['message'=>'Text responses cannot be empty.'],422); if(in_array($type,['link','qr_code'],true)) { $url=(string)($c['content']??''); if(!filter_var($url,FILTER_VALIDATE_URL)||!in_array(strtolower(parse_url($url,PHP_URL_SCHEME)??''),['http','https'],true)) return response()->json(['message'=>'Links and QR codes must use a valid HTTP or HTTPS URL.'],422); } if(in_array($type,['image','file'],true)&&empty($c['file'])) return response()->json(['message'=>ucfirst($type).' components require a file.'],422); $components[]=['type'=>$type,'content'=>$c['content']??null,'label'=>$c['label']??null,'file'=>$c['file']??null]; }
+        $response=$responseService->createAndForward($ticket,(int)auth()->id(),(int)$ticket->agency_id,$components);
+        try { broadcast(new SupportRequestResponseCreated((int)$ticket->user_id,(int)$ticket->id,(int)$response->id,'awaiting_confirmation')); broadcast(new SupportRequestUpdated(id:(int)$ticket->id,action:'response_created',responseId:(int)$response->id,userId:(int)$ticket->user_id)); } catch (\Throwable $e) { \Log::warning('Admin support inbox broadcast failed',['ticket_id'=>$ticket->id,'error'=>$e->getMessage()]); }
+        return response()->json(['success'=>true,'message'=>'Official response sent to the citizen.','redirect'=>route('admin.support.requests',['user'=>$ticket->user_id,'agency'=>$ticket->agency_id,'ticket'=>$ticket->id])]);
+    }
+
     public function reply(Request $request)
     {
         /*
@@ -815,7 +611,7 @@ abort_unless(
                                             true
                                         )
                                             ? route(
-                                                'admin.support.response-attachment',
+                                                'user.inquiries.response-attachment',
                                                 [
                                                     'supportRequestId' =>
                                                         $supportRequest->id,
@@ -1014,7 +810,8 @@ public function viewCitizenResponseAttachment(
                     ->where(
                         'user_id',
                         auth()->id()
-                    );
+                    )
+                    ->whereNull('user_deleted_at');
             }
         )
         ->firstOrFail();
@@ -1091,9 +888,14 @@ public function userInquiry($id)
     $supportRequest = SupportRequest::withTrashed()
         ->where('id', $id)
         ->where('user_id', auth()->id())
+        ->whereNull('user_deleted_at')
         ->with([
             'agency',
             'latestResponse.components',
+            'responses' => function ($query) {
+                $query->where('status', '!=', 'draft')->orderBy('id');
+            },
+            'responses.components',
         ])
         ->firstOrFail();
 
@@ -1103,40 +905,76 @@ public function userInquiry($id)
      * Private storage paths are never returned directly
      * to the browser.
      */
-    if ($supportRequest->latestResponse) {
+    $attachCitizenUrls = function ($response) use ($supportRequest) {
+        if (!$response) {
+            return;
+        }
 
-        $supportRequest->latestResponse
-            ->components
-            ->each(function ($component) use ($supportRequest) {
+        $response->components->each(function ($component) use ($supportRequest, $response) {
+            $component->attachment_url = in_array($component->type, ['image', 'file'], true)
+                ? route('user.inquiries.response-attachment', [
+                    'supportRequestId' => $supportRequest->id,
+                    'responseId' => $response->id,
+                    'componentId' => $component->id,
+                ])
+                : null;
+        });
+    };
 
-                $component->attachment_url =
-                    in_array(
-                        $component->type,
-                        ['image', 'file'],
-                        true
-                    )
-                        ? route(
-                            'user.inquiries.response-attachment',
-                            [
-                                'supportRequestId' =>
-                                    $supportRequest->id,
-
-                                'responseId' =>
-                                    $supportRequest->latestResponse->id,
-
-                                'componentId' =>
-                                    $component->id,
-                            ]
-                        )
-                        : null;
-            });
-    }
+    $supportRequest->responses->each($attachCitizenUrls);
+    // The realtime renderer consumes latest_response directly, so it also
+    // needs the same authorized attachment URLs as the history collection.
+    $attachCitizenUrls($supportRequest->latestResponse);
 
     return response()->json([
         'success' => true,
         'inquiry' => $supportRequest,
     ]);
 }
+
+    /**
+     * Allow a citizen to edit their original question only while the
+     * ticket is pending and no official response has been recorded.
+     */
+    public function updatePendingQuestion(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'question' => ['required', 'string', 'min:3', 'max:500'],
+        ]);
+
+        $supportRequest = SupportRequest::query()
+            ->where('id', $id)
+            ->where('user_id', auth()->id())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $hasResponse = $supportRequest->responses()->exists()
+            || filled($supportRequest->answer)
+            || !is_null($supportRequest->answered_at)
+            || $supportRequest->status !== 'pending';
+
+        if ($hasResponse) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This ticket can no longer be edited because the agency has responded or started processing it.',
+            ], 409);
+        }
+
+        $supportRequest->question = trim($validated['question']);
+        $supportRequest->save();
+
+        try {
+            event(new SupportRequestUpdated((int) $supportRequest->id, 'question_updated', null, (int) $supportRequest->user_id));
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Your question was updated.',
+            'support_request_id' => $supportRequest->id,
+        ]);
+    }
 
     /**
      * =========================================================
@@ -1148,28 +986,12 @@ public function userInquiry($id)
      */
     public function notificationCount()
     {
-        $count = SupportRequest::withTrashed()
-            ->where('user_id', auth()->id())
-            ->where(function ($query) {
-                $query
-                    ->where(function ($query) {
-                        $query
-                            ->whereNull('deleted_at')
-                            ->where('status', 'awaiting_confirmation')
-                            ->whereNull('answer_seen_at');
-                    })
-                    ->orWhere(function ($query) {
-                        $query
-                            ->whereNull('deleted_at')
-                            ->where('status', 'answered')
-                            ->whereNull('answer_seen_at');
-                    })
-                    ->orWhere(function ($query) {
-                        $query
-                            ->whereNotNull('deleted_at')
-                            ->whereNull('trash_seen_at');
-                    });
-            })
+        // Only unread official responses contribute to the public notification
+        // dot. Tickets moved to trash are still visible in the inquiry history,
+        // but must not leave a persistent unread-response notification.
+        $count = SupportRequest::where('user_id', auth()->id())
+            ->whereIn('status', ['awaiting_confirmation', 'answered'])
+            ->whereNull('answer_seen_at')
             ->count();
 
         $trashedUnreadCount = SupportRequest::onlyTrashed()
@@ -1215,10 +1037,12 @@ public function userInquiry($id)
          */
         $unreadTrashCount = SupportRequest::onlyTrashed()
             ->where('user_id', auth()->id())
+            ->whereNull('user_deleted_at')
             ->whereNull('trash_seen_at')
             ->count();
 
         $unreadNeedsAttentionCount = SupportRequest::where('user_id', auth()->id())
+            ->whereNull('user_deleted_at')
             ->whereNull('deleted_at')
             ->where('status', 'awaiting_confirmation')
             ->whereNull('answer_seen_at')
@@ -1226,9 +1050,14 @@ public function userInquiry($id)
 
         $requests = SupportRequest::withTrashed()
             ->where('user_id', auth()->id())
+            ->whereNull('user_deleted_at')
             ->with([
                 'agency',
                 'latestResponse.components',
+                'responses' => function ($query) {
+                    $query->where('status', '!=', 'draft')->orderBy('id');
+                },
+                'responses.components',
             ])
             ->latest()
             ->get();
@@ -1239,45 +1068,141 @@ public function userInquiry($id)
         * We never expose the private storage path itself.
         */
         $requests->each(function ($supportRequest) {
-
-            if (!$supportRequest->latestResponse) {
-                return;
-            }
-
-            $supportRequest->latestResponse->components->each(
-                function ($component) use ($supportRequest) {
-
-                    $component->attachment_url =
-                        in_array(
-                            $component->type,
-                            ['image', 'file'],
-                            true
-                        )
-                            ? route(
-                                'user.inquiries.response-attachment',
-                                [
-                                    'supportRequestId' =>
-                                        $supportRequest->id,
-
-                                    'responseId' =>
-                                        $supportRequest->latestResponse->id,
-
-                                    'componentId' =>
-                                        $component->id,
-                                ]
-                            )
-                            : null;
-                }
-            );
+            $supportRequest->responses->each(function ($response) use ($supportRequest) {
+                $response->components->each(function ($component) use ($supportRequest, $response) {
+                    $component->attachment_url = in_array($component->type, ['image', 'file'], true)
+                        ? route('user.inquiries.response-attachment', [
+                            'supportRequestId' => $supportRequest->id,
+                            'responseId' => $response->id,
+                            'componentId' => $component->id,
+                        ])
+                        : null;
+                });
+            });
         });
+
+        $agencies = Agency::query()
+            ->select('id', 'agency_name', 'agency_abbreviation')
+            ->orderBy('agency_name')
+            ->get();
 
         return view(
             'public_user.my-inquiries.index',
-            compact('requests', 'unreadTrashCount', 'unreadNeedsAttentionCount')
+            compact('requests', 'unreadTrashCount', 'unreadNeedsAttentionCount', 'agencies')
         );
     }
     
 
+
+    /**
+     * Soft-delete a ticket at the citizen's request.
+     * The record and audit history remain recoverable for administration,
+     * but it is hidden from the citizen's own inquiry list.
+     */
+    public function deleteOwnInquiry($id)
+    {
+        $supportRequest = SupportRequest::query()
+            ->where('id', $id)
+            ->where('user_id', auth()->id())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $oldData = $this->buildAuditSnapshot($supportRequest);
+        $supportId = (int) $supportRequest->id;
+        $agencyId = $supportRequest->agency_id ? (int) $supportRequest->agency_id : null;
+
+        DB::transaction(function () use ($supportRequest) {
+            $supportRequest->user_deleted_at = now();
+            $supportRequest->save();
+            $supportRequest->delete();
+        });
+
+        app(AuditLogService::class)->record(
+            action: 'citizen_delete_support_request',
+            page: 'user_inquiries',
+            targetType: 'support_request',
+            targetId: $supportId,
+            supportRequestId: $supportId,
+            agencyId: $agencyId,
+            oldValues: $oldData,
+            newValues: ['deleted_by' => 'citizen', 'user_deleted_at' => now()->toISOString()],
+            description: 'Citizen deleted Support Request #' . $supportId,
+        );
+
+        try {
+            broadcast(new SupportRequestUpdated(
+                id: $supportId,
+                action: 'citizen_deleted',
+                responseId: null,
+                userId: (int) auth()->id(),
+            ));
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Your ticket has been deleted.',
+            'support_request_id' => $supportId,
+        ]);
+    }
+
+    /**
+     * Reopen a citizen-confirmed ticket without erasing the accepted response.
+     * The ticket returns to the agency follow-up queue; response history remains intact.
+     */
+    public function reopenSatisfiedTicket(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'message' => ['required', 'string', 'min:3', 'max:2000'],
+        ]);
+        $message = trim($validated['message']);
+        abort_if(mb_strlen($message) < 3, 422, 'Please explain what you still need help with.');
+
+        $supportRequest = SupportRequest::query()
+            ->where('id', $id)
+            ->where('user_id', auth()->id())
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        abort_unless($supportRequest->status === 'answered', 409, 'Only resolved tickets can be reopened.');
+
+        // Legacy resolved tickets may store their answer directly on the
+        // support request instead of a response row, so response history is optional.
+        $response = $supportRequest->latestResponse()->first();
+        $oldData = $this->buildAuditSnapshot($supportRequest, $response);
+
+        DB::transaction(function () use ($supportRequest, $message) {
+            $supportRequest->status = 'needs_follow_up';
+            $supportRequest->answered_at = null;
+            $supportRequest->answer_seen_at = now();
+            $supportRequest->reopen_message = $message;
+            $supportRequest->reopen_message_at = now();
+            $supportRequest->save();
+        });
+
+        $fresh = $supportRequest->fresh();
+        $newData = $this->buildAuditSnapshot($fresh, $response?->fresh());
+        app(AuditLogService::class)->record(
+            action: 'citizen_reopen_support_request',
+            page: 'user_inquiries',
+            targetType: 'support_request',
+            targetId: (int) $supportRequest->id,
+            supportRequestId: (int) $supportRequest->id,
+            agencyId: $supportRequest->agency_id ? (int) $supportRequest->agency_id : null,
+            oldValues: $oldData,
+            newValues: $newData,
+            description: 'Citizen reopened resolved Support Request #' . $supportRequest->id,
+        );
+
+        $this->broadcastSupportRequestUpdated($fresh, 'reopened', $response ? (int) $response->id : null);
+
+        return response()->json([
+            'success' => true,
+            'status' => 'needs_follow_up',
+            'message' => 'Your ticket has been reopened. The agency can now follow up.',
+        ]);
+    }
 
     /**
      * =========================================================

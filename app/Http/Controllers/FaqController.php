@@ -119,9 +119,9 @@ public function prepareFromSupport(
     /*
      * Defense-in-depth authorization.
      */
+    $user = auth()->user();
     abort_unless(
-        auth()->check() &&
-        auth()->user()->role === 'superadmin',
+        $user && in_array($user->role, ['superadmin', 'agency_admin'], true),
         403,
         'Unauthorized action.'
     );
@@ -135,6 +135,11 @@ public function prepareFromSupport(
     $support = SupportRequest::query()
         ->with('latestResponse.components')
         ->findOrFail($id);
+
+    // Agency admins can only prepare FAQs from tickets owned by their own agency.
+    if ($user->role === 'agency_admin') {
+        abort_unless($user->agency_id && (int) $support->agency_id === (int) $user->agency_id, 403, 'This ticket does not belong to your agency.');
+    }
 
     if ($support->status !== 'answered') {
         return response()->json([
@@ -160,18 +165,45 @@ public function prepareFromSupport(
          * The authoritative response components come from the
          * completed Support Request itself.
          */
-        $latestResponse = $support->latestResponse;
+        $requestedResponseId = $request->input('response_id');
+        if ($user->role === 'agency_admin') {
+            if ($requestedResponseId !== null && (int) $requestedResponseId > 0) {
+                $latestResponse = $support->responses()
+                    ->with('components')
+                    ->where('status', 'accepted')
+                    ->whereKey((int) $requestedResponseId)
+                    ->first();
+                if (!$latestResponse) {
+                    return response()->json(['success' => false, 'message' => 'The selected response is not an accepted response for this ticket.'], 422);
+                }
+            } else {
+                // Explicit response_id=0 is reserved for legacy tickets with no response records.
+                if (!((string) $requestedResponseId === '0'
+                    && !$support->responses()->exists()
+                    && (filled($support->answer) || filled($support->answer_image)))) {
+                    return response()->json(['success' => false, 'message' => 'Select an official response accepted by the citizen.'], 422);
+                }
+                $latestResponse = null;
+            }
+        } elseif ($requestedResponseId !== null && (int) $requestedResponseId > 0) {
+            $latestResponse = $support->responses()
+                ->with('components')
+                ->where('status', 'accepted')
+                ->whereKey((int) $requestedResponseId)
+                ->first();
+            if (!$latestResponse) {
+                return response()->json(['success' => false, 'message' => 'The selected response is not an accepted response for this ticket.'], 422);
+            }
+        } else {
+            $latestResponse = $support->latestResponse;
+        }
+
         $responseComponents = [];
 
-        $responseAnswer = trim((string) ($support->answer ?? ''));
-
-        if ($responseAnswer === '' && $latestResponse) {
-            $responseAnswer = $latestResponse->components
-                ->where('type', 'text')
-                ->pluck('content')
-                ->filter(fn ($content) => trim((string) $content) !== '')
-                ->implode("\n\n");
-        }
+        // A selected historical response must supply its own answer, not the ticket's latest legacy answer field.
+        $responseAnswer = $latestResponse
+            ? $latestResponse->components->where('type', 'text')->pluck('content')->filter(fn ($content) => trim((string) $content) !== '')->implode("\n\n")
+            : trim((string) ($support->answer ?? ''));
 
         /*
          * A completed Support Request can legitimately contain an
@@ -288,14 +320,17 @@ public function prepareFromSupport(
                         'language' => 'attachment',
                         'content' => '',
                         'label' => $component->label,
-                        'attachment_url' => route(
-                            'admin.support.response-attachment',
-                            [
+                        'attachment_url' => $user->role === 'agency_admin'
+                            ? route('agency-admin.tickets.response-attachment', [
+                                'ticketId' => $support->id,
+                                'responseId' => $latestResponse->id,
+                                'componentId' => $component->id,
+                            ])
+                            : route('admin.support.response-attachment', [
                                 'supportRequestId' => $support->id,
                                 'responseId' => $latestResponse->id,
                                 'componentId' => $component->id,
-                            ]
-                        ),
+                            ]),
                         'source_support_request_id' => $support->id,
                         'source_response_id' => $latestResponse->id,
                         'source_component_id' => $component->id,
@@ -365,6 +400,7 @@ public function prepareFromSupport(
         return response()->json([
             'success' => true,
             'support_request_id' => $support->id,
+            'response_id' => $latestResponse?->id,
             'agency_id' => $support->agency_id,
             'draft' => [
                 'detected_language' => $questionDraft['detected_language'],
@@ -847,6 +883,11 @@ public function store(Request $request)
             'integer',
             'exists:support_requests,id',
         ],
+        'source_response_id' => [
+            'nullable',
+            'integer',
+            'exists:support_request_responses,id',
+        ],
 
         // English is required.
         'question' => [
@@ -919,6 +960,29 @@ public function store(Request $request)
             'max:5120',
         ],
     ]);
+
+    if (!empty($validated['support_request_id'])) {
+        $sourceSupportId = (int) $validated['support_request_id'];
+        $sourceTicket = SupportRequest::query()
+            ->whereKey($sourceSupportId)
+            ->where('agency_id', (int) $validated['agency_id'])
+            ->where('status', 'answered')
+            ->first();
+
+        abort_unless($sourceTicket, 422, 'The source ticket is no longer eligible for FAQ conversion.');
+
+        if (!empty($validated['source_response_id'])) {
+            $sourceResponse = \App\Models\SupportRequestResponse::query()
+                ->whereKey((int) $validated['source_response_id'])
+                ->where('support_request_id', $sourceSupportId)
+                ->where('status', 'accepted')
+                ->first();
+
+            abort_unless($sourceResponse, 422, 'The selected source response is no longer eligible for FAQ conversion.');
+        }
+    } elseif (!empty($validated['source_response_id'])) {
+        abort(422, 'A source response requires its source ticket.');
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -1121,6 +1185,8 @@ elseif ($request->filled('support_request_id')) {
 
 $faq = Faq::create([
     'agency_id'    => $request->agency_id,
+    'source_support_request_id' => $validated['support_request_id'] ?? null,
+    'source_response_id' => $validated['source_response_id'] ?? null,
 
     'question'     => $request->question,
     'answer'       => (string) ($request->input('answer') ?? ''),
@@ -1166,8 +1232,11 @@ $faq->id
 );
     
 
+        // Return to the canonical FAQ index after creation. Redirecting back
+        // can preserve ?convert_support=...&response_id=..., which reopens the
+        // conversion modal and calls the bilingual preparation endpoint again.
         return redirect()
-            ->back()
+            ->route(auth()->user()?->role === 'agency_admin' ? 'agency-admin.faqs' : 'admin.faqs.index')
             ->with('success', 'FAQ created successfully.');
     }
 
@@ -1953,6 +2022,9 @@ public function forceDestroy($id)
                     $source = SupportResponseComponent::query()
                         ->where('id', (int) $component['source_component_id'])
                         ->where('support_request_response_id', (int) $component['source_response_id'])
+                        ->whereHas('response', function ($responseQuery) {
+                            $responseQuery->where('status', 'accepted');
+                        })
                         ->where('type', $type)
                         ->whereHas('response.supportRequest', function ($query) use ($component) {
                             $query->where('id', (int) $component['source_support_request_id'])

@@ -189,7 +189,34 @@ class AppServiceProvider extends ServiceProvider
         View::composer(
             'partials.header',
             function ($view) {
-                if (!auth()->check() || !in_array(auth()->user()->role, ['admin', 'superadmin'], true)) {
+                if (!auth()->check()) {
+                    $view->with([
+                        'adminNotificationSupportCount' => 0,
+                        'adminNotificationSupportRequests' => collect(),
+                        'adminNotificationCollaborationCount' => 0,
+                        'adminNotificationCollaborationTasks' => collect(),
+                    ]);
+                    return;
+                }
+
+                if (auth()->user()->role === 'agency_admin') {
+                    $agencyId = auth()->user()->agency_id;
+                    $agencySupportQuery = SupportRequest::query()
+                        ->where('agency_id', $agencyId)
+                        ->whereIn('status', ['pending', 'needs_follow_up'])
+                        ->with(['user', 'agency'])
+                        ->latest('created_at');
+
+                    $view->with([
+                        'adminNotificationSupportCount' => (clone $agencySupportQuery)->count(),
+                        'adminNotificationSupportRequests' => $agencySupportQuery->limit(5)->get(),
+                        'adminNotificationCollaborationCount' => 0,
+                        'adminNotificationCollaborationTasks' => collect(),
+                    ]);
+                    return;
+                }
+
+                if (!in_array(auth()->user()->role, ['admin', 'superadmin'], true)) {
                     $view->with([
                         'adminNotificationSupportCount' => 0,
                         'adminNotificationSupportRequests' => collect(),

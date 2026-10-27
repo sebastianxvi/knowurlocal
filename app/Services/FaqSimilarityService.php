@@ -16,7 +16,8 @@ class FaqSimilarityService
     public function findSimilar(
         string $question,
         ?int $agencyId = null,
-        int $limit = 5
+        int $limit = 5,
+        bool $sameAgencyOnly = false
     ): array {
         /*
          * Normalize the Support Request question once.
@@ -40,7 +41,7 @@ class FaqSimilarityService
          * Soft-deleted FAQs are automatically excluded because
          * the Faq model uses Laravel's SoftDeletes trait.
          */
-        $faqs = Faq::query()
+        $faqQuery = Faq::query()
             ->select([
                 'id',
                 'agency_id',
@@ -48,8 +49,13 @@ class FaqSimilarityService
                 'question_fil',
                 'keywords',
             ])
-            ->with('agency:id,agency_name')
-            ->get();
+            ->with('agency:id,agency_name');
+
+        if ($sameAgencyOnly && $agencyId !== null) {
+            $faqQuery->where('agency_id', $agencyId);
+        }
+
+        $faqs = $faqQuery->get();
 
         /*
          * Score every FAQ independently.

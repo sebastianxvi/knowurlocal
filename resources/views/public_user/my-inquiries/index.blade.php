@@ -49,7 +49,7 @@
     <!-- My Inquiries styles -->
     <link
         rel="stylesheet"
-        href="{{ asset('cssfiles/public_user/my-inquiries/index.css') }}?v={{ filemtime(public_path('cssfiles/public_user/my-inquiries/index.css')) }}"
+        href="{{ asset('cssfiles/public_user/my-inquiries/index.css') }}?v={{ filemtime(public_path('cssfiles/public_user/my-inquiries/index.css')) }}-mobile-header-chatbot-composer-4"
     >
 
 </head>
@@ -58,11 +58,14 @@
 
 <div class="inquiries-page">
 
-    @include('public_user.my-inquiries.components.header')
-
     @include(
         'public_user.my-inquiries.components.inquiry-list',
         ['requests' => $requests]
+    )
+
+    @include(
+        'public_user.my-inquiries.components.create-ticket-modal',
+        ['agencies' => $agencies]
     )
 
 </div>
@@ -71,6 +74,10 @@
 @include(
     'public_user.my-inquiries.components.image-lightbox'
 )
+
+@include('components.modal')
+<link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
+<script src="{{ asset('jsfiles/components/modal-system.js') }}?v={{ filemtime(public_path('jsfiles/components/modal-system.js')) }}"></script>
 
 
 <!-- Laravel Echo / Reverb -->
@@ -82,7 +89,7 @@
 <!-- Page JavaScript -->
 <script
     type="module"
-    src="{{ asset('jsfiles/public_user/my-inquiries/index.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/index.js')) }}"
+    src="{{ asset('jsfiles/public_user/my-inquiries/index.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/index.js')) }}-mobile-header-chatbot-composer-4"
 ></script>
 
 </body>

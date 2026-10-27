@@ -1,4 +1,43 @@
 <aside class="sidebar" aria-label="Administrator navigation">
+    @if(auth()->check() && auth()->user()->role === 'agency_admin')
+        <div class="sidebar-header">
+            <a href="{{ route('agency-admin.dashboard') }}" class="sidebar-brand" aria-label="KNOWURLOCAL Agency Workspace">
+                <span class="sidebar-brand-mark" aria-hidden="true">K</span>
+                <span class="sidebar-brand-copy">
+                    <strong>KNOWURLOCAL</strong>
+                    <small>Agency workspace</small>
+                </span>
+            </a>
+            <button type="button" class="sidebar-mobile-close" data-admin-shell-close aria-label="Close navigation">
+                <i class="ph-light ph-x" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="sidebar-main">
+            <nav class="admin-nav">
+                <span class="nav-section-label">Workspace</span>
+                <a href="{{ route('agency-admin.dashboard') }}" class="{{ request()->routeIs('agency-admin.dashboard') ? 'active' : '' }}">
+                    <i class="ph-light ph-house"></i><span>Overview</span>
+                </a>
+                <a href="{{ route('agency-admin.tickets') }}" class="{{ request()->routeIs('agency-admin.tickets') ? 'active' : '' }}">
+                    <i class="ph-light ph-chat-circle-dots" aria-hidden="true"></i><span>Support Inbox</span>
+                </a>
+                <a href="{{ route('agency-admin.faqs') }}" class="{{ request()->routeIs('agency-admin.faqs') ? 'active' : '' }}">
+                    <i class="ph-light ph-book-open-text"></i><span>FAQ Management</span>
+                </a>
+                <a href="{{ route('agency-admin.agency') }}" class="{{ request()->routeIs('agency-admin.agency') ? 'active' : '' }}">
+                    <i class="ph-light ph-buildings"></i><span>Agency Profile</span>
+                </a>
+            </nav>
+        </div>
+        <div class="sidebar-footer">
+            <form action="{{ route('logout') }}" method="POST">
+                @csrf
+                <button type="submit" class="logout-btn">
+                    <i class="ph-light ph-sign-out"></i><span>Sign out</span>
+                </button>
+            </form>
+        </div>
+    @else
     <div class="sidebar-header">
         <a href="{{ route('admin.dashboard') }}" class="sidebar-brand" aria-label="KNOWURLOCAL Dashboard">
             <span class="sidebar-brand-mark" aria-hidden="true">K</span>
@@ -52,6 +91,12 @@
                 </a>
             @endif
 
+            @if(auth()->check() && in_array(auth()->user()->role, ['admin','superadmin'], true))
+                <a href="{{ route('admin.agency-admins') }}" class="{{ request()->routeIs('admin.agency-admins') ? 'active' : '' }}">
+                    <i class="ph-light ph-user-gear"></i><span>Agency Admins</span>
+                </a>
+            @endif
+
             @if(auth()->check() && in_array(auth()->user()->role, ['admin','superadmin']))
                 <a href="{{ route('admin.users') }}" class="{{ request()->routeIs('admin.users') ? 'active' : '' }}">
                     <i class="ph-light ph-user"></i><span>Users</span>
@@ -79,4 +124,5 @@
             </button>
         </form>
     </div>
+    @endif
 </aside>

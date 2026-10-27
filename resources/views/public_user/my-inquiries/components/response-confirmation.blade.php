@@ -65,17 +65,25 @@
         ></textarea>
 
         <div class="follow-up-form-actions">
-            <button
-                type="submit"
-                class="confirmation-btn confirmation-btn-primary"
-            >
+                <button
+                    type="button"
+                    class="confirmation-btn confirmation-btn-secondary"
+                    data-cancel-follow-up
+                >
+                    <i class="ph-light ph-arrow-u-up-left" aria-hidden="true"></i>
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    class="confirmation-btn confirmation-btn-primary"
+                >
                 <i
                     class="ph-light ph-paper-plane-tilt"
                     aria-hidden="true"
                 ></i>
 
-                Request follow-up
-            </button>
+                    Request follow-up
+                </button>
         </div>
     </form>
 </section>

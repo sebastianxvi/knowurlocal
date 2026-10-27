@@ -69,6 +69,20 @@ class AuthController extends Controller
                 return back()->withErrors(['email' => 'This email is not invited']);
             }
 
+            if (($invite->role ?: 'admin') === 'agency_admin') {
+                if (!$invite->agency_id || !$invite->agency || $invite->agency->trashed()) {
+                    return back()->withErrors(['email' => 'This invitation is not associated with an available agency.']);
+                }
+
+                if (User::query()
+                    ->where('agency_id', $invite->agency_id)
+                    ->where('role', 'agency_admin')
+                    ->where('status', 'active')
+                    ->exists()) {
+                    return back()->withErrors(['email' => 'This agency already has an active Agency Admin. Please contact the system administrator.']);
+                }
+            }
+
             /**
              * 🔥 CLEAN INSERT (NO updateOrCreate)
              */
@@ -82,7 +96,8 @@ class AuthController extends Controller
                 'otp'           => $otp,
                 'expires_at'    => now()->addMinutes(10),
 
-                'role'          => 'admin',
+                'role'          => $invite->role ?: 'admin',
+                'agency_id'     => $invite->agency_id,
                 'invite_token'  => $request->token,
             ]);
 
@@ -101,7 +116,7 @@ class AuthController extends Controller
     }
 );
 
-            return redirect('/otp?email=' . urlencode($request->email));
+            return redirect()->route('otp.page', ['email' => $request->email]);
         }
 
         /**
@@ -137,7 +152,7 @@ class AuthController extends Controller
     }
 );
 
-        return redirect('/otp?email=' . urlencode($request->email));
+        return redirect()->route('otp.page', ['email' => $request->email]);
     }
 
     /**
@@ -164,9 +179,9 @@ class AuthController extends Controller
          */
         try {
             $user = DB::transaction(function () use ($request) {
-                $record = EmailVerification::where(
-                    'email',
-                    $request->email
+                $record = EmailVerification::whereRaw(
+                    'LOWER(email) = ?',
+                    [$request->email]
                 )->lockForUpdate()->first();
 
                 if (!$record) {
@@ -192,10 +207,40 @@ class AuthController extends Controller
                         $record->invite_token
                     )->lockForUpdate()->first();
 
-                    if (!$invite || !$invite->isValid()) {
+                    if (!$invite || !$invite->isValid()
+                        || strtolower(trim($invite->email)) !== strtolower(trim($record->email))) {
                         $record->delete();
                         throw new \RuntimeException('invite_invalid');
                     }
+
+                    $inviteRole = $invite->role ?: 'admin';
+                    if ($inviteRole === 'agency_admin') {
+                        $agency = \App\Models\Agency::query()
+                            ->whereKey($invite->agency_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if (!$agency || $agency->trashed()) {
+                            $record->delete();
+                            throw new \RuntimeException('invite_invalid');
+                        }
+
+                        if (User::query()
+                            ->where('agency_id', $invite->agency_id)
+                            ->where('role', 'agency_admin')
+                            ->where('status', 'active')
+                            ->exists()) {
+                            $record->delete();
+                            throw new \RuntimeException('agency_admin_exists');
+                        }
+                    }
+                }
+
+                $trustedRole = $record->role ?? 'user';
+                $trustedAgencyId = $record->agency_id;
+                if ($record->invite_token) {
+                    $trustedRole = $invite->role ?: 'admin';
+                    $trustedAgencyId = $invite->agency_id;
                 }
 
                 $user = User::create([
@@ -204,9 +249,10 @@ class AuthController extends Controller
                     'email'      => $record->email,
                     'password'   => $record->password,
                     'email_verified_at' => now(),
-                    'role' => $record->role ?? 'user',
+                    'role' => $trustedRole,
+                    'agency_id' => $trustedRole === 'agency_admin' ? $trustedAgencyId : null,
                     'status' => in_array(
-                        $record->role,
+                        $trustedRole,
                         ['admin', 'superadmin'],
                         true
                     ) ? 'pending' : 'active',
@@ -225,20 +271,28 @@ class AuthController extends Controller
                 return $user;
             });
         } catch (\RuntimeException $exception) {
-            return match ($exception->getMessage()) {
-                'expired' => back()->withErrors([
-                    'otp' => 'OTP expired. Please request a new code.',
-                ]),
-                'incorrect' => back()->withErrors([
-                    'otp' => 'Incorrect OTP',
-                ]),
-                'invite_invalid' => back()->withErrors([
-                    'otp' => 'This invitation is no longer valid. Please contact the administrator who invited you.',
-                ]),
-                default => back()->withErrors([
-                    'otp' => 'Invalid verification request. Please start the registration process again.',
-                ]),
+            // Only map the explicit, expected verification outcomes here.
+            // Database/query/runtime exceptions must not be silently presented
+            // as "invalid verification request", because that hides failures
+            // during User::create() (including role/check-constraint failures).
+            $message = match ($exception->getMessage()) {
+                'expired' => 'OTP expired. Please request a new code.',
+                'incorrect' => 'Incorrect OTP',
+                'invite_invalid' => 'This invitation is no longer valid. Please contact the administrator who invited you.',
+                'agency_admin_exists' => 'This agency already has an active Agency Admin. Please contact the system administrator.',
+                'invalid_request' => 'No pending verification was found for this email. Please restart registration.',
+                default => null,
             };
+
+            if ($message === null) {
+                report($exception);
+
+                return back()->withErrors([
+                    'otp' => 'We could not complete verification because of a server error. Your pending registration has been preserved; please try again later.',
+                ]);
+            }
+
+            return back()->withErrors(['otp' => $message]);
         }
 
         /*
@@ -268,9 +322,11 @@ class AuthController extends Controller
         return redirect('/login-page')
             ->with(
                 'success',
-                $user->role === 'admin' || $user->role === 'superadmin'
+                in_array($user->role, ['admin', 'superadmin'], true)
                     ? 'Your email has been verified successfully. Your admin account is now awaiting approval. You will be able to sign in once an administrator approves your account.'
-                    : 'Your email has been verified. You can now log in to your KNOWURLOCAL account.'
+                    : ($user->role === 'agency_admin'
+                        ? 'Your Agency Admin account is verified and ready. You can now sign in to your agency workspace.'
+                        : 'Your email has been verified. You can now log in to your KNOWURLOCAL account.')
             );
     }
 
@@ -300,9 +356,9 @@ public function resendOtp(Request $request)
      * This record tells us whether this is a public
      * user registration or an administrator registration.
      */
-    $record = EmailVerification::where(
-        'email',
-        $request->email
+    $record = EmailVerification::whereRaw(
+        'LOWER(email) = ?',
+        [$request->email]
     )->first();
 
 
@@ -357,7 +413,7 @@ public function resendOtp(Request $request)
     $isAdmin =
         in_array(
             $record->role,
-            ['admin', 'superadmin'],
+            ['admin', 'superadmin', 'agency_admin'],
             true
         );
 
@@ -1289,6 +1345,10 @@ public function resetPassword(Request $request)
             ),
         ]);
 
+        if (Auth::user()->role === 'agency_admin') {
+            return redirect()->route('agency-admin.dashboard');
+        }
+
         if (in_array(
             Auth::user()->role,
             ['admin', 'superadmin'],
@@ -1312,7 +1372,7 @@ public function resetPassword(Request $request)
         if ($user) {
             UserLog::create([
                 'user_id' => $user->id,
-                'action' => in_array($user->role, ['admin', 'superadmin'], true) ? 'admin_logout' : 'logout',
+                'action' => in_array($user->role, ['admin', 'superadmin', 'agency_admin'], true) ? 'admin_logout' : 'logout',
                 'page' => 'navbar',
                 'ip_address' => $request->ip(),
                 'device' => substr($request->userAgent(), 0, 255),

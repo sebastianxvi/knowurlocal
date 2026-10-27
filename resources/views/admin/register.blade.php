@@ -18,7 +18,7 @@
         content="KNOWURLOCAL administrator account registration"
     >
 
-    <title>KNOWURLOCAL | Admin Registration</title>
+    <title>KNOWURLOCAL | {{ ($role ?? 'admin') === 'agency_admin' ? 'Agency Admin' : 'Admin' }} Registration</title>
 
 
     <!-- =====================================================
@@ -122,8 +122,11 @@
 
             <p>
 
-                Manage local information and help keep
-                KNOWURLOCAL accurate, useful, and up to date.
+                @if(($role ?? 'admin') === 'agency_admin')
+                    Manage your assigned agency's inquiries, public information, and frequently asked questions.
+                @else
+                    Manage local information and help keep KNOWURLOCAL accurate, useful, and up to date.
+                @endif
 
             </p>
 
@@ -144,7 +147,7 @@
                     </span>
 
                     <span>
-                        Manage agencies
+                        {{ ($role ?? 'admin') === 'agency_admin' ? 'Manage your agency profile' : 'Manage agencies' }}
                     </span>
 
                 </li>
@@ -174,7 +177,7 @@
                     </span>
 
                     <span>
-                        Review analytics
+                        {{ ($role ?? 'admin') === 'agency_admin' ? 'Maintain agency FAQs' : 'Review analytics' }}
                     </span>
 
                 </li>
@@ -230,6 +233,11 @@
 
             <div class="form">
 
+                @if($errors->any())
+                    <div role="alert" style="margin:0 0 16px;padding:12px 14px;border:1px solid #fecaca;border-radius:12px;background:#fef2f2;color:#991b1b;font-size:13px;">
+                        {{ $errors->first() }}
+                    </div>
+                @endif
 
                 <!-- =================================================
                      FORM HEADER
@@ -238,15 +246,19 @@
                 <div class="form-heading">
 
                     <span class="form-eyebrow">
-                        ADMIN ACCESS
+                        {{ ($role ?? 'admin') === 'agency_admin' ? 'AGENCY ADMIN ACCESS' : 'ADMIN ACCESS' }}
                     </span>
 
                     <h2>
-                        Create your account
+                        Create your {{ ($role ?? 'admin') === 'agency_admin' ? 'agency account' : 'account' }}
                     </h2>
 
                     <p class="subtitle">
-                        Complete your account details to continue.
+                        @if(($role ?? 'admin') === 'agency_admin' && $agency)
+                            You're invited to manage {{ $agency->agency_name }}. Complete your account details to continue.
+                        @else
+                            Complete your account details to continue.
+                        @endif
                     </p>
 
                 </div>
@@ -461,7 +473,7 @@
                     id="adminRegistrationSubmit"
                 >
 
-                    Create Admin Account
+                    {{ ($role ?? 'admin') === 'agency_admin' ? 'Create Agency Account' : 'Create Admin Account' }}
 
                 </button>
 

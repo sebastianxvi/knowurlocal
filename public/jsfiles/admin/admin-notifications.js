@@ -317,6 +317,12 @@
     const subscribe = () => {
         if (subscriptionsStarted) return;
 
+        // Agency Admins do not subscribe to the legacy global admin channel:
+        // it is not agency-scoped and must never expose cross-agency events.
+        // Their server-rendered notification list remains safely scoped until
+        // agency-private realtime channels are introduced.
+        if (document.body.dataset.adminRole === 'agency_admin') return;
+
         const echo = window.Echo;
         const adminId = document.body.dataset.adminUserId;
         if (!echo || !adminId) return;

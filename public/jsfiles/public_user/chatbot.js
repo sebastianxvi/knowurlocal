@@ -883,36 +883,21 @@ async function submitTicket(question = "", sourceButton = null) {
         return;
     }
 
-    ticketSubmissionInProgress = true;
-    setTicketButtonsLoading(true);
-
+    // Keep the draft out of the URL because it may contain personal information.
+    // My Inquiries consumes this one-time draft and asks the user to choose an agency.
     try {
-        const data = await sendToHuman(resolvedQuestion);
-
-        if (data?.success) {
-            addMessage(
-                data.message || "Your question has been sent to a human assistant.",
-                "bot"
-            );
-
-            if (input) {
-                input.value = "";
-                resizeMessageInput();
-            }
-        } else {
-            addMessage(
-                data?.message || "We couldn't send your ticket. Please try again.",
-                "bot"
-            );
-        }
+        sessionStorage.setItem("knowurlocal:new-ticket-draft", JSON.stringify({
+            question: resolvedQuestion.slice(0, 500),
+            agencyId: agencyId ? String(agencyId) : "",
+            createdAt: Date.now()
+        }));
     } catch (error) {
-        console.error("Ticket submission failed:", error);
-        addMessage("We couldn't send your ticket. Please try again.", "bot");
-    } finally {
-        ticketSubmissionInProgress = false;
-        setTicketButtonsLoading(false);
-        sourceButton?.focus?.();
+        console.error("Unable to preserve ticket draft in this browser session.", error);
+        addMessage("We couldn't prepare the ticket form. Please allow session storage and try again.", "bot");
+        return;
     }
+
+    window.location.assign("/my-inquiries?create_ticket=1");
 }
 
 

@@ -1,165 +1,36 @@
-<section class="inquiries-toolbar" aria-label="Inquiry filters">
-
-    <div class="inquiries-search-row">
-
-        <div class="inquiries-search" role="search">
-
-            <i
-                class="ph-light ph-magnifying-glass"
-                aria-hidden="true"
-            ></i>
-
-            <label
-                for="inquiry-search"
-                class="sr-only"
-            >
-                Search your inquiries
-            </label>
-
-            <input
-                id="inquiry-search"
-                type="search"
-                data-inquiry-search
-                placeholder="Search questions, agencies, or #number"
-                autocomplete="off"
-                spellcheck="false"
-            >
-
-            <button
-                type="button"
-                class="inquiries-search-clear"
-                data-clear-inquiry-search
-                aria-label="Clear inquiry search"
-                hidden
-            >
-                <i class="ph-light ph-x" aria-hidden="true"></i>
+<section class="inquiries-section messenger-inquiries" aria-label="Your agency conversations">
+    <aside class="messenger-sidebar" aria-label="Ticket conversations">
+        <div class="messenger-sidebar-topbar">
+            <button type="button" onclick="history.back()" class="messenger-back-button" aria-label="Back to map">
+                <i class="ph-light ph-arrow-left" aria-hidden="true"></i>
+                <span>Back to map</span>
             </button>
-
         </div>
-
-    </div>
-
-
-    <div class="inquiries-filter-picker" data-inquiry-filter-picker>
-
-        <button
-            type="button"
-            class="inquiries-filter-trigger"
-            data-inquiry-filter-trigger
-            aria-expanded="false"
-            aria-controls="inquiry-filter-drawer"
-        >
-            <span class="inquiries-filter-trigger-leading">
-                <i class="ph-light ph-funnel" aria-hidden="true"></i>
-                <span>Filter inquiries</span>
-            </span>
-            <span class="inquiries-filter-trigger-selection">
-                <span data-inquiry-filter-label>Needs Attention</span>
-                <strong data-inquiry-filter-trigger-count>0</strong>
-                <span
-                    class="inquiries-filter-unread-badge inquiries-filter-trigger-unread"
-                    data-filter-unread-count
-                    data-filter="needs_attention"
-                    data-filter-unread-initial="{{ $unreadNeedsAttentionCount ?? 0 }}"
-                    @if(($unreadNeedsAttentionCount ?? 0) <= 0) hidden @endif
-                    aria-label="{{ ($unreadNeedsAttentionCount ?? 0) }} new {{ ($unreadNeedsAttentionCount ?? 0) === 1 ? 'response' : 'responses' }} needing attention"
-                >{{ ($unreadNeedsAttentionCount ?? 0) > 99 ? '99+' : ($unreadNeedsAttentionCount ?? 0) }}</span>
-                <i class="ph-light ph-caret-down" aria-hidden="true"></i>
-            </span>
-        </button>
-
-        <div
-            id="inquiry-filter-drawer"
-            class="inquiries-filter-drawer"
-            data-inquiry-filter-drawer
-            hidden
-        >
-<div
-                class="inquiries-filter-tabs"
-                role="group"
-                aria-label="Filter inquiries"
-            >
-
-                <button
-                    type="button"
-                    class="inquiries-filter-tab active"
-                    data-filter="needs_attention"
-                    aria-pressed="true"
-                >
-                    <i class="ph-light ph-warning-circle" aria-hidden="true"></i>
-                    <span>Needs Attention</span>
-                    <strong data-filter-count>0</strong>
-                    <span
-                        class="inquiries-filter-unread-badge"
-                        data-filter-unread-count
-                        data-filter="needs_attention"
-                        data-filter-unread-initial="{{ $unreadNeedsAttentionCount ?? 0 }}"
-                        @if(($unreadNeedsAttentionCount ?? 0) <= 0) hidden @endif
-                        aria-label="{{ ($unreadNeedsAttentionCount ?? 0) }} new {{ ($unreadNeedsAttentionCount ?? 0) === 1 ? 'response' : 'responses' }} needing attention"
-                    >{{ ($unreadNeedsAttentionCount ?? 0) > 99 ? '99+' : ($unreadNeedsAttentionCount ?? 0) }}</span>
+        <div class="messenger-sidebar-heading">
+            <div>
+                <span class="inquiries-section-eyebrow">Your conversations</span>
+                <h2>User Tickets</h2>
+            </div>
+            <div class="messenger-sidebar-heading-actions">
+                <span class="messenger-chat-count" data-inquiry-result-meta>{{ $requests->count() }}</span>
+                <button type="button" class="messenger-new-ticket-button" data-ticket-modal-open
+                    aria-label="Create a new ticket" title="Create a new ticket">
+                    <i class="ph-light ph-plus" aria-hidden="true"></i>
                 </button>
-
-                <button type="button" class="inquiries-filter-tab" data-filter="pending" aria-pressed="false">
-                    <i class="ph-light ph-clock" aria-hidden="true"></i>
-                    <span>Pending</span>
-                    <strong data-filter-count>0</strong>
-                </button>
-
-                <button type="button" class="inquiries-filter-tab" data-filter="follow_up" aria-pressed="false">
-                    <i class="ph-light ph-arrow-counter-clockwise" aria-hidden="true"></i>
-                    <span>Follow-up</span>
-                    <strong data-filter-count>0</strong>
-                </button>
-
-                <button type="button" class="inquiries-filter-tab" data-filter="answered" aria-pressed="false">
-                    <i class="ph-light ph-check-circle" aria-hidden="true"></i>
-                    <span>Answered</span>
-                    <strong data-filter-count>0</strong>
-                </button>
-
-                <button type="button" class="inquiries-filter-tab" data-filter="trashed" aria-pressed="false">
-                    <i class="ph-light ph-trash" aria-hidden="true"></i>
-                    <span>Trashed</span>
-                    <strong data-filter-count>0</strong>
-                    <span
-                        class="inquiries-filter-unread-badge"
-                        data-filter-unread-count
-                        data-filter="trashed"
-                        data-filter-unread-initial="{{ $unreadTrashCount ?? 0 }}"
-                        @if(($unreadTrashCount ?? 0) <= 0) hidden @endif
-                        aria-label="{{ ($unreadTrashCount ?? 0) }} new trashed {{ ($unreadTrashCount ?? 0) === 1 ? 'inquiry' : 'inquiries' }}"
-                    >{{ ($unreadTrashCount ?? 0) > 99 ? '99+' : ($unreadTrashCount ?? 0) }}</span>
-                </button>
-
             </div>
         </div>
-    </div>
-
-</section>
-
-<section class="inquiries-section" aria-labelledby="inquiries-section-title">
-
-    <div class="inquiries-section-heading">
-
-        <div>
-            <span class="inquiries-section-eyebrow">All submissions</span>
-
-            <h2 id="inquiries-section-title">
-                Your inquiries
-            </h2>
+        <div class="messenger-sidebar-search inquiries-search" role="search">
+            <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
+            <label for="inquiry-search" class="sr-only">Search agencies and tickets</label>
+            <input id="inquiry-search" type="search" data-inquiry-search
+                placeholder="Search agencies or tickets..." autocomplete="off" spellcheck="false">
+            <button type="button" class="inquiries-search-clear" data-clear-inquiry-search
+                aria-label="Clear search" hidden>
+                <i class="ph-light ph-x" aria-hidden="true"></i>
+            </button>
         </div>
+        <div class="messenger-chat-list" data-messenger-chat-list>
 
-        <div
-            class="inquiries-section-meta"
-            data-inquiry-result-meta
-            aria-live="polite"
-        >
-            {{ $requests->count() }} {{ Str::plural('inquiry', $requests->count()) }}
-        </div>
-
-    </div>
-
-    <main class="inquiries-list">
 
         @forelse($requests as $req)
 
@@ -176,6 +47,14 @@
 
         @endforelse
 
-    </main>
-
+        </div>
+    </aside>
+    <section class="messenger-conversation" aria-label="Selected ticket conversation" data-messenger-conversation>
+        <div class="messenger-welcome" data-messenger-welcome>
+            <div class="messenger-welcome-icon"><i class="ph-light ph-chat-circle-dots" aria-hidden="true"></i></div>
+            <h2>Your conversations</h2>
+            <p>Select an agency on the left to view your ticket and official responses.</p>
+        </div>
+        <div class="messenger-conversation-content" data-messenger-conversation-content hidden></div>
+    </section>
 </section>

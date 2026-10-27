@@ -21,12 +21,19 @@ class SupportRequest extends Model
         'answer_seen_at',
         'trash_reason',
         'trash_seen_at',
+        'user_deleted_at',
+        'agency_seen_at',
+        'reopen_message',
+        'reopen_message_at',
     ];
 
     protected $casts = [
         'answered_at' => 'datetime',
         'answer_seen_at' => 'datetime',
         'trash_seen_at' => 'datetime',
+        'user_deleted_at' => 'datetime',
+        'agency_seen_at' => 'datetime',
+        'reopen_message_at' => 'datetime',
     ];
 
     /*

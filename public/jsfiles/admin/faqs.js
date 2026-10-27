@@ -652,6 +652,8 @@ buildSearchableAgencyOptions();
  */
 const supportRequestIdInput =
     document.getElementById("support_request_id");
+const sourceResponseIdInput =
+    document.getElementById("source_response_id");
 
     
 
@@ -1168,10 +1170,10 @@ const supportRequestIdInput =
  * Laravel can securely validate source response attachments.
  */
 if (supportRequestIdInput) {
-
-    supportRequestIdInput.value =
-        result.support_request_id || "";
-
+    supportRequestIdInput.value = result.support_request_id || "";
+}
+if (sourceResponseIdInput) {
+    sourceResponseIdInput.value = result.response_id || "";
 }
 
 
@@ -1870,6 +1872,7 @@ resetTextareaHeights();
 
         supportRequestIdInput.value =
             "";
+        if (sourceResponseIdInput) sourceResponseIdInput.value = "";
 
     }
 
@@ -2077,10 +2080,10 @@ resetTextareaHeights();
      * before the preparation request finishes.
      */
     if (supportRequestIdInput) {
-
-        supportRequestIdInput.value =
-            data.id || "";
-
+        supportRequestIdInput.value = data.id || "";
+    }
+    if (sourceResponseIdInput) {
+        sourceResponseIdInput.value = "";
     }
 
 

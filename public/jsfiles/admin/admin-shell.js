@@ -1,17 +1,18 @@
 /*
  * KNOWURLOCAL admin shell controller.
- * The header notification center owns support/collaboration alerts;
- * this file is responsible only for navigation drawer behavior.
+ * Handles the mobile navigation drawer for every protected admin workspace.
  */
 (function () {
     'use strict';
 
     const body = document.body;
-    const toggle = document.querySelector('[data-admin-shell-toggle]');
-    const closeButton = document.querySelector('[data-admin-shell-close]');
-    const sidebar = document.querySelector('.sidebar');
+    const toggleSelector = '[data-admin-shell-toggle]';
+    const closeSelector = '[data-admin-shell-close]';
+    const sidebarSelector = '.sidebar';
 
     const setDrawerOpen = (open) => {
+        const sidebar = document.querySelector(sidebarSelector);
+        const toggle = document.querySelector(toggleSelector);
         if (!sidebar) return;
 
         body.classList.toggle('admin-drawer-open', open);
@@ -19,11 +20,7 @@
 
         if (toggle) {
             toggle.setAttribute('aria-expanded', String(open));
-            toggle.setAttribute(
-                'aria-label',
-                open ? 'Close navigation' : 'Open navigation'
-            );
-
+            toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
             const icon = toggle.querySelector('i');
             if (icon) {
                 icon.classList.toggle('ph-list', !open);
@@ -32,29 +29,33 @@
         }
     };
 
-    const toggleDrawer = () => {
-        setDrawerOpen(!body.classList.contains('admin-drawer-open'));
-    };
-
-    if (toggle) toggle.addEventListener('click', toggleDrawer);
-    if (closeButton) closeButton.addEventListener('click', () => setDrawerOpen(false));
-
+    // Delegate clicks so the drawer remains functional if a layout fragment
+    // is replaced or initialized after this script is evaluated.
     document.addEventListener('click', (event) => {
-        if (event.target.closest('[data-admin-shell-close]')) {
+        const toggle = event.target.closest(toggleSelector);
+        if (toggle) {
+            event.preventDefault();
+            setDrawerOpen(!body.classList.contains('admin-drawer-open'));
+            return;
+        }
+
+        if (event.target.closest(closeSelector)) {
             setDrawerOpen(false);
             return;
         }
 
-        const link = event.target.closest('.sidebar a');
-        if (link) setDrawerOpen(false);
+        if (event.target.closest('.sidebar a')) {
+            setDrawerOpen(false);
+        }
     });
 
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && body.classList.contains('admin-drawer-open')) {
             setDrawerOpen(false);
-            toggle?.focus();
+            document.querySelector(toggleSelector)?.focus();
         }
     });
 
+    // Establish a predictable closed state on each page load.
     setDrawerOpen(false);
 })();

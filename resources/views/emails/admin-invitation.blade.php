@@ -14,7 +14,7 @@
         content="IE=edge"
     >
 
-    <title>KNOWURLOCAL Admin Invitation</title>
+    <title>KNOWURLOCAL {{ $roleLabel ?? "Admin" }} Invitation</title>
 </head>
 
 <body
@@ -112,7 +112,7 @@
                                 color: rgba(255,255,255,0.82);
                             "
                         >
-                            ADMINISTRATION PORTAL
+                            {{ strtoupper($roleLabel ?? 'ADMINISTRATION PORTAL') }}
                         </div>
 
                     </td>
@@ -144,7 +144,7 @@
                                 text-transform: uppercase;
                             "
                         >
-                            Administrator Invitation
+                            {{ ($roleLabel ?? 'System Administrator') }} Invitation
                         </div>
 
 
@@ -173,8 +173,11 @@
                                 color: #4b5563;
                             "
                         >
-                            You've been invited to create an administrator
-                            account for the KNOWURLOCAL administration portal.
+                            @if(!empty($agencyName))
+                                You've been invited to manage {{ $agencyName }} on KNOWURLOCAL. Your access will be limited to that agency.
+                            @else
+                                You've been invited to create an administrator account for the KNOWURLOCAL administration portal.
+                            @endif
                         </p>
 
 
@@ -213,7 +216,7 @@
                                             color: #1f2937;
                                         "
                                     >
-                                        As an administrator, you can help:
+                                        As a {{ strtolower($roleLabel ?? 'system administrator') }}, you can help:
                                     </div>
 
 

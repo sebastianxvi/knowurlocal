@@ -99,19 +99,16 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])
 */
 
 Route::get('/otp', function (Request $request) {
+    $email = strtolower(trim((string) $request->query('email', '')));
 
-    $availableAt = $request->session()->get(
-        'otp_resend_available_at'
-    );
-
+    $availableAt = $request->session()->get('otp_resend_available_at');
     $resendRemaining = $availableAt
         ? max(0, $availableAt - now()->timestamp)
         : 0;
 
-    return view('otp', compact(
-        'resendRemaining'
-    ));
-
+    // Keep the canonical email from the registration redirect available to
+    // the OTP form. Do not infer the recipient from client-side state.
+    return view('otp', compact('resendRemaining', 'email'));
 })->name('otp.page');
 
 // Keep the anonymous OTP session alive while the verification page is open.
@@ -190,6 +187,20 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     ->middleware('throttle:30,1')
     ->name('user.inquiries.follow-up');
 
+    Route::post(
+        '/my-inquiries/{id}/reopen',
+        [SupportRequestController::class, 'reopenSatisfiedTicket']
+    )
+    ->middleware('throttle:20,1')
+    ->name('user.inquiries.reopen');
+
+    Route::delete(
+        '/my-inquiries/{id}',
+        [SupportRequestController::class, 'deleteOwnInquiry']
+    )
+    ->middleware('throttle:10,1')
+    ->name('user.inquiries.delete');
+
     Route::get(
         '/my-inquiries/notification-count',
         [SupportRequestController::class, 'notificationCount']
@@ -210,6 +221,13 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     )
     ->middleware('throttle:60,1')
     ->name('user.inquiries.show');
+
+    Route::patch(
+        '/my-inquiries/{id}/question',
+        [SupportRequestController::class, 'updatePendingQuestion']
+    )
+    ->middleware('throttle:10,1')
+    ->name('user.inquiries.question.update');
 
 
 
@@ -348,6 +366,13 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::delete('/agencies/{agency}', [AgencyController::class, 'destroy'])
         ->name('admin.agencies.destroy');
 
+    // Agency Admin onboarding is available to central System Admins and Superadmins.
+    Route::get('/agency-admins', [AdminInviteController::class, 'agencyAdmins'])
+        ->name('admin.agency-admins');
+    Route::post('/agency-admins/invite', [AdminInviteController::class, 'sendAgencyInvite'])
+        ->middleware('throttle:admin-invite')
+        ->name('admin.agency-admins.invite');
+
 
     // ================= CATEGORY MANAGEMENT =================
     Route::get('/categories', [CategoryController::class, 'index'])
@@ -388,6 +413,9 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
 
     Route::post('/support-requests/reply', [SupportRequestController::class, 'reply'])
         ->name('admin.support.reply');
+
+    Route::post('/support-requests/inbox-reply', [SupportRequestController::class, 'inboxReply'])
+        ->middleware('throttle:30,1')->name('admin.support.inbox-reply');
 
     Route::post(
         '/support-requests/forward-response',
@@ -604,3 +632,57 @@ Route::delete(
 
 });
 });
+
+/*
+|--------------------------------------------------------------------------
+| AGENCY ADMIN WORKSPACE
+|--------------------------------------------------------------------------
+|
+| Agency Admins have a separate route namespace and cannot enter the
+| general administrator routes. Every page derives its agency from the
+| authenticated account; no agency ID is accepted from the URL.
+*/
+Route::prefix('agency-admin')
+    ->middleware(['auth', 'agency-admin.only', 'no.cache'])
+    ->name('agency-admin.')
+    ->group(function () {
+        Route::get('/', [\App\Http\Controllers\AgencyAdminController::class, 'dashboard'])
+            ->name('dashboard');
+        Route::get('/tickets', [\App\Http\Controllers\AgencyAdminController::class, 'tickets'])
+            ->name('tickets');
+        Route::post('/tickets/{ticketId}/trash', [\App\Http\Controllers\AgencyAdminController::class, 'trashTicket'])
+            ->whereNumber('ticketId')->middleware('throttle:20,1')->name('tickets.trash');
+        Route::patch('/tickets/{ticketId}/restore', [\App\Http\Controllers\AgencyAdminController::class, 'restoreTicket'])
+            ->whereNumber('ticketId')->middleware('throttle:20,1')->name('tickets.restore');
+        Route::delete('/tickets/{ticketId}/permanent', [\App\Http\Controllers\AgencyAdminController::class, 'permanentlyDeleteTicket'])
+            ->whereNumber('ticketId')->middleware('throttle:10,1')->name('tickets.force-delete');
+        Route::post('/tickets/respond', [\App\Http\Controllers\AgencyAdminController::class, 'respondToTicket'])
+            ->middleware('throttle:30,1')->name('tickets.respond');
+        Route::get('/tickets/{ticketId}/similar-faqs', [\App\Http\Controllers\AgencyAdminController::class, 'similarFaqsForTicket'])
+            ->whereNumber('ticketId')->middleware('throttle:20,1')->name('tickets.similar-faqs');
+        Route::post('/faqs/prepare-from-support/{id}', [FaqController::class, 'prepareFromSupport'])
+            ->whereNumber('id')->middleware('throttle:8,1')->name('faqs.prepareFromSupport');
+        Route::get('/tickets/{ticketId}/responses/{responseId}/components/{componentId}/attachment', [\App\Http\Controllers\AgencyAdminController::class, 'responseAttachment'])
+            ->whereNumber(['ticketId', 'responseId', 'componentId'])->name('tickets.response-attachment');
+        // FAQ management mirrors the system-admin editor, but every operation
+        // is scoped to the authenticated agency by AgencyAdminController.
+        Route::get('/faqs', [\App\Http\Controllers\AgencyAdminController::class, 'faqs'])
+            ->name('faqs');
+        Route::post('/faqs', [\App\Http\Controllers\AgencyAdminController::class, 'storeFaq'])
+            ->middleware('throttle:30,1')->name('faqs.store');
+        Route::put('/faqs/{faq}', [\App\Http\Controllers\AgencyAdminController::class, 'updateFaq'])
+            ->whereNumber('faq')->middleware('throttle:30,1')->name('faqs.update');
+        Route::delete('/faqs/{faq}', [\App\Http\Controllers\AgencyAdminController::class, 'destroyFaq'])
+            ->whereNumber('faq')->middleware('throttle:30,1')->name('faqs.destroy');
+        Route::post('/faqs/translate', [FaqController::class, 'translate'])
+            ->middleware('throttle:8,1')->name('faqs.translate');
+        Route::get('/faqs/{faq}/feedback', [\App\Http\Controllers\AgencyAdminController::class, 'faqFeedback'])
+            ->whereNumber('faq')->name('faqs.feedback');
+        Route::get('/faqs/{faqId}/response-attachments/{componentIndex}', [\App\Http\Controllers\AgencyAdminController::class, 'faqResponseAttachment'])
+            ->whereNumber(['faqId', 'componentIndex'])->name('faqs.response-attachment');
+        Route::get('/agency', [\App\Http\Controllers\AgencyAdminController::class, 'editAgency'])
+            ->name('agency');
+        Route::put('/agency', [\App\Http\Controllers\AgencyAdminController::class, 'updateAgency'])
+            ->middleware('throttle:30,1')
+            ->name('agency.update');
+    });

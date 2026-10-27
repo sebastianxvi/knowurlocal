@@ -2888,8 +2888,9 @@ document.addEventListener("DOMContentLoaded", function () {
             /*
              * Add route.
              */
-            form.action =
-                "/admin/agencies";
+            form.action = window.agencyAdminProfileMode
+                ? (window.agencyAdminProfileUpdateUrl || "/agency-admin/agency")
+                : "/admin/agencies";
 
 
             const methodInput =
@@ -2979,8 +2980,9 @@ document.addEventListener("DOMContentLoaded", function () {
             data
         ) {
 
-            form.action =
-                `/admin/agencies/${data.id}`;
+            form.action = window.agencyAdminProfileMode
+                ? (window.agencyAdminProfileUpdateUrl || "/agency-admin/agency")
+                : `/admin/agencies/${data.id}`;
 
 
             const methodInput =
@@ -4286,6 +4288,12 @@ document.addEventListener("DOMContentLoaded", function () {
         window.__FLASH_SUCCESS__ =
             null;
 
+    }
+
+    // Reopen the profile editor after validation redirects so submitted values
+    // remain editable instead of forcing the agency admin to re-enter them.
+    if (window.agencyAdminProfileMode && window.agencyAdminProfileOpenOnLoad && window.agencyProfileData) {
+        openModal("edit", window.agencyProfileData);
     }
 
 });

@@ -30,9 +30,15 @@ class SupportRequestCreated implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('admin.support-requests'),
-        ];
+        $channels = [new PrivateChannel('admin.support-requests')];
+
+        // Route new tickets to the assigned agency inbox as well as the
+        // system-admin inbox. Unassigned tickets remain system-admin-only.
+        if ($this->agencyId !== null) {
+            $channels[] = new PrivateChannel('agency.' . (int) $this->agencyId . '.support-requests');
+        }
+
+        return $channels;
     }
 
     /**

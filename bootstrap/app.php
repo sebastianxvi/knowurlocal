@@ -71,6 +71,7 @@ return Application::configure(
             |--------------------------------------------------------------------------
             */
             'admin.only' => \App\Http\Middleware\AdminOnly::class,
+            'agency-admin.only' => \App\Http\Middleware\AgencyAdminOnly::class,
 
             /*
             |--------------------------------------------------------------------------

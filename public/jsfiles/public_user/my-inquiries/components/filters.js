@@ -173,6 +173,9 @@ function initializeFilters() {
     };
 
     const matchesFilter = (card, filter) => {
+        // The Messenger inbox intentionally shows every inquiry status together.
+        // Search remains active, but status is no longer a page-level filter.
+        if (filterButtons.length === 0 || !filter) return true;
         return getFilterForStatus(card.dataset.status) === filter;
     };
 
@@ -259,9 +262,13 @@ function initializeFilters() {
             },
         };
 
-        const state =
-            states[filter] ||
-            states.needs_attention;
+        const state = filter
+            ? (states[filter] || states.needs_attention)
+            : {
+                icon: "ph-chat-circle-dots",
+                heading: "No conversations yet",
+                message: "When you submit a ticket to an agency, it will appear here.",
+            };
 
         if (emptyIcon) {
             const icon = document.createElement("i");
@@ -318,7 +325,7 @@ function initializeFilters() {
         visibleCards,
         totalCards
     ) => {
-        if (!resultMeta) {
+        if (!resultMeta || filterButtons.length === 0) {
             return;
         }
 
@@ -396,13 +403,9 @@ function initializeFilters() {
     };
 
     const getCurrentFilter = () => {
-        return (
-            filterButtons.find(
-                (button) =>
-                    button.classList.contains("active")
-            )?.dataset.filter ||
-            "needs_attention"
-        );
+        return filterButtons.find(
+            (button) => button.classList.contains("active")
+        )?.dataset.filter || "";
     };
 
     filterButtons.forEach((button) => {
@@ -475,7 +478,7 @@ function initializeFilters() {
     );
 
     const initialCards = getInquiryCards();
-    const initialFilter = "needs_attention";
+    const initialFilter = filterButtons.length ? "needs_attention" : "";
 
     filterButtons.forEach((button) => {
         const isActive =

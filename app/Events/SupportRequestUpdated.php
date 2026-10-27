@@ -26,6 +26,18 @@ class SupportRequestUpdated implements ShouldBroadcastNow
             new PrivateChannel('admin.support-requests'),
         ];
 
+        // Agency inboxes receive the same authoritative ticket-change event,
+        // but only on the private channel for the ticket's assigned agency.
+        $agencyId = SupportRequest::withTrashed()
+            ->whereKey($this->id)
+            ->value('agency_id');
+
+        if ($agencyId !== null) {
+            $channels[] = new PrivateChannel(
+                'agency.' . (int) $agencyId . '.support-requests'
+            );
+        }
+
         /*
          * Citizen-side status changes use the same authoritative
          * event as the admin workspace. The user channel is private,

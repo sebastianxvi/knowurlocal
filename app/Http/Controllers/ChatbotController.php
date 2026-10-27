@@ -380,6 +380,7 @@ class ChatbotController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Your question has been sent to a human assistant.',
+            'support_request_id' => (int) $supportRequest->id,
         ], 201);
     }
 

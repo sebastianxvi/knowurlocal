@@ -97,10 +97,43 @@ function showClientMessage(
     }
 
     /*
-     * Fallback for environments where the shared modal
-     * infrastructure isn't available.
+     * Fallback: render a small accessible in-app dialog instead of a
+     * browser-native alert. The shared modal remains the preferred path.
      */
-    window.alert(text);
+    let fallback = document.getElementById("similar-faq-message-fallback");
+    if (!fallback) {
+        fallback = document.createElement("div");
+        fallback.id = "similar-faq-message-fallback";
+        fallback.className = "similar-faq-message-backdrop";
+        fallback.innerHTML = `
+            <section class="similar-faq-message-dialog" role="alertdialog"
+                aria-modal="true" aria-labelledby="similar-faq-message-title"
+                aria-describedby="similar-faq-message-text" tabindex="-1">
+                <div class="similar-faq-message-eyebrow">KNOWURLOCAL · KNOWLEDGE BASE</div>
+                <h2 id="similar-faq-message-title"></h2>
+                <p id="similar-faq-message-text"></p>
+                <footer><button type="button" class="similar-faq-message-ok">Got it</button></footer>
+            </section>`;
+        const style = document.createElement("style");
+        style.textContent = `
+            .similar-faq-message-backdrop{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.58);backdrop-filter:blur(4px)}
+            .similar-faq-message-dialog{width:min(100%,440px);background:#fff;color:#172033;border:1px solid #e2e8f0;border-radius:18px;padding:24px;box-shadow:0 24px 70px rgba(15,23,42,.28);font:inherit}
+            .similar-faq-message-eyebrow{font-size:10px;font-weight:700;letter-spacing:.12em;color:#64748b;margin-bottom:10px}
+            .similar-faq-message-dialog h2{font-size:19px;line-height:1.3;margin:0 0 10px;font-weight:700}
+            .similar-faq-message-dialog p{font-size:14px;line-height:1.6;color:#475569;white-space:pre-line;margin:0 0 22px;overflow-wrap:anywhere}
+            .similar-faq-message-dialog footer{display:flex;justify-content:flex-end}
+            .similar-faq-message-ok{border:0;border-radius:10px;padding:10px 18px;background:#285cf4;color:#fff;font-weight:600;cursor:pointer}
+            .similar-faq-message-ok:focus-visible{outline:3px solid #93c5fd;outline-offset:3px}`;
+        document.head.appendChild(style);
+        document.body.appendChild(fallback);
+        fallback.querySelector(".similar-faq-message-ok").addEventListener("click", () => fallback.remove());
+        fallback.addEventListener("click", event => { if (event.target === fallback) fallback.remove(); });
+        fallback.addEventListener("keydown", event => { if (event.key === "Escape") fallback.remove(); });
+    }
+    fallback.querySelector("#similar-faq-message-title").textContent = title || "Notice";
+    fallback.querySelector("#similar-faq-message-text").textContent = text || "";
+    fallback.hidden = false;
+    fallback.querySelector(".similar-faq-message-dialog").focus();
 }
 
 
