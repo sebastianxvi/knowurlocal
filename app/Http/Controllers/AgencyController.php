@@ -338,7 +338,9 @@ public function getAll()
         $agency->setAttribute(
             'agency_image_url',
             $agency->agency_image
-                ? Storage::disk('public')->url($agency->agency_image)
+                ? (Storage::disk('agency_local')->exists($agency->agency_image)
+                    ? Storage::disk('agency_local')->url($agency->agency_image)
+                    : Storage::disk('public')->url($agency->agency_image))
                 : null
         );
     });
@@ -714,7 +716,7 @@ public function getAll()
 
         $uploadedImage = $request
             ->file('agency_image')
-            ->store('agencies', 'public');
+            ->store('agencies', 'agency_local');
 
         $agencyData['agency_image'] = $uploadedImage;
     }
@@ -784,8 +786,7 @@ public function getAll()
          */
         if ($uploadedImage) {
 
-            Storage::disk('public')
-                ->delete($uploadedImage);
+            Storage::disk('agency_local')->delete($uploadedImage);
         }
 
         /*
@@ -1231,7 +1232,7 @@ public function getAll()
 
         $newImage = $request
             ->file('agency_image')
-            ->store('agencies', 'public');
+            ->store('agencies', 'agency_local');
 
         $agencyData['agency_image'] = $newImage;
     }
@@ -1347,8 +1348,7 @@ public function getAll()
          */
         if ($newImage) {
 
-            Storage::disk('public')
-                ->delete($newImage);
+            Storage::disk('agency_local')->delete($newImage);
         }
 
         throw $e;
@@ -1519,8 +1519,11 @@ public function getAll()
         $oldImage !== $agency->agency_image
     ) {
 
-        Storage::disk('public')
-            ->delete($oldImage);
+        if (Storage::disk('agency_local')->exists($oldImage)) {
+            Storage::disk('agency_local')->delete($oldImage);
+        } else {
+            Storage::disk('public')->delete($oldImage);
+        }
     }
 
 
@@ -2118,8 +2121,11 @@ public function restore($id)
      */
     if ($agency->agency_image) {
 
-        Storage::disk('public')
-            ->delete($agency->agency_image);
+        if (Storage::disk('agency_local')->exists($agency->agency_image)) {
+            Storage::disk('agency_local')->delete($agency->agency_image);
+        } else {
+            Storage::disk('public')->delete($agency->agency_image);
+        }
     }
 
 

@@ -63,6 +63,17 @@ return [
                 'report' => false,
             ],
 
+        // Agency profile images use Hostinger local public storage independently
+        // from the public disk used by FAQ and other existing uploads.
+        'agency_local' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/') . '/storage',
+            'visibility' => 'public',
+            'throw' => true,
+            'report' => false,
+        ],
+
         // Private uploads are never given public object URLs; controllers authorize
         // access and stream them through Laravel routes.
         'private' => env('PRIVATE_STORAGE_DRIVER', 'local') === 's3'
