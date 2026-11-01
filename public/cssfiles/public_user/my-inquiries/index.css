@@ -5515,3 +5515,26 @@ body {
     .response-image-grid .response-image-trigger { max-width: min(100%, 180px); }
     .response-image-grid .response-image-trigger img { max-height: 88px; }
 }
+
+
+/* KNOWURLOCAL readability and typography consistency overrides */
+/* Agency suggestions overlay the form instead of expanding the modal's layout. */
+.ticket-agency-picker { position: relative; }
+.ticket-agency-options {
+    position: absolute;
+    top: 76px;
+    left: 0;
+    right: 0;
+    z-index: 80;
+    width: 100%;
+    max-height: min(245px, 32vh);
+}
+.ticket-agency-option { font-size: 14px; font-weight: 400; }
+.ticket-agency-option-abbreviation { font-size: 11px; font-weight: 600; }
+.ticket-agency-help { font-size: 12px; }
+.ticket-agency-no-results { font-size: 14px; }
+.ticket-create-dialog label { font-size: 14px; font-weight: 600; }
+.ticket-create-description { font-size: 15px; }
+.ticket-create-dialog select, .ticket-create-dialog textarea,
+.ticket-agency-input-wrap input { font-size: 15px; }
+.ticket-create-meta { font-size: 12px; }

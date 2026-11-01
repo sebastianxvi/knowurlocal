@@ -25,6 +25,7 @@ class User extends Authenticatable
     'email_verified_at',
     'role',
     'agency_id',
+    'can_moderate_evaluations',
     'status',    // 🔥 ADD THIS (you are using it)
     'last_login_at',
 ];
@@ -49,6 +50,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'can_moderate_evaluations' => 'boolean',
             'password' => 'hashed',
         ];
     }
@@ -56,6 +58,11 @@ class User extends Authenticatable
     public function agency()
     {
         return $this->belongsTo(Agency::class);
+    }
+
+    public function agencyEvaluations()
+    {
+        return $this->hasMany(AgencyEvaluation::class);
     }
 
     public function collaborationTasksCreated()

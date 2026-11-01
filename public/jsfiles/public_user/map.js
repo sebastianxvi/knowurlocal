@@ -441,6 +441,617 @@ function createSelectedAgencyIcon() {
             'agencyDetails'
         );
 
+    // Agency evaluations are loaded independently so the map's agency payload
+    // remains lightweight and review data is refreshed whenever a panel opens.
+    const evaluationSummary = document.getElementById('agencyEvaluationSummary');
+    const evaluationFilters = document.getElementById('agencyEvaluationFilters');
+    const evaluationReviews = document.getElementById('agencyEvaluationReviews');
+    const evaluationForm = document.getElementById('agencyEvaluationForm');
+    const evaluationFormWrap = document.getElementById('agencyEvaluationFormWrap');
+    const evaluationComment = document.getElementById('agencyEvaluationComment');
+    const evaluationConfirmation = document.getElementById('agencyEvaluationConfirmation');
+    const evaluationSubmit = document.getElementById('agencyEvaluationSubmit');
+    const evaluationCancel = document.getElementById('agencyEvaluationCancel');
+    let isEditingEvaluation = false;
+    let originalEvaluation = null;
+    const evaluationRatingLabel = document.getElementById('agencyRatingLabel');
+    const evaluationFormTitle = document.getElementById('agencyEvaluationFormTitle');
+    const evaluationStars = Array.from(document.querySelectorAll('.agency-rating-star'));
+    let selectedEvaluationRating = 0;
+    let evaluationRequestSequence = 0;
+    let selectedEvaluationFilter = null;
+    let evaluationCurrentPage = 1;
+    let evaluationLoadedReviews = [];
+    let evaluationHasMore = false;
+    let evaluationLoadMoreButton = null;
+
+    const evaluationRatingCopy = {
+        1: 'Very dissatisfied', 2: 'Dissatisfied', 3: 'Neutral',
+        4: 'Satisfied', 5: 'Very satisfied'
+    };
+
+    function setEvaluationRating(rating) {
+        selectedEvaluationRating = Number(rating) || 0;
+        evaluationStars.forEach((star) => {
+            const value = Number(star.dataset.rating);
+            const active = value <= selectedEvaluationRating;
+            star.classList.toggle('is-active', active);
+            star.setAttribute('aria-checked', String(value === selectedEvaluationRating));
+        });
+        if (evaluationRatingLabel) {
+            evaluationRatingLabel.textContent = selectedEvaluationRating
+                ? `${selectedEvaluationRating} out of 5 — ${evaluationRatingCopy[selectedEvaluationRating]}`
+                : 'Select a rating from 1 to 5';
+        }
+        if (evaluationSubmit) evaluationSubmit.disabled = selectedEvaluationRating < 1;
+    }
+
+    evaluationStars.forEach((star) => {
+        star.addEventListener('click', () => setEvaluationRating(star.dataset.rating));
+        star.addEventListener('keydown', (event) => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+            event.preventDefault();
+            const next = Math.min(5, Math.max(1, selectedEvaluationRating + (event.key === 'ArrowRight' ? 1 : -1)));
+            setEvaluationRating(next);
+            evaluationStars[next - 1]?.focus();
+        });
+    });
+
+    function renderEvaluationData(data) {
+        if (!evaluationSummary || !evaluationReviews) return;
+        const total = Number(data.total || 0);
+        const average = Number(data.average || 0).toFixed(1);
+        const distribution = data.distribution || {};
+        evaluationSummary.replaceChildren();
+
+        const score = document.createElement('div');
+        score.className = 'agency-evaluation-score';
+        const scoreValue = document.createElement('strong');
+        scoreValue.textContent = total ? average : '—';
+        const scoreStars = document.createElement('div');
+        scoreStars.className = 'agency-evaluation-stars';
+        scoreStars.textContent = total ? '★★★★★' : '☆☆☆☆☆';
+        const count = document.createElement('div');
+        count.className = 'agency-evaluation-count';
+        count.textContent = `${total} ${total === 1 ? 'evaluation' : 'evaluations'}`;
+        score.append(scoreValue, scoreStars, count);
+
+        const bars = document.createElement('div');
+        bars.className = 'agency-evaluation-bars';
+        for (let rating = 5; rating >= 1; rating--) {
+            const row = document.createElement('div');
+            row.className = 'agency-evaluation-bar-row';
+            const label = document.createElement('span');
+            label.textContent = String(rating);
+            const track = document.createElement('div');
+            track.className = 'agency-evaluation-bar-track';
+            const fill = document.createElement('div');
+            fill.className = 'agency-evaluation-bar-fill';
+            const ratingCount = Number(distribution[rating] || 0);
+            fill.style.width = `${total ? (ratingCount / total) * 100 : 0}%`;
+            track.append(fill);
+            const countLabel = document.createElement('span');
+            countLabel.className = 'agency-evaluation-bar-count';
+            countLabel.textContent = String(ratingCount);
+            row.append(label, track, countLabel);
+            bars.append(row);
+        }
+        evaluationSummary.append(score, bars);
+
+        if (evaluationFilters) {
+            evaluationFilters.replaceChildren();
+            const filterOptions = [
+                { value: null, label: 'All', count: total },
+                ...[5, 4, 3, 2, 1].map((rating) => ({
+                    value: rating,
+                    label: `${rating} ★`,
+                    count: Number(distribution[rating] || 0)
+                }))
+            ];
+            filterOptions.forEach((option) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'agency-evaluation-filter' + (selectedEvaluationFilter === option.value ? ' is-active' : '');
+                button.disabled = option.count === 0 && option.value !== null;
+                button.setAttribute('aria-pressed', String(selectedEvaluationFilter === option.value));
+                button.textContent = `${option.label} · ${option.count}`;
+                button.addEventListener('click', () => {
+                    if (button.disabled || selectedEvaluationFilter === option.value || !selectedAgencyId) return;
+                    selectedEvaluationFilter = option.value;
+                    loadAgencyEvaluations(selectedAgencyId, { preserveForm: true, preserveFilter: true });
+                });
+                evaluationFilters.append(button);
+            });
+            evaluationFilters.hidden = total === 0;
+        }
+
+        evaluationReviews.replaceChildren();
+        const reviews = Array.isArray(data.reviews) ? [...data.reviews] : [];
+        const filteredTotal = Number(data.filtered_total ?? reviews.length);
+        if (filteredTotal > 0) {
+            const resultMeta = document.createElement('p');
+            resultMeta.className = 'agency-evaluation-filter-meta';
+            resultMeta.textContent = `Showing ${reviews.length} of ${filteredTotal} matching evaluations.`;
+            evaluationReviews.append(resultMeta);
+        }
+        // The signed-in user's own review always takes precedence over community reviews.
+        reviews.sort((a, b) => Number(Boolean(b.is_mine)) - Number(Boolean(a.is_mine))
+            || new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        if (!reviews.length) {
+            const empty = document.createElement('p');
+            empty.className = 'agency-evaluation-empty';
+            empty.textContent = selectedEvaluationFilter
+                ? `There are no ${selectedEvaluationFilter}-star evaluations to display.`
+                : 'No evaluations yet. Be the first to share your experience.';
+            evaluationReviews.append(empty);
+        } else {
+            reviews.forEach((review) => {
+                const article = document.createElement('article');
+                article.className = 'agency-evaluation-review';
+                const top = document.createElement('div');
+                top.className = 'agency-evaluation-review-top';
+                const authorGroup = document.createElement('div');
+                authorGroup.className = 'agency-evaluation-review-author-group';
+                const author = document.createElement('span');
+                author.className = 'agency-evaluation-review-author';
+                author.textContent = review.reviewer || 'Public User';
+                authorGroup.append(author);
+                if (review.is_mine) {
+                    const ownBadge = document.createElement('span');
+                    ownBadge.className = 'agency-evaluation-own-badge';
+                    ownBadge.textContent = 'Your evaluation';
+                    ownBadge.setAttribute('aria-label', 'This is your evaluation');
+                    authorGroup.append(ownBadge);
+                }
+                const date = document.createElement('time');
+                date.className = 'agency-evaluation-review-date';
+                if (review.created_at) {
+                    const parsed = new Date(review.created_at);
+                    date.dateTime = review.created_at;
+                    date.textContent = Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                }
+                top.append(authorGroup, date);
+                const stars = document.createElement('div');
+                stars.className = 'agency-evaluation-review-rating';
+                const rating = Math.max(0, Math.min(5, Number(review.rating) || 0));
+                stars.textContent = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+                article.append(top, stars);
+                const reportForm = document.createElement('form');
+                reportForm.className = 'agency-evaluation-report-form';
+                reportForm.hidden = true;
+                const reasonSelect = document.createElement('select');
+                reasonSelect.name = 'reason';
+                [
+                    ['spam', 'Spam or misleading content'],
+                    ['offensive', 'Offensive language'],
+                    ['personal_information', 'Personal information'],
+                    ['harassment', 'Harassment or personal attack'],
+                    ['irrelevant', 'Irrelevant content'],
+                    ['other', 'Other policy concern']
+                ].forEach(([value, label]) => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = label;
+                    reasonSelect.append(option);
+                });
+                const reportDetails = document.createElement('textarea');
+                reportDetails.name = 'details';
+                reportDetails.maxLength = 1000;
+                reportDetails.placeholder = 'Additional details (optional)';
+                const reportSubmit = document.createElement('button');
+                reportSubmit.type = 'submit';
+                reportSubmit.textContent = 'Submit report';
+                reportForm.append(reasonSelect, reportDetails, reportSubmit);
+                reportForm.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    reportSubmit.disabled = true;
+                    reportSubmit.textContent = 'Submitting…';
+                    try {
+                        const response = await fetch(`/api/agencies/${encodeURIComponent(selectedAgencyId)}/evaluations/${encodeURIComponent(review.id)}/report`, {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                            },
+                            body: JSON.stringify({ reason: reasonSelect.value, details: reportDetails.value })
+                        });
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok) throw new Error(result.message || 'Unable to submit this report.');
+                        reportForm.hidden = true;
+                        window.notifyUser?.(result.message || 'Report submitted.', { variant: 'success' });
+                    } catch (error) {
+                        window.notifyUser?.(error.message, { variant: 'danger' });
+                    } finally {
+                        reportSubmit.disabled = false;
+                        reportSubmit.textContent = 'Submit report';
+                    }
+                });
+                if (review.is_mine) {
+                    const actions = document.createElement('div');
+                    actions.className = 'agency-evaluation-review-actions';
+                    const toggle = document.createElement('button');
+                    toggle.type = 'button';
+                    toggle.className = 'agency-evaluation-more';
+                    toggle.setAttribute('aria-label', 'Evaluation options');
+                    toggle.setAttribute('aria-expanded', 'false');
+                    toggle.textContent = '⋯';
+                    const menu = document.createElement('div');
+                    menu.className = 'agency-evaluation-menu';
+                    menu.hidden = true;
+                    const edit = document.createElement('button');
+                    edit.type = 'button';
+                    edit.textContent = 'Edit evaluation';
+                    edit.addEventListener('click', () => {
+                        originalEvaluation = {
+                            rating: Number(review.rating),
+                            comment: review.comment || ''
+                        };
+                        isEditingEvaluation = true;
+                        setEvaluationRating(originalEvaluation.rating);
+                        evaluationComment.value = originalEvaluation.comment;
+                        if (evaluationConfirmation) evaluationConfirmation.checked = true;
+                        if (evaluationFormTitle) evaluationFormTitle.textContent = 'Update your evaluation';
+                        if (evaluationSubmit) evaluationSubmit.textContent = 'Update evaluation';
+                        if (evaluationCancel) evaluationCancel.hidden = false;
+                        if (evaluationFormWrap) evaluationFormWrap.hidden = false;
+                        menu.hidden = true;
+                        toggle.setAttribute('aria-expanded', 'false');
+                        evaluationFormWrap?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    });
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.className = 'is-danger';
+                    remove.textContent = 'Delete evaluation';
+                    remove.addEventListener('click', () => {
+                        menu.hidden = true;
+                        toggle.setAttribute('aria-expanded', 'false');
+
+                        if (typeof window.showAlertModal !== 'function') {
+                            if (typeof window.notifyUser === 'function') {
+                                window.notifyUser('The confirmation dialog is unavailable. Please refresh the page and try again.', { variant: 'danger' });
+                            }
+                            return;
+                        }
+
+                        const deletingAgencyId = selectedAgencyId;
+                        window.showAlertModal({
+                            title: 'Delete your evaluation?',
+                            text: 'This will permanently remove your rating, comment, and all helpful votes received. This action cannot be undone.',
+                            icon: 'ph-light ph-trash',
+                            variant: 'danger',
+                            confirmText: 'Delete evaluation',
+                            cancelText: 'Keep evaluation',
+                            showConfirm: true,
+                            showCancel: true,
+                            loading: true,
+                            loadingText: 'Deleting…',
+                            onConfirm: async () => {
+                                const response = await fetch(`/api/agencies/${encodeURIComponent(deletingAgencyId)}/evaluations`, {
+                                    method: 'DELETE',
+                                    credentials: 'same-origin',
+                                    headers: {
+                                        'Accept': 'application/json',
+                                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                                    }
+                                });
+                                const result = await response.json().catch(() => ({}));
+                                if (!response.ok) throw new Error(result.message || 'Unable to delete your evaluation.');
+                                window.closeAlertModal?.();
+                                isEditingEvaluation = false;
+                                originalEvaluation = null;
+                                if (String(selectedAgencyId) === String(deletingAgencyId)) {
+                                    await loadAgencyEvaluations(deletingAgencyId);
+                                }
+                            }
+                        });
+                    });
+                    menu.append(edit, remove);
+                    toggle.addEventListener('click', () => {
+                        const opening = menu.hidden;
+                        menu.hidden = !opening;
+                        toggle.setAttribute('aria-expanded', String(opening));
+                    });
+                    actions.append(toggle, menu);
+                    top.append(actions);
+                } else {
+                    const actions = document.createElement('div');
+                    actions.className = 'agency-evaluation-review-actions';
+                    const reportButton = document.createElement('button');
+                    reportButton.type = 'button';
+                    reportButton.className = 'agency-evaluation-report-trigger';
+                    reportButton.setAttribute('aria-label', 'Report this evaluation');
+                    reportButton.setAttribute('title', 'Report this evaluation');
+                    reportButton.setAttribute('aria-expanded', 'false');
+                    const reportIcon = document.createElement('i');
+                    reportIcon.className = 'ph-light ph-flag';
+                    reportIcon.setAttribute('aria-hidden', 'true');
+                    reportButton.append(reportIcon);
+                    reportButton.addEventListener('click', () => {
+                        reportForm.hidden = !reportForm.hidden;
+                        reportButton.classList.toggle('is-active', !reportForm.hidden);
+                        reportButton.setAttribute('aria-expanded', String(!reportForm.hidden));
+                        if (!reportForm.hidden) {
+                            reportForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                    });
+                    actions.append(reportButton);
+                    top.append(actions);
+                }
+                if (review.comment) {
+                    const comment = document.createElement('p');
+                    comment.className = 'agency-evaluation-review-comment';
+                    comment.textContent = review.comment;
+                    article.append(comment);
+                }
+
+                if (review.response && review.response.body) {
+                    const responseCard = document.createElement('div');
+                    responseCard.className = 'agency-evaluation-official-response';
+                    const responseTitle = document.createElement('strong');
+                    responseTitle.textContent = review.response.responder_role === 'agency_admin'
+                        ? 'Official Agency Response'
+                        : 'Official System Response';
+                    const responseBody = document.createElement('p');
+                    responseBody.textContent = review.response.body;
+                    responseCard.append(responseTitle, responseBody);
+                    article.append(responseCard);
+                }
+                article.append(reportForm);
+
+                // Keep review engagement controls aligned to the right edge.
+                const helpfulFooter = document.createElement('div');
+                helpfulFooter.className = 'agency-evaluation-helpful-footer';
+
+                if (review.is_mine) {
+                    // Owners can see appreciation their review has received, but cannot vote on it.
+                    const ownerCount = document.createElement('span');
+                    ownerCount.className = 'agency-evaluation-helpful-owner-count';
+                    const ownerIcon = document.createElement('i');
+                    ownerIcon.className = 'ph-light ph-thumbs-up';
+                    ownerIcon.setAttribute('aria-hidden', 'true');
+                    const ownerText = document.createElement('span');
+                    const helpfulTotal = Number(review.helpful_count || 0);
+                    ownerText.textContent = `${helpfulTotal} ${helpfulTotal === 1 ? 'person' : 'people'} found this helpful`;
+                    ownerCount.append(ownerIcon, ownerText);
+                    helpfulFooter.append(ownerCount);
+                } else {
+                    // Helpful voting is available on other users' published reviews only.
+                    const helpful = document.createElement('button');
+                    helpful.type = 'button';
+                    helpful.className = 'agency-evaluation-helpful' + (review.has_marked_helpful ? ' is-active' : '');
+                    helpful.setAttribute('aria-pressed', String(Boolean(review.has_marked_helpful)));
+                    helpful.setAttribute('aria-label', `${review.has_marked_helpful ? 'Remove helpful vote' : 'Mark as helpful'}; ${Number(review.helpful_count || 0)} helpful votes`);
+
+                    const helpfulIcon = document.createElement('i');
+                    helpfulIcon.className = 'ph-light ph-thumbs-up';
+                    helpfulIcon.setAttribute('aria-hidden', 'true');
+
+                    const helpfulLabel = document.createElement('span');
+                    helpfulLabel.textContent = 'Helpful';
+                    const helpfulCount = document.createElement('span');
+                    helpfulCount.className = 'agency-evaluation-helpful-count';
+                    helpfulCount.textContent = String(Number(review.helpful_count || 0));
+                    helpful.append(helpfulIcon, helpfulLabel, helpfulCount);
+
+                    helpful.addEventListener('click', async () => {
+                        if (helpful.disabled) return;
+                        helpful.disabled = true;
+                        try {
+                            const response = await fetch(`/api/agencies/${encodeURIComponent(selectedAgencyId)}/evaluations/${encodeURIComponent(review.id)}/helpful`, {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                                }
+                            });
+                            const result = await response.json().catch(() => ({}));
+                            if (!response.ok) throw new Error(result.message || 'Unable to update helpful vote.');
+                            helpful.classList.toggle('is-active', Boolean(result.marked_helpful));
+                            helpful.setAttribute('aria-pressed', String(Boolean(result.marked_helpful)));
+                            helpfulCount.textContent = String(Number(result.helpful_count || 0));
+                            helpful.setAttribute('aria-label', `${result.marked_helpful ? 'Remove helpful vote' : 'Mark as helpful'}; ${Number(result.helpful_count || 0)} helpful votes`);
+                        } catch (error) {
+                            window.notifyUser?.(error.message, { title: 'Helpful vote could not be updated', variant: 'danger' });
+                        } finally {
+                            helpful.disabled = false;
+                        }
+                    });
+                    helpfulFooter.append(helpful);
+                }
+
+                article.append(helpfulFooter);
+                evaluationReviews.append(article);
+            });
+        }
+
+        if (evaluationForm && data.my_evaluation?.status === 'hidden') {
+            // A hidden evaluation is under moderation and cannot be edited or
+            // republished by its author while the review is being handled.
+            if (evaluationFormWrap) evaluationFormWrap.hidden = true;
+            const moderationNotice = document.createElement('p');
+            moderationNotice.className = 'agency-evaluation-moderation-notice';
+            moderationNotice.textContent = 'Your evaluation is temporarily hidden while it is being reviewed. Editing is unavailable during this process.';
+            evaluationReviews.prepend(moderationNotice);
+        } else if (evaluationForm && data.my_evaluation) {
+            // Keep the form collapsed until the user explicitly chooses Edit.
+            if (evaluationFormWrap && !isEditingEvaluation) evaluationFormWrap.hidden = true;
+            if (!isEditingEvaluation) {
+                setEvaluationRating(data.my_evaluation.rating);
+                evaluationComment.value = data.my_evaluation.comment || '';
+                if (evaluationConfirmation) evaluationConfirmation.checked = true;
+                if (evaluationFormTitle) evaluationFormTitle.textContent = 'Update your evaluation';
+                if (evaluationSubmit) evaluationSubmit.textContent = 'Update evaluation';
+                if (evaluationCancel) evaluationCancel.hidden = true;
+            }
+        } else if (evaluationForm) {
+            isEditingEvaluation = false;
+            originalEvaluation = null;
+            if (evaluationFormWrap) evaluationFormWrap.hidden = false;
+            setEvaluationRating(0);
+            evaluationComment.value = '';
+            if (evaluationConfirmation) evaluationConfirmation.checked = false;
+            if (evaluationFormTitle) evaluationFormTitle.textContent = 'Share your experience';
+            if (evaluationSubmit) evaluationSubmit.textContent = 'Submit evaluation';
+            if (evaluationCancel) evaluationCancel.hidden = true;
+        }
+
+        if (evaluationHasMore) {
+            evaluationLoadMoreButton = document.createElement('button');
+            evaluationLoadMoreButton.type = 'button';
+            evaluationLoadMoreButton.className = 'agency-evaluation-load-more';
+            evaluationLoadMoreButton.textContent = 'Load More Evaluations';
+            evaluationLoadMoreButton.addEventListener('click', () => {
+                if (evaluationLoadMoreButton.disabled || !selectedAgencyId) return;
+                loadAgencyEvaluations(selectedAgencyId, {
+                    preserveForm: true,
+                    preserveFilter: true,
+                    append: true
+                });
+            });
+            evaluationReviews.append(evaluationLoadMoreButton);
+        } else {
+            evaluationLoadMoreButton = null;
+        }
+    }
+
+    async function loadAgencyEvaluations(agencyId, options = {}) {
+        if (!evaluationSummary || !evaluationReviews) return;
+        if (!options.preserveFilter) selectedEvaluationFilter = null;
+
+        if (!options.append) {
+            evaluationCurrentPage = 1;
+            evaluationLoadedReviews = [];
+            evaluationHasMore = false;
+        } else {
+            evaluationCurrentPage += 1;
+        }
+
+        const requestedPage = evaluationCurrentPage;
+        const sequence = ++evaluationRequestSequence;
+
+        // Keep summary and rating filters in place; loading feedback belongs
+        // beneath the filters, in the evaluations list area.
+        if (options.append && evaluationLoadMoreButton) {
+            evaluationLoadMoreButton.disabled = true;
+            evaluationLoadMoreButton.textContent = 'Loading…';
+        } else {
+            evaluationReviews.replaceChildren();
+            const loading = document.createElement('p');
+            loading.className = 'agency-evaluation-loading';
+            loading.textContent = 'Loading evaluations…';
+            evaluationReviews.append(loading);
+        }
+
+        if (evaluationForm && !options.preserveForm) {
+            isEditingEvaluation = false;
+            originalEvaluation = null;
+            if (evaluationFormWrap) evaluationFormWrap.hidden = true;
+            setEvaluationRating(0);
+            if (evaluationComment) evaluationComment.value = '';
+            if (evaluationConfirmation) evaluationConfirmation.checked = false;
+            if (evaluationFormTitle) evaluationFormTitle.textContent = 'Share your experience';
+            if (evaluationSubmit) evaluationSubmit.textContent = 'Submit evaluation';
+            if (evaluationCancel) evaluationCancel.hidden = true;
+        }
+
+        try {
+            const params = new URLSearchParams();
+            if (selectedEvaluationFilter) params.set('rating', selectedEvaluationFilter);
+            params.set('page', String(requestedPage));
+            const response = await fetch(`/api/agencies/${encodeURIComponent(agencyId)}/evaluations?${params.toString()}`, {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            });
+            if (!response.ok) throw new Error('Unable to load evaluations.');
+            const data = await response.json();
+            if (sequence !== evaluationRequestSequence || String(selectedAgencyId) !== String(agencyId)) return;
+
+            if (options.append) {
+                evaluationLoadedReviews = evaluationLoadedReviews.concat(Array.isArray(data.reviews) ? data.reviews : []);
+            } else {
+                evaluationLoadedReviews = Array.isArray(data.reviews) ? data.reviews : [];
+            }
+            evaluationHasMore = Boolean(data.has_more);
+            renderEvaluationData({ ...data, reviews: evaluationLoadedReviews });
+        } catch (error) {
+            if (sequence !== evaluationRequestSequence) return;
+            if (options.append) {
+                evaluationCurrentPage = Math.max(1, requestedPage - 1);
+                if (evaluationLoadMoreButton) {
+                    evaluationLoadMoreButton.disabled = false;
+                    evaluationLoadMoreButton.textContent = 'Try Loading More';
+                }
+            } else {
+                evaluationReviews.textContent = 'Evaluations are temporarily unavailable.';
+            }
+            console.error('KNOWURLOCAL: Failed to load agency evaluations.', error);
+        }
+    }
+
+    if (evaluationCancel) {
+        evaluationCancel.addEventListener('click', () => {
+            // Cancelling is a purely local action: do not send a request or
+            // alter the saved evaluation/helpful votes.
+            isEditingEvaluation = false;
+            originalEvaluation = null;
+            if (evaluationFormWrap) evaluationFormWrap.hidden = true;
+            if (evaluationCancel) evaluationCancel.hidden = true;
+            if (evaluationFormTitle) evaluationFormTitle.textContent = 'Update your evaluation';
+        });
+    }
+
+    if (evaluationForm) {
+        evaluationForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!selectedAgencyId || selectedEvaluationRating < 1 || !evaluationSubmit) return;
+            const submittingAgencyId = selectedAgencyId;
+            if (evaluationConfirmation && !evaluationConfirmation.checked) {
+                window.notifyUser?.('Please confirm that your evaluation is based on your actual experience.', { title: 'Confirmation required', variant: 'warning' });
+                return;
+            }
+            evaluationSubmit.disabled = true;
+            if (evaluationCancel) evaluationCancel.disabled = true;
+            const isUpdatingEvaluation = isEditingEvaluation;
+            evaluationSubmit.classList.add('is-loading');
+            evaluationSubmit.innerHTML = `<span class="agency-evaluation-button-spinner" aria-hidden="true"></span> ${isUpdatingEvaluation ? 'Updating…' : 'Submitting…'}`;
+
+            try {
+                const response = await fetch(`/api/agencies/${encodeURIComponent(submittingAgencyId)}/evaluations`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify({ rating: selectedEvaluationRating, comment: evaluationComment?.value || '', confirmed_experience: Boolean(evaluationConfirmation?.checked) })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const firstError = result.errors ? Object.values(result.errors).flat()[0] : null;
+                    throw new Error(firstError || result.message || 'Your evaluation could not be saved. Please try again.');
+                }
+                if (String(selectedAgencyId) === String(submittingAgencyId)) {
+                    isEditingEvaluation = false;
+                    originalEvaluation = null;
+                    await loadAgencyEvaluations(submittingAgencyId);
+                }
+            } catch (error) {
+                window.notifyUser?.(error.message, { title: 'Evaluation could not be saved', variant: 'danger' });
+            } finally {
+                if (evaluationCancel) evaluationCancel.disabled = false;
+                if (evaluationSubmit) {
+                    evaluationSubmit.classList.remove('is-loading');
+                    evaluationSubmit.textContent = evaluationFormTitle?.textContent === 'Update your evaluation' ? 'Update evaluation' : 'Submit evaluation';
+                    evaluationSubmit.disabled = selectedEvaluationRating < 1;
+                }
+            }
+        });
+    }
+
 
     /*
      * Close button.
@@ -2017,6 +2628,8 @@ marker.setIcon(
          */
         selectedAgencyId =
             agency.id;
+
+        loadAgencyEvaluations(agency.id);
 
 
         // -----------------------------------------------------
@@ -3791,6 +4404,19 @@ allAgencyMarkers.push(
                  */
                 updateAgencyLabels();
                 setAgencyMapStatus('hidden');
+
+                // Evaluation moderation notifications link back to the affected
+                // agency. Open its details after markers are ready so the user
+                // can see the current evaluation state or submit a replacement.
+                const requestedAgencyId = new URLSearchParams(window.location.search).get('agency_id');
+                if (requestedAgencyId) {
+                    const requestedMarker = markerClusterGroup.getLayers().find(
+                        marker => String(marker.agencyData?.id) === String(requestedAgencyId)
+                    );
+                    if (requestedMarker) {
+                        focusMarker(requestedMarker);
+                    }
+                }
 
             }
         )

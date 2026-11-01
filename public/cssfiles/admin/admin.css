@@ -305,3 +305,16 @@ body{
     border-collapse:collapse;
 }
 .js-support-pending-badge[hidden]{display:none !important;}
+
+
+/* KNOWURLOCAL readability and typography consistency overrides */
+/* Shared readable type scale across admin and agency-admin modules. */
+body { font-size: 14px; }
+.layout :is(p, li, label, td, th, input, select, textarea, button) {
+    font-size: 14px;
+}
+.layout :is(.admin-nav a, .sidebar nav a, .nav-parent) { font-size: 14px; }
+.layout :is(.text-muted, .help-text, .form-text, .field-hint, small) {
+    font-size: 12px;
+}
+.layout :is(h1, h2, h3, h4, h5, h6) { line-height: 1.3; }

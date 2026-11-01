@@ -166,6 +166,20 @@
             $isSelf = $admin->id === auth()->id();
         @endphp
 
+        @if($admin->role === 'admin' && $admin->status === 'active')
+            <form method="POST" action="{{ route('admin.admins.evaluation-moderation', $admin->id) }}" class="admin-inline-permission-form">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="can_moderate_evaluations" value="{{ $admin->can_moderate_evaluations ? 0 : 1 }}">
+                <button type="submit" class="btn {{ $admin->can_moderate_evaluations ? 'btn-success' : 'btn-secondary' }} admin-table-icon-action"
+                    title="{{ $admin->can_moderate_evaluations ? 'Revoke evaluation moderation' : 'Grant evaluation moderation' }}"
+                    aria-label="{{ $admin->can_moderate_evaluations ? 'Revoke evaluation moderation' : 'Grant evaluation moderation' }}">
+                    <i class="ph-light {{ $admin->can_moderate_evaluations ? 'ph-shield-check' : 'ph-shield-plus' }}"></i>
+                    <span class="sr-only">{{ $admin->can_moderate_evaluations ? 'Revoke moderation' : 'Grant moderation' }}</span>
+                </button>
+            </form>
+        @endif
+
 
         {{-- =================================================
              PENDING

@@ -26,11 +26,19 @@
         item.dataset.notificationId = String(notification.id);
         item.dataset.read = '0';
 
-        const isTrash = notification.type === 'ticket_trashed';
+        const type = String(notification.type || '');
+        const isEvaluation = type.startsWith('evaluation_');
+        const isTrash = type === 'ticket_trashed' || type === 'evaluation_removed';
+        const iconName = ({
+            ticket_trashed: 'ph-trash',
+            evaluation_hidden: 'ph-eye-slash',
+            evaluation_restored: 'ph-eye',
+            evaluation_removed: 'ph-trash',
+        })[type] || 'ph-chat-circle-text';
         const icon = document.createElement('span');
-        icon.className = `user-notification-icon ${isTrash ? 'is-trash' : 'is-response'}`;
+        icon.className = `user-notification-icon ${isTrash ? 'is-trash' : (isEvaluation ? 'is-evaluation' : 'is-response')}`;
         const iconEl = document.createElement('i');
-        iconEl.className = `ph-light ${isTrash ? 'ph-trash' : 'ph-chat-circle-text'}`;
+        iconEl.className = `ph-light ${iconName}`;
         iconEl.setAttribute('aria-hidden', 'true');
         icon.appendChild(iconEl);
 

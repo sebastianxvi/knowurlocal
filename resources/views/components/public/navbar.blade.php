@@ -303,3 +303,7 @@
     </div>
 
 </header>
+
+{{-- Shared confirmation modal used by the public sign-out action. --}}
+@include('components.modal')
+<script src="{{ asset('jsfiles/components/modal-system.js') }}?v={{ file_exists(public_path('jsfiles/components/modal-system.js')) ? filemtime(public_path('jsfiles/components/modal-system.js')) : time() }}"></script>

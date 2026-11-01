@@ -42,6 +42,11 @@ class Agency extends Model
         return $this->hasMany(Faq::class);
     }
 
+    public function evaluations()
+    {
+        return $this->hasMany(AgencyEvaluation::class);
+    }
+
 
     public function type()
     {

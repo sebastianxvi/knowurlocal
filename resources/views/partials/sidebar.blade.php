@@ -21,6 +21,9 @@
                 <a href="{{ route('agency-admin.analytics') }}" class="{{ request()->routeIs('agency-admin.analytics') ? 'active' : '' }}">
                     <i class="ph-light ph-chart-line-up"></i><span>Analytics</span>
                 </a>
+                <a href="{{ route('agency-admin.evaluations') }}" class="{{ request()->routeIs('agency-admin.evaluations') ? 'active' : '' }}">
+                    <i class="ph-light ph-star"></i><span>Service Evaluations</span>
+                </a>
                 <a href="{{ route('agency-admin.tickets') }}" class="{{ request()->routeIs('agency-admin.tickets') ? 'active' : '' }}">
                     <i class="ph-light ph-chat-circle-dots" aria-hidden="true"></i><span>Support Inbox</span>
                 </a>
@@ -67,6 +70,9 @@
             <a href="{{ route('admin.analytics') }}" class="{{ request()->routeIs('admin.analytics') ? 'active' : '' }}">
                 <i class="ph-light ph-chart-line-up"></i><span>Analytics</span>
             </a>
+            <a href="{{ route('admin.evaluations.overview') }}" class="{{ request()->routeIs('admin.evaluations.*') && !request()->routeIs('admin.evaluations.moderation') ? 'active' : '' }}">
+                <i class="ph-light ph-star"></i><span>Agency Satisfaction</span>
+            </a>
 
             <a href="{{ route('admin.nga') }}" class="{{ request()->routeIs('admin.nga') ? 'active' : '' }}">
                 <i class="ph-light ph-buildings"></i><span>NGA &amp; NGO</span>
@@ -103,6 +109,12 @@
             @if(auth()->check() && in_array(auth()->user()->role, ['admin','superadmin']))
                 <a href="{{ route('admin.users') }}" class="{{ request()->routeIs('admin.users') ? 'active' : '' }}">
                     <i class="ph-light ph-user"></i><span>Users</span>
+                </a>
+            @endif
+
+            @if(auth()->user()->role === 'superadmin' || (auth()->user()->role === 'admin' && auth()->user()->can_moderate_evaluations))
+                <a href="{{ route('admin.evaluations.moderation') }}" class="{{ request()->routeIs('admin.evaluations.moderation') ? 'active' : '' }}">
+                    <i class="ph-light ph-shield-warning"></i><span>Evaluation Moderation</span>
                 </a>
             @endif
 

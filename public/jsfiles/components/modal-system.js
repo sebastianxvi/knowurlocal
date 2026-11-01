@@ -273,6 +273,43 @@
     window.showAlertModal = showAlertModal;
     window.closeAlertModal = closeAlertModal;
     window.showConfirmModal = showConfirmModal;
+
+    // Confirm every Laravel logout form consistently across public and admin areas.
+    // Submit through the native form method after confirmation to avoid re-triggering
+    // this submit listener or bypassing the form's existing CSRF token.
+    document.addEventListener('submit', async (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (form.dataset.logoutConfirmed === 'true') return;
+
+        const method = String(form.getAttribute('method') || 'get').toLowerCase();
+        if (method !== 'post') return;
+
+        let actionPath = '';
+        try {
+            actionPath = new URL(form.action, window.location.href).pathname.replace(/\/+$/, '');
+        } catch (_) {
+            return;
+        }
+        if (!/(^|\/)logout$/i.test(actionPath)) return;
+        if (typeof window.showConfirmModal !== 'function') return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        const accepted = await window.showConfirmModal({
+            title: 'Sign out?',
+            text: 'Are you sure you want to sign out of KNOWURLOCAL?',
+            icon: 'ph-light ph-sign-out',
+            variant: 'warning',
+            confirmText: 'Yes, sign out',
+            cancelText: 'Stay signed in'
+        });
+
+        if (!accepted) return;
+        form.dataset.logoutConfirmed = 'true';
+        HTMLFormElement.prototype.submit.call(form);
+    }, true);
     window.notifyUser = (text, options = {}) => {
         if (typeof window.showAlertModal === 'function') {
             window.showAlertModal({

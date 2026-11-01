@@ -95,6 +95,8 @@
         href="{{ asset('cssfiles/admin/admin-mobile-polish.css') }}?v={{ file_exists(public_path('cssfiles/admin/admin-mobile-polish.css')) ? filemtime(public_path('cssfiles/admin/admin-mobile-polish.css')) : time() }}"
     >
 
+    {{-- Shared readable type scale and accessibility refinements, after all module CSS. --}}
+    <link rel="stylesheet" href="{{ asset('cssfiles/accessibility-typography.css') }}?v={{ file_exists(public_path('cssfiles/accessibility-typography.css')) ? filemtime(public_path('cssfiles/accessibility-typography.css')) : time() }}">
 
 </head>
 

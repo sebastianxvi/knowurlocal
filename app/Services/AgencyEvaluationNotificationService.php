@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Services;
+
+use App\Events\UserNotificationCreated;
+use App\Models\AgencyEvaluation;
+use App\Models\AgencyEvaluationModerationLog;
+use App\Models\UserNotification;
+use Illuminate\Support\Facades\Log;
+use Throwable;
+
+class AgencyEvaluationNotificationService
+{
+    public function moderationDecision(AgencyEvaluation $evaluation, AgencyEvaluationModerationLog $log, string $action): ?UserNotification
+    {
+        if (!$evaluation->user_id || !in_array($action, ['hide', 'restore', 'delete'], true)) {
+            return null;
+        }
+
+        $agencyName = $evaluation->agency?->agency_name ?: 'the agency';
+        [$type, $title, $message] = match ($action) {
+            'hide' => [
+                'evaluation_hidden',
+                'Your evaluation is temporarily hidden',
+                'Your evaluation for ' . $agencyName . ' has been temporarily hidden while it is being reviewed. You cannot edit it or submit another evaluation for this agency until the review is completed.',
+            ],
+            'restore' => [
+                'evaluation_restored',
+                'Your evaluation has been restored',
+                'Your evaluation for ' . $agencyName . ' has been restored and is visible to the public again.',
+            ],
+            'delete' => [
+                'evaluation_removed',
+                'Your evaluation was removed',
+                'Your evaluation for ' . $agencyName . ' was removed following moderation review. Reason: ' . (trim((string) $log->reason) ?: 'The evaluation violated the platform\'s evaluation guidelines.') . ' You may now submit a new evaluation for this agency.',
+            ],
+        };
+
+        $attributes = [
+            'user_id' => (int) $evaluation->user_id,
+            'type' => $type,
+            'title' => $title,
+            'message' => $message,
+            'data' => [
+                'agency_id' => (int) $evaluation->agency_id,
+                'agency_name' => $agencyName,
+                'evaluation_id' => (int) $evaluation->id,
+                'moderation_action' => $action,
+                'moderation_reason' => $action === 'delete' ? trim((string) $log->reason) : null,
+            ],
+            'dedupe_key' => 'evaluation-moderation:' . $evaluation->id . ':' . $action . ':' . $log->id,
+        ];
+
+        try {
+            $notification = UserNotification::query()->firstOrCreate(['dedupe_key' => $attributes['dedupe_key']], $attributes);
+            if ($notification->wasRecentlyCreated) {
+                try {
+                    broadcast(new UserNotificationCreated($notification));
+                } catch (Throwable $exception) {
+                    Log::warning('Evaluation moderation notification broadcast failed.', [
+                        'notification_id' => $notification->id,
+                        'user_id' => $notification->user_id,
+                        'error' => $exception->getMessage(),
+                    ]);
+                }
+            }
+            return $notification;
+        } catch (Throwable $exception) {
+            Log::error('Unable to persist evaluation moderation notification.', [
+                'evaluation_id' => $evaluation->id,
+                'user_id' => $evaluation->user_id,
+                'action' => $action,
+                'error' => $exception->getMessage(),
+            ]);
+            return null;
+        }
+    }
+}

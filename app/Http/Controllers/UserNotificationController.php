@@ -36,6 +36,12 @@ class UserNotificationController extends Controller
             $notification->forceFill(['read_at' => now()])->save();
         }
 
+        if (str_starts_with((string) $notification->type, 'evaluation_')) {
+            $action = (string) ($notification->data['moderation_action'] ?? '');
+            $agencyId = (int) ($notification->data['agency_id'] ?? 0);
+            return redirect()->route('map', $agencyId > 0 ? ['agency_id' => $agencyId] : []);
+        }
+
         $ticketId = (int) ($notification->support_request_id ?? 0);
         if ($ticketId > 0) {
             $ticket = SupportRequest::withTrashed()

@@ -29,6 +29,7 @@
     <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.options.port') }}">
     <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme') }}">
     <meta name="realtime-debug" content="{{ app()->environment('local') ? 'true' : 'false' }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/accessibility-typography.css') }}?v={{ file_exists(public_path('cssfiles/accessibility-typography.css')) ? filemtime(public_path('cssfiles/accessibility-typography.css')) : time() }}">
 </head>
     <body class="bg-[#FDFDFC] dark:bg-[#0a0a0a] text-[#1b1b18] flex p-6 lg:p-8 items-center lg:justify-center min-h-screen flex-col">
         <header class="w-full lg:max-w-4xl max-w-[335px] text-sm mb-6 not-has-[nav]:hidden">

@@ -13,6 +13,7 @@
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="chatbot-feedback-url" content="{{ route('chatbot.feedback.store') }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
 </head>
 <body>
     

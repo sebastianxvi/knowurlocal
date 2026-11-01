@@ -52,6 +52,7 @@
     href="{{ asset('cssfiles/components/modal.css') }}"
 >
 
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
 </head>
 
 <body>

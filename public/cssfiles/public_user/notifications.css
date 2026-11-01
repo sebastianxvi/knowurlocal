@@ -126,3 +126,17 @@ body.user-notifications-page .notifications-list::-webkit-scrollbar-thumb {
         scrollbar-width: thin;
     }
 }
+
+
+/* KNOWURLOCAL readability and typography consistency overrides */
+/* Readability pass: notification titles are medium-weight, not extra-bold. */
+.user-notification-copy strong { font-size: 14px; font-weight: 600; }
+.user-notification-copy > span { font-size: 14px; line-height: 1.6; }
+.user-notification-copy small { font-size: 12px; }
+.notifications-card-header { font-size: 14px; font-weight: 600; }
+.notifications-heading p { font-size: 15px; }
+.notifications-empty p { font-size: 14px; }
+.notifications-read-all { font-size: 14px; font-weight: 600; }
+
+/* Evaluation moderation notices share the public notification icon system. */
+.user-notification-icon.is-evaluation { background:#fff6e5; color:#9a6500; }

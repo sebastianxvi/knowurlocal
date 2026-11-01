@@ -616,6 +616,7 @@ public function demote($id)
      */
     $user->update([
         'role' => 'admin',
+        'can_moderate_evaluations' => false,
     ]);
 
     /*
@@ -801,4 +802,28 @@ private function logAdminAction(
         'description' => $description,
     ]);
 }
+
+
+    /**
+     * Grant or revoke the explicit evaluation-moderation capability.
+     * Only Superadmins may change this privilege.
+     */
+    public function toggleEvaluationModeration(Request $request, int $id)
+    {
+        $admin = User::query()->where('role', 'admin')->findOrFail($id);
+        abort_unless($admin->status === 'active', 422, 'Only active System Admin accounts can receive moderation permissions.');
+        abort_if((int) $admin->id === (int) $request->user()->id, 403);
+
+        $validated = $request->validate([
+            'can_moderate_evaluations' => ['required', 'boolean'],
+        ]);
+
+        $admin->forceFill([
+            'can_moderate_evaluations' => (bool) $validated['can_moderate_evaluations'],
+        ])->save();
+
+        return back()->with('success', $admin->can_moderate_evaluations
+            ? 'Evaluation moderation permission granted.'
+            : 'Evaluation moderation permission revoked.');
+    }
 }

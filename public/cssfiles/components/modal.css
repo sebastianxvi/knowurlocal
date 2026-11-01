@@ -1,5 +1,6 @@
 /* KNOWURLOCAL shared alert and confirmation modal */
 #alert-modal {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   position: fixed;
   inset: 0;
   z-index: 99999;
@@ -58,8 +59,8 @@
 #alert-modal .message-box.success .icon { background: #d9f5e5; color: #16814b; }
 #alert-modal .message-box.danger { border-color: #f3d5d7; background: #fff7f7; color: #713b42; }
 #alert-modal .message-box.danger .icon { background: #ffe7e8; color: #c33845; }
-#alert-modal .message-box.warning { border-color: #f0dfb5; background: #fffbef; color: #72531a; }
-#alert-modal .message-box.warning .icon { background: #fff0c7; color: #986b0c; }
+#alert-modal .message-box.warning { border-color: #cbdcff; background: #f0f5ff; color: #294b83; }
+#alert-modal .message-box.warning .icon { background: #dce8ff; color: #315fbd; }
 #alert-modal .message-box.info .icon { background: #e8efff; color: #4d6fd0; }
 
 #alert-modal .alert-modal-input { margin-top: 14px; }
@@ -84,8 +85,8 @@
 #alert-modal .danger-btn:hover:not(:disabled) { background: #ad2f3b; }
 #alert-modal .success-btn { background: #198754; }
 #alert-modal .success-btn:hover:not(:disabled) { background: #147446; }
-#alert-modal .warning-btn { background: #a56d0b; }
-#alert-modal .warning-btn:hover:not(:disabled) { background: #875806; }
+#alert-modal .warning-btn { background: #315fbd; color: #fff; }
+#alert-modal .warning-btn:hover:not(:disabled) { background: #264f9f; }
 
 @media (max-width: 520px) {
   #alert-modal { align-items: flex-end; padding: 12px; }

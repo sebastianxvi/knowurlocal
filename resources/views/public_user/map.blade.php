@@ -27,6 +27,7 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navbar.css')) }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/map.css') }}?v={{ filemtime(public_path('cssfiles/public_user/map.css')) }}">
 
@@ -43,6 +44,7 @@
     <meta name="realtime-debug" content="{{ app()->environment('local') ? 'true' : 'false' }}">
 
 
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
 </head>
 <body>
 
@@ -278,6 +280,49 @@
     ></div>
 
 </section>
+
+            <!-- PUBLIC SERVICE SATISFACTION -->
+            <section id="agencyEvaluationSection" class="agency-evaluation-section" aria-labelledby="agencyEvaluationTitle">
+                <div class="agency-evaluation-heading">
+                    <div>
+                        <h3 id="agencyEvaluationTitle">Service Satisfaction</h3>
+                        <p>Ratings and feedback from KNOWURLOCAL users</p>
+                    </div>
+                </div>
+
+                <div id="agencyEvaluationSummary" class="agency-evaluation-summary" aria-live="polite"></div>
+                <div id="agencyEvaluationFilters" class="agency-evaluation-filters" aria-label="Filter evaluations by star rating" hidden></div>
+
+                @if (auth()->user()?->role === 'user')
+                <div class="agency-evaluation-form-wrap" id="agencyEvaluationFormWrap">
+                    <h4 id="agencyEvaluationFormTitle">Share your experience</h4>
+                    <p class="agency-evaluation-form-hint">Rate the service and accommodation you experienced at this office.</p>
+                    <form id="agencyEvaluationForm">
+                        <div class="agency-rating-input" role="radiogroup" aria-label="Your satisfaction rating">
+                            @for ($star = 1; $star <= 5; $star++)
+                                <button type="button" class="agency-rating-star" data-rating="{{ $star }}" role="radio" aria-checked="false" aria-label="{{ $star }} out of 5 stars">★</button>
+                            @endfor
+                        </div>
+                        <p id="agencyRatingLabel" class="agency-rating-label">Select a rating from 1 to 5</p>
+                        <label class="agency-evaluation-confirmation">
+                            <input type="checkbox" id="agencyEvaluationConfirmation" required>
+                            <span>I confirm this evaluation is based on my actual experience with this agency.</span>
+                        </label>
+                        <label class="agency-evaluation-comment-label" for="agencyEvaluationComment">Additional comments <span>(optional)</span></label>
+                        <textarea id="agencyEvaluationComment" maxlength="1500" rows="3" placeholder="Tell others about your experience…"></textarea>
+                        <div class="agency-evaluation-form-footer">
+                            <button type="button" id="agencyEvaluationCancel" class="agency-evaluation-cancel" hidden>Cancel</button>
+                            <button type="submit" id="agencyEvaluationSubmit" disabled>Submit evaluation</button>
+                        </div>
+                    </form>
+                    <p class="agency-evaluation-privacy-note">Your name is partially masked to protect your identity. You can edit or delete your evaluation anytime.</p>
+                </div>
+                @endif
+
+                <div id="agencyEvaluationReviews" class="agency-evaluation-reviews" aria-live="polite"><p class="agency-evaluation-loading">Loading evaluations…</p></div>
+
+
+            </section>
 
         </div>
 

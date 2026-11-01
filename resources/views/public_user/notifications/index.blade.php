@@ -15,11 +15,13 @@
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/knowurlocal-kyl-logo.svg') }}?v=3">
     <script src="https://unpkg.com/phosphor-icons@1.4.2"></script>
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navbar.css')) }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/notifications.css') }}?v={{ filemtime(public_path('cssfiles/public_user/notifications.css')) }}">
     @vite('resources/js/echo.js')
     <script src="{{ asset('jsfiles/public_user/navbar.js') }}" defer></script>
     <script type="module" src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}?v={{ filemtime(public_path('jsfiles/public_user/navbar-realtime.js')) }}"></script>
     <script type="module" src="{{ asset('jsfiles/public_user/notifications.js') }}?v={{ filemtime(public_path('jsfiles/public_user/notifications.js')) }}"></script>
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
 </head>
 <body class="user-notifications-page">
     <x-public.navbar :hideSearch="true" />
@@ -28,7 +30,7 @@
             <div>
                 <span class="notifications-eyebrow">YOUR ACCOUNT</span>
                 <h1>Notifications</h1>
-                <p>Updates about your support tickets and official agency responses.</p>
+                <p>Updates about your support tickets, agency responses, and evaluations.</p>
             </div>
             <form method="POST" action="{{ route('user.notifications.read-all') }}">
                 @csrf
@@ -56,8 +58,20 @@
                        data-user-notification-item
                        data-notification-id="{{ $notification->id }}"
                        data-read="{{ $notification->read_at ? '1' : '0' }}">
-                        <span class="user-notification-icon {{ $notification->type === 'ticket_trashed' ? 'is-trash' : 'is-response' }}">
-                            <i class="ph-light {{ $notification->type === 'ticket_trashed' ? 'ph-trash' : 'ph-chat-circle-text' }}" aria-hidden="true"></i>
+                        @php
+                            $isEvaluationNotice = str_starts_with($notification->type, 'evaluation_');
+                            $notificationIcon = match ($notification->type) {
+                                'ticket_trashed', 'evaluation_removed' => 'ph-trash',
+                                'evaluation_hidden' => 'ph-eye-slash',
+                                'evaluation_restored' => 'ph-eye',
+                                default => 'ph-chat-circle-text',
+                            };
+                            $notificationTone = in_array($notification->type, ['ticket_trashed', 'evaluation_removed'], true)
+                                ? 'is-trash'
+                                : ($isEvaluationNotice ? 'is-evaluation' : 'is-response');
+                        @endphp
+                        <span class="user-notification-icon {{ $notificationTone }}">
+                            <i class="ph-light {{ $notificationIcon }}" aria-hidden="true"></i>
                         </span>
                         <span class="user-notification-copy">
                             <strong>{{ $notification->title }}</strong>
@@ -73,7 +87,7 @@
                     <div class="notifications-empty" data-notifications-empty>
                         <span class="notifications-empty-icon"><i class="ph-light ph-bell-slash" aria-hidden="true"></i></span>
                         <h2>You're all caught up</h2>
-                        <p>New ticket updates and official responses will appear here.</p>
+                        <p>New ticket updates, official responses, and evaluation notices will appear here.</p>
                     </div>
                 @endforelse
             </div>

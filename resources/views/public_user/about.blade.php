@@ -38,6 +38,7 @@
     <link
         rel="stylesheet"
         href="{{ asset('cssfiles/public_user/navbar.css') }}"
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
     >
 
 
@@ -100,6 +101,7 @@
         defer
     ></script>
 
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
 </head>
 
 

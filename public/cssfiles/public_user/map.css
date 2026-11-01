@@ -13,7 +13,7 @@ body {
 
 html, body {
     height: 100%;
-    font-family: Arial, sans-serif;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 /* MAP FULLSCREEN */
@@ -2915,4 +2915,179 @@ a.agency-contact-value:focus-visible {
     .map-legend {
         bottom: 24px;
     }
+}
+
+/* Agency service satisfaction */
+.agency-evaluation-section{margin:24px 0 8px;padding:20px 0 4px;border-top:1px solid #e8edf2;color:#253247}
+.agency-evaluation-heading h3{font-size:1.05rem;font-weight:700;margin:0 0 4px}
+.agency-evaluation-heading p,.agency-evaluation-form-hint{font-size:.82rem;color:#718096;margin:0}
+.agency-evaluation-summary{display:flex;gap:18px;align-items:center;margin:16px 0;padding:14px;background:#f7f9fc;border:1px solid #edf1f5;border-radius:12px}
+.agency-evaluation-score{min-width:76px;text-align:center}.agency-evaluation-score strong{display:block;font-size:2rem;line-height:1.1;color:#26364b}.agency-evaluation-stars{color:#e7a936;letter-spacing:2px;font-size:.95rem}.agency-evaluation-count{font-size:.72rem;color:#718096;margin-top:3px}
+.agency-evaluation-bars{flex:1;display:grid;gap:4px}.agency-evaluation-bar-row{display:flex;align-items:center;gap:7px;font-size:.7rem;color:#718096}.agency-evaluation-bar-track{height:6px;flex:1;border-radius:20px;background:#e5eaf0;overflow:hidden}.agency-evaluation-bar-fill{height:100%;background:#e7a936;border-radius:20px}.agency-evaluation-bar-count{min-width:16px;text-align:right;font-size:.68rem;font-variant-numeric:tabular-nums;color:#64748b}
+.agency-evaluation-filters{display:flex;flex-wrap:wrap;gap:7px;margin:-5px 0 12px}
+.agency-evaluation-filters[hidden]{display:none!important}
+.agency-evaluation-filter{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:30px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:999px;background:#fff;color:#526174;font:inherit;font-size:.72rem;line-height:1.2;white-space:nowrap;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.agency-evaluation-filter:hover:not(:disabled){background:#f5f8fc;border-color:#cbd8e8}
+.agency-evaluation-filter.is-active{background:#edf4ff;border-color:#a9c3e8;color:#285b99;font-weight:650}
+.agency-evaluation-filter:disabled{opacity:.42;cursor:not-allowed}
+.agency-evaluation-filter:focus-visible{outline:2px solid #5379b8;outline-offset:2px}
+.agency-evaluation-filter-meta{margin:0 0 2px;color:#8491a2;font-size:.7rem;line-height:1.4}
+.agency-evaluation-reviews{display:grid;gap:10px}.agency-evaluation-review{padding:12px 0;border-bottom:1px solid #edf1f5}.agency-evaluation-review:last-child{border-bottom:0}.agency-evaluation-review-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.agency-evaluation-review-author{font-size:.82rem;font-weight:650;color:#334155}.agency-evaluation-review-date{font-size:.7rem;color:#94a3b8}.agency-evaluation-review-rating{color:#e7a936;letter-spacing:1px;font-size:.8rem}.agency-evaluation-review-comment{font-size:.82rem;line-height:1.55;color:#526174;margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.agency-evaluation-empty{font-size:.8rem;color:#7b8797;padding:4px 0 12px}
+.agency-evaluation-form-wrap{margin-top:16px;padding:16px;background:#f8fafc;border:1px solid #e9eef4;border-radius:12px}.agency-evaluation-form-wrap h4{font-size:.92rem;font-weight:700;margin:0 0 4px}.agency-rating-input{display:flex;gap:7px;margin-top:12px}.agency-rating-star{border:0;background:transparent;color:#cbd5e1;font-size:1.9rem;line-height:1;cursor:pointer;padding:2px;transition:color .15s,transform .15s}.agency-rating-star.is-active,.agency-rating-star:hover{color:#e7a936}.agency-rating-star:focus-visible{outline:2px solid #5379b8;outline-offset:3px;border-radius:5px}.agency-rating-label{font-size:.75rem;color:#718096;margin:7px 0 13px}.agency-evaluation-comment-label{display:block;font-size:.78rem;font-weight:650;color:#475569;margin-bottom:6px}.agency-evaluation-comment-label span{font-weight:400;color:#94a3b8}.agency-evaluation-form-wrap textarea{width:100%;min-height:76px;resize:vertical;border:1px solid #dbe3ec;border-radius:9px;background:#fff;padding:10px 11px;font:inherit;font-size:.82rem;color:#334155;outline:none}.agency-evaluation-form-wrap textarea:focus{border-color:#7294c7;box-shadow:0 0 0 3px rgba(83,121,184,.12)}.agency-evaluation-form-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}.agency-evaluation-form-footer span{font-size:.75rem;color:#64748b}.agency-evaluation-form-footer span.is-error{color:#b42318}.agency-evaluation-form-footer span.is-success{color:#16804a}.agency-evaluation-form-footer button{border:0;border-radius:8px;background:#315f9d;color:#fff;font-size:.8rem;font-weight:650;padding:9px 14px;cursor:pointer}.agency-evaluation-form-footer button:disabled{opacity:.45;cursor:not-allowed}.agency-evaluation-privacy-note{font-size:.7rem;color:#8491a2;margin:10px 0 0;line-height:1.45}
+@media(max-width:480px){.agency-evaluation-summary{gap:10px;padding:11px}.agency-evaluation-score strong{font-size:1.7rem}.agency-evaluation-form-wrap{padding:13px}.agency-evaluation-form-footer{align-items:flex-start;flex-direction:column}.agency-evaluation-form-footer button{width:100%}}
+.agency-evaluation-confirmation{display:flex;align-items:flex-start;gap:8px;margin:12px 0 10px;font-size:.74rem;line-height:1.45;color:#64748b;cursor:pointer}.agency-evaluation-confirmation input{margin-top:2px;accent-color:#315f9d;flex:0 0 auto}
+
+
+/* Agency evaluation actions and compact submit feedback */
+.agency-evaluation-review-top{position:relative}
+.agency-evaluation-review-actions{position:relative;flex:0 0 auto;margin-left:auto}
+.agency-evaluation-more{width:30px;height:30px;border:1px solid #e5eaf0;border-radius:8px;background:#fff;color:#526174;font-size:22px;line-height:1;cursor:pointer}
+.agency-evaluation-more:hover,.agency-evaluation-more:focus-visible{background:#f3f6fa;border-color:#cbd5e1;outline:none}
+.agency-evaluation-menu{position:absolute;z-index:5;right:0;top:34px;min-width:164px;padding:5px;background:#fff;border:1px solid #e5eaf0;border-radius:10px;box-shadow:0 10px 28px rgba(20,35,55,.16)}
+.agency-evaluation-menu[hidden],.agency-evaluation-form-wrap[hidden]{display:none!important}
+.agency-evaluation-menu>button{display:block;width:100%;border:0;border-radius:7px;background:transparent;text-align:left;padding:9px 10px;color:#334155;font:inherit;font-size:.78rem;cursor:pointer}
+.agency-evaluation-menu>button:hover{background:#f3f6fa}
+.agency-evaluation-menu>button.is-danger{color:#b42318}
+.agency-evaluation-form-footer button.is-loading{opacity:.85;cursor:wait}
+.agency-evaluation-button-spinner{display:inline-block;width:12px;height:12px;margin-right:6px;vertical-align:-2px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:agency-evaluation-spin .7s linear infinite}
+@keyframes agency-evaluation-spin{to{transform:rotate(360deg)}}
+
+/* Agency evaluation helpful votes */
+.agency-evaluation-helpful{display:inline-flex;align-items:center;gap:6px;margin-top:9px;padding:5px 9px;border:1px solid #e3e9f0;border-radius:999px;background:#fff;color:#64748b;font:inherit;font-size:.72rem;line-height:1.2;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.agency-evaluation-helpful:hover,.agency-evaluation-helpful:focus-visible{background:#f5f8fc;border-color:#cbd8e8;outline:none}
+.agency-evaluation-helpful.is-active{background:#edf4ff;border-color:#b8cbea;color:#285b99}
+.agency-evaluation-helpful:disabled{opacity:.6;cursor:wait}
+.agency-evaluation-helpful-count{min-width:14px;text-align:center;font-weight:700}
+
+
+/* Agency evaluation helpful controls: consistent Phosphor icon and right alignment. */
+.agency-evaluation-helpful-footer{display:flex;justify-content:flex-end;align-items:center;width:100%;margin-top:8px}
+.agency-evaluation-helpful{margin-top:0;gap:6px}
+.agency-evaluation-helpful>i,.agency-evaluation-helpful-owner-count>i{font-size:15px;line-height:1}
+.agency-evaluation-helpful-owner-count{display:inline-flex;align-items:center;gap:6px;color:#8491a3;font-size:.7rem;line-height:1.35}
+
+/* Evaluation edit cancellation */
+.agency-evaluation-form-footer button.agency-evaluation-cancel{
+    background:#fff;
+    color:#526174;
+    border:1px solid #dbe3ec;
+}
+.agency-evaluation-form-footer button.agency-evaluation-cancel:hover{
+    background:#f3f6fa;
+    border-color:#cbd5e1;
+}
+.agency-evaluation-form-footer button[hidden]{display:none!important}
+@media(max-width:480px){
+    .agency-evaluation-form-footer button.agency-evaluation-cancel{width:100%}
+}
+
+/* Agency evaluation pagination */
+.agency-evaluation-loading{margin:0;padding:12px 10px;color:#718096;font-size:.78rem;text-align:center;background:#f7f9fc;border:1px solid #edf1f5;border-radius:10px}
+.agency-evaluation-load-more{display:flex;align-items:center;justify-content:center;width:100%;min-height:40px;margin:8px 0 4px;padding:9px 14px;border:1px solid #c9d8eb;border-radius:9px;background:#f4f8fd;color:#315f98;font:inherit;font-size:.78rem;font-weight:650;cursor:pointer;transition:background .15s,border-color .15s}
+.agency-evaluation-load-more:hover:not(:disabled){background:#eaf2fc;border-color:#9eb9dc}
+.agency-evaluation-load-more:focus-visible{outline:2px solid #5379b8;outline-offset:2px}
+.agency-evaluation-load-more:disabled{opacity:.65;cursor:wait}
+
+
+/* Agency evaluation response and report affordances */
+.agency-evaluation-official-response {
+    margin: 12px 0 8px;
+    padding: 12px 14px;
+    border: 1px solid #dce8f4;
+    border-radius: 10px;
+    background: #f5f9fd;
+}
+.agency-evaluation-official-response strong {
+    display: block;
+    color: #28496d;
+    font-size: 12px;
+    font-weight: 700;
+}
+.agency-evaluation-official-response p {
+    margin: 6px 0 0;
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+.agency-evaluation-report-form {
+    display: grid;
+    gap: 8px;
+    margin: 10px 0;
+    padding: 12px;
+    border: 1px solid #e1e7ef;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+.agency-evaluation-report-form[hidden] { display: none !important; }
+.agency-evaluation-report-form select,
+.agency-evaluation-report-form textarea {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid #d6deea;
+    border-radius: 8px;
+    padding: 9px 10px;
+    background: #fff;
+    color: #334155;
+    font: inherit;
+}
+.agency-evaluation-report-form textarea { min-height: 68px; resize: vertical; }
+.agency-evaluation-report-form button {
+    justify-self: end;
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: #315f9d;
+    color: #fff;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.agency-evaluation-moderation-notice{margin:10px 0;padding:10px 12px;border:1px solid #f0d9a8;border-radius:9px;background:#fff9eb;color:#805b19;font-size:12px;line-height:1.45}
+
+
+/* Evaluation ownership and reporting controls */
+.agency-evaluation-review-author-group{
+    display:inline-flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:7px;
+    min-width:0;
+}
+.agency-evaluation-own-badge{
+    display:inline-flex;
+    align-items:center;
+    padding:3px 7px;
+    border:1px solid #d8e6fb;
+    border-radius:999px;
+    background:#eff6ff;
+    color:#315f9d;
+    font-size:.64rem;
+    font-weight:650;
+    line-height:1.2;
+    white-space:nowrap;
+}
+.agency-evaluation-report-trigger{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:30px;
+    height:30px;
+    padding:0;
+    border:1px solid #e5eaf0;
+    border-radius:8px;
+    background:#fff;
+    color:#64748b;
+    cursor:pointer;
+    transition:background .16s ease,border-color .16s ease,color .16s ease;
+}
+.agency-evaluation-report-trigger i{font-size:16px}
+.agency-evaluation-report-trigger:hover,
+.agency-evaluation-report-trigger:focus-visible,
+.agency-evaluation-report-trigger.is-active{
+    background:#f3f6fa;
+    border-color:#cbd5e1;
+    color:#315f9d;
+    outline:none;
 }

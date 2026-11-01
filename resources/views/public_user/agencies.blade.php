@@ -13,6 +13,7 @@
 
 <link rel="stylesheet" href="{{ asset('cssfiles/theme.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css')}}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
 
 <style>
 
@@ -168,6 +169,7 @@ body{
     <meta name="realtime-debug" content="{{ app()->environment('local') ? 'true' : 'false' }}">
 
 
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
 </head>
 
 <body>

@@ -3,6 +3,8 @@
 use App\Http\Controllers\AdminInviteController;
 use App\Http\Controllers\AdminManagementController;
 use App\Http\Controllers\AgencyController;
+use App\Http\Controllers\AgencyEvaluationController;
+use App\Http\Controllers\AgencyEvaluationManagementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChatbotController;
@@ -251,6 +253,26 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
 
     // API
     Route::get('/api/agencies', [AgencyController::class, 'getAll']);
+    Route::get('/api/agencies/{agency}/evaluations', [AgencyEvaluationController::class, 'index'])
+        ->whereNumber('agency')
+        ->middleware('throttle:60,1')
+        ->name('agency.evaluations.index');
+    Route::post('/api/agencies/{agency}/evaluations', [AgencyEvaluationController::class, 'store'])
+        ->whereNumber('agency')
+        ->middleware('throttle:10,1')
+        ->name('agency.evaluations.store');
+    Route::delete('/api/agencies/{agency}/evaluations', [AgencyEvaluationController::class, 'destroy'])
+        ->whereNumber('agency')
+        ->middleware('throttle:10,1')
+        ->name('agency.evaluations.destroy');
+    Route::post('/api/agencies/{agency}/evaluations/{evaluation}/helpful', [AgencyEvaluationController::class, 'toggleHelpful'])
+        ->whereNumber(['agency', 'evaluation'])
+        ->middleware('throttle:30,1')
+        ->name('agency.evaluations.helpful');
+    Route::post('/api/agencies/{agency}/evaluations/{evaluation}/report', [AgencyEvaluationManagementController::class, 'publicReport'])
+        ->whereNumber(['agency', 'evaluation'])
+        ->middleware('throttle:5,1')
+        ->name('agency.evaluations.report');
 
     // Chatbot
     Route::post('/chat', [ChatbotController::class, 'ask'])
@@ -478,6 +500,23 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     )->middleware('throttle:8,1')
       ->name('admin.faqs.prepareFromSupport');
 
+    Route::get('/evaluations', [AgencyEvaluationManagementController::class, 'adminOverview'])
+        ->name('admin.evaluations.overview');
+    Route::get('/evaluations/{agency}', [AgencyEvaluationManagementController::class, 'adminAgency'])
+        ->whereNumber('agency')->name('admin.evaluations.agency');
+    Route::post('/evaluations/{agency}/{evaluation}/response', [AgencyEvaluationManagementController::class, 'respond'])
+        ->whereNumber(['agency', 'evaluation'])->middleware('throttle:20,1')->name('admin.evaluations.respond');
+    Route::delete('/evaluations/{agency}/responses/{response}', [AgencyEvaluationManagementController::class, 'deleteResponse'])
+        ->whereNumber(['agency', 'response'])->name('admin.evaluations.responses.delete');
+
+    Route::get('/evaluation-moderation', [AgencyEvaluationManagementController::class, 'reports'])
+        ->name('admin.evaluations.moderation');
+    Route::get('/evaluation-moderation/evaluations/{evaluation}/reports', [AgencyEvaluationManagementController::class, 'reportsForEvaluation'])
+        ->whereNumber('evaluation')->middleware('throttle:60,1')
+        ->name('admin.evaluations.moderation.reports');
+    Route::post('/evaluation-moderation/evaluations/{evaluation}', [AgencyEvaluationManagementController::class, 'moderate'])
+        ->whereNumber('evaluation')->middleware('throttle:20,1')->name('admin.evaluations.moderate');
+
 });
 
 
@@ -524,6 +563,8 @@ Route::delete(
     // ADMIN MANAGEMENT PAGE
     Route::get('/admins', [AdminManagementController::class, 'admins'])
         ->name('admin.admins');
+    Route::patch('/admins/{id}/evaluation-moderation', [AdminManagementController::class, 'toggleEvaluationModeration'])
+        ->whereNumber('id')->name('admin.admins.evaluation-moderation');
 
     // APPROVAL
     Route::post('/admins/approve/{id}', [AdminManagementController::class, 'approve'])
@@ -654,6 +695,15 @@ Route::prefix('agency-admin')
             ->name('collaboration.targets');
         Route::get('/analytics', [\App\Http\Controllers\AgencyAdminController::class, 'analytics'])
             ->name('analytics');
+        Route::get('/evaluations', [AgencyEvaluationManagementController::class, 'agencyIndex'])
+            ->name('evaluations');
+        Route::post('/evaluations/{evaluation}/response', [AgencyEvaluationManagementController::class, 'agencyAdminRespond'])
+            ->whereNumber('evaluation')->middleware('throttle:20,1')->name('evaluations.respond');
+        Route::delete('/evaluations/responses/{response}', function (Request $request, \App\Models\AgencyEvaluationResponse $response) {
+            $agency = $request->user()->agency;
+            abort_unless($agency, 403);
+            return app(AgencyEvaluationManagementController::class)->deleteResponse($request, $agency, $response);
+        })->whereNumber('response')->name('evaluations.responses.delete');
         Route::get('/tickets', [\App\Http\Controllers\AgencyAdminController::class, 'tickets'])
             ->name('tickets');
         Route::post('/tickets/{ticketId}/trash', [\App\Http\Controllers\AgencyAdminController::class, 'trashTicket'])
