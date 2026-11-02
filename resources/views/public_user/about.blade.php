@@ -51,7 +51,7 @@
 
     <link
         rel="stylesheet"
-        href="{{ asset('cssfiles/public_user/about.css') }}"
+        href="{{ asset('cssfiles/public_user/about.css') }}?v={{ filemtime(public_path('cssfiles/public_user/about.css')) }}"
     >
 
 

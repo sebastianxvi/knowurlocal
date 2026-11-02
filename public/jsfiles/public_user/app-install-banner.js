@@ -14,6 +14,7 @@
     const action = banner.querySelector('[data-app-install-action]');
     const dismiss = banner.querySelector('[data-app-install-dismiss]');
     const help = banner.querySelector('[data-app-install-help]');
+    if (help) help.setAttribute('aria-live', 'polite');
     let deferredPrompt = null;
     const dismissedKey = 'knowurlocal-app-banner-dismissed';
 
@@ -78,9 +79,16 @@
             const choice = await deferredPrompt.userChoice;
             deferredPrompt = null;
             if (choice?.outcome === 'accepted') hide();
+            else if (action) action.querySelector('span')?.replaceChildren(document.createTextNode('Install App'));
         } else if (help) {
             help.textContent = instructions();
             help.hidden = false;
+            // Make the fallback obvious and accessible when the browser does
+            // not expose its native install prompt (e.g. iOS Safari).
+            if (action) {
+                action.querySelector('span')?.replaceChildren(document.createTextNode('Install help'));
+            }
+            syncBannerLayout();
         }
     });
 
