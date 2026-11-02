@@ -1,9 +1,27 @@
 (() => {
-    // Keep installation support available from every public page; no pages or
-    // private data are cached by this online-only service worker.
-    if ("serviceWorker" in navigator && window.location.protocol === "https:") {
-        window.addEventListener("load", () => {
-            navigator.serviceWorker.register("/service-worker.js", { scope: "/" }).catch(() => {});
+    // Capture the browser's install event as early as this shared component loads.
+    // The event is only available when the browser considers this site installable.
+    const installState = window.__kylPwaInstallState ||
+        (window.__kylPwaInstallState = { deferredPrompt: null });
+
+    if (!window.__kylBeforeInstallPromptBound) {
+        window.__kylBeforeInstallPromptBound = true;
+        window.addEventListener('beforeinstallprompt', event => {
+            event.preventDefault();
+            installState.deferredPrompt = event;
+            window.dispatchEvent(new CustomEvent('kyl:pwa-install-available'));
+        }, { capture: true });
+
+        window.addEventListener('appinstalled', () => {
+            installState.deferredPrompt = null;
+            window.dispatchEvent(new CustomEvent('kyl:pwa-installed'));
+        });
+    }
+
+    // Online-only service worker: no pages or private data are cached.
+    if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(() => {});
         }, { once: true });
     }
 
@@ -14,8 +32,9 @@
     const action = banner.querySelector('[data-app-install-action]');
     const dismiss = banner.querySelector('[data-app-install-dismiss]');
     const help = banner.querySelector('[data-app-install-help]');
+    const actionLabel = action?.querySelector('span');
     if (help) help.setAttribute('aria-live', 'polite');
-    let deferredPrompt = null;
+
     const dismissedKey = 'knowurlocal-app-banner-dismissed';
 
     const isInstalled = () =>
@@ -28,17 +47,16 @@
         catch (_) { return false; }
     };
 
+    const syncBannerLayout = () => {
+        const height = banner.hidden ? 0 : Math.ceil(banner.getBoundingClientRect().height);
+        document.documentElement.style.setProperty('--kyl-install-banner-height', `${height}px`);
+    };
+
     const show = () => {
         if (!isInstalled() && !wasDismissed()) {
             banner.hidden = false;
             syncBannerLayout();
         }
-    };
-    const syncBannerLayout = () => {
-        // The banner is in normal document flow. Publish its measured height
-        // so fixed navigation and full-screen map surfaces start below it.
-        const height = banner.hidden ? 0 : Math.ceil(banner.getBoundingClientRect().height);
-        document.documentElement.style.setProperty('--kyl-install-banner-height', `${height}px`);
     };
 
     const hide = () => {
@@ -50,16 +68,27 @@
         const ua = navigator.userAgent || '';
         const ios = /iPad|iPhone|iPod/.test(ua) ||
             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        if (ios) return 'In Safari, tap Share, then choose “Add to Home Screen” to install KNOWURLOCAL.';
-        if (/Android/i.test(ua)) return 'In your browser menu, choose “Install app” or “Add to Home screen”.';
-        return 'In Chrome or Edge, open the browser menu and choose “Install KNOWURLOCAL” or “Install page as app”.';
+
+        if (ios) {
+            return 'To install: open this page in Safari, tap Share, then choose “Add to Home Screen”.';
+        }
+        if (/Android/i.test(ua)) {
+            return 'Your browser did not offer the install prompt. In Chrome, open ⋮ and choose “Install app” or “Add to Home screen”.';
+        }
+        return 'Your browser did not offer the install prompt. In Chrome or Edge, open the browser menu and choose “Install KNOWURLOCAL” or “Install page as app”.';
+    };
+
+    const showHelp = message => {
+        if (!help) return;
+        help.textContent = message || instructions();
+        help.hidden = false;
+        if (actionLabel) actionLabel.textContent = 'Install help';
+        syncBannerLayout();
     };
 
     if (isInstalled()) hide();
     else show();
 
-    // Keep fixed surfaces aligned after responsive wrapping, orientation changes,
-    // browser zoom, font loading, or dynamic banner help text.
     if ('ResizeObserver' in window) {
         const bannerObserver = new ResizeObserver(syncBannerLayout);
         bannerObserver.observe(banner);
@@ -67,28 +96,37 @@
         window.addEventListener('resize', syncBannerLayout, { passive: true });
     }
 
-    window.addEventListener('beforeinstallprompt', event => {
-        event.preventDefault();
-        deferredPrompt = event;
+    // Re-render state if the install event arrives after this component initializes.
+    window.addEventListener('kyl:pwa-install-available', () => {
+        if (actionLabel) actionLabel.textContent = 'Install App';
+        if (help) help.hidden = true;
         show();
     });
 
     action?.addEventListener('click', async () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const choice = await deferredPrompt.userChoice;
-            deferredPrompt = null;
-            if (choice?.outcome === 'accepted') hide();
-            else if (action) action.querySelector('span')?.replaceChildren(document.createTextNode('Install App'));
-        } else if (help) {
-            help.textContent = instructions();
-            help.hidden = false;
-            // Make the fallback obvious and accessible when the browser does
-            // not expose its native install prompt (e.g. iOS Safari).
-            if (action) {
-                action.querySelector('span')?.replaceChildren(document.createTextNode('Install help'));
+        const promptEvent = installState.deferredPrompt;
+
+        if (!promptEvent) {
+            showHelp();
+            return;
+        }
+
+        try {
+            // The native prompt must be invoked directly from this user gesture.
+            await promptEvent.prompt();
+            const choice = await promptEvent.userChoice;
+            installState.deferredPrompt = null;
+
+            if (choice?.outcome === 'accepted') {
+                hide();
+                if (help) help.hidden = true;
+            } else {
+                showHelp('Installation was not completed. You can try again from your browser menu.');
+                if (actionLabel) actionLabel.textContent = 'Install App';
             }
-            syncBannerLayout();
+        } catch (_) {
+            installState.deferredPrompt = null;
+            showHelp();
         }
     });
 
@@ -97,9 +135,9 @@
         try { localStorage.setItem(dismissedKey, '1'); } catch (_) {}
     });
 
-    window.addEventListener('appinstalled', () => {
+    window.addEventListener('kyl:pwa-installed', () => {
         hide();
-        deferredPrompt = null;
+        installState.deferredPrompt = null;
         try { localStorage.removeItem(dismissedKey); } catch (_) {}
     });
 
