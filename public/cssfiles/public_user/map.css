@@ -19,7 +19,7 @@ html, body {
 /* MAP FULLSCREEN */
 #map {
     position: absolute;
-    top: calc(env(safe-area-inset-top, 0px) + 0px);
+    top: calc(env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px));
     bottom: calc(env(safe-area-inset-bottom, 0px) + 0px);
     left: 0;
     right: 0;

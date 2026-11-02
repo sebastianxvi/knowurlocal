@@ -6,13 +6,16 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f8faf8">
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/pwa-icon-192.png') }}">
 <title>KNOWURLOCAL | Agencies</title>
 
 <!-- Phosphor Icons -->
 <script src="https://unpkg.com/phosphor-icons"></script>
 
 <link rel="stylesheet" href="{{ asset('cssfiles/theme.css') }}">
-<link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css')}}">
+<link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navbar.css')) }}">
     <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
 
 <style>

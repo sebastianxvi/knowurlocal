@@ -1,0 +1,94 @@
+/* Compact, sticky site-level PWA install notice.
+   It remains in normal flow, reserving space while sticky at the viewport top. */
+.kyl-app-install-banner {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 10000;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 4px clamp(12px, 3vw, 28px);
+    background: #eef3ff;
+    border-bottom: 1px solid #dce5fb;
+    color: #202536;
+}
+.kyl-app-install-banner[hidden] { display: none !important; }
+.kyl-app-install-banner-inner {
+    width: min(100%, 1240px);
+    min-height: 36px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.kyl-app-install-banner-icon {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #e2e9fb;
+}
+.kyl-app-install-banner-icon img { width: 23px; height: 23px; object-fit: contain; }
+.kyl-app-install-banner-copy {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 3px 8px;
+}
+.kyl-app-install-banner-title { margin: 0; font-size: 12px; font-weight: 700; line-height: 1.3; white-space: nowrap; }
+.kyl-app-install-banner-description { margin: 0; font-size: 11px; line-height: 1.35; color: #596276; }
+.kyl-app-install-banner-help { margin: 3px 0 0; font-size: 11px; line-height: 1.4; color: #46516b; flex-basis: 100%; }
+.kyl-app-install-banner-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    min-height: 30px;
+    padding: 0 11px;
+    border: 0;
+    border-radius: 8px;
+    background: #5273d2;
+    color: #fff;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.kyl-app-install-banner-action:hover { background: #405fbd; }
+.kyl-app-install-banner-action:focus-visible,
+.kyl-app-install-banner-dismiss:focus-visible { outline: 3px solid #8aa8ff; outline-offset: 2px; }
+.kyl-app-install-banner-dismiss {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #68738a;
+    cursor: pointer;
+}
+.kyl-app-install-banner-dismiss:hover { background: #e0e8fb; color: #26324a; }
+
+@media (max-width: 600px) {
+    .kyl-app-install-banner { padding: 4px 8px; }
+    .kyl-app-install-banner-inner { gap: 6px; min-height: 32px; }
+    .kyl-app-install-banner-icon { width: 26px; height: 26px; flex-basis: 26px; }
+    .kyl-app-install-banner-icon img { width: 20px; height: 20px; }
+    .kyl-app-install-banner-copy { display: block; }
+    .kyl-app-install-banner-title { font-size: 11px; }
+    .kyl-app-install-banner-description { display: none; }
+    .kyl-app-install-banner-action { min-height: 28px; padding: 0 8px; font-size: 10px; }
+    .kyl-app-install-banner-dismiss { width: 26px; height: 26px; flex-basis: 26px; }
+    .kyl-app-install-banner-help { font-size: 10px; }
+}
+
+/* Shared measured height consumed by fixed public navigation and full-screen map. */
+:root { --kyl-install-banner-height: 0px; }

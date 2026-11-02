@@ -118,6 +118,7 @@ body {
     top:
         calc(
             env(safe-area-inset-top, 0px)
+            + var(--kyl-install-banner-height, 0px)
             + 14px
         );
 
@@ -1568,9 +1569,11 @@ mark {
 
     .site-header {
 
+        /* Keep the mobile header below the global sticky install banner. */
         top:
             calc(
                 env(safe-area-inset-top, 0px)
+                + var(--kyl-install-banner-height, 0px)
                 + 10px
             );
     }

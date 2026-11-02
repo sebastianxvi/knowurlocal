@@ -1,3 +1,5 @@
+<x-public.app-install-banner />
+
 <header class="site-header">
 
     <div class="nav-group">

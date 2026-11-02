@@ -27,6 +27,9 @@
         content="#f8faf8"
     >
 
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/pwa-icon-192.png') }}">
+
     <title>
         KNOWURLOCAL - Know Where To Go. Know What To Ask.
     </title>
@@ -56,6 +59,8 @@
 
 
 <body>
+
+    <x-public.app-install-banner />
 
     {{-- =========================================================
          LANDING PAGE ROOT
@@ -324,7 +329,6 @@
              ===================================================== --}}
 
         <main class="landing-main">
-
 
             {{-- =================================================
                  HERO

@@ -45,7 +45,7 @@ body.user-notifications-page {
 
 body.user-notifications-page .site-header {
     position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 20px);
+    top: calc(env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px) + 20px);
     left: 0;
     right: 0;
     z-index: 9999;
@@ -55,9 +55,9 @@ body.user-notifications-page .notifications-shell {
     display: flex;
     flex-direction: column;
     width: min(100% - 40px, 980px);
-    height: calc(100dvh - 124px - env(safe-area-inset-bottom, 0px));
+    height: calc(100dvh - 124px - var(--kyl-install-banner-height, 0px) - env(safe-area-inset-bottom, 0px));
     min-height: 0;
-    margin: 104px auto 20px;
+    margin: calc(104px + var(--kyl-install-banner-height, 0px)) auto 20px;
     overflow: hidden;
 }
 
@@ -104,13 +104,13 @@ body.user-notifications-page .notifications-list::-webkit-scrollbar-thumb {
 
 @media (max-width: 640px) {
     body.user-notifications-page .site-header {
-        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        top: calc(env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px) + 12px);
     }
 
     body.user-notifications-page .notifications-shell {
         width: calc(100% - 24px);
-        height: calc(100dvh - 112px - env(safe-area-inset-bottom, 0px));
-        margin: calc(92px + env(safe-area-inset-top, 0px)) auto 12px;
+        height: calc(100dvh - 112px - var(--kyl-install-banner-height, 0px) - env(safe-area-inset-bottom, 0px));
+        margin: calc(92px + env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px)) auto 12px;
     }
 
     body.user-notifications-page .notifications-heading {

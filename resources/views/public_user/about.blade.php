@@ -18,6 +18,9 @@
         content="#f6f7fa"
     >
 
+    <meta name="theme-color" content="#f8faf8">
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/pwa-icon-192.png') }}">
     <title>KNOWURLOCAL | About</title>
 
 
@@ -37,9 +40,9 @@
 
     <link
         rel="stylesheet"
-        href="{{ asset('cssfiles/public_user/navbar.css') }}"
-    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
+        href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navbar.css')) }}"
     >
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
 
 
     {{-- =========================================================
