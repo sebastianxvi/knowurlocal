@@ -28,6 +28,27 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
+// Public PWA metadata fallback. Static public files are served directly when present;
+// these routes also cover deployments where the document root is mapped differently.
+Route::get('/manifest.webmanifest', function () {
+    return response()->json([
+        'id' => '/',
+        'name' => 'KNOWURLOCAL',
+        'short_name' => 'KNOWURLOCAL',
+        'description' => 'Discover local agencies, services, office locations, and community information in San Jose, Occidental Mindoro.',
+        'start_url' => '/',
+        'scope' => '/',
+        'display' => 'standalone',
+        'orientation' => 'any',
+        'background_color' => '#f6f7fa',
+        'theme_color' => '#f8faf8',
+        'icons' => [
+            ['src' => '/images/pwa-icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+            ['src' => '/images/pwa-icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+        ],
+    ])->header('Content-Type', 'application/manifest+json');
+})->name('pwa.manifest');
+
 // Public landing page
 Route::view('/', 'public_user.landing')
     ->name('landing');
