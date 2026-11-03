@@ -43,7 +43,7 @@
         window.navigator.standalone === true;
 
     const wasDismissed = () => {
-        try { return window.localStorage.getItem(dismissedKey) === '1'; }
+        try { return window.sessionStorage.getItem(dismissedKey) === '1'; }
         catch (_) { return false; }
     };
 
@@ -103,16 +103,22 @@
         show();
     });
 
-    action?.addEventListener('click', async () => {
+    action?.addEventListener('click', () => {
+        requestInstall();
+    });
+
+    // Each entry point calls prompt() from its own trusted click handler.
+    const requestInstall = async () => {
         const promptEvent = installState.deferredPrompt;
 
         if (!promptEvent) {
+            banner.hidden = false;
+            syncBannerLayout();
             showHelp();
             return;
         }
 
         try {
-            // The native prompt must be invoked directly from this user gesture.
             await promptEvent.prompt();
             const choice = await promptEvent.userChoice;
             installState.deferredPrompt = null;
@@ -121,18 +127,43 @@
                 hide();
                 if (help) help.hidden = true;
             } else {
+                banner.hidden = false;
+                syncBannerLayout();
                 showHelp('Installation was not completed. You can try again from your browser menu.');
                 if (actionLabel) actionLabel.textContent = 'Install App';
             }
         } catch (_) {
             installState.deferredPrompt = null;
+            banner.hidden = false;
+            syncBannerLayout();
             showHelp();
         }
+    };
+
+    // Delegated handling is required because this shared script is loaded
+    // near the top of the page, before landing navigation/footer links exist.
+    // Keep prompt() directly within the trusted click event.
+    document.addEventListener('click', event => {
+        const trigger = event.target.closest('[data-app-install-trigger]');
+        if (!trigger) return;
+
+        event.preventDefault();
+
+        if (isInstalled()) {
+            // On an already-installed PWA, the page is already running as the app.
+            // From a normal browser tab, avoid a misleading install-help message.
+            window.location.assign('/');
+            return;
+        }
+
+        banner.hidden = false;
+        syncBannerLayout();
+        requestInstall();
     });
 
     dismiss?.addEventListener('click', () => {
         hide();
-        try { localStorage.setItem(dismissedKey, '1'); } catch (_) {}
+        try { sessionStorage.setItem(dismissedKey, '1'); } catch (_) {}
     });
 
     window.addEventListener('kyl:pwa-installed', () => {

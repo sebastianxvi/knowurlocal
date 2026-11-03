@@ -19,4 +19,4 @@
         </button>
     </div>
 </aside>
-<script src="{{ asset('jsfiles/public_user/app-install-banner.js') }}?v=5-{{ filemtime(public_path('jsfiles/public_user/app-install-banner.js')) }}"></script>
+<script src="{{ asset('jsfiles/public_user/app-install-banner.js') }}?v=7-{{ filemtime(public_path('jsfiles/public_user/app-install-banner.js')) }}"></script>

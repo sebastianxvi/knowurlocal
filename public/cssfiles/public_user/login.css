@@ -125,11 +125,19 @@ body {
 
     display: flex;
 
-    justify-content: center;
+    flex-direction: column;
+
+    justify-content: flex-start;
 
     align-items: center;
 
-    padding: 24px;
+    /*
+     * The shared install banner is a full-width, normal-flow element.
+     * Keep it at the top; center the authentication card in the
+     * remaining page space instead of treating both as side-by-side
+     * flex children.
+     */
+    padding: 0 24px 24px;
 
     -webkit-font-smoothing: antialiased;
 
@@ -1858,4 +1866,33 @@ body {
 
     }
 
+}
+
+
+/* Login page: the global install banner must sit above the auth card. */
+body > .kyl-app-install-banner {
+    width: calc(100% + 48px);
+    margin: 0 -24px 24px;
+    flex: 0 0 auto;
+}
+
+body > .container {
+    margin: auto 0;
+}
+
+@media (max-width: 850px) {
+    body {
+        padding: 0;
+    }
+
+    body > .kyl-app-install-banner {
+        width: 100%;
+        margin: 0 0 0;
+        position: sticky;
+        top: env(safe-area-inset-top, 0px);
+    }
+
+    body > .container {
+        margin: 0;
+    }
 }

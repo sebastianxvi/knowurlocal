@@ -166,6 +166,10 @@
                         Sign in
                     </a>
 
+                    <a href="#install-app" class="landing-login" data-app-install-trigger>
+                        Install app
+                    </a>
+
                     <a
                         href="{{ route('public.login', ['register' => 1]) }}"
                         class="landing-button landing-button-primary"
@@ -246,6 +250,10 @@
                     data-mobile-link
                 >
                     Sign in
+                </a>
+
+                <a href="#install-app" class="landing-mobile-link" data-mobile-link data-app-install-trigger>
+                    Install app
                 </a>
 
             </div>
@@ -1344,6 +1352,10 @@
 
                     <a href="{{ route('public.login') }}">
                         Sign in
+                    </a>
+
+                    <a href="#install-app" data-app-install-trigger>
+                        Install app
                     </a>
 
                 </div>

@@ -59,8 +59,27 @@ Route::view('/', 'public_user.landing')
 |--------------------------------------------------------------------------
 */
 
-Route::get('/login-page', function () {
-    return view('public_user.login-page');
+Route::get('/login-page', function (Request $request) {
+    // Keep an authenticated user from landing on a stale login screen through
+    // browser/Android Back navigation. This does not invalidate their session.
+    if (auth()->check()) {
+        $user = auth()->user();
+
+        if ($user->role === 'agency_admin') {
+            return redirect()->route('agency-admin.dashboard');
+        }
+
+        if (in_array($user->role, ['admin', 'superadmin'], true)) {
+            return redirect('/admin/dashboard');
+        }
+
+        return redirect()->route('map');
+    }
+
+    return response()
+        ->view('public_user.login-page')
+        ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->header('Pragma', 'no-cache');
 })->name('public.login');
 
 Route::post('/login', [AuthController::class, 'login'])

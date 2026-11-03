@@ -19,6 +19,8 @@
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/knowurlocal-kyl-logo.svg') }}?v=3" sizes="any">
     <link rel="alternate icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=3">
     <meta name="theme-color" content="#1769E0">
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/pwa-icon-192.png') }}">
 
 
     {{-- =====================================================
@@ -64,6 +66,7 @@
 
 <body>
 
+<x-public.app-install-banner />
 
 <div
     class="container"
