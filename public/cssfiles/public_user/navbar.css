@@ -146,7 +146,7 @@ body {
 
     display: flex;
 
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
 
     gap: 12px;
@@ -1594,6 +1594,7 @@ mark {
 
     .logo-search {
 
+        height: 46px;
         min-height: 46px;
 
         padding:
@@ -1669,6 +1670,8 @@ mark {
 
         width: 46px;
         height: 46px;
+        min-height: 46px;
+        align-self: center;
 
         border-radius:
             13px;
@@ -3100,3 +3103,77 @@ a,
 body { font-size: 14px; }
 body :is(p, li, label, td, th, input, select, textarea, button) { font-size: 14px; }
 body :is(small, .helper-text, .field-hint, .form-hint) { font-size: 12px; }
+
+
+/* =========================================================
+   NAVBAR CONTROL HEIGHT NORMALIZATION
+   Keep the search control at the navigation control's height.
+   The global accessibility stylesheet gives inputs a minimum
+   height; explicitly reset it here so it cannot inflate the
+   search wrapper through its flex layout.
+   ========================================================= */
+@media (min-width: 768px) {
+    /*
+     * Search-area also contains category chips below the search box.
+     * Centering the drawer against that whole column moves the drawer
+     * down beside the chips. Align both primary controls at the top
+     * so the drawer shares the search box's vertical position.
+     */
+    .nav-group {
+        align-items: flex-start;
+    }
+
+    .nav-drawer {
+        align-self: flex-start;
+    }
+
+    .logo-search {
+        height: 50px;
+        min-height: 50px;
+        box-sizing: border-box;
+        padding-block: 5px;
+    }
+
+    .search-form,
+    .search-form input[type="search"] {
+        min-height: 0;
+    }
+
+    .search-form input[type="search"] {
+        height: 34px;
+        max-height: 34px;
+        box-sizing: border-box;
+        padding-block: 0;
+        line-height: 34px;
+    }
+}
+
+@media (max-width: 767px) {
+    .logo-search {
+        height: 48px;
+        min-height: 48px;
+        box-sizing: border-box;
+        padding-block: 5px;
+    }
+
+    .menu-toggle {
+        width: 48px;
+        height: 48px;
+        min-height: 48px;
+        box-sizing: border-box;
+        align-self: flex-start;
+    }
+
+    .search-form,
+    .search-form input[type="search"] {
+        min-height: 0;
+    }
+
+    .search-form input[type="search"] {
+        height: 34px;
+        max-height: 34px;
+        box-sizing: border-box;
+        padding-block: 0;
+        line-height: 34px;
+    }
+}

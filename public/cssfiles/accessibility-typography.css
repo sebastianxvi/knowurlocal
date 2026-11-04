@@ -119,3 +119,21 @@ body :is(small, [class*="hint"], [class*="helper"], [class*="eyebrow"], [class*=
 /* Comfortable pointer targets; icon-only controls may use a 24px target where space is essential. */
 body :is(button, [role="button"], input[type="checkbox"], input[type="radio"]) { touch-action: manipulation; }
 body :is(input[type="checkbox"], input[type="radio"]) { min-width: 1.25rem; min-height: 1.25rem; }
+
+
+/* =========================================================
+   FORM FIELD FOCUS RESET
+   Remove the intrusive blue focus box from text-entry controls
+   across public and admin modules. Keep focus styling scoped to
+   interactive non-field controls; native keyboard navigation remains.
+   ========================================================= */
+body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea):focus,
+body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea):focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Neutralize focus rings on field wrappers that otherwise add a blue halo. */
+body :is(.input-group, .floating-group, .searchable-select-input, .logo-search, .inquiries-search, .messenger-composer-field, #inputArea):focus-within {
+    box-shadow: none !important;
+}
