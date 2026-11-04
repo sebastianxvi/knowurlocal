@@ -343,6 +343,55 @@
 
         }
 
+    
+        /* Modern OTP verification treatment, aligned with the profile password flow. */
+        body { background: #f1f4f9; color: #1d2a40; }
+        .otp-container { width: min(100%, 430px); }
+        .otp-card {
+            padding: 34px 28px;
+            border: 1px solid #e0e7f2;
+            border-radius: 22px;
+            box-shadow: 0 20px 56px rgba(28, 43, 72, .10);
+            text-align: left;
+        }
+        .otp-card h2 { color: #172b4d; font-size: 22px; letter-spacing: -.035em; }
+        .otp-card > p { font-size: 13px; line-height: 1.55; color: #718096; }
+        .otp-inputs { gap: 9px; margin: 24px 0 20px; }
+        .otp-inputs input {
+            width: clamp(38px, 9vw, 48px);
+            height: 54px;
+            border: 1px solid #dce4f0;
+            border-radius: 12px;
+            background: #f9fbff;
+            color: #1e2b43;
+            font-size: 19px;
+            font-weight: 700;
+            transition: border-color .15s, box-shadow .15s, background .15s;
+        }
+        .otp-inputs input:focus {
+            border-color: #5272c9;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(82, 114, 201, .14);
+            transform: none;
+        }
+        .otp-card .btn {
+            border-radius: 12px;
+            padding: 13px 16px;
+            background: #5272c9;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .otp-card .btn:hover { background: #4262b9; }
+        .otp-resend-status { min-height: 17px; margin-top: 9px; color: #718096; font-size: 11px; }
+        .otp-card .resend { text-align: center; }
+        .otp-card .otp-help { color: #8793a7; font-size: 11px; }
+        @media (max-width: 420px) {
+            body { padding: 12px; }
+            .otp-card { padding: 28px 18px; border-radius: 18px; }
+            .otp-inputs { gap: 6px; }
+            .otp-inputs input { height: 48px; border-radius: 10px; }
+        }
+
     </style>
 
     <link rel="stylesheet" href="{{ asset('cssfiles/accessibility-typography.css') }}?v={{ file_exists(public_path('cssfiles/accessibility-typography.css')) ? filemtime(public_path('cssfiles/accessibility-typography.css')) : time() }}">
@@ -407,6 +456,8 @@
                         type="text"
                         maxlength="1"
                         inputmode="numeric"
+                        autocomplete="one-time-code"
+                        pattern="[0-9]"
                         aria-label="OTP digit 1"
                     >
 
@@ -414,6 +465,7 @@
                         type="text"
                         maxlength="1"
                         inputmode="numeric"
+                        pattern="[0-9]"
                         aria-label="OTP digit 2"
                     >
 
@@ -421,6 +473,7 @@
                         type="text"
                         maxlength="1"
                         inputmode="numeric"
+                        pattern="[0-9]"
                         aria-label="OTP digit 3"
                     >
 
@@ -428,6 +481,7 @@
                         type="text"
                         maxlength="1"
                         inputmode="numeric"
+                        pattern="[0-9]"
                         aria-label="OTP digit 4"
                     >
 
@@ -435,6 +489,7 @@
                         type="text"
                         maxlength="1"
                         inputmode="numeric"
+                        pattern="[0-9]"
                         aria-label="OTP digit 5"
                     >
 
@@ -442,6 +497,7 @@
                         type="text"
                         maxlength="1"
                         inputmode="numeric"
+                        pattern="[0-9]"
                         aria-label="OTP digit 6"
                     >
 
@@ -464,6 +520,7 @@
                      RESEND
                      ================================================= -->
 
+                <p class="otp-resend-status" id="otp-resend-status" aria-live="polite"></p>
                 <p class="resend">
 
     Didn't receive code?
@@ -681,7 +738,30 @@ startResendCountdown(serverResendSeconds);
      * =====================================================
      */
 
+    let otpSubmitting = false;
+
+    function submitCompleteOtp() {
+        const complete = Array.from(inputs).every(field => /^\d$/.test(field.value));
+        if (!complete || otpSubmitting) return;
+        hiddenInput.value = Array.from(inputs).map(field => field.value).join("");
+        otpSubmitting = true;
+        form.requestSubmit();
+    }
+
     inputs.forEach(function (input, index) {
+
+        input.addEventListener("paste", function (event) {
+            const pasted = (event.clipboardData?.getData("text") || "").replace(/\D/g, "").slice(0, 6);
+            if (!pasted) return;
+            event.preventDefault();
+            inputs.forEach((field, fieldIndex) => {
+                field.value = pasted[fieldIndex] || "";
+            });
+            const focusIndex = Math.min(pasted.length, inputs.length - 1);
+            inputs[focusIndex]?.focus();
+            hiddenInput.value = Array.from(inputs).map(field => field.value).join("");
+            submitCompleteOtp();
+        });
 
         /*
          * Only allow numeric characters and automatically
@@ -718,55 +798,8 @@ startResendCountdown(serverResendSeconds);
         }
 
 
-        /*
-         * =================================================
-         * AUTO SUBMIT
-         * =================================================
-         *
-         * Check whether all six OTP fields contain a
-         * digit.
-         */
-        const complete =
-            Array.from(inputs).every(
-                function (field) {
-                    return field.value.length === 1;
-                }
-            );
-
-
-        /*
-         * If all six fields are complete, construct the
-         * complete OTP and submit the form automatically.
-         */
-        if (complete) {
-
-            let otp = "";
-
-
-            inputs.forEach(
-                function (field) {
-                    otp += field.value;
-                }
-            );
-
-
-            /*
-             * Put the complete OTP into the hidden field
-             * that Laravel receives.
-             */
-            hiddenInput.value = otp;
-
-
-            /*
-             * Submit the form programmatically.
-             *
-             * requestSubmit() is used instead of
-             * form.submit() because it preserves the
-             * normal submit event and validation flow.
-             */
-            form.requestSubmit();
-
-        }
+        // Auto-process immediately after all six digits are present.
+        submitCompleteOtp();
 
     }
 );
@@ -838,6 +871,7 @@ startResendCountdown(serverResendSeconds);
                 const refreshed = await refreshOtpSession();
 
                 if (!refreshed) {
+                    otpSubmitting = false;
                     showAlertModal({
                         title: "Connection issue",
                         text: "We could not refresh the verification session. Please check your connection and try again.",
@@ -849,7 +883,7 @@ startResendCountdown(serverResendSeconds);
                     return;
                 }
 
-                form.submit();
+                HTMLFormElement.prototype.submit.call(form);
                 return;
             }
 

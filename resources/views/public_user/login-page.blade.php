@@ -61,6 +61,7 @@
     href="{{ asset('cssfiles/components/modal.css') }}"
 >
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v=20261104-field-focus-reset&build={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/registration-legal-modal.css') }}?v={{ file_exists(public_path('cssfiles/components/registration-legal-modal.css')) ? filemtime(public_path('cssfiles/components/registration-legal-modal.css')) : time() }}">
 </head>
 
 
@@ -252,6 +253,7 @@
                     </button>
 
                 </div>
+                <p class="registration-password-feedback" id="registerPasswordRequirement" aria-live="polite">Use at least 8 characters.</p>
 
 
                 {{-- =================================================
@@ -296,6 +298,7 @@
                     </button>
 
                 </div>
+                <p class="registration-password-feedback" id="registerPasswordMatch" aria-live="polite"></p>
 
 
                 {{-- =================================================
@@ -306,6 +309,8 @@
 
                     <input
                         type="checkbox"
+                        name="legal_consent"
+                        value="1"
                         required
                     >
 
@@ -313,21 +318,13 @@
 
                         I agree to the
 
-                        <a
-                            href="/terms"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
+                        <a href="/terms" data-legal-open="terms" aria-haspopup="dialog">
                             Terms
                         </a>
 
                         and
 
-                        <a
-                            href="/privacy"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
+                        <a href="/privacy" data-legal-open="privacy" aria-haspopup="dialog">
                             Privacy Policy
                         </a>
 
@@ -877,6 +874,35 @@ const registerForm =
 
 if (registerForm) {
 
+    const registerPassword = registerForm.querySelector('input[name="password"]');
+    const registerConfirmation = registerForm.querySelector('input[name="password_confirmation"]');
+    const registerRequirement = document.getElementById("registerPasswordRequirement");
+    const registerMatch = document.getElementById("registerPasswordMatch");
+
+    function updateRegistrationPasswordFeedback() {
+        const longEnough = registerPassword.value.length >= 8;
+        registerRequirement.textContent = longEnough
+            ? "Password length requirement met."
+            : `Use at least 8 characters (${registerPassword.value.length}/8).`;
+        registerRequirement.classList.toggle("is-valid", longEnough);
+        registerRequirement.classList.toggle("is-invalid", !longEnough && registerPassword.value.length > 0);
+
+        if (!registerConfirmation.value) {
+            registerMatch.textContent = "";
+            registerMatch.classList.remove("is-valid", "is-invalid");
+            registerConfirmation.setCustomValidity("");
+            return;
+        }
+        const matches = registerPassword.value === registerConfirmation.value;
+        registerMatch.textContent = matches ? "Passwords match." : "Passwords do not match.";
+        registerMatch.classList.toggle("is-valid", matches);
+        registerMatch.classList.toggle("is-invalid", !matches);
+        registerConfirmation.setCustomValidity(matches ? "" : "Passwords do not match.");
+    }
+
+    registerPassword.addEventListener("input", updateRegistrationPasswordFeedback);
+    registerConfirmation.addEventListener("input", updateRegistrationPasswordFeedback);
+
     registerForm.addEventListener(
         "submit",
         function (event) {
@@ -1167,6 +1193,8 @@ if (registerForm) {
 
 </script>
 
+@include('components.registration-legal-modal')
+<script src="{{ asset('jsfiles/components/registration-legal-modal.js') }}?v={{ file_exists(public_path('jsfiles/components/registration-legal-modal.js')) ? filemtime(public_path('jsfiles/components/registration-legal-modal.js')) : time() }}"></script>
 
 </body>
 

@@ -1,117 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/knowurlocal-kyl-logo.svg') }}?v=3" sizes="any">
-    <link rel="alternate icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=3">
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terms of Service | KnowUrLocal</title>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-
-    <style>
-        body {
-            font-family: "Inter", sans-serif;
-            background: #f5f7fb;
-            margin: 0;
-            padding: 40px;
-            color: #333;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: auto;
-            background: #fff;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.08);
-        }
-
-        h1 {
-            margin-bottom: 10px;
-        }
-
-        h2 {
-            margin-top: 30px;
-            color: #1F3A5F;
-        }
-
-        p, li {
-            font-size: 0.9rem;
-            line-height: 1.7;
-            color: #555;
-        }
-
-        ul {
-            padding-left: 20px;
-        }
-
-        .date {
-            font-size: 0.8rem;
-            color: #888;
-            margin-bottom: 20px;
-        }
-    </style>
-    <link rel="stylesheet" href="{{ asset('cssfiles/accessibility-typography.css') }}?v={{ file_exists(public_path('cssfiles/accessibility-typography.css')) ? filemtime(public_path('cssfiles/accessibility-typography.css')) : time() }}">
+    <meta name="theme-color" content="#f1f4f9">
+    <title>KNOWURLOCAL | Terms of Service</title>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/knowurlocal-kyl-logo.svg') }}?v=3" sizes="any">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/registration-legal-modal.css') }}?v={{ file_exists(public_path('cssfiles/components/registration-legal-modal.css')) ? filemtime(public_path('cssfiles/components/registration-legal-modal.css')) : time() }}">
 </head>
-
 <body>
-
-<div class="container">
-
-    <h1>Terms of Service</h1>
-    <p class="date">Effective Date: [Insert Date]</p>
-
-    <p>
-        Welcome to KnowUrLocal. By accessing or using our platform, you agree to comply with these Terms of Service.
-    </p>
-
-    <h2>1. Acceptance of Terms</h2>
-    <p>
-        By creating an account and using KnowUrLocal, you confirm that you have read and agreed to these Terms.
-    </p>
-
-    <h2>2. User Responsibilities</h2>
-    <ul>
-        <li>Provide accurate and complete information</li>
-        <li>Maintain confidentiality of your account</li>
-        <li>Be responsible for all activities under your account</li>
-    </ul>
-
-    <h2>3. Acceptable Use</h2>
-    <ul>
-        <li>Do not use the platform for unlawful purposes</li>
-        <li>Do not attempt unauthorized access</li>
-        <li>Do not disrupt system functionality</li>
-    </ul>
-
-    <h2>4. Account Management</h2>
-    <p>
-        We reserve the right to suspend or terminate accounts that violate these Terms.
-    </p>
-
-    <h2>5. Service Availability</h2>
-    <p>
-        We do not guarantee uninterrupted service. The platform may undergo updates or maintenance at any time.
-    </p>
-
-    <h2>6. Limitation of Liability</h2>
-    <p>
-        KnowUrLocal is not responsible for any damages resulting from the use or inability to use the platform.
-    </p>
-
-    <h2>7. Changes to Terms</h2>
-    <p>
-        We may update these Terms at any time. Continued use of the platform means you accept the changes.
-    </p>
-
-    <h2>8. Contact</h2>
-    <p>
-        Email: [Insert Your Email]
-    </p>
-
-</div>
-
+    @php($legalStandaloneDocument = 'terms')
+    <main class="legal-standalone-page" data-legal-standalone="terms">
+        <article class="legal-standalone-shell">
+            <a href="{{ route('public.login') }}" style="display:inline-flex;align-items:center;gap:7px;margin-bottom:25px;color:#4f70d4;font-size:12px;font-weight:650;text-decoration:none;">← Back to KNOWURLOCAL</a>
+            @include('components.legal-documents')
+        </article>
+    </main>
 </body>
 </html>

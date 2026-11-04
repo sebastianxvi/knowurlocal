@@ -1896,3 +1896,18 @@ body > .container {
         margin: 0;
     }
 }
+
+
+.registration-password-feedback,
+.admin-registration-password-feedback {
+    display: block;
+    min-height: 15px;
+    margin: -7px 2px 9px;
+    color: #7b879a;
+    font-size: 11px;
+    line-height: 1.4;
+}
+.registration-password-feedback.is-valid,
+.admin-registration-password-feedback.is-valid { color: #23804e; }
+.registration-password-feedback.is-invalid,
+.admin-registration-password-feedback.is-invalid { color: #c23d4a; }

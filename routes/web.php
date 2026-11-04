@@ -211,6 +211,9 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
         Route::post('/profile/password/otp', [PublicUserProfileController::class, 'requestPasswordOtp'])
             ->middleware('throttle:3,1')
             ->name('user.profile.password.otp');
+        Route::post('/profile/password/otp/verify', [PublicUserProfileController::class, 'verifyPasswordOtp'])
+            ->middleware('throttle:10,1')
+            ->name('user.profile.password.otp.verify');
         Route::put('/profile/password', [PublicUserProfileController::class, 'changePasswordWithOtp'])
             ->middleware('throttle:5,1')
             ->name('user.profile.password.update');

@@ -39,6 +39,7 @@ class AuthController extends Controller
             'last_name'  => 'required|string|max:255',
             'email'      => 'required|email|unique:users,email',
             'password'   => 'required|min:8|confirmed',
+            'legal_consent' => ['required', 'accepted'],
         ];
 
         if ($isAdminRegister) {
@@ -99,6 +100,9 @@ class AuthController extends Controller
                 'role'          => $invite->role ?: 'admin',
                 'agency_id'     => $invite->agency_id,
                 'invite_token'  => $request->token,
+                'legal_accepted_at' => now(),
+                'terms_version' => '2026-11-05',
+                'privacy_version' => '2026-11-05',
             ]);
 
             // 📧 Send OTP
@@ -136,6 +140,9 @@ class AuthController extends Controller
 
             'role'          => 'user',
             'invite_token'  => null,
+            'legal_accepted_at' => now(),
+            'terms_version' => '2026-11-05',
+            'privacy_version' => '2026-11-05',
         ]);
 
         Mail::send(
@@ -256,6 +263,9 @@ class AuthController extends Controller
                         ['admin', 'superadmin'],
                         true
                     ) ? 'pending' : 'active',
+                    'legal_accepted_at' => $record->legal_accepted_at,
+                    'terms_version' => $record->terms_version,
+                    'privacy_version' => $record->privacy_version,
                 ]);
 
                 if ($record->invite_token) {

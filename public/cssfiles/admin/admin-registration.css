@@ -279,3 +279,29 @@
     }
 
 }
+
+.registration-password-feedback,
+.admin-registration-password-feedback {
+    display: block;
+    min-height: 15px;
+    margin: -7px 2px 9px;
+    color: #7b879a;
+    font-size: 11px;
+    line-height: 1.4;
+}
+.registration-password-feedback.is-valid,
+.admin-registration-password-feedback.is-valid { color: #23804e; }
+.registration-password-feedback.is-invalid,
+.admin-registration-password-feedback.is-invalid { color: #c23d4a; }
+
+.admin-registration-legal-consent {
+    margin: 12px 0 16px;
+    align-items: flex-start;
+    line-height: 1.55;
+}
+.admin-registration-legal-consent a {
+    color: var(--color-primary, #4f70d0);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}

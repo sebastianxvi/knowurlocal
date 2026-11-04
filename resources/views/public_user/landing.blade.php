@@ -1313,13 +1313,24 @@
                     data-reveal="up"
                 >
 
-                    <div class="landing-footer-wordmark">
-                        KNOWURLOCAL
-                    </div>
+                    <a
+                        href="{{ route('landing') }}"
+                        class="landing-footer-brand-link"
+                        aria-label="KNOWURLOCAL home"
+                    >
+                        <img
+                            src="{{ asset('images/knowurlocal-kyl-logo.svg') }}"
+                            alt="KNOWURLOCAL logo"
+                            class="landing-footer-logo"
+                            width="42"
+                            height="42"
+                        >
+                        <span class="landing-footer-wordmark">KNOWURLOCAL</span>
+                    </a>
 
                     <p>
-                        Local information made easier
-                        for San Jose.
+                        Find local agencies, understand their services,
+                        and know where to go before you make the trip.
                     </p>
 
                 </div>

@@ -68,6 +68,7 @@
     >
 
     <link rel="stylesheet" href="{{ asset('cssfiles/accessibility-typography.css') }}?v={{ file_exists(public_path('cssfiles/accessibility-typography.css')) ? filemtime(public_path('cssfiles/accessibility-typography.css')) : time() }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/registration-legal-modal.css') }}?v={{ file_exists(public_path('cssfiles/components/registration-legal-modal.css')) ? filemtime(public_path('cssfiles/components/registration-legal-modal.css')) : time() }}">
 </head>
 
 
@@ -414,6 +415,7 @@
                     </button>
 
                 </div>
+                <p class="admin-registration-password-feedback" id="adminPasswordLengthFeedback" aria-live="polite">Use at least 8 characters.</p>
 
 
 
@@ -448,6 +450,7 @@
                     </button>
 
                 </div>
+                <p class="admin-registration-password-feedback" id="adminPasswordMatchFeedback" aria-live="polite"></p>
 
 
                 <!-- PASSWORD REQUIREMENT -->
@@ -467,6 +470,16 @@
                 <!-- =================================================
                      SUBMIT
                      ================================================= -->
+
+                <label class="checkbox-group admin-registration-legal-consent">
+                    <input type="checkbox" name="legal_consent" value="1" required>
+                    <span>
+                        I agree to the
+                        <a href="/terms" data-legal-open="terms" aria-haspopup="dialog">Terms</a>
+                        and
+                        <a href="/privacy" data-legal-open="privacy" aria-haspopup="dialog">Privacy Policy</a>.
+                    </span>
+                </label>
 
                 <button
                     type="submit"
@@ -515,6 +528,10 @@
      ========================================================= -->
 
 @include('components.modal')
+@include('components.registration-legal-modal')
+
+<script src="{{ asset('jsfiles/components/registration-legal-modal.js') }}?v={{ file_exists(public_path('jsfiles/components/registration-legal-modal.js')) ? filemtime(public_path('jsfiles/components/registration-legal-modal.js')) : time() }}"></script>
+
 
 
 <!-- =========================================================
@@ -629,6 +646,34 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
+    const passwordField = document.getElementById("adminPassword");
+    const confirmationField = document.getElementById("adminPasswordConfirmation");
+    const lengthFeedback = document.getElementById("adminPasswordLengthFeedback");
+    const matchFeedback = document.getElementById("adminPasswordMatchFeedback");
+
+    function updateAdminPasswordFeedback() {
+        const longEnough = passwordField.value.length >= 8;
+        lengthFeedback.textContent = longEnough
+            ? "Password length requirement met."
+            : `Use at least 8 characters (${passwordField.value.length}/8).`;
+        lengthFeedback.classList.toggle("is-valid", longEnough);
+        lengthFeedback.classList.toggle("is-invalid", !longEnough && passwordField.value.length > 0);
+
+        if (!confirmationField.value) {
+            matchFeedback.textContent = "";
+            matchFeedback.classList.remove("is-valid", "is-invalid");
+            confirmationField.setCustomValidity("");
+            return;
+        }
+        const matches = passwordField.value === confirmationField.value;
+        matchFeedback.textContent = matches ? "Passwords match." : "Passwords do not match.";
+        matchFeedback.classList.toggle("is-valid", matches);
+        matchFeedback.classList.toggle("is-invalid", !matches);
+        confirmationField.setCustomValidity(matches ? "" : "Passwords do not match.");
+    }
+
+    passwordField.addEventListener("input", updateAdminPasswordFeedback);
+    confirmationField.addEventListener("input", updateAdminPasswordFeedback);
 
     form.addEventListener("submit", (event) => {
 

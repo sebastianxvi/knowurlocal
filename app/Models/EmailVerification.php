@@ -16,5 +16,8 @@ class EmailVerification extends Model
         'role',
         'agency_id',
         'invite_token',
+        'legal_accepted_at',
+        'terms_version',
+        'privacy_version',
     ];
 }

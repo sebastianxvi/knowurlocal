@@ -22,14 +22,14 @@
             </div>
             <div class="profile-identity">
                 <div class="profile-picture-wrap">
-                    <div class="profile-picture" id="profilePicture">
+                    <button type="button" class="profile-picture profile-picture-open" id="profilePicture" aria-label="Profile picture options" aria-haspopup="dialog">
                         @if($user->profile_picture)
                             <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($user->profile_picture) }}" alt="Profile picture" id="profilePictureImage">
                         @else
                             <span id="profilePictureInitials">{{ mb_strtoupper(mb_substr($user->first_name ?: 'U', 0, 1) . mb_substr($user->last_name ?: '', 0, 1)) }}</span>
                         @endif
-                    </div>
-                    <button type="button" class="profile-picture-edit" id="chooseProfilePicture" aria-label="Change profile picture" title="Change profile picture">
+                    </button>
+                    <button type="button" class="profile-picture-edit" id="chooseProfilePicture" aria-label="Profile picture options" title="Profile picture options">
                         <i class="ph-light ph-camera" aria-hidden="true"></i>
                     </button>
                     <input type="file" id="profilePictureInput" accept="image/jpeg,image/png,image/webp" hidden>
@@ -117,6 +117,32 @@
     </main>
 
 
+    <div class="profile-picture-options-backdrop" id="profilePictureOptionsBackdrop" hidden>
+        <section class="profile-picture-options" role="dialog" aria-modal="true" aria-labelledby="profilePictureOptionsTitle">
+            <header>
+                <div><p class="profile-eyebrow">PROFILE PHOTO</p><h2 id="profilePictureOptionsTitle">Your profile picture</h2><p>View your current photo or choose a replacement.</p></div>
+                <button type="button" id="profilePictureOptionsClose" aria-label="Close"><i class="ph-light ph-x" aria-hidden="true"></i></button>
+            </header>
+            @if($user->profile_picture)
+                <button type="button" class="profile-picture-option" id="viewProfilePicture">
+                    <i class="ph-light ph-eye" aria-hidden="true"></i><span><strong>View profile picture</strong><small>Open your current photo without changing it.</small></span>
+                </button>
+            @else
+                <p class="profile-picture-no-photo">You haven't added a profile picture yet.</p>
+            @endif
+            <button type="button" class="profile-picture-option" id="replaceProfilePicture">
+                <i class="ph-light ph-camera" aria-hidden="true"></i><span><strong>Replace profile picture</strong><small>Choose a new JPG, PNG, or WEBP image.</small></span>
+            </button>
+        </section>
+    </div>
+
+    <div class="profile-picture-viewer-backdrop" id="profilePictureViewerBackdrop" hidden>
+        <section class="profile-picture-viewer" role="dialog" aria-modal="true" aria-label="Current profile picture">
+            <button type="button" id="profilePictureViewerClose" aria-label="Close image viewer"><i class="ph-light ph-x" aria-hidden="true"></i></button>
+            <img id="profilePictureViewerImage" src="" alt="Your current profile picture">
+        </section>
+    </div>
+
     <div class="profile-modal-backdrop" id="profileModalBackdrop" hidden>
         <section class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
             <header class="profile-modal-header">
@@ -127,7 +153,7 @@
             <form id="profileNameForm" class="profile-modal-form" hidden>
                 <label>First name<input name="first_name" required maxlength="100" value="{{ $user->first_name }}"></label>
                 <label>Last name<input name="last_name" required maxlength="100" value="{{ $user->last_name }}"></label>
-                <label>Current password <small>Confirm it's you</small><input type="password" name="current_password" required autocomplete="current-password"></label>
+                <label>Current password <small>Confirm it's you</small><div class="profile-password-input-wrap"><input type="password" name="current_password" required autocomplete="current-password"><button type="button" class="profile-password-toggle" aria-label="Show current password"><i class="ph-light ph-eye" aria-hidden="true"></i></button></div></label>
                 <p class="profile-modal-error" role="alert" hidden></p>
                 <footer><button type="button" class="profile-modal-cancel" data-close-profile-modal>Cancel</button><button type="submit" class="profile-modal-save">Save name</button></footer>
             </form>
@@ -135,24 +161,36 @@
             <form id="profileEmailForm" class="profile-modal-form" hidden>
                 <label>Email address<input type="email" name="email" required maxlength="255" value="{{ $user->email }}"></label>
                 <p class="profile-email-note"><i class="ph-light ph-shield-check"></i> Your current password is required to save this change.</p>
-                <label>Current password <small>Confirm it's you</small><input type="password" name="current_password" required autocomplete="current-password"></label>
+                <label>Current password <small>Confirm it's you</small><div class="profile-password-input-wrap"><input type="password" name="current_password" required autocomplete="current-password"><button type="button" class="profile-password-toggle" aria-label="Show current password"><i class="ph-light ph-eye" aria-hidden="true"></i></button></div></label>
                 <p class="profile-modal-error" role="alert" hidden></p>
                 <footer><button type="button" class="profile-modal-cancel" data-close-profile-modal>Cancel</button><button type="submit" class="profile-modal-save">Save email</button></footer>
             </form>
 
             <form id="profilePasswordRequestForm" class="profile-modal-form" hidden>
-                <p class="profile-password-explainer">We'll send a one-time verification code to <strong>{{ $user->email }}</strong>. The code expires after 10 minutes.</p>
-                <label>Current password<input type="password" name="current_password" required autocomplete="current-password"></label>
+                <p class="profile-password-explainer">A verification code will be sent to <strong>{{ $user->email }}</strong>. It expires after 10 minutes.</p>
                 <p class="profile-modal-error" role="alert" hidden></p>
-                <footer><button type="button" class="profile-modal-cancel" data-close-profile-modal>Cancel</button><button type="submit" class="profile-modal-save">Send verification code</button></footer>
+                <footer><button type="button" class="profile-modal-cancel" data-close-profile-modal>Cancel</button><button type="button" class="profile-modal-save" id="profileSendPasswordOtp">Send verification code</button></footer>
+            </form>
+
+            <form id="profilePasswordOtpForm" class="profile-modal-form" hidden>
+                <p class="profile-password-explainer">Enter the 6-digit code sent to <strong>{{ $user->email }}</strong>.</p>
+                <input type="hidden" name="otp" id="profilePasswordOtpValue" autocomplete="one-time-code">
+                <div class="profile-otp-inputs" role="group" aria-label="Six-digit email verification code">
+                    @for($digit = 1; $digit <= 6; $digit++)
+                        <input type="text" inputmode="numeric" maxlength="1" pattern="[0-9]" aria-label="OTP digit {{ $digit }}" autocomplete="one-time-code">
+                    @endfor
+                </div>
+                <p class="profile-otp-status" id="profileOtpStatus" aria-live="polite"></p>
+                <p class="profile-otp-resend">Didn't receive the code? <button type="button" id="profileResendPasswordOtp" disabled>Resend in 60s</button></p>
+                <p class="profile-modal-error" role="alert" hidden></p>
+                <footer><button type="button" class="profile-modal-cancel" data-close-profile-modal>Cancel</button><button type="submit" class="profile-modal-save">Verify code</button></footer>
             </form>
 
             <form id="profilePasswordChangeForm" class="profile-modal-form" hidden>
-                <p class="profile-password-explainer">Enter the code sent to your email and choose a new password.</p>
-                <label>6-digit verification code<input name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code"></label>
-                <label>New password<input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
-                <label>Confirm new password<input type="password" name="password_confirmation" required minlength="8" autocomplete="new-password"></label>
-                <label>Current password<input type="password" name="current_password" required autocomplete="current-password"></label>
+                <p class="profile-password-explainer">Email verified. Confirm your current password and choose a new one.</p>
+                <label>Current password<div class="profile-password-input-wrap"><input type="password" name="current_password" required autocomplete="current-password"><button type="button" class="profile-password-toggle" aria-label="Show current password"><i class="ph-light ph-eye" aria-hidden="true"></i></button></div></label>
+                <label>New password<div class="profile-password-input-wrap"><input type="password" name="password" required minlength="8" autocomplete="new-password"><button type="button" class="profile-password-toggle" aria-label="Show new password"><i class="ph-light ph-eye" aria-hidden="true"></i></button></div><small class="profile-field-hint">At least 8 characters.</small></label>
+                <label>Confirm new password<div class="profile-password-input-wrap"><input type="password" name="password_confirmation" required minlength="8" autocomplete="new-password"><button type="button" class="profile-password-toggle" aria-label="Show confirmation password"><i class="ph-light ph-eye" aria-hidden="true"></i></button></div><small class="profile-password-match" id="profilePasswordMatch" aria-live="polite"></small></label>
                 <p class="profile-modal-error" role="alert" hidden></p>
                 <footer><button type="button" class="profile-modal-cancel" data-close-profile-modal>Cancel</button><button type="submit" class="profile-modal-save">Change password</button></footer>
             </form>
@@ -161,6 +199,7 @@
 
     @include('components.modal')
     <script src="{{ asset('jsfiles/components/modal-system.js') }}?v={{ filemtime(public_path('jsfiles/components/modal-system.js')) }}"></script>
-    <script src="{{ asset('jsfiles/public_user/profile.js') }}?v={{ filemtime(public_path('jsfiles/public_user/profile.js')) }}"></script>
+    <script src="{{ asset('jsfiles/public_user/navbar.js') }}?v={{ filemtime(public_path('jsfiles/public_user/navbar.js')) }}"></script>
+<script src="{{ asset('jsfiles/public_user/profile.js') }}?v={{ filemtime(public_path('jsfiles/public_user/profile.js')) }}"></script>
 </body>
 </html>
