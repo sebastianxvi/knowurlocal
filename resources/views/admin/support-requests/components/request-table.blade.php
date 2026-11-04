@@ -116,10 +116,19 @@
 
                             <div class="support-user-cell">
 
+                                <span class="support-user-avatar" aria-hidden="true">
+                                    @if($request->user?->profile_picture)
+                                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($request->user->profile_picture) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
+                                        <span hidden>{{ strtoupper(substr($request->user->first_name ?? 'G', 0, 1).substr($request->user->last_name ?? '', 0, 1)) }}</span>
+                                    @else
+                                        {{ strtoupper(substr($request->user->first_name ?? 'G', 0, 1).substr($request->user->last_name ?? '', 0, 1)) }}
+                                    @endif
+                                </span>
+
                                 <div class="support-user-details">
 
                                     <span class="support-user-name">
-                                        {{ $request->user->first_name ?? 'Guest' }}
+                                        {{ trim(($request->user->first_name ?? '').' '.($request->user->last_name ?? '')) ?: 'Guest' }}
                                     </span>
 
                                 </div>
@@ -259,7 +268,9 @@
 
                                         data-id="{{ $request->id }}"
 
-                                        data-user="{{ $request->user->first_name ?? 'Guest' }}"
+                                        data-user="{{ trim(($request->user->first_name ?? '').' '.($request->user->last_name ?? '')) ?: 'Guest' }}"
+
+                                        data-user-avatar="{{ $request->user?->profile_picture ? \Illuminate\Support\Facades\Storage::disk('public')->url($request->user->profile_picture) : '' }}"
 
                                         data-question="{{ $request->question }}"
 

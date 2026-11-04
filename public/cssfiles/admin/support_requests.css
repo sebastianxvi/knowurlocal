@@ -1874,3 +1874,15 @@ body.support-modal-open {
     }
 }
 
+
+/* Citizen profile photos in the support-request table */
+.support-user-cell{display:flex;align-items:center;gap:10px;min-width:0}
+.support-user-avatar{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;overflow:hidden;border-radius:50%;background:#e8f0ff;color:#2859a8;font-size:11px;font-weight:750}
+.support-user-avatar img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.support-user-avatar [hidden]{display:none!important}
+.support-user-details{min-width:0}
+.support-user-name{overflow-wrap:anywhere}
+
+.support-user-detail-value{display:flex;align-items:center;gap:9px}
+.support-user-detail-value .support-user-avatar{flex:0 0 32px;width:32px;height:32px}
+.support-user-detail-value input{min-width:0;flex:1}

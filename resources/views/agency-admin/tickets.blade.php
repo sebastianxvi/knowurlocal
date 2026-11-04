@@ -281,6 +281,17 @@
 .ai-faq-modal-cancel{padding:10px 14px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#475569;font-size:12px;font-weight:750;cursor:pointer}.ai-faq-modal-footer .ai-faq-convert-submit{width:auto;padding:10px 14px}
 @media(max-width:600px){.ai-faq-modal{padding:10px;align-items:flex-end}.ai-faq-modal-dialog{max-height:92vh;border-radius:16px}.ai-faq-modal-header{padding:16px}.ai-faq-modal-body{padding:15px 16px}.ai-faq-modal-header h2{font-size:17px}.ai-faq-modal-footer{position:sticky;bottom:0;background:#fff;padding-top:10px}.ai-faq-modal-footer button{flex:1}}
 
+
+.ai-citizen-avatar{overflow:hidden;position:relative}
+.ai-citizen-avatar img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.ai-citizen-avatar [hidden]{display:none!important}
+.ai-ticket-intro-person{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ai-ticket-intro-person .ai-avatar{width:36px;height:36px;flex-basis:36px;font-size:11px}
+.ai-ticket-intro-person-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:3px}
+.ai-ticket-intro-person-copy strong{font-size:12px;color:#24344c}
+.ai-ticket-intro-person-copy small{font-size:10px;color:#64748b}
+.ai-ticket-intro-person time{flex:0 0 auto;font-size:10px;color:#8490a2}
+@media(max-width:520px){.ai-ticket-intro-person{align-items:flex-start;flex-wrap:wrap}.ai-ticket-intro-person time{margin-left:46px}}
 </style>
 @endpush
 @section('content')
@@ -297,7 +308,14 @@
             @php($latest = $conversation->first())
             @php($personName = trim(($person?->first_name ?? '').' '.($person?->last_name ?? '')) ?: 'Citizen')
             <a class="ai-item {{ $selectedUser && (int)$selectedUser->id === (int)$person?->id ? 'active' : '' }}" href="{{ route('agency-admin.tickets', ['user' => $person?->id, 'search' => $search ?: null]) }}">
-                <div class="ai-item-top"><span class="ai-avatar">{{ strtoupper(substr($person?->first_name ?? 'C',0,1).substr($person?->last_name ?? '',0,1)) }}</span><span class="ai-item-name">{{ $personName }}</span><span class="ai-item-date">{{ ($latest?->trashed() ? $latest?->created_at : $latest?->updated_at)?->format('M j') }}</span>@if($conversation->contains(fn ($ticket) => !$ticket->trashed() && (!$ticket->agency_seen_at || $ticket->updated_at > $ticket->agency_seen_at)))<span class="ai-unread-dot" role="img" aria-label="New ticket activity" title="New ticket activity"></span>@endif</div>
+                <div class="ai-item-top"><span class="ai-avatar ai-citizen-avatar" aria-hidden="true">
+                    @if($person?->profile_picture)
+                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($person->profile_picture) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
+                        <span hidden>{{ strtoupper(substr($person?->first_name ?? 'C',0,1).substr($person?->last_name ?? '',0,1)) }}</span>
+                    @else
+                        {{ strtoupper(substr($person?->first_name ?? 'C',0,1).substr($person?->last_name ?? '',0,1)) }}
+                    @endif
+                </span><span class="ai-item-name">{{ $personName }}</span><span class="ai-item-date">{{ ($latest?->trashed() ? $latest?->created_at : $latest?->updated_at)?->format('M j') }}</span>@if($conversation->contains(fn ($ticket) => !$ticket->trashed() && (!$ticket->agency_seen_at || $ticket->updated_at > $ticket->agency_seen_at)))<span class="ai-unread-dot" role="img" aria-label="New ticket activity" title="New ticket activity"></span>@endif</div>
                 <div class="ai-preview">{{ '#'.$latest?->id }} · {{ $latest?->trashed() ? ($latest?->user_deleted_at ? 'Trashed by citizen' : 'Trashed by administration') : \Illuminate\Support\Str::limit($latest?->question ?? 'No ticket details', 55) }}</div>
                 <span class="ai-status">{{ $conversation->count() }} ticket{{ $conversation->count() === 1 ? '' : 's' }} · {{ $latest?->trashed() ? ($latest?->user_deleted_at ? 'Trashed by citizen' : 'Trashed by administration') : str_replace('_',' ',ucfirst($latest?->status ?? 'pending')) }}</span>
             </a>
@@ -307,7 +325,14 @@
     <section class="ai-main" aria-label="Citizen tickets and response">
     @if($selectedUser && !$selectedTicket)
         @php($selectedUserName = trim(($selectedUser->first_name ?? '').' '.($selectedUser->last_name ?? '')) ?: 'Citizen')
-        <header class="ai-chat-head"><a class="ai-mobile-inbox-back" href="{{ route('agency-admin.tickets', ['search' => $search ?: null]) }}" aria-label="Back to conversations"><i class="ph ph-arrow-left" aria-hidden="true"></i><span>Inbox</span></a><span class="ai-avatar">{{ strtoupper(substr($selectedUser->first_name ?? 'C',0,1).substr($selectedUser->last_name ?? '',0,1)) }}</span><div class="ai-chat-head-copy"><h2>{{ $selectedUserName }}</h2><p>{{ $selectedTickets->count() }} ticket{{ $selectedTickets->count() === 1 ? '' : 's' }} · Select a ticket to open its conversation</p></div></header>
+        <header class="ai-chat-head"><a class="ai-mobile-inbox-back" href="{{ route('agency-admin.tickets', ['search' => $search ?: null]) }}" aria-label="Back to conversations"><i class="ph ph-arrow-left" aria-hidden="true"></i><span>Inbox</span></a><span class="ai-avatar ai-citizen-avatar" aria-hidden="true">
+                @if($selectedUser->profile_picture)
+                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($selectedUser->profile_picture) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
+                    <span hidden>{{ strtoupper(substr($selectedUser->first_name ?? 'C',0,1).substr($selectedUser->last_name ?? '',0,1)) }}</span>
+                @else
+                    {{ strtoupper(substr($selectedUser->first_name ?? 'C',0,1).substr($selectedUser->last_name ?? '',0,1)) }}
+                @endif
+            </span><div class="ai-chat-head-copy"><h2>{{ $selectedUserName }}</h2><p>{{ $selectedTickets->count() }} ticket{{ $selectedTickets->count() === 1 ? '' : 's' }} · Select a ticket to open its conversation</p></div></header>
         <div class="ai-ticket-list-view">
             <p class="ai-ticket-picker-label">Tickets from this citizen</p>
             <div class="ai-ticket-list">
@@ -326,7 +351,14 @@
         <header class="ai-chat-head">
             <a class="ai-mobile-inbox-back" href="{{ route('agency-admin.tickets', ['search' => $search ?: null]) }}" aria-label="Back to conversations"><i class="ph ph-arrow-left" aria-hidden="true"></i><span>Inbox</span></a>
             <a class="ai-back-to-tickets ai-back-icon" href="{{ route('agency-admin.tickets', ['user' => $selectedUser->id, 'search' => $search ?: null]) }}" aria-label="Back to all tickets" title="Back to all tickets"><i class="ph ph-arrow-left" aria-hidden="true"></i></a>
-            <span class="ai-avatar">{{ strtoupper(substr($selectedUser->first_name ?? 'C',0,1).substr($selectedUser->last_name ?? '',0,1)) }}</span>
+            <span class="ai-avatar ai-citizen-avatar" aria-hidden="true">
+                @if($selectedUser->profile_picture)
+                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($selectedUser->profile_picture) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
+                    <span hidden>{{ strtoupper(substr($selectedUser->first_name ?? 'C',0,1).substr($selectedUser->last_name ?? '',0,1)) }}</span>
+                @else
+                    {{ strtoupper(substr($selectedUser->first_name ?? 'C',0,1).substr($selectedUser->last_name ?? '',0,1)) }}
+                @endif
+            </span>
             <div class="ai-chat-head-copy"><h2>{{ $selectedUserName }}</h2><p>Ticket #{{ $selectedTicket->id }} · {{ $selectedTicket->trashed() ? ($selectedTicket->user_deleted_at ? 'Trashed by citizen' : 'Trashed by administration') : str_replace('_',' ',ucfirst($selectedTicket->status)) }}</p></div>
             <div class="ai-chat-head-actions">
                 @php($faqEligibleResponses = $selectedTicket->responses->where('status', 'accepted')->sortBy('responded_at')->values())
@@ -391,7 +423,21 @@
             @if($selectedTicket->trashed())
                 <section class="ai-trashed-banner" role="status"><i class="ph ph-trash" aria-hidden="true"></i><div><strong>{{ $selectedTicket->user_deleted_at ? 'Trashed by citizen' : 'Trashed by administration' }}</strong><p>{{ $selectedTicket->user_deleted_at ? 'The citizen removed this ticket from their own inquiries.' : ($selectedTicket->trash_reason ?: 'No reason was recorded.') }}</p><small>{{ $selectedTicket->user_deleted_at ? 'Trashed by citizen' : 'Moved to trash by administration' }} {{ ($selectedTicket->user_deleted_at ?: $selectedTicket->deleted_at)?->format('M j, Y · g:i A') }}</small><small>Recovery and permanent deletion are restricted to the System Superadmin.</small></div></section>
             @endif
-            <article class="ai-ticket-intro"><small>Citizen's original question · Ticket #{{ $selectedTicket->id }}</small><h3>{{ $selectedTicket->question }}</h3><p>{{ $selectedTicket->created_at?->format('M j, Y · g:i A') }}</p></article>
+            <article class="ai-ticket-intro">
+                <div class="ai-ticket-intro-person">
+                    <span class="ai-avatar ai-citizen-avatar" aria-hidden="true">
+                        @if($selectedUser?->profile_picture)
+                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($selectedUser->profile_picture) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
+                            <span hidden>{{ strtoupper(substr($selectedUser?->first_name ?? 'C',0,1).substr($selectedUser?->last_name ?? '',0,1)) }}</span>
+                        @else
+                            {{ strtoupper(substr($selectedUser?->first_name ?? 'C',0,1).substr($selectedUser?->last_name ?? '',0,1)) }}
+                        @endif
+                    </span>
+                    <span class="ai-ticket-intro-person-copy"><strong>{{ trim(($selectedUser?->first_name ?? '').' '.($selectedUser?->last_name ?? '')) ?: 'Citizen' }}</strong><small>Citizen's original question · Ticket #{{ $selectedTicket->id }}</small></span>
+                    <time>{{ $selectedTicket->created_at?->format('M j, Y · g:i A') }}</time>
+                </div>
+                <h3>{{ $selectedTicket->question }}</h3>
+            </article>
             @php($reopenMessageRendered = false)
             @foreach($selectedTicket->responses->sortBy(fn ($response) => $response->forwarded_at ?? $response->created_at) as $response)
                 @if(!$reopenMessageRendered && filled(trim((string) $selectedTicket->reopen_message)) && (($selectedTicket->reopen_message_at && (($response->forwarded_at ?? $response->created_at) >= $selectedTicket->reopen_message_at)) || (!$selectedTicket->reopen_message_at && in_array($selectedTicket->status, ['awaiting_confirmation', 'answered'], true) && (string) $response->id === (string) optional($selectedTicket->latestResponse)->id)))

@@ -22,6 +22,7 @@ class SupportRequestCreated implements ShouldBroadcastNow
         public ?string $agencyName,
         public string $userName,
         public string $createdAt,
+        public ?string $userProfilePictureUrl = null,
     ) {
     }
 
@@ -61,6 +62,7 @@ class SupportRequestCreated implements ShouldBroadcastNow
             'agency_id' => $this->agencyId,
             'agency_name' => $this->agencyName,
             'user_name' => $this->userName,
+            'user_profile_picture_url' => $this->userProfilePictureUrl,
             'created_at' => $this->createdAt,
         ];
     }

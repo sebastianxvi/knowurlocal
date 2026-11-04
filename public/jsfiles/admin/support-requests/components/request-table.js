@@ -803,10 +803,13 @@ function createRealtimeSupportRequestRow(
      * a separate profile/avatar structure.
      */
     const userName =
-        request.user?.first_name ||
-        request.first_name ||
+        [request.user?.first_name, request.user?.last_name].filter(Boolean).join(" ").trim() ||
         request.user_name ||
+        request.first_name ||
         "Guest";
+
+    const userAvatarUrl =
+        safeString(request.user_profile_picture_url || request.profile_picture_url || request.user?.profile_picture_url || "");
 
 
     row.dataset.requestId =
@@ -866,6 +869,26 @@ function createRealtimeSupportRequestRow(
     userWrapper.className =
         "support-user-cell";
 
+    const userAvatar =
+        document.createElement("span");
+
+    userAvatar.className = "support-user-avatar";
+    userAvatar.setAttribute("aria-hidden", "true");
+
+    if (userAvatarUrl) {
+        const avatarImage = document.createElement("img");
+        avatarImage.src = userAvatarUrl;
+        avatarImage.alt = "";
+        avatarImage.loading = "lazy";
+        avatarImage.addEventListener("error", () => {
+            avatarImage.hidden = true;
+            userAvatar.textContent = userName.split(/\s+/).map(part => part.charAt(0)).slice(0, 2).join("").toUpperCase() || "G";
+        }, { once: true });
+        userAvatar.appendChild(avatarImage);
+    } else {
+        userAvatar.textContent = userName.split(/\s+/).map(part => part.charAt(0)).slice(0, 2).join("").toUpperCase() || "G";
+    }
+
     const userDetails =
         document.createElement(
             "div"
@@ -887,6 +910,10 @@ function createRealtimeSupportRequestRow(
 
     userDetails.appendChild(
         userNameElement
+    );
+
+    userWrapper.appendChild(
+        userAvatar
     );
 
     userWrapper.appendChild(
@@ -1154,6 +1181,9 @@ function createRealtimeSupportRequestRow(
 
     manageButton.dataset.user =
         userName;
+
+    manageButton.dataset.userAvatar =
+        userAvatarUrl;
 
     manageButton.dataset.question =
         question;

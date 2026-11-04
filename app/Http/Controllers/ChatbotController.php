@@ -364,9 +364,12 @@ class ChatbotController extends Controller
                 status: $supportRequest->status,
                 agencyId: $supportRequest->agency_id,
                 agencyName: $supportRequest->agency?->agency_name,
-                userName: $supportRequest->user?->first_name ?? 'User',
+                userName: trim(($supportRequest->user?->first_name ?? '').' '.($supportRequest->user?->last_name ?? '')) ?: 'User',
                 createdAt: $supportRequest->created_at?->toIso8601String()
                     ?? now()->toIso8601String(),
+                userProfilePictureUrl: $supportRequest->user?->profile_picture
+                    ? \Illuminate\Support\Facades\Storage::disk('public')->url($supportRequest->user->profile_picture)
+                    : null,
             ));
         } catch (\Throwable $exception) {
             // The request is already persisted; a realtime outage must not

@@ -1379,6 +1379,26 @@ export const prepareSupportRequest = async (
             'Guest';
     }
 
+    const modalUserAvatar = document.getElementById('support-modal-user-avatar');
+    if (modalUserAvatar) {
+        const avatarUrl = button.dataset.userAvatar || '';
+        const userName = button.dataset.user || 'Guest';
+        modalUserAvatar.replaceChildren();
+
+        if (avatarUrl) {
+            const image = document.createElement('img');
+            image.src = avatarUrl;
+            image.alt = '';
+            image.addEventListener('error', () => {
+                modalUserAvatar.replaceChildren();
+                modalUserAvatar.textContent = userName.split(/\s+/).map(part => part.charAt(0)).slice(0, 2).join('').toUpperCase() || 'G';
+            }, { once: true });
+            modalUserAvatar.appendChild(image);
+        } else {
+            modalUserAvatar.textContent = userName.split(/\s+/).map(part => part.charAt(0)).slice(0, 2).join('').toUpperCase() || 'G';
+        }
+    }
+
 
     if (questionInput) {
 

@@ -118,7 +118,9 @@
                                 User
                             </span>
 
-                            <div class="support-detail-value">
+                            <div class="support-detail-value support-user-detail-value">
+
+                                <span id="support-modal-user-avatar" class="support-user-avatar" aria-hidden="true">G</span>
 
                                 <input
                                     type="text"
