@@ -137,3 +137,35 @@ body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):no
 body :is(.input-group, .floating-group, .searchable-select-input, .logo-search, .inquiries-search, .messenger-composer-field, #inputArea):focus-within {
     box-shadow: none !important;
 }
+
+
+/* Deployment-safe field focus reset (2026-11-04).
+   Text-entry controls and their common wrappers should not display
+   the decorative blue focus ring. Keyboard focus remains functional. */
+html body :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+    select,
+    textarea
+):focus,
+html body :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+    select,
+    textarea
+):focus-visible {
+    outline: 0 !important;
+    outline-offset: 0 !important;
+    box-shadow: none !important;
+}
+
+html body :is(
+    .input-group,
+    .floating-group,
+    .searchable-select-input,
+    .logo-search,
+    .inquiries-search,
+    .messenger-composer-field,
+    #inputArea
+):focus-within {
+    outline: 0 !important;
+    box-shadow: none !important;
+}

@@ -1,5 +1,5 @@
 /* Public-facing pages share the same type scale as admin modules. */
-@import url('../accessibility-typography.css');
+@import url('../accessibility-typography.css?v=20261104-field-focus-reset');
 
 body { color: var(--text-main, #1f2937); }
 body :is(.page-title, .section-title, .hero-title) { font-weight: 600; }
