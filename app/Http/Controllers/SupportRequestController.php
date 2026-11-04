@@ -73,6 +73,20 @@ public function index(Request $request)
         $selectedTickets = $selectedAgencyGroup?->tickets ?? collect();
         $selectedTicket = $ticketFromList && $selectedTickets->contains('id', $ticketFromList->id) ? $ticketFromList : null;
         $agency = $selectedAgencyGroup?->agency;
+
+        if ($selectedTicket && $agency && !$selectedTicket->trashed()) {
+            // Viewing a specific ticket acknowledges the unread citizen activity
+            // for that ticket only; other tickets/agencies remain unread.
+            $viewedAt = now();
+            DB::table('support_requests')
+                ->where('id', $selectedTicket->id)
+                ->where('user_id', $selectedUser->id)
+                ->where('agency_id', $agency->id)
+                ->whereNull('deleted_at')
+                ->update(['agency_seen_at' => $viewedAt]);
+            $selectedTicket->agency_seen_at = $viewedAt;
+        }
+
         $selectedTicket?->load(['responses.admin','responses.components']);
         $agencies = Agency::orderBy('agency_name')->get();
         return view('admin.support-requests.inbox', compact('tickets','conversations','selectedUser','selectedUserId','selectedTickets','selectedTicket','selectedAgencies','selectedAgencyId','agency','search'));
@@ -969,6 +983,7 @@ public function userInquiry($id)
         }
 
         $supportRequest->question = trim($validated['question']);
+        $supportRequest->citizen_activity_at = now();
         $supportRequest->save();
 
         try {
@@ -1194,6 +1209,7 @@ public function userInquiry($id)
             $supportRequest->answer_seen_at = now();
             $supportRequest->reopen_message = $message;
             $supportRequest->reopen_message_at = now();
+            $supportRequest->citizen_activity_at = now();
             $supportRequest->save();
         });
 
@@ -1405,6 +1421,7 @@ public function confirmResponse($id)
         'status' => 'answered',
         'answered_at' => now(),
         'answer_seen_at' => now(),
+        'citizen_activity_at' => now(),
     ]);
 
     $newData = $this->buildAuditSnapshot($supportRequest->fresh(), $response->fresh());
@@ -1512,6 +1529,7 @@ public function requestFollowUp(Request $request, $id)
      */
     $supportRequest->update([
         'status' => 'needs_follow_up',
+        'citizen_activity_at' => now(),
     ]);
 
     $newData = $this->buildAuditSnapshot($supportRequest->fresh(), $response->fresh());

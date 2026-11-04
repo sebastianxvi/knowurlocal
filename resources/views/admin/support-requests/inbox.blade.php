@@ -292,6 +292,141 @@
 .ai-ticket-intro-person-copy small{font-size:10px;color:#64748b}
 .ai-ticket-intro-person time{flex:0 0 auto;font-size:10px;color:#8490a2}
 @media(max-width:520px){.ai-ticket-intro-person{align-items:flex-start;flex-wrap:wrap}.ai-ticket-intro-person time{margin-left:46px}}
+
+/* Admin inbox density and agency-specific unread context. */
+.ai-sidebar-head{padding:16px 14px 11px}
+.ai-sidebar-head h2{font-size:20px}
+.ai-search{margin-top:11px;height:38px;padding:8px 10px;border-radius:9px;font-size:12px}
+.ai-list{padding:0 7px 9px}
+.ai-item{padding:10px;margin:3px 0;border-radius:10px}
+.ai-item-top{gap:8px}
+.ai-item-top .ai-avatar{width:34px;height:34px;flex-basis:34px;font-size:11px}
+.ai-item-name{font-size:12px}
+.ai-item-date{font-size:10px}
+.ai-preview{margin:6px 0 0 42px;font-size:11px}
+.ai-status{margin:6px 0 0 42px;font-size:9px;padding:3px 6px}
+.ai-unread-agencies{display:flex;align-items:flex-start;gap:5px;flex-wrap:wrap;margin:7px 0 0 42px;min-width:0}
+.ai-unread-agencies-label{padding-top:2px;color:#b4232c;font-size:10px;font-weight:750;white-space:nowrap}
+.ai-unread-agency{max-width:100%;padding:3px 6px;border:1px solid #fecaca;border-radius:6px;background:#fff1f2;color:#a21c27;font-size:10px;line-height:1.35;overflow-wrap:anywhere}
+.ai-unread-dot{width:7px;height:7px;flex-basis:7px;box-shadow:0 0 0 2px #fee2e2}
+@media(max-width:800px){
+ .ai-sidebar-head{padding:12px 9px 10px}
+ .ai-sidebar-head h2{font-size:17px}
+ .ai-item{padding:9px 6px}
+ .ai-item-top{gap:6px}
+ .ai-item-top .ai-avatar{width:30px;height:30px;flex-basis:30px}
+ .ai-preview{margin-left:0;font-size:10px}
+ .ai-status{margin-left:0}
+ .ai-unread-agencies{margin-left:0;gap:4px}
+ .ai-unread-agency{font-size:9px}
+}
+@media(max-width:640px){
+ .ai-sidebar-head{padding:13px 12px 10px}
+ .ai-sidebar-head h2{font-size:19px}
+ .ai-search{height:39px;font-size:13px}
+ .ai-item{padding:11px 9px}
+ .ai-item-top .ai-avatar{width:36px;height:36px;flex-basis:36px}
+ .ai-preview{margin:6px 0 0 45px;font-size:11px}
+ .ai-status{margin:6px 0 0 45px;font-size:10px}
+ .ai-unread-agencies{margin-left:45px}
+}
+
+/* Compact, scalable citizen list: prioritize many conversations over oversized cards. */
+.ai-sidebar{min-width:0}
+.ai-sidebar-head{padding:12px 12px 9px}
+.ai-sidebar-head h2{font-size:17px;line-height:1.25;margin:0 0 3px}
+.ai-sidebar-head p{font-size:11px;line-height:1.3}
+.ai-search{height:34px!important;min-height:34px;margin-top:9px!important;padding:6px 9px!important;border-radius:8px!important;font-size:12px!important;line-height:1.2}
+.ai-list{padding:0 5px 7px!important}
+.ai-item{padding:7px 8px!important;margin:2px 0!important;border-radius:8px!important}
+.ai-item-top{gap:7px!important;min-width:0}
+.ai-item-top .ai-avatar{width:28px!important;height:28px!important;flex:0 0 28px!important;font-size:10px!important}
+.ai-item-name{font-size:11.5px!important;line-height:1.3}
+.ai-item-date{font-size:9px!important}
+.ai-item-top .ai-unread-dot{width:6px!important;height:6px!important;flex:0 0 6px!important;box-shadow:none!important;margin-left:5px!important}
+.ai-preview{margin:4px 0 0 35px!important;font-size:10.5px!important;line-height:1.25!important}
+.ai-status{margin:4px 0 0 35px!important;padding:2px 5px!important;font-size:9px!important;line-height:1.2!important}
+.ai-ticket-list-option{padding:10px 12px!important}
+.ai-ticket-list-option strong{font-size:11.5px!important}
+.ai-ticket-list-option .ai-ticket-list-main>span{font-size:10.5px!important;line-height:1.35}
+.ai-ticket-list-meta{gap:6px}
+.ai-ticket-list-meta .ai-unread-dot{width:7px;height:7px;flex:0 0 7px;box-shadow:none;margin:0}
+@media(max-width:640px){
+ .ai-sidebar-head{padding:10px 10px 8px}
+ .ai-sidebar-head h2{font-size:16px}
+ .ai-search{height:35px!important;min-height:35px;font-size:12px!important}
+ .ai-item{padding:8px 7px!important}
+ .ai-item-top .ai-avatar{width:30px!important;height:30px!important;flex-basis:30px!important}
+ .ai-preview,.ai-status{margin-left:37px!important}
+}
+
+
+/* Numeric unread badges: compact, visible without expanding conversation rows. */
+.ai-unread-count{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;border-radius:999px;background:#dc2626;color:#fff;font-size:10px;font-weight:750;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 0 0 1px rgba(255,255,255,.85)}
+.ai-item-top .ai-unread-count{margin-left:3px}
+.ai-ticket-list-meta .ai-unread-count{min-width:19px;height:19px;font-size:10px}
+@media(max-width:640px){.ai-unread-count{min-width:16px;height:16px;font-size:9px;padding:0 3px}}
+
+
+/* Shared ticket-thread density pass: applied consistently to both admin inboxes. */
+.ai-chat-head{padding:11px 14px!important;gap:9px!important}
+.ai-chat-head h2{font-size:13px!important;line-height:1.35}
+.ai-chat-head p{font-size:10.5px!important;margin-top:3px!important}
+.ai-ticket-picker{padding:9px 12px!important}
+.ai-ticket-picker-label{font-size:9px!important;margin-bottom:6px!important}
+.ai-ticket-options{gap:6px!important}
+.ai-ticket-option{padding:8px 10px!important;border-radius:9px!important}
+.ai-ticket-option strong{font-size:11.5px!important}
+.ai-ticket-option small,.ai-ticket-option span{font-size:10px!important}
+.ai-messages{padding:14px clamp(10px,2vw,26px)!important}
+.ai-ticket-intro{padding:11px 13px!important;margin-bottom:12px!important;border-radius:10px!important}
+.ai-ticket-intro h3{font-size:13px!important;margin:5px 0!important}
+.ai-ticket-intro p{font-size:11.5px!important;line-height:1.45!important}
+.ai-ticket-intro-person{gap:8px!important;margin-bottom:8px!important}
+.ai-ticket-intro-person .ai-avatar{width:30px!important;height:30px!important;flex-basis:30px!important}
+.ai-ticket-intro-person-copy strong{font-size:11.5px!important}
+.ai-ticket-intro-person-copy small,.ai-ticket-intro-person time{font-size:9px!important}
+.ai-response{margin-bottom:11px!important}
+.ai-response-meta{font-size:9.5px!important;margin-bottom:4px!important}
+.ai-bubble{padding:10px 12px!important;border-radius:11px!important;font-size:11.5px!important;line-height:1.45!important}
+.ai-component{margin:5px 0!important}
+.ai-component-label{font-size:9.5px!important}
+.ai-component img{max-height:250px!important;border-radius:7px!important}
+.ai-response-image-trigger{max-width:min(100%,300px)!important;border-radius:8px!important}
+.ai-response-image-trigger img{max-height:240px!important}
+.ai-response-file,.ai-response-link{gap:8px!important;padding:7px 9px!important;min-height:40px!important;border-radius:8px!important;font-size:10.5px!important}
+.ai-response-file>i,.ai-response-link>i{font-size:16px!important}
+.ai-follow-up{margin-bottom:11px!important}
+.ai-follow-up-bubble{padding:9px 11px!important;border-radius:11px 11px 3px 11px!important;font-size:11.5px!important;line-height:1.45!important}
+.ai-follow-up-label{font-size:9px!important;margin-bottom:3px!important}
+.ai-follow-up-empty{font-size:10.5px!important}
+.ai-compose-modern{padding:8px 12px 9px!important}
+.ai-compose-modern .ai-compose-title{font-size:10px!important;margin-bottom:5px!important}
+.ai-chat-composer{gap:6px!important;padding:5px 5px 5px 10px!important;border-radius:12px!important}
+.ai-chat-composer textarea{min-height:32px!important;max-height:100px!important;padding:6px 0!important;font-size:12px!important;line-height:1.4!important}
+.ai-chat-composer .ai-composer-send{width:32px!important;height:32px!important;flex-basis:32px!important;border-radius:9px!important}
+.ai-attachment-chips{gap:5px!important;margin-top:5px!important}
+.ai-attachment-chip{padding:4px 6px!important;font-size:10px!important;border-radius:8px!important}
+.ai-compose-toolbar{margin-top:6px!important;gap:7px!important}
+.ai-attach-btn{min-height:29px!important;padding:0 8px!important;font-size:10.5px!important}
+@media(max-width:800px){
+ .ai-chat-head{padding:9px 10px!important}
+ .ai-ticket-picker{padding:8px 9px!important}
+ .ai-messages{padding:11px 9px!important}
+ .ai-response .ai-bubble,.ai-follow-up-bubble{max-width:92%!important}
+ .ai-response .ai-bubble:has(.ai-component){width:92%!important}
+ .ai-ticket-intro{padding:9px 10px!important}
+ .ai-response-file,.ai-response-link{min-height:38px!important}
+}
+@media(max-width:640px){
+ .ai-chat-head h2{font-size:12px!important}
+ .ai-chat-head p{font-size:10px!important}
+ .ai-messages{padding:9px 7px!important}
+ .ai-bubble,.ai-follow-up-bubble{font-size:11px!important}
+ .ai-compose-modern{padding:7px 8px max(7px,env(safe-area-inset-bottom))!important}
+ .ai-chat-composer textarea{font-size:16px!important;min-height:34px!important}
+}
+
 </style>
 @endpush
 @section('content')
@@ -307,6 +442,7 @@
             @php($person = $conversation->first()?->user)
             @php($latest = $conversation->first())
             @php($personName = trim(($person?->first_name ?? '').' '.($person?->last_name ?? '')) ?: 'Citizen')
+            @php($unreadAgencyCount = $conversation->filter(fn ($ticket) => !$ticket->trashed() && $ticket->agency && ($ticket->citizen_activity_at && (!$ticket->agency_seen_at || $ticket->citizen_activity_at > $ticket->agency_seen_at)))->pluck('agency_id')->unique()->count())
             <a class="ai-item {{ $selectedUser && (int)$selectedUser->id === (int)$person?->id ? 'active' : '' }}" href="{{ route('admin.support.requests', ['user' => $person?->id, 'search' => $search ?: null]) }}">
                 <div class="ai-item-top"><span class="ai-avatar ai-citizen-avatar" aria-hidden="true">
                     @if($person?->profile_picture)
@@ -315,7 +451,7 @@
                     @else
                         {{ strtoupper(substr($person?->first_name ?? 'C',0,1).substr($person?->last_name ?? '',0,1)) }}
                     @endif
-                </span><span class="ai-item-name">{{ $personName }}</span><span class="ai-item-date">{{ ($latest?->trashed() ? $latest?->created_at : $latest?->updated_at)?->format('M j') }}</span>@if($conversation->contains(fn ($ticket) => !$ticket->trashed() && (!$ticket->agency_seen_at || $ticket->updated_at > $ticket->agency_seen_at)))<span class="ai-unread-dot" role="img" aria-label="New ticket activity" title="New ticket activity"></span>@endif</div>
+                </span><span class="ai-item-name">{{ $personName }}</span><span class="ai-item-date">{{ ($latest?->trashed() ? $latest?->created_at : $latest?->updated_at)?->format('M j') }}</span>@if($unreadAgencyCount > 0)<span class="ai-unread-count" aria-label="{{ $unreadAgencyCount }} agencies with unread updates" title="{{ $unreadAgencyCount }} agencies with unread updates">{{ $unreadAgencyCount }}</span>@endif</div>
                 <div class="ai-preview">{{ '#'.$latest?->id }} · {{ $latest?->trashed() ? ($latest?->user_deleted_at ? 'Trashed by citizen' : 'Trashed by administration') : \Illuminate\Support\Str::limit($latest?->question ?? 'No ticket details', 55) }}</div>
                 <span class="ai-status">{{ $conversation->count() }} ticket{{ $conversation->count() === 1 ? '' : 's' }} · {{ $latest?->trashed() ? ($latest?->user_deleted_at ? 'Trashed by citizen' : 'Trashed by administration') : str_replace('_',' ',ucfirst($latest?->status ?? 'pending')) }}</span>
             </a>
@@ -336,7 +472,8 @@
             </span><div class="ai-chat-head-copy"><h2>{{ $selectedUserName }}</h2><p>Select an agency to view this citizen’s tickets</p></div></header>
         <div class="ai-ticket-list-view"><p class="ai-ticket-picker-label">Agencies contacted by this citizen</p><div class="ai-ticket-list">
         @forelse($selectedAgencies as $agencyGroup)
-          <a class="ai-ticket-list-option" href="{{ route('admin.support.requests', ['user'=>$selectedUser->id,'agency'=>$agencyGroup->agency->id,'search'=>$search ?: null]) }}"><span class="ai-ticket-list-main"><strong>{{ $agencyGroup->agency->agency_name }}</strong><span>{{ $agencyGroup->tickets->count() }} ticket{{ $agencyGroup->tickets->count()===1?'':'s' }} · Latest: {{ \Illuminate\Support\Str::limit($agencyGroup->tickets->first()->question, 85) }}</span></span><span class="ai-ticket-list-meta">{{ $agencyGroup->tickets->first()->created_at?->format('M j, Y') }} <i class="ph ph-caret-right" aria-hidden="true"></i></span></a>
+          @php($agencyUnreadCount = $agencyGroup->tickets->filter(fn ($ticket) => !$ticket->trashed() && ($ticket->citizen_activity_at && (!$ticket->agency_seen_at || $ticket->citizen_activity_at > $ticket->agency_seen_at)))->count())
+          <a class="ai-ticket-list-option" href="{{ route('admin.support.requests', ['user'=>$selectedUser->id,'agency'=>$agencyGroup->agency->id,'search'=>$search ?: null]) }}"><span class="ai-ticket-list-main"><strong>{{ $agencyGroup->agency->agency_name }}</strong><span>{{ $agencyGroup->tickets->count() }} ticket{{ $agencyGroup->tickets->count()===1?'':'s' }} · Latest: {{ \Illuminate\Support\Str::limit($agencyGroup->tickets->first()->question, 85) }}</span></span><span class="ai-ticket-list-meta">@if($agencyUnreadCount > 0)<span class="ai-unread-count" aria-label="{{ $agencyUnreadCount }} unread tickets" title="{{ $agencyUnreadCount }} unread tickets">{{ $agencyUnreadCount }}</span>@endif {{ $agencyGroup->tickets->first()->created_at?->format('M j, Y') }} <i class="ph ph-caret-right" aria-hidden="true"></i></span></a>
         @empty <div class="ai-empty">This citizen has no tickets associated with an agency.</div> @endforelse
         </div></div>
         @else
@@ -346,7 +483,7 @@
             @forelse($selectedTickets as $ticketOption)
                 <a class="ai-ticket-list-option {{ $ticketOption->trashed() ? 'is-trashed' : '' }}" href="{{ route('admin.support.requests', ['user' => $selectedUser->id, 'agency' => $ticketOption->agency_id, 'ticket' => $ticketOption->id, 'search' => $search ?: null]) }}">
                     <span class="ai-ticket-list-main"><strong>Ticket #{{ $ticketOption->id }} · {{ $ticketOption->trashed() ? ($ticketOption->user_deleted_at ? 'Trashed by citizen' : 'Trashed by administration') : str_replace('_',' ',ucfirst($ticketOption->status)) }}</strong><span>{{ $ticketOption->question }}</span></span>
-                    <span class="ai-ticket-list-meta">@if(!$ticketOption->trashed() && (!$ticketOption->agency_seen_at || $ticketOption->updated_at > $ticketOption->agency_seen_at))<span class="ai-unread-dot" role="img" aria-label="New ticket activity" title="New ticket activity"></span>@endif {{ $ticketOption->created_at?->format('M j, Y · g:i A') }} <i class="ph ph-caret-right" aria-hidden="true"></i></span>
+                    <span class="ai-ticket-list-meta">@if(!$ticketOption->trashed() && $ticketOption->citizen_activity_at && (!$ticketOption->agency_seen_at || $ticketOption->citizen_activity_at > $ticketOption->agency_seen_at))<span class="ai-unread-count" role="img" aria-label="1 unread update" title="1 unread update">1</span>@endif {{ $ticketOption->created_at?->format('M j, Y · g:i A') }} <i class="ph ph-caret-right" aria-hidden="true"></i></span>
                 </a>
             @empty
                 <div class="ai-empty">This citizen has no available tickets.</div>
@@ -587,7 +724,7 @@
      .listen('.support.request.updated',payload=>{
        if(!payload)return;
        const ticketId=Number(payload.id);
-       const isUserActivity=['created','ticket_created','follow_up_requested','reopened','question_updated'].includes(payload.action);
+       const isUserActivity=['created','ticket_created','follow_up_requested','reopened','question_updated','confirmed'].includes(payload.action);
        if(ticketId===selectedTicketId){
          // Keep the active conversation authoritative and acknowledge the item
          // on its next render. User follow-ups must be visible immediately.

@@ -23,6 +23,7 @@ class SupportRequest extends Model
         'trash_seen_at',
         'user_deleted_at',
         'agency_seen_at',
+        'citizen_activity_at',
         'reopen_message',
         'reopen_message_at',
     ];
@@ -33,6 +34,7 @@ class SupportRequest extends Model
         'trash_seen_at' => 'datetime',
         'user_deleted_at' => 'datetime',
         'agency_seen_at' => 'datetime',
+        'citizen_activity_at' => 'datetime',
         'reopen_message_at' => 'datetime',
     ];
 

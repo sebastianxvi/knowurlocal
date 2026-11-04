@@ -337,6 +337,7 @@ class ChatbotController extends Controller
             'agency_id' => $validated['agency_id'] ?? null,
             'question' => $question,
             'status' => 'pending',
+            'citizen_activity_at' => now(),
             'ip_address' => $request->ip(),
         ]);
 
