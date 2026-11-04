@@ -14,6 +14,7 @@ use App\Http\Controllers\CollaborationController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\FaqFeedbackController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\PublicUserProfileController;
 use App\Http\Controllers\SupportRequestController;
 use App\Http\Controllers\UserActivityController;
 use App\Http\Controllers\UserController;
@@ -198,6 +199,23 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
         ->name('user.notifications.read-all');
 
     Route::get('/map', [PageController::class, 'map'])->name('map');
+    Route::middleware('auth')->group(function () {
+        Route::get('/profile', [PublicUserProfileController::class, 'index'])
+            ->name('user.profile');
+        Route::put('/profile/details', [PublicUserProfileController::class, 'updateDetails'])
+            ->middleware('throttle:10,1')
+            ->name('user.profile.details.update');
+        Route::post('/profile/picture', [PublicUserProfileController::class, 'updatePhoto'])
+            ->middleware('throttle:5,1')
+            ->name('user.profile.picture.update');
+        Route::post('/profile/password/otp', [PublicUserProfileController::class, 'requestPasswordOtp'])
+            ->middleware('throttle:3,1')
+            ->name('user.profile.password.otp');
+        Route::put('/profile/password', [PublicUserProfileController::class, 'changePasswordWithOtp'])
+            ->middleware('throttle:5,1')
+            ->name('user.profile.password.update');
+    });
+
 
     Route::post(
         '/user/activity/agency',

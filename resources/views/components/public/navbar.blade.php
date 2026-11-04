@@ -30,7 +30,7 @@
 
 
                 {{-- SEARCH --}}
-                @if(!isset($hideSearch))
+                @if(request()->routeIs('map') && !isset($hideSearch))
 
                     <div class="search-form">
 
@@ -86,7 +86,7 @@
             {{-- =================================================
                  CATEGORY FILTERS
                  ================================================= --}}
-            @if(!isset($hideSearch))
+            @if(request()->routeIs('map') && !isset($hideSearch))
 
                 <div
                     id="categoryFilters"
@@ -248,6 +248,16 @@
                     class="account-dropdown"
                     id="accountDropdown"
                 >
+
+                    <a
+                        href="{{ route('user.profile') }}"
+                        class="dropdown-item profile-link"
+                    >
+                        <span class="dropdown-item-label">
+                            <i class="ph-light ph-user-circle" aria-hidden="true"></i>
+                            <span>My Profile</span>
+                        </span>
+                    </a>
 
                     <a
                         href="{{ route('user.inquiries') }}"
