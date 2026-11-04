@@ -53,7 +53,7 @@
     {{-- Page-specific authentication styles. --}}
     <link
         rel="stylesheet"
-        href="{{ asset('cssfiles/public_user/login.css') }}"
+        href="{{ asset('cssfiles/public_user/login.css') }}?v={{ file_exists(public_path('cssfiles/public_user/login.css')) ? filemtime(public_path('cssfiles/public_user/login.css')) : time() }}"
     >
 
     <link
