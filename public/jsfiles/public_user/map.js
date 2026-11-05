@@ -450,6 +450,7 @@ function createSelectedAgencyIcon() {
     const evaluationFormWrap = document.getElementById('agencyEvaluationFormWrap');
     const evaluationComment = document.getElementById('agencyEvaluationComment');
     const evaluationConfirmation = document.getElementById('agencyEvaluationConfirmation');
+    const evaluationKeepIdentityHidden = document.getElementById('agencyEvaluationKeepIdentityHidden');
     const evaluationSubmit = document.getElementById('agencyEvaluationSubmit');
     const evaluationCancel = document.getElementById('agencyEvaluationCancel');
     let isEditingEvaluation = false;
@@ -594,7 +595,22 @@ function createSelectedAgencyIcon() {
                 authorGroup.className = 'agency-evaluation-review-author-group';
                 const author = document.createElement('span');
                 author.className = 'agency-evaluation-review-author';
-                author.textContent = review.reviewer || 'Public User';
+                author.textContent = review.reviewer || 'Anonymous User';
+                if (review.reviewer_avatar && !review.is_anonymous) {
+                    const avatar = document.createElement('img');
+                    avatar.className = 'agency-evaluation-review-avatar';
+                    avatar.src = review.reviewer_avatar;
+                    avatar.alt = '';
+                    avatar.loading = 'lazy';
+                    avatar.referrerPolicy = 'no-referrer';
+                    authorGroup.append(avatar);
+                } else {
+                    const avatar = document.createElement('span');
+                    avatar.className = 'agency-evaluation-review-avatar is-anonymous';
+                    avatar.setAttribute('aria-hidden', 'true');
+                    avatar.textContent = '';
+                    authorGroup.append(avatar);
+                }
                 authorGroup.append(author);
                 if (review.is_mine) {
                     const ownBadge = document.createElement('span');
@@ -686,12 +702,14 @@ function createSelectedAgencyIcon() {
                     edit.addEventListener('click', () => {
                         originalEvaluation = {
                             rating: Number(review.rating),
-                            comment: review.comment || ''
+                            comment: review.comment || '',
+                            keep_identity_hidden: Boolean(review.is_anonymous)
                         };
                         isEditingEvaluation = true;
                         setEvaluationRating(originalEvaluation.rating);
                         evaluationComment.value = originalEvaluation.comment;
                         if (evaluationConfirmation) evaluationConfirmation.checked = true;
+                        if (evaluationKeepIdentityHidden) evaluationKeepIdentityHidden.checked = originalEvaluation.keep_identity_hidden;
                         if (evaluationFormTitle) evaluationFormTitle.textContent = 'Update your evaluation';
                         if (evaluationSubmit) evaluationSubmit.textContent = 'Update evaluation';
                         if (evaluationCancel) evaluationCancel.hidden = false;
@@ -882,6 +900,7 @@ function createSelectedAgencyIcon() {
                 setEvaluationRating(data.my_evaluation.rating);
                 evaluationComment.value = data.my_evaluation.comment || '';
                 if (evaluationConfirmation) evaluationConfirmation.checked = true;
+                if (evaluationKeepIdentityHidden) evaluationKeepIdentityHidden.checked = data.my_evaluation.keep_identity_hidden !== false;
                 if (evaluationFormTitle) evaluationFormTitle.textContent = 'Update your evaluation';
                 if (evaluationSubmit) evaluationSubmit.textContent = 'Update evaluation';
                 if (evaluationCancel) evaluationCancel.hidden = true;
@@ -893,6 +912,7 @@ function createSelectedAgencyIcon() {
             setEvaluationRating(0);
             evaluationComment.value = '';
             if (evaluationConfirmation) evaluationConfirmation.checked = false;
+            if (evaluationKeepIdentityHidden) evaluationKeepIdentityHidden.checked = true;
             if (evaluationFormTitle) evaluationFormTitle.textContent = 'Share your experience';
             if (evaluationSubmit) evaluationSubmit.textContent = 'Submit evaluation';
             if (evaluationCancel) evaluationCancel.hidden = true;
@@ -952,6 +972,7 @@ function createSelectedAgencyIcon() {
             setEvaluationRating(0);
             if (evaluationComment) evaluationComment.value = '';
             if (evaluationConfirmation) evaluationConfirmation.checked = false;
+            if (evaluationKeepIdentityHidden) evaluationKeepIdentityHidden.checked = true;
             if (evaluationFormTitle) evaluationFormTitle.textContent = 'Share your experience';
             if (evaluationSubmit) evaluationSubmit.textContent = 'Submit evaluation';
             if (evaluationCancel) evaluationCancel.hidden = true;
@@ -1027,7 +1048,7 @@ function createSelectedAgencyIcon() {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
                     },
-                    body: JSON.stringify({ rating: selectedEvaluationRating, comment: evaluationComment?.value || '', confirmed_experience: Boolean(evaluationConfirmation?.checked) })
+                    body: JSON.stringify({ rating: selectedEvaluationRating, comment: evaluationComment?.value || '', confirmed_experience: Boolean(evaluationConfirmation?.checked), keep_identity_hidden: Boolean(evaluationKeepIdentityHidden?.checked) })
                 });
                 const result = await response.json().catch(() => ({}));
                 if (!response.ok) {

@@ -311,6 +311,13 @@
                             <input type="checkbox" id="agencyEvaluationConfirmation" required>
                             <span>I confirm this evaluation is based on my actual experience with this agency.</span>
                         </label>
+                        <label class="agency-evaluation-identity-privacy">
+                            <input type="checkbox" id="agencyEvaluationKeepIdentityHidden" checked>
+                            <span>
+                                <strong>Keep my identity hidden</strong>
+                                <small>Your name and profile picture will not be shown publicly. Uncheck this option to reveal your identity with this evaluation.</small>
+                            </span>
+                        </label>
                         <label class="agency-evaluation-comment-label" for="agencyEvaluationComment">Additional comments <span>(optional)</span></label>
                         <textarea id="agencyEvaluationComment" maxlength="1500" rows="3" placeholder="Tell others about your experience…"></textarea>
                         <div class="agency-evaluation-form-footer">
@@ -318,7 +325,7 @@
                             <button type="submit" id="agencyEvaluationSubmit" disabled>Submit evaluation</button>
                         </div>
                     </form>
-                    <p class="agency-evaluation-privacy-note">Your name is partially masked to protect your identity. You can edit or delete your evaluation anytime.</p>
+                    <p class="agency-evaluation-privacy-note">Your evaluation is anonymous by default. You can choose to reveal your identity, and you can edit or delete your evaluation anytime.</p>
                 </div>
                 @endif
 

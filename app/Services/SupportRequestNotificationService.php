@@ -40,6 +40,55 @@ class SupportRequestNotificationService
         ]);
     }
 
+
+    public function ticketRestored(SupportRequest $ticket, string $actorRole, ?string $trashedAt = null): ?UserNotification
+    {
+        if (!$ticket->user_id) {
+            return null;
+        }
+
+        $agencyName = $ticket->agency?->agency_name ?: 'the assigned agency';
+        $cycle = $trashedAt ?: ($ticket->deleted_at?->format('Uu') ?? now()->format('Uu'));
+
+        return $this->create([
+            'user_id' => (int) $ticket->user_id,
+            'support_request_id' => (int) $ticket->id,
+            'type' => 'ticket_restored',
+            'title' => 'Your ticket was restored',
+            'message' => 'Ticket #' . $ticket->id . ' sent to ' . $agencyName . ' has been restored and is available again.',
+            'data' => [
+                'agency_id' => $ticket->agency_id ? (int) $ticket->agency_id : null,
+                'agency_name' => $agencyName,
+                'actor_role' => $actorRole,
+                'restored_from' => $cycle,
+            ],
+            'dedupe_key' => 'ticket-restored:' . $ticket->id . ':' . $cycle,
+        ]);
+    }
+
+    public function ticketPermanentlyDeleted(SupportRequest $ticket, string $actorRole): ?UserNotification
+    {
+        if (!$ticket->user_id) {
+            return null;
+        }
+
+        $agencyName = $ticket->agency?->agency_name ?: 'the assigned agency';
+
+        return $this->create([
+            'user_id' => (int) $ticket->user_id,
+            'support_request_id' => (int) $ticket->id,
+            'type' => 'ticket_permanently_deleted',
+            'title' => 'Your ticket was permanently deleted',
+            'message' => 'Ticket #' . $ticket->id . ' sent to ' . $agencyName . ' was permanently deleted by an administrator and can no longer be restored.',
+            'data' => [
+                'agency_id' => $ticket->agency_id ? (int) $ticket->agency_id : null,
+                'agency_name' => $agencyName,
+                'actor_role' => $actorRole,
+            ],
+            'dedupe_key' => 'ticket-permanently-deleted:' . $ticket->id,
+        ]);
+    }
+
     public function responseCreated(SupportRequest $ticket, ?int $responseId, string $actorRole): ?UserNotification
     {
         if (!$ticket->user_id) {

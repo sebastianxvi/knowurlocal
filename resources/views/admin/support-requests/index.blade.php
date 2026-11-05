@@ -33,7 +33,7 @@
 
 @section('title', 'KNOWURLOCAL | ' . ucfirst(auth()->user()->role) . ' Module')
 
-@section('page-title', 'Support Requests')
+@section('page-title', 'Support Tickets')
 @section('page-subtitle', 'Review and respond to questions submitted by citizens')
 
 @section('content')

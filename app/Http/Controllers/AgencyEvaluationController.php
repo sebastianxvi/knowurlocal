@@ -7,6 +7,7 @@ use App\Models\AgencyEvaluation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AgencyEvaluationController extends Controller
 {
@@ -49,8 +50,10 @@ class AgencyEvaluationController extends Controller
             ->orderByDesc('id')
             ->offset(($page - 1) * $perPage)
             ->limit($perPage)
-            ->with(['user:id,first_name,last_name', 'response:id,agency_evaluation_id,responder_role,body,updated_at'])
-            ->get(['id', 'user_id', 'rating', 'comment', 'created_at']);
+            ->with(['user:id,first_name,last_name,profile_picture', 'response:id,agency_evaluation_id,responder_role,body,updated_at'])
+            // Include the privacy preference in this projection. Without it,
+            // Eloquent returns null and the serializer can mistakenly expose identity.
+            ->get(['id', 'user_id', 'rating', 'comment', 'created_at', 'keep_identity_hidden']);
 
         $reviewIds = $reviewRecords->pluck('id');
         $helpfulCounts = DB::table('agency_evaluation_helpful_votes')
@@ -71,7 +74,11 @@ class AgencyEvaluationController extends Controller
                 'rating' => $evaluation->rating,
                 'comment' => $evaluation->comment,
                 'created_at' => $evaluation->created_at?->toISOString(),
-                'reviewer' => $this->maskedReviewerName($evaluation->user),
+                'reviewer' => $evaluation->keep_identity_hidden ? 'Anonymous User' : $this->publicReviewerName($evaluation->user),
+                'reviewer_avatar' => (!$evaluation->keep_identity_hidden && $evaluation->user?->profile_picture)
+                    ? Storage::disk('public')->url($evaluation->user->profile_picture)
+                    : null,
+                'is_anonymous' => (bool) $evaluation->keep_identity_hidden,
                 'is_mine' => (int) $evaluation->user_id === (int) $request->user()->id,
                 'helpful_count' => (int) ($helpfulCounts[$evaluation->id] ?? 0),
                 'has_marked_helpful' => $myHelpfulVotes->has($evaluation->id),
@@ -86,7 +93,7 @@ class AgencyEvaluationController extends Controller
         if ($request->user()->role === 'user') {
             $ownEvaluation = $agency->evaluations()
                 ->where('user_id', $request->user()->id)
-                ->first(['id', 'rating', 'comment', 'status', 'updated_at']);
+                ->first(['id', 'rating', 'comment', 'status', 'updated_at', 'keep_identity_hidden']);
         }
 
         return response()->json([
@@ -106,6 +113,7 @@ class AgencyEvaluationController extends Controller
                 'comment' => $ownEvaluation->comment,
                 'updated_at' => $ownEvaluation->updated_at?->toISOString(),
                 'status' => $ownEvaluation->status,
+                'keep_identity_hidden' => (bool) $ownEvaluation->keep_identity_hidden,
             ] : null,
         ])->header('Cache-Control', 'private, no-store');
     }
@@ -118,6 +126,7 @@ class AgencyEvaluationController extends Controller
             'rating' => ['required', 'integer', 'between:1,5'],
             'comment' => ['nullable', 'string', 'max:1500'],
             'confirmed_experience' => ['required', 'accepted'],
+            'keep_identity_hidden' => ['required', 'boolean'],
         ]);
 
         $evaluation = DB::transaction(function () use ($request, $agency, $validated) {
@@ -149,6 +158,7 @@ class AgencyEvaluationController extends Controller
 
                 $evaluation->rating = $validated['rating'];
                 $evaluation->comment = $comment;
+                $evaluation->keep_identity_hidden = (bool) $validated['keep_identity_hidden'];
                 $evaluation->status = 'published';
                 $evaluation->save();
 
@@ -162,6 +172,7 @@ class AgencyEvaluationController extends Controller
                 'user_id' => $request->user()->id,
                 'rating' => $validated['rating'],
                 'comment' => $comment,
+                'keep_identity_hidden' => (bool) $validated['keep_identity_hidden'],
                 'status' => 'published',
             ]);
         });
@@ -171,6 +182,7 @@ class AgencyEvaluationController extends Controller
             'evaluation' => [
                 'rating' => $evaluation->rating,
                 'comment' => $evaluation->comment,
+                'keep_identity_hidden' => (bool) $evaluation->keep_identity_hidden,
                 'updated_at' => $evaluation->updated_at?->toISOString(),
             ],
         ]);
@@ -238,25 +250,17 @@ class AgencyEvaluationController extends Controller
         ])->header('Cache-Control', 'private, no-store');
     }
 
-    private function maskedReviewerName($user): string
+    private function publicReviewerName($user): string
     {
         if (!$user) {
             return 'Public User';
         }
 
-        $parts = array_filter([
+        $name = trim(implode(' ', array_filter([
             trim((string) $user->first_name),
             trim((string) $user->last_name),
-        ]);
+        ])));
 
-        if (!$parts) {
-            return 'Public User';
-        }
-
-        return collect($parts)->map(function ($part) {
-            $firstCharacter = mb_substr($part, 0, 1);
-            $remainingLength = max(2, min(5, mb_strlen($part) - 1));
-            return $firstCharacter . str_repeat('*', $remainingLength);
-        })->implode(' ');
+        return $name !== '' ? $name : 'Public User';
     }
 }

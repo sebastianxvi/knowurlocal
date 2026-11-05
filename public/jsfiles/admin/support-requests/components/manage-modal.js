@@ -203,10 +203,11 @@ const showClientMessage = (
 
 
     /*
-    | Fallback if the shared alert system
-    | is not available.
+    | The shared modal is a required part of the admin layout.
+    | Avoid falling back to a browser-native alert, which breaks
+    | the consistent interaction pattern.
     */
-    window.alert(text);
+    console.error('KNOWURLOCAL shared alert modal is unavailable:', text);
 };
 
 

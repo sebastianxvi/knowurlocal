@@ -25,7 +25,7 @@
                     <i class="ph-light ph-star"></i><span>Service Evaluations</span>
                 </a>
                 <a href="{{ route('agency-admin.tickets') }}" class="{{ request()->routeIs('agency-admin.tickets') ? 'active' : '' }}">
-                    <i class="ph-light ph-chat-circle-dots" aria-hidden="true"></i><span>Support Inbox</span>
+                    <i class="ph-light ph-chat-circle-dots" aria-hidden="true"></i><span>Support Tickets</span>
                 </a>
                 <a href="{{ route('agency-admin.faqs') }}" class="{{ request()->routeIs('agency-admin.faqs') ? 'active' : '' }}">
                     <i class="ph-light ph-book-open-text"></i><span>FAQ Management</span>
@@ -90,7 +90,7 @@
 
             @if(auth()->check() && in_array(auth()->user()->role, ['admin','superadmin']))
                 <a href="{{ route('admin.support.requests') }}" class="{{ request()->routeIs('admin.support.requests') ? 'active' : '' }}">
-                    <i class="ph-light ph-chat-circle"></i><span>Support Requests</span>
+                    <i class="ph-light ph-chat-circle"></i><span>Support Tickets</span>
                 </a>
             @endif
 

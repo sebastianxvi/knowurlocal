@@ -26,7 +26,7 @@
                         @if($user->profile_picture)
                             <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($user->profile_picture) }}" alt="Profile picture" id="profilePictureImage">
                         @else
-                            <span id="profilePictureInitials">{{ mb_strtoupper(mb_substr($user->first_name ?: 'U', 0, 1) . mb_substr($user->last_name ?: '', 0, 1)) }}</span>
+                            <span class="profile-picture-default-avatar" id="profilePictureDefaultAvatar" aria-label="Default profile picture" role="img"></span>
                         @endif
                     </button>
                     <button type="button" class="profile-picture-edit" id="chooseProfilePicture" aria-label="Profile picture options" title="Profile picture options">

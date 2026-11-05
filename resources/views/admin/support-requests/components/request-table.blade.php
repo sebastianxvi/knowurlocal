@@ -333,7 +333,6 @@
                                                         $request->id
                                                     ) }}"
                                                     class="support-lifecycle-form"
-                                                    onsubmit="const reason = prompt('Why are you moving ticket #{{ $request->id }} to trash?'); if (reason === null || reason.trim().length < 3) { if (reason !== null) alert('Please enter a reason of at least 3 characters.'); return false; } this.querySelector('[name=reason]').value = reason.trim();"
                                                 >
 
                                                     @csrf

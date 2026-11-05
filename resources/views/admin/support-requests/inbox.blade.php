@@ -1,6 +1,6 @@
 @extends('layouts.admin')
-@section('title', 'KNOWURLOCAL | Support Inbox')
-@section('page-title', 'Support Inbox')
+@section('title', 'KNOWURLOCAL | Support Tickets')
+@section('page-title', 'Support Tickets')
 @section('page-subtitle', 'Review citizen support requests across agencies')
 @push('styles')
 <style>
@@ -139,9 +139,6 @@
 .ai-ticket-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 .ai-ticket-modal-actions button{min-height:38px;padding:8px 13px;border:1px solid #dbe2ec;border-radius:10px;background:#fff;color:#334155;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .ai-ticket-modal-actions .confirm{border-color:#dc2626;background:#dc2626;color:#fff}
-.ai-flash{margin:0 0 12px;padding:11px 14px;border-radius:10px;font-size:12px}
-.ai-flash.success{background:#ecfdf5;color:#166534;border:1px solid #bbf7d0}
-.ai-flash.error{background:#fff1f2;color:#9f1239;border:1px solid #fecdd3}
 @media(max-width:640px){.ai-chat-head-actions{gap:5px}.ai-trash-ticket-button{width:34px;height:34px}.ai-trashed-banner{margin-bottom:12px}.ai-ticket-modal{padding:18px}.ai-ticket-actions-menu{position:fixed;right:14px;top:auto;bottom:16px;min-width:min(250px,calc(100vw - 28px))}}
 
 
@@ -430,8 +427,6 @@
 </style>
 @endpush
 @section('content')
-@if(session('success'))<div class="ai-flash success" role="status">{{ session('success') }}</div>@endif
-@if(session('error'))<div class="ai-flash error" role="alert">{{ session('error') }}</div>@endif
 <div class="agency-inbox {{ $selectedUser ? 'ai-mobile-show-conversation' : 'ai-mobile-show-list' }} {{ $selectedAgencyId ? 'has-selected-agency' : '' }}" data-agency-inbox data-agency-id="{{ (int) ($agency->id ?? 0) }}" data-selected-ticket-id="{{ (int) ($selectedTicket->id ?? 0) }}">
     <aside class="ai-sidebar">
         <div class="ai-sidebar-head"><h2>User Tickets</h2><p>{{ $conversations->count() }} citizen conversation{{ $conversations->count() === 1 ? '' : 's' }}</p>
@@ -558,8 +553,8 @@
                     <details class="ai-ticket-actions">
                         <summary class="ai-icon-btn" aria-label="Ticket actions" title="Ticket actions"><i class="ph ph-dots-three-vertical" aria-hidden="true"></i></summary>
                         <div class="ai-ticket-actions-menu">
-                            <form method="POST" action="{{ route('admin.support.restore', $selectedTicket->id) }}">@csrf @method('PATCH')<button type="submit"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore ticket</button></form>
-                            <form method="POST" action="{{ route('admin.support.forceDelete', $selectedTicket->id) }}" onsubmit="return confirm('Permanently delete ticket #{{ $selectedTicket->id }}? This cannot be undone and removes its response history and attachments.');">@csrf @method('DELETE')<button class="is-danger" type="submit"><i class="ph ph-trash" aria-hidden="true"></i> Delete permanently</button></form>
+                            <form method="POST" action="{{ route('admin.support.restore', $selectedTicket->id) }}" data-ticket-lifecycle-confirm="restore" data-ticket-id="{{ (int) $selectedTicket->id }}">@csrf @method('PATCH')<button type="submit"><i class="ph ph-arrow-counter-clockwise" aria-hidden="true"></i> Restore ticket</button></form>
+                            <form method="POST" action="{{ route('admin.support.forceDelete', $selectedTicket->id) }}" data-ticket-lifecycle-confirm="permanent-delete" data-ticket-id="{{ (int) $selectedTicket->id }}">@csrf @method('DELETE')<button class="is-danger" type="submit"><i class="ph ph-trash" aria-hidden="true"></i> Delete permanently</button></form>
                         </div>
                     </details>
                     @else
@@ -952,4 +947,50 @@ document.querySelectorAll('.ai-faq-convert-panel').forEach((form) => {
     });
 });
 </script>
+
+<script>
+(() => {
+    'use strict';
+
+    document.addEventListener('submit', async (event) => {
+        const form = event.target.closest('form[data-ticket-lifecycle-confirm]');
+        if (!form || form.dataset.confirmed === 'true') return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        if (typeof window.showConfirmModal !== 'function') {
+            console.error('KNOWURLOCAL confirmation modal is unavailable; ticket action was not submitted.');
+            return;
+        }
+
+        const action = form.dataset.ticketLifecycleConfirm;
+        const ticketId = form.dataset.ticketId || '';
+        const config = action === 'restore'
+            ? {
+                title: 'Restore Support Ticket?',
+                text: `Restore ticket #${ticketId}? It will return to the active ticket list.`,
+                icon: 'ph-light ph-arrow-counter-clockwise',
+                variant: 'warning',
+                confirmText: 'Restore Ticket',
+                cancelText: 'Cancel'
+            }
+            : {
+                title: 'Permanently Delete Support Ticket?',
+                text: `Permanently delete ticket #${ticketId}? This cannot be undone and removes its response history and attachments.`,
+                icon: 'ph-light ph-trash',
+                variant: 'danger',
+                confirmText: 'Delete Permanently',
+                cancelText: 'Cancel'
+            };
+
+        const accepted = await window.showConfirmModal(config);
+        if (!accepted) return;
+
+        form.dataset.confirmed = 'true';
+        form.requestSubmit();
+    });
+})();
+</script>
+
 @endpush

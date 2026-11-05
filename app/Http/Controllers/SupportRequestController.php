@@ -1899,11 +1899,18 @@ public function update(
         $agencyId =
             $support->agency_id;
 
+        $trashedAt = $support->deleted_at?->toDateTimeString();
 
         /*
          * Restore the Support Request.
          */
         $support->restore();
+
+        app(SupportRequestNotificationService::class)->ticketRestored(
+            $support,
+            (string) (auth()->user()->role ?? 'superadmin'),
+            $trashedAt
+        );
 
 
         /*
@@ -2029,6 +2036,16 @@ public function update(
                 'The support request could not be permanently deleted. No data was removed.'
             );
         }
+
+        /*
+         * The ticket is now permanently gone. Keep its notification
+         * history independent of the ticket row so the citizen can still
+         * learn what happened from their Notifications page.
+         */
+        app(SupportRequestNotificationService::class)->ticketPermanentlyDeleted(
+            $support,
+            (string) (auth()->user()->role ?? 'superadmin')
+        );
 
         /*
          * Database deletion succeeded. Remove the optional answer

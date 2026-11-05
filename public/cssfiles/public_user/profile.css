@@ -362,3 +362,35 @@ body.profile-editor-open{overflow:hidden}
 .profile-otp-resend{margin:0 0 12px;text-align:center;color:#78859a;font-size:11px}
 .profile-otp-resend button{border:0;padding:0;background:transparent;color:#4e6fd0;font:inherit;font-weight:700;cursor:pointer}
 .profile-otp-resend button:disabled{color:#8b96a8;cursor:not-allowed}
+
+
+/* Shared KNOWURLOCAL default avatar silhouette, scaled from the evaluation avatar. */
+.profile-picture-default-avatar{
+    position:relative;
+    display:block;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    border-radius:50%;
+    background:#e8edf3;
+}
+.profile-picture-default-avatar::before{
+    content:"";
+    position:absolute;
+    top:22%;
+    left:40%;
+    width:20%;
+    height:20%;
+    border-radius:50%;
+    background:#94a3b8;
+}
+.profile-picture-default-avatar::after{
+    content:"";
+    position:absolute;
+    left:22%;
+    bottom:13%;
+    width:56%;
+    height:28%;
+    border-radius:50% 50% 32% 32%;
+    background:#94a3b8;
+}

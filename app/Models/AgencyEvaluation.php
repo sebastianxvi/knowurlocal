@@ -15,11 +15,12 @@ class AgencyEvaluation extends Model
         'rating',
         'comment',
         'status',
+        'keep_identity_hidden',
     ];
 
     protected function casts(): array
     {
-        return ['rating' => 'integer'];
+        return ['rating' => 'integer', 'keep_identity_hidden' => 'boolean'];
     }
 
     public function agency()

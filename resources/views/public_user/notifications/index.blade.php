@@ -62,16 +62,19 @@
                        data-notification-id="{{ $notification->id }}"
                        data-read="{{ $notification->read_at ? '1' : '0' }}">
                         @php
-                            $isEvaluationNotice = str_starts_with($notification->type, 'evaluation_');
+                            $isEvaluationNotice = str_starts_with($notification->type, 'evaluation_')
+                                && $notification->type !== 'evaluation_response';
                             $notificationIcon = match ($notification->type) {
-                                'ticket_trashed', 'evaluation_removed' => 'ph-trash',
+                                'ticket_trashed', 'ticket_permanently_deleted', 'evaluation_removed' => 'ph-trash',
+                                'ticket_restored' => 'ph-arrow-counter-clockwise',
                                 'evaluation_hidden' => 'ph-eye-slash',
                                 'evaluation_restored' => 'ph-eye',
+                                'evaluation_response' => 'ph-chat-circle-text',
                                 default => 'ph-chat-circle-text',
                             };
-                            $notificationTone = in_array($notification->type, ['ticket_trashed', 'evaluation_removed'], true)
+                            $notificationTone = in_array($notification->type, ['ticket_trashed', 'ticket_permanently_deleted', 'evaluation_removed'], true)
                                 ? 'is-trash'
-                                : ($isEvaluationNotice ? 'is-evaluation' : 'is-response');
+                                : (($isEvaluationNotice || $notification->type === 'evaluation_response') ? 'is-evaluation' : 'is-response');
                         @endphp
                         <span class="user-notification-icon {{ $notificationTone }}">
                             <i class="ph-light {{ $notificationIcon }}" aria-hidden="true"></i>

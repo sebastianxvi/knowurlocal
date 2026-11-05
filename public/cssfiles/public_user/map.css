@@ -3091,3 +3091,65 @@ a.agency-contact-value:focus-visible {
     color:#315f9d;
     outline:none;
 }
+
+
+.agency-evaluation-identity-privacy{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    margin:8px 0 10px;
+    padding:0;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:#64748b;
+    cursor:pointer;
+    font-size:.74rem;
+    line-height:1.45;
+}
+.agency-evaluation-identity-privacy input{
+    margin-top:2px;
+    accent-color:#315f9d;
+    flex:0 0 auto;
+}
+.agency-evaluation-identity-privacy span{display:grid;gap:2px}
+.agency-evaluation-identity-privacy strong{font-weight:600;color:#475569}
+.agency-evaluation-identity-privacy small{font-size:inherit;color:#64748b}
+.agency-evaluation-review-avatar{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:28px;
+    height:28px;
+    flex:0 0 28px;
+    border-radius:50%;
+    object-fit:cover;
+    background:#e8edf3;
+    color:#64748b;
+    font-size:15px;
+}
+.agency-evaluation-review-avatar.is-anonymous{
+    position:relative;
+    overflow:hidden;
+    font-size:0;
+}
+.agency-evaluation-review-avatar.is-anonymous::before{
+    content:"";
+    position:absolute;
+    top:6px;
+    left:10px;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#94a3b8;
+}
+.agency-evaluation-review-avatar.is-anonymous::after{
+    content:"";
+    position:absolute;
+    left:5px;
+    bottom:4px;
+    width:18px;
+    height:10px;
+    border-radius:10px 10px 6px 6px;
+    background:#94a3b8;
+}

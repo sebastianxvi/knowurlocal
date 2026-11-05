@@ -81,7 +81,7 @@ class AgencyEvaluationManagementController extends Controller
             $filter = 'all';
         }
 
-        $evaluationQuery = (clone $base)->with(['response', 'user:id,first_name,last_name'])
+        $evaluationQuery = (clone $base)->with(['response', 'user:id,first_name,last_name,profile_picture'])
             ->withCount(['reports', 'helpfulVotes'])
             ->when($filter === 'unanswered', fn ($query) => $query->whereDoesntHave('response'))
             ->when($filter === 'responded', fn ($query) => $query->whereHas('response'))
@@ -89,7 +89,12 @@ class AgencyEvaluationManagementController extends Controller
 
         $evaluations = $evaluationQuery->paginate(25)->withQueryString();
         $evaluations->getCollection()->each(function (AgencyEvaluation $evaluation) {
-            $evaluation->setAttribute('masked_reviewer_name', $this->maskedReviewerName($evaluation->user));
+            $identityVisible = !$evaluation->keep_identity_hidden;
+            $evaluation->setAttribute('reviewer_name', $identityVisible ? $this->reviewerName($evaluation->user) : 'Anonymous User');
+            $evaluation->setAttribute('reviewer_avatar_url', $identityVisible && $evaluation->user?->profile_picture
+                ? \Illuminate\Support\Facades\Storage::disk('public')->url($evaluation->user->profile_picture)
+                : null);
+            $evaluation->setAttribute('reviewer_is_anonymous', !$identityVisible);
         });
 
         return view('agency-admin.evaluations', compact(
@@ -160,10 +165,15 @@ class AgencyEvaluationManagementController extends Controller
         $base = $agency->evaluations()->where('status', 'published');
         $stats = (clone $base)->selectRaw('COUNT(*) total, COALESCE(AVG(rating),0) average')->first();
         $distribution = (clone $base)->selectRaw('rating, COUNT(*) total')->groupBy('rating')->pluck('total', 'rating');
-        $evaluations = (clone $base)->with(['response', 'user:id,first_name,last_name'])
+        $evaluations = (clone $base)->with(['response', 'user:id,first_name,last_name,profile_picture'])
             ->withCount(['reports', 'helpfulVotes'])->latest()->paginate(50)->withQueryString();
         $evaluations->getCollection()->each(function (AgencyEvaluation $evaluation) {
-            $evaluation->setAttribute('masked_reviewer_name', $this->maskedReviewerName($evaluation->user));
+            $identityVisible = !$evaluation->keep_identity_hidden;
+            $evaluation->setAttribute('reviewer_name', $identityVisible ? $this->reviewerName($evaluation->user) : 'Anonymous User');
+            $evaluation->setAttribute('reviewer_avatar_url', $identityVisible && $evaluation->user?->profile_picture
+                ? \Illuminate\Support\Facades\Storage::disk('public')->url($evaluation->user->profile_picture)
+                : null);
+            $evaluation->setAttribute('reviewer_is_anonymous', !$identityVisible);
         });
         $canRespond = $this->mayRespond(auth()->user(), $agency);
         return view('admin.evaluations.agency', compact('agency', 'stats', 'distribution', 'evaluations', 'canRespond'));
@@ -184,7 +194,8 @@ class AgencyEvaluationManagementController extends Controller
         abort_unless($this->mayRespond($request->user(), $agency), 403, 'You are not authorized to respond to this agency evaluation.');
 
         $validated = $request->validate(['body' => ['required', 'string', 'min:3', 'max:2000']]);
-        $response = DB::transaction(function () use ($request, $evaluation, $validated) {
+        $responseWasCreated = false;
+        $response = DB::transaction(function () use ($request, $evaluation, $validated, &$responseWasCreated) {
             $existing = AgencyEvaluationResponse::where('agency_evaluation_id', $evaluation->id)->lockForUpdate()->first();
             if ($existing) {
                 // Response authority follows the agency's current assignment.
@@ -199,6 +210,7 @@ class AgencyEvaluationManagementController extends Controller
                 return $existing;
             }
 
+            $responseWasCreated = true;
             return AgencyEvaluationResponse::create([
                 'agency_evaluation_id' => $evaluation->id,
                 'responder_id' => $request->user()->id,
@@ -206,6 +218,15 @@ class AgencyEvaluationManagementController extends Controller
                 'body' => trim($validated['body']),
             ]);
         });
+
+        // Only the first official response should trigger the "agency responded"
+        // notification. Editing/reassigning an existing response is not a new reply.
+        if ($responseWasCreated) {
+            app(AgencyEvaluationNotificationService::class)->officialResponse(
+                $evaluation->fresh(['agency']),
+                $response
+            );
+        }
 
         return back()->with('success', 'Official response saved.');
     }
@@ -419,28 +440,20 @@ class AgencyEvaluationManagementController extends Controller
     }
 
     /**
-     * Match the public map's privacy-preserving reviewer label. Only the
-     * masked value is rendered; the original name is never exposed in markup.
+     * Return a reviewer's full name only when their evaluation explicitly
+     * allows identity disclosure. Anonymous labels are handled by the caller.
      */
-    private function maskedReviewerName($user): string
+    private function reviewerName($user): string
     {
         if (!$user) {
             return 'Public User';
         }
 
-        $parts = array_filter([
+        $name = trim(implode(' ', array_filter([
             trim((string) $user->first_name),
             trim((string) $user->last_name),
-        ]);
+        ])));
 
-        if (!$parts) {
-            return 'Public User';
-        }
-
-        return collect($parts)->map(function ($part) {
-            $firstCharacter = mb_substr($part, 0, 1);
-            $remainingLength = max(2, min(5, mb_strlen($part) - 1));
-            return $firstCharacter . str_repeat('*', $remainingLength);
-        })->implode(' ');
+        return $name !== '' ? $name : 'Public User';
     }
 }
