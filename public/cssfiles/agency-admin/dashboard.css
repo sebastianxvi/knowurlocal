@@ -1,0 +1,94 @@
+/* Agency Admin dashboard: align visual hierarchy and component rhythm with System Admin. */
+.agency-workspace{max-width:1180px;margin:0 auto;gap:18px;overflow-x:clip}
+.agency-workspace .aw-welcome{padding:22px 24px;border-radius:15px;border-color:#e2e8f0;box-shadow:0 2px 8px rgba(20,36,65,.025);background:linear-gradient(115deg,#fff 0%,#fbfcff 100%)}
+.agency-workspace .aw-eyebrow{font-size:9px;letter-spacing:.13em;color:#8b97aa}
+.agency-workspace .aw-welcome h2{margin:5px 0;font-size:24px;line-height:1.2;font-weight:650;letter-spacing:-.025em;color:#172033}
+.agency-workspace .aw-welcome p{font-size:11px;line-height:1.65;color:#718096;max-width:720px}
+.agency-workspace .aw-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0}
+.agency-workspace .aw-stat.dashboard-kpi{min-height:104px;padding:13px 14px;display:flex;align-items:flex-start;gap:11px;border:1px solid #e6ebf2;border-radius:13px;background:#fff;box-shadow:0 3px 12px rgba(17,29,49,.035)}
+.agency-workspace .aw-stat.dashboard-kpi:hover{transform:translateY(-2px);border-color:#ccd6e5;box-shadow:0 10px 24px rgba(22,35,58,.07)}
+.agency-workspace .dashboard-kpi-icon{width:34px;height:34px;flex:0 0 34px;border-radius:10px;background:#edf2ff;color:#4f72d8;font-size:17px}
+.agency-workspace .dashboard-kpi-icon.is-violet{background:#f1edff;color:#8066cf}
+.agency-workspace .dashboard-kpi-icon.is-teal{background:#e7f7ef;color:#2f9b70}
+.agency-workspace .dashboard-kpi-copy{padding:0;display:flex;flex:1;min-width:0;flex-direction:column}
+.agency-workspace .dashboard-kpi-label{color:#788498;font-size:9px;font-weight:600;line-height:1.35;border:0}
+.agency-workspace .dashboard-kpi-copy strong{margin-top:3px;color:#172033;font-size:22px;font-weight:650;line-height:1.1;letter-spacing:-.02em}
+.agency-workspace .dashboard-kpi-copy small{margin-top:5px;color:#98a3b4;font-size:8px;line-height:1.4}
+.agency-workspace .dashboard-kpi-support.is-attention{border-color:#eedfbd;background:linear-gradient(180deg,#fffefa 0%,#fff 100%)}
+.agency-workspace .dashboard-kpi-support.is-attention .dashboard-kpi-icon{background:#fff3d9;color:#a87317}
+.agency-workspace .dashboard-kpi-support.is-attention .dashboard-kpi-copy strong{color:#9b690e}
+.agency-workspace .aw-card{padding:17px;border:1px solid #e6ebf2;border-radius:15px;box-shadow:0 4px 16px rgba(18,31,55,.035);transition:border-color .16s,box-shadow .16s}
+.agency-workspace .aw-card:hover{border-color:#d6dfed;box-shadow:0 7px 20px rgba(18,31,55,.05)}
+.agency-workspace .aw-card-head{align-items:flex-start;margin-bottom:12px}
+.agency-workspace .aw-card h3{font-size:14px;line-height:1.25;font-weight:650;color:#1a2841}
+.agency-workspace .aw-card .aw-muted{font-size:9px;line-height:1.5;color:#8994a5}
+.agency-workspace .aw-link{font-size:9px;color:#4f72d8}
+.agency-workspace .aw-table th{font-size:9px;letter-spacing:.06em;color:#8a96a8}
+.agency-workspace .aw-table td{font-size:10px;line-height:1.5;color:#526078;padding:11px 10px}
+.agency-workspace .aw-status{background:#edf3ff;color:#4e6fc7;font-size:8px}
+.agency-workspace .aw-empty{padding:20px;color:#8994a5;font-size:10px}
+.agency-workspace .dashboard-analytics-section{margin:0}
+.agency-workspace .dashboard-analytics-link{display:flex;align-items:center;gap:12px;padding:15px 17px;border:1px solid #e4eaf3;border-radius:14px;background:linear-gradient(110deg,#f8faff,#fff);text-decoration:none;transition:border-color .16s,box-shadow .16s}
+.agency-workspace .dashboard-analytics-link:hover{border-color:#cbd8ed;box-shadow:0 7px 20px rgba(35,64,112,.06)}
+.agency-workspace .dashboard-analytics-icon{display:grid;place-items:center;width:35px;height:35px;flex:0 0 35px;border-radius:10px;background:#edf2ff;color:#4f72d8;font-size:18px}
+.agency-workspace .dashboard-analytics-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.agency-workspace .dashboard-analytics-copy .eyebrow{font-size:8px;color:#8b97aa;letter-spacing:.12em}
+.agency-workspace .dashboard-analytics-copy strong{font-size:11px;color:#26354c;font-weight:650}
+.agency-workspace .dashboard-analytics-copy small{font-size:9px;color:#8994a5;line-height:1.5}
+.agency-workspace .dashboard-analytics-action{display:flex;align-items:center;gap:6px;flex:none;color:#4f72d8;font-size:9px;font-weight:650}
+@media(max-width:1000px){.agency-workspace .aw-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.agency-workspace{gap:13px}.agency-workspace .aw-welcome{padding:17px;flex-direction:column}.agency-workspace .aw-welcome h2{font-size:21px}.agency-workspace .aw-grid{gap:8px}.agency-workspace .aw-stat.dashboard-kpi{min-height:92px;padding:11px;gap:8px}.agency-workspace .dashboard-kpi-icon{width:29px;height:29px;flex-basis:29px;font-size:15px}.agency-workspace .dashboard-kpi-copy strong{font-size:19px}.agency-workspace .aw-card{padding:13px}.agency-workspace .dashboard-analytics-link{align-items:flex-start;padding:13px}.agency-workspace .dashboard-analytics-action{font-size:0}.agency-workspace .dashboard-analytics-action i{font-size:14px}}
+@media(max-width:360px){.agency-workspace .aw-grid{grid-template-columns:1fr}.agency-workspace .aw-stat.dashboard-kpi{min-height:76px}}
+@media print{.agency-workspace .dashboard-analytics-section,.agency-workspace .admin-export-menu{display:none!important}.agency-workspace .aw-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+
+/* Dashboard metric icon alignment and vivid-but-purposeful accents */
+.agency-workspace .dashboard-kpi-icon{display:grid;place-items:center;align-self:flex-start;line-height:1}
+.agency-workspace .dashboard-kpi-icon i{display:block;line-height:1;font-size:17px}
+.agency-workspace .aw-stat.dashboard-kpi:nth-child(4n+2) .dashboard-kpi-icon{background:#fff3df;color:#c58a2b}
+.agency-workspace .aw-stat.dashboard-kpi:nth-child(4n+3) .dashboard-kpi-icon{background:#f1edff;color:#8066cf}
+.agency-workspace .aw-stat.dashboard-kpi:nth-child(4n+4) .dashboard-kpi-icon{background:#e4f7f1;color:#259c83}
+.agency-workspace .dashboard-kpi-copy strong{font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:reduce){.agency-workspace *, .agency-workspace *::before,.agency-workspace *::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.agency-workspace .aw-stat.dashboard-kpi{animation:dashboard-kpi-arrive .48s cubic-bezier(.2,.75,.2,1) both}
+.agency-workspace .aw-stat.dashboard-kpi:nth-child(2){animation-delay:.045s}
+.agency-workspace .aw-stat.dashboard-kpi:nth-child(3){animation-delay:.09s}
+.agency-workspace .aw-stat.dashboard-kpi:nth-child(4){animation-delay:.135s}
+@keyframes dashboard-kpi-arrive{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.agency-workspace .aw-stat.dashboard-kpi{animation:none!important}}
+
+
+/* Agency dashboard: coordinated entrances for non-chart content. */
+.agency-workspace > .aw-welcome,
+.agency-workspace > .aw-grid > .aw-stat,
+.agency-workspace > .aw-card,
+.agency-workspace .aw-collab-summary > .aw-collab-stat {
+    animation: agency-dashboard-enter .5s cubic-bezier(.2,.75,.2,1) both;
+}
+.agency-workspace > .aw-grid > .aw-stat:nth-child(2) { animation-delay: .06s; }
+.agency-workspace > .aw-grid > .aw-stat:nth-child(3) { animation-delay: .12s; }
+.agency-workspace > .aw-grid > .aw-stat:nth-child(4) { animation-delay: .18s; }
+@keyframes agency-dashboard-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@media(prefers-reduced-motion:reduce) {
+    .agency-workspace > .aw-welcome,
+    .agency-workspace > .aw-grid > .aw-stat,
+    .agency-workspace > .aw-card,
+    .agency-workspace .aw-collab-summary > .aw-collab-stat {
+        animation:none!important;
+    }
+}
+
+/* Collaboration task requirements and contextual help. */
+.aw-collab-form label > span em {
+    color: var(--text-secondary, #64748b);
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 600;
+}
+.aw-collab-form select:disabled {
+    cursor: not-allowed;
+    opacity: .65;
+}

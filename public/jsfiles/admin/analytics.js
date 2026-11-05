@@ -6,6 +6,29 @@
 
     const endpoint = root.dataset.analyticsUrl;
     const numberFormat = new Intl.NumberFormat();
+
+    const animateInitialMetrics = () => {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        root.querySelectorAll('[data-metric]').forEach(node => {
+            const original = (node.textContent || '').trim();
+            const match = original.match(/^([\d,]+)(.*)$/);
+            if (!match) return;
+            const target = Number(match[1].replace(/,/g, ''));
+            if (!Number.isFinite(target) || target <= 0) return;
+            const suffix = match[2];
+            const started = performance.now();
+            const duration = 650;
+            node.textContent = `0${suffix}`;
+            const tick = now => {
+                const progress = Math.min(1, (now - started) / duration);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                node.textContent = `${numberFormat.format(Math.round(target * eased))}${suffix}`;
+                if (progress < 1) requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        });
+    };
+
     let refreshInFlight = false;
     let currentPeriod = root.dataset.analyticsCurrentPeriod || '7d';
     let currentMonth = root.dataset.analyticsCurrentMonth || new Date().toISOString().slice(0, 7);
@@ -21,9 +44,26 @@
         feedback: parseJson(root.dataset.analyticsInitialFeedback, {}),
     };
 
+    const animateMetric = (node, value) => {
+        if (!Number.isFinite(value) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            node.textContent = numberFormat.format(value);
+            return;
+        }
+        const start = Number((node.textContent || '0').replace(/[^\d.-]/g, '')) || 0;
+        const duration = 650;
+        const began = performance.now();
+        const tick = now => {
+            const progress = Math.min(1, (now - began) / duration);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            node.textContent = numberFormat.format(Math.round(start + (value - start) * eased));
+            if (progress < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    };
     const setMetric = (name, value) => {
         root.querySelectorAll(`[data-metric="${name}"]`).forEach(node => {
-            node.textContent = typeof value === 'number' ? numberFormat.format(value) : (value ?? '—');
+            if (typeof value === 'number') animateMetric(node, value);
+            else node.textContent = value ?? '—';
         });
     };
 
@@ -89,10 +129,20 @@
         const x = index => pad.left + (trend.length === 1 ? innerW / 2 : (index / (trend.length - 1)) * innerW);
         const y = value => pad.top + innerH - (Number(value || 0) / maxValue) * innerH;
 
-        const pointsFor = key => trend.map((d, i) => `${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`).join(' ');
+const smoothPath = points => {
+        if (points.length < 2) return points.length ? `M ${points[0][0]} ${points[0][1]}` : '';
+        let d = `M ${points[0][0]} ${points[0][1]}`;
+        for (let i = 0; i < points.length - 1; i++) {
+            const p0 = points[i], p1 = points[i + 1];
+            const midX = (p0[0] + p1[0]) / 2;
+            d += ` C ${midX} ${p0[1]}, ${midX} ${p1[1]}, ${p1[0]} ${p1[1]}`;
+        }
+        return d;
+    };
+        const pointsFor = key => trend.map((d, i) => [x(i), y(d[key])]);
         const submittedPoints = pointsFor('submitted');
         const answeredPoints = pointsFor('answered');
-        const area = `${pad.left},${pad.top + innerH} ${submittedPoints} ${pad.left + innerW},${pad.top + innerH}`;
+        const area = `${pad.left},${pad.top + innerH} ${submittedPoints.map(point => point.join(',')).join(' ')} ${pad.left + innerW},${pad.top + innerH}`;
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -363,6 +413,7 @@
         node.addEventListener('focus', () => node.setAttribute('aria-label', tip));
     });
 
+    animateInitialMetrics();
     setPeriodControls(currentPeriod, currentMonth);
     buildTrendChart(state.trend);
     renderStatus(state.status);

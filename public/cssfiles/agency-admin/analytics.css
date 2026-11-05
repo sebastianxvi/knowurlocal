@@ -1,0 +1,107 @@
+/* Agency-scoped additions to the System Admin analytics visual language. */
+.agency-analytics-page{--agency-blue:#5b7dde;max-width:1180px}
+.agency-analytics-page .analytics-header h2{font-size:25px}
+.agency-analytics-page .agency-analytics-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.agency-analytics-page .analytics-kpi small{white-space:normal}
+.agency-analytics-page .analytics-period-controls{flex-wrap:wrap;justify-content:flex-end}
+.agency-analytics-page .analytics-period-total{min-width:95px}
+.agency-analytics-page .analytics-line-chart{transition:opacity .15s}
+.agency-analytics-page.is-loading .analytics-line-chart{opacity:.45;pointer-events:none}
+.agency-analytics-page .analytics-trend-svg{overflow:visible}
+.agency-analytics-page .agency-trend-gridline{stroke:#e9edf3;stroke-width:1}
+.agency-analytics-page .trend-line{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.agency-analytics-page .trend-line.submitted{stroke:#5b7dde}
+.agency-analytics-page .trend-line.answered{stroke:#43a879}
+.agency-analytics-page .trend-point{stroke:#fff;stroke-width:2;cursor:help}
+.agency-analytics-page .trend-point.submitted{fill:#5b7dde}
+.agency-analytics-page .trend-point.answered{fill:#43a879}
+.agency-analytics-page .trend-point:focus{outline:none;stroke:#172033;stroke-width:3}
+.agency-analytics-page .agency-analytics-lower{margin-top:12px}
+.agency-analytics-page .agency-status-list{display:grid;gap:17px;padding:8px 2px 3px}
+.agency-analytics-page .agency-status-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px 12px;align-items:center}
+.agency-analytics-page .agency-status-row>div{display:flex;align-items:center;gap:9px;color:#69778d;font-size:10px}
+.agency-analytics-page .agency-status-row strong{font-size:12px;font-weight:650;color:#26354c}
+.agency-analytics-page .agency-status-track{grid-column:1;display:block;height:6px;border-radius:99px;background:#f0f3f8;overflow:hidden}
+.agency-analytics-page .agency-status-track i{display:block;height:100%;border-radius:99px;background:#5b7dde}
+.agency-analytics-page .agency-status-row small{grid-column:2;grid-row:2;color:#98a3b4;font-size:9px}
+.agency-analytics-page .agency-analytics-note{display:flex;gap:8px;align-items:flex-start;margin:0 0 12px;padding:10px 11px;border-radius:9px;background:#f5f8ff;color:#738199;font-size:9px;line-height:1.55}
+.agency-analytics-page .agency-analytics-note i{color:#5b7dde;font-size:14px;flex:none}
+.agency-analytics-page .agency-faq-opportunities{display:grid}
+.agency-analytics-page .agency-faq-opportunity{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #edf0f5}
+.agency-analytics-page .agency-faq-opportunity>div{min-width:0}
+.agency-analytics-page .agency-faq-opportunity strong{display:block;color:#26354c;font-size:10px;line-height:1.5;font-weight:600;overflow-wrap:anywhere}
+.agency-analytics-page .agency-faq-opportunity small{display:block;margin-top:4px;color:#98a3b4;font-size:9px}
+.agency-analytics-page .agency-faq-opportunity>span{flex:none;padding:4px 7px;border-radius:99px;background:#edf3ff;color:#5473c9;font-size:8px;font-weight:650}
+.agency-analytics-page .analytics-text-link{display:inline-flex;align-items:center;gap:5px;color:#4e6fc7;font-size:9px;font-weight:650;text-decoration:none;white-space:nowrap}
+.agency-analytics-page .analytics-text-link:hover{text-decoration:underline}
+@media(max-width:1000px){.agency-analytics-page .agency-analytics-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.agency-analytics-page .analytics-header{flex-wrap:wrap}}
+@media(max-width:700px){.agency-analytics-page .analytics-header-actions{width:100%;justify-content:space-between}.agency-analytics-page .analytics-panel{padding:13px}.agency-analytics-page .analytics-panel-head{flex-wrap:wrap}.agency-analytics-page .analytics-period-controls{justify-content:flex-start}.agency-analytics-page .analytics-period-total{align-items:flex-start}.agency-analytics-page .analytics-line-chart{height:245px}.agency-analytics-page .analytics-grid-2{grid-template-columns:1fr}}
+@media(max-width:420px){.agency-analytics-page .agency-analytics-kpis{gap:8px}.agency-analytics-page .analytics-kpi{padding:11px;gap:8px}.agency-analytics-page .analytics-kpi-icon{width:30px;height:30px;flex-basis:30px}.agency-analytics-page .analytics-kpi strong{font-size:18px}.agency-analytics-page .analytics-range-tab{padding:6px 7px}.agency-analytics-page .analytics-month-picker select{max-width:76px}}
+@media print{.agency-analytics-page .analytics-period-controls,.agency-analytics-page .analytics-export-menu,.agency-analytics-page .analytics-chart-hint{display:none!important}.agency-analytics-page .analytics-kpi,.agency-analytics-page .analytics-panel{break-inside:avoid;box-shadow:none!important}}
+
+/* Match System Admin analytics color, chart and motion language */
+.agency-analytics-page .trend-line{stroke-dasharray:1800;stroke-dashoffset:1800;animation:analytics-line-reveal 1.15s cubic-bezier(.22,.7,.2,1) forwards}
+.agency-analytics-page .trend-line.submitted{stroke:#5578f0}
+.agency-analytics-page .trend-line.answered{stroke:#22a879}
+.agency-analytics-page .trend-point{animation:analytics-point-pop .42s cubic-bezier(.2,.8,.2,1) both}
+.agency-analytics-page .analytics-kpi{animation:analytics-card-enter .45s ease both}
+.agency-analytics-page .analytics-kpi:nth-child(2){animation-delay:.05s}
+.agency-analytics-page .analytics-kpi:nth-child(3){animation-delay:.1s}
+.agency-analytics-page .analytics-kpi:nth-child(4){animation-delay:.15s}
+@media(prefers-reduced-motion:reduce){.agency-analytics-page *, .agency-analytics-page *::before,.agency-analytics-page *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+
+/* Motion system extends beyond SVG charts: metrics, panels, rows and bars enter together. */
+.agency-analytics-page .analytics-kpi,
+.agency-analytics-page .analytics-panel,
+.agency-analytics-page .analytics-health-card,
+.agency-analytics-page .analytics-list-item,
+.agency-analytics-page .analytics-ranking-bar,
+.agency-analytics-page .analytics-legend-row,
+.agency-analytics-page .analytics-review-badge {
+    animation: analytics-content-enter .48s cubic-bezier(.2,.75,.2,1) both;
+}
+.agency-analytics-page .analytics-kpi:nth-child(2) { animation-delay: .055s; }
+.agency-analytics-page .analytics-kpi:nth-child(3) { animation-delay: .11s; }
+.agency-analytics-page .analytics-kpi:nth-child(4) { animation-delay: .165s; }
+.agency-analytics-page .analytics-panel { animation-delay: .08s; }
+.agency-analytics-page .analytics-health-card:nth-child(2n) { animation-delay: .08s; }
+.agency-analytics-page .analytics-method-row .method-track em,
+.agency-analytics-page .agency-status-track i,
+.agency-analytics-page .analytics-ranking-track span {
+    transform-origin: left center;
+    animation: analytics-bar-fill .9s cubic-bezier(.22,.7,.2,1) both;
+}
+@keyframes analytics-content-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes analytics-bar-fill {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+@media(prefers-reduced-motion:reduce) {
+    .agency-analytics-page .analytics-kpi,
+    .agency-analytics-page .analytics-panel,
+    .agency-analytics-page .analytics-health-card,
+    .agency-analytics-page .analytics-list-item,
+    .agency-analytics-page .analytics-ranking-bar,
+    .agency-analytics-page .analytics-legend-row,
+    .agency-analytics-page .analytics-review-badge,
+    .agency-analytics-page .analytics-method-row .method-track em,
+    .agency-analytics-page .agency-status-track i,
+    .agency-analytics-page .analytics-ranking-track span {
+        animation:none!important;
+    }
+}
+
+/* Keep hovered explanations above adjacent cards and allow readable wrapping. */
+.agency-analytics-page [data-tooltip] { position:relative; }
+.agency-analytics-page [data-tooltip]:hover,
+.agency-analytics-page [data-tooltip]:focus-visible { z-index:60; }
+.agency-analytics-page [data-tooltip]::after {
+    width:min(260px,calc(100vw - 32px));
+    max-width:calc(100vw - 32px);
+    white-space:normal;
+    overflow-wrap:anywhere;
+}

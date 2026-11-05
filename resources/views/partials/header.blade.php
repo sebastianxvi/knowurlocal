@@ -100,7 +100,7 @@
                             @endphp
                             <a
                                 class="admin-notification-item"
-                                href="{{ route('admin.dashboard') }}#collaboration-task-{{ $task->id }}"
+                                href="{{ auth()->user()->role === 'agency_admin' ? route('agency-admin.dashboard') : route('admin.dashboard') }}#collaboration-task-{{ $task->id }}"
                                 data-notification-kind="collaboration"
                                 data-notification-id="{{ $task->id }}"
                             >
@@ -124,8 +124,13 @@
                 </div>
 
                 <div class="admin-notification-panel-footer">
-                    <a href="{{ route('admin.support.requests') }}">Support requests <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
-                    <a href="{{ route('admin.dashboard') }}#team-collaboration">Collaboration <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
+                    @if(auth()->user()->role === 'agency_admin')
+                        <a href="{{ route('agency-admin.tickets') }}">Support tickets <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
+                        <a href="{{ route('agency-admin.dashboard') }}#agency-collaboration">Collaboration <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
+                    @else
+                        <a href="{{ route('admin.support.requests') }}">Support requests <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
+                        <a href="{{ route('admin.dashboard') }}#team-collaboration">Collaboration <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
+                    @endif
                 </div>
             </section>
         </div>

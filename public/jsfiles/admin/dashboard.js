@@ -10,6 +10,8 @@
 
         const typeSelect = document.getElementById('collaboration-target-type');
         const targetSelect = document.getElementById('collaboration-target-id');
+        const assigneeSelect = form.querySelector('[name="assigned_to_id"]');
+        const targetTypeOptions = typeSelect ? Array.from(typeSelect.options) : [];
         const errorEl = document.getElementById('collaboration-form-error');
         const submitButton = document.getElementById('collaboration-submit');
 
@@ -51,6 +53,35 @@
             });
         });
 
+        const syncTargetOptions = () => {
+            if (!typeSelect || !assigneeSelect) return;
+            const recipientRole = assigneeSelect.selectedOptions[0]?.dataset.role || '';
+            const agencyRecipient = recipientRole === 'agency_admin';
+
+            targetTypeOptions.forEach((option) => {
+                if (!option.value) {
+                    option.hidden = agencyRecipient;
+                    option.disabled = agencyRecipient;
+                    return;
+                }
+
+                const allowedForAgency = ['agency', 'faq', 'support_request'].includes(option.value);
+                option.hidden = agencyRecipient && !allowedForAgency;
+                option.disabled = agencyRecipient && !allowedForAgency;
+            });
+
+            if (agencyRecipient && !['agency', 'faq', 'support_request'].includes(typeSelect.value)) {
+                typeSelect.value = '';
+            }
+            if (agencyRecipient) {
+                const note = form.querySelector('[data-collaboration-guidance]');
+                if (note) note.textContent = 'Agency Admin assignments must reference a record in that recipient’s agency and include clear instructions.';
+            } else {
+                const note = form.querySelector('[data-collaboration-guidance]');
+                if (note) note.textContent = 'Choose work that matches the recipient’s responsibilities and link the relevant record when applicable.';
+            }
+        };
+
         const loadTargets = async () => {
             if (!typeSelect || !targetSelect) return;
 
@@ -72,6 +103,9 @@
             try {
                 const url = new URL(targetsUrl, window.location.origin);
                 url.searchParams.set('type', type);
+                if (assigneeSelect?.value) {
+                    url.searchParams.set('assigned_to_id', assigneeSelect.value);
+                }
 
                 const response = await fetch(url.toString(), {
                     headers: {
@@ -109,6 +143,11 @@
         };
 
         typeSelect?.addEventListener('change', loadTargets);
+        assigneeSelect?.addEventListener('change', () => {
+            syncTargetOptions();
+            loadTargets();
+        });
+        syncTargetOptions();
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -259,8 +298,30 @@
         }
     };
 
+    const initDashboardMetricMotion = () => {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const formatter = new Intl.NumberFormat();
+        document.querySelectorAll('.dashboard-kpi-copy strong, .dashboard-kpi strong').forEach(node => {
+            const raw = (node.textContent || '').trim();
+            const target = Number(raw.replace(/[^\d.-]/g, ''));
+            if (!raw || !Number.isFinite(target) || target <= 0) return;
+            const duration = 650;
+            const startAt = performance.now();
+            const tick = now => {
+                const progress = Math.min(1, (now - startAt) / duration);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                node.textContent = formatter.format(Math.round(target * eased));
+                if (progress < 1) requestAnimationFrame(tick);
+            };
+            node.textContent = '0';
+            requestAnimationFrame(tick);
+        });
+    };
+
     const initDashboard = () => {
         initCollaboration();
+        initCollaborationRealtime();
+        initDashboardMetricMotion();
         initCollaborationRealtime();
     };
 

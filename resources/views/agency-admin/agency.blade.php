@@ -4,6 +4,7 @@
 <link rel="stylesheet" href="{{ asset('cssfiles/theme.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/nga-management.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
+
 @endpush
 
 @section('title', 'KNOWURLOCAL | Agency Profile')
@@ -33,7 +34,12 @@
         </div>
     @endif
 
-    <section class="agency-profile-hero">
+    <section class="agency-profile-hero agency-profile-public-card">
+        <div class="agency-profile-public-cover" aria-hidden="true">
+            <span class="agency-profile-cover-orb agency-profile-cover-orb-one"></span>
+            <span class="agency-profile-cover-orb agency-profile-cover-orb-two"></span>
+            <span class="agency-profile-cover-mark">KNOWURLOCAL</span>
+        </div>
         <div class="agency-profile-hero-glow" aria-hidden="true"></div>
         <div class="agency-profile-identity">
             <div class="agency-profile-logo-frame">
@@ -55,9 +61,15 @@
                     @endif
                 </div>
             </div>
+            <div class="agency-profile-actions-wrap">
+                <button type="button" class="agency-profile-more-button" id="agencyProfileMoreButton" aria-label="Agency profile options" title="Agency profile options" aria-haspopup="menu" aria-expanded="false">
+                    <i class="ph-light ph-dots-three-vertical" aria-hidden="true"></i>
+                </button>
+                <div class="agency-profile-actions-menu" id="agencyProfileActionsMenu" role="menu" hidden>
+                    <button type="button" role="menuitem" id="agencyProfileEditAction"><i class="ph-light ph-pencil-simple" aria-hidden="true"></i> Edit agency profile</button>
+                </div>
+            </div>
         </div>
-        <button type="button" class="agency-profile-edit-button" onclick="openModal('edit', window.agencyProfileData)"><i class="ph-light ph-pencil-simple" aria-hidden="true"></i><span>Edit profile</span></button>
-        <div class="agency-profile-hero-footer"><i class="ph-light ph-globe-hemisphere-west" aria-hidden="true"></i><span>This information helps citizens identify and contact your agency.</span></div>
     </section>
 
     <section class="agency-profile-section">
@@ -245,6 +257,65 @@
     .agency-profile-page .agency-profile-description{font-size:10.5px}
 }
 @media(prefers-reduced-motion:reduce){.agency-profile-page *{transition:none!important;scroll-behavior:auto!important}}
+
+/* Agency profile hero: mirror the public-user profile card geometry and hierarchy. */
+.agency-profile-page .agency-profile-hero.agency-profile-public-card {
+    display:block; position:relative; isolation:auto; overflow:visible;
+    min-width:0; padding:0; gap:0; border:1px solid #e0e5ec;
+    border-radius:20px; background:#fff; box-shadow:0 3px 14px rgba(26,39,62,.04);
+}
+.agency-profile-page .agency-profile-public-cover {
+    height:188px; position:relative; overflow:hidden;
+    border-radius:19px 19px 0 0;
+    background:linear-gradient(120deg,#dbe7ff 0%,#c8d8fa 48%,#e9efff 100%);
+}
+.agency-profile-page .agency-profile-public-cover:after {
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(100deg,rgba(255,255,255,.14),transparent 45%,rgba(255,255,255,.28));
+}
+.agency-profile-page .agency-profile-cover-orb { position:absolute; border-radius:50%; border:1px solid rgba(255,255,255,.42); background:rgba(255,255,255,.16); }
+.agency-profile-page .agency-profile-cover-orb-one { width:310px; height:310px; right:9%; top:-190px; }
+.agency-profile-page .agency-profile-cover-orb-two { width:250px; height:250px; right:22%; bottom:-200px; }
+.agency-profile-page .agency-profile-cover-mark { position:absolute; right:24px; bottom:18px; z-index:1; color:rgba(59,86,145,.34); font-size:12px; font-weight:800; letter-spacing:.16em; }
+.agency-profile-page .agency-profile-hero-glow { display:none; }
+.agency-profile-page .agency-profile-identity {
+    display:flex; align-items:flex-end; gap:22px; position:relative;
+    min-height:138px; margin:0; padding:0 30px 24px;
+    border-radius:0 0 20px 20px; background:#fff;
+}
+.agency-profile-page .agency-profile-logo-frame {
+    display:grid; place-items:center; position:relative; z-index:2;
+    flex:0 0 148px; width:148px; height:148px; margin-top:-78px;
+    overflow:hidden; border:5px solid #fff; border-radius:50%;
+    background:#e1eaff; box-shadow:0 3px 10px rgba(28,43,70,.12);
+}
+.agency-profile-page .agency-profile-logo-frame .agency-profile-logo,
+.agency-profile-page .agency-profile-logo-frame img { display:block; width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.agency-profile-page .agency-profile-logo-placeholder { display:grid; place-items:center; width:100%; height:100%; border-radius:50%; background:linear-gradient(145deg,#e7efff,#d8e4ff); color:#4567b5; font-size:42px; }
+.agency-profile-page .agency-profile-heading { min-width:0; flex:1; padding:14px 0 0; }
+.agency-profile-page .agency-profile-heading h2 { margin:0; color:#182438; font-size:clamp(24px,3vw,30px); font-weight:800; letter-spacing:-.035em; line-height:1.2; overflow-wrap:anywhere; }
+.agency-profile-page .agency-profile-description { margin:6px 0 7px; color:#66748a; font-size:14px; overflow-wrap:anywhere; }
+.agency-profile-page .agency-profile-badges { display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
+.agency-profile-page .agency-profile-actions-wrap { position:absolute; top:-171px; right:22px; z-index:12; margin:0; }
+.agency-profile-page .agency-profile-more-button {
+    display:grid; place-items:center; width:40px; min-width:40px; height:40px; min-height:40px; padding:0;
+    border:1px solid rgba(255,255,255,.72); border-radius:12px; background:rgba(255,255,255,.82);
+    color:#34435a; box-shadow:0 2px 8px rgba(38,55,87,.08); backdrop-filter:blur(8px);
+}
+.agency-profile-page .agency-profile-more-button i { font-size:22px; }
+.agency-profile-page .agency-profile-more-button:hover,
+.agency-profile-page .agency-profile-more-button[aria-expanded="true"] { background:#fff; }
+.agency-profile-page .agency-profile-actions-menu { position:absolute; top:calc(100% + 8px); right:0; left:auto; z-index:30; width:205px; }
+.agency-profile-page .agency-profile-actions-menu[hidden] { display:none !important; }
+.agency-profile-page .agency-profile-edit-button { display:none !important; }
+@media (max-width:700px) {
+    .agency-profile-page .agency-profile-identity { align-items:flex-start; gap:14px; padding:0 18px 22px; flex-direction:column; }
+    .agency-profile-page .agency-profile-logo-frame { flex:0 0 112px; width:112px; height:112px; margin-top:-58px; }
+    .agency-profile-page .agency-profile-heading { width:100%; padding-top:0; }
+    .agency-profile-page .agency-profile-heading h2 { font-size:clamp(21px,5vw,27px); }
+    .agency-profile-page .agency-profile-actions-wrap { top:-163px; right:13px; }
+    .agency-profile-page .agency-profile-cover-mark { right:16px; bottom:14px; }
+}
 </style>
 
 <script>
@@ -617,6 +688,37 @@ Additional contact information may be added.
     </div>
 </div>
 
+<script>
+(() => {
+    const trigger = document.getElementById('agencyProfileMoreButton');
+    const menu = document.getElementById('agencyProfileActionsMenu');
+    const editAction = document.getElementById('agencyProfileEditAction');
+    if (!trigger || !menu || !editAction) return;
+    const closeMenu = () => {
+        menu.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+    };
+    trigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const isOpen = !menu.hidden;
+        menu.hidden = isOpen;
+        trigger.setAttribute('aria-expanded', String(!isOpen));
+    });
+    editAction.addEventListener('click', () => {
+        closeMenu();
+        if (typeof window.openModal === 'function') window.openModal('edit', window.agencyProfileData);
+    });
+    document.addEventListener('click', (event) => {
+        if (!menu.contains(event.target) && !trigger.contains(event.target)) closeMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !menu.hidden) {
+            closeMenu();
+            trigger.focus();
+        }
+    });
+})();
+</script>
 <script src="{{ asset('jsfiles/components/form-system.js') }}"></script>
 @endsection
 

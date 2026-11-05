@@ -98,6 +98,7 @@
     {{-- Shared readable type scale and accessibility refinements, after all module CSS. --}}
     <link rel="stylesheet" href="{{ asset('cssfiles/accessibility-typography.css') }}?v={{ file_exists(public_path('cssfiles/accessibility-typography.css')) ? filemtime(public_path('cssfiles/accessibility-typography.css')) : time() }}">
 
+    <link rel="stylesheet" href="{{ asset('cssfiles/admin/admin-motion.css') }}?v={{ file_exists(public_path('cssfiles/admin/admin-motion.css')) ? filemtime(public_path('cssfiles/admin/admin-motion.css')) : time() }}">
 </head>
 
 
@@ -105,6 +106,7 @@
     data-admin-page="@yield('admin-page')"
     data-admin-user-id="{{ auth()->id() }}"
     data-admin-role="{{ auth()->user()->role ?? '' }}"
+    data-admin-agency-id="{{ auth()->user()->agency_id ?? '' }}"
 >
 <div class="admin-drawer-backdrop" data-admin-shell-close aria-hidden="true"></div>
 
@@ -172,6 +174,7 @@
 
 
 
+<script src="{{ asset('jsfiles/admin/admin-motion.js') }}?v={{ file_exists(public_path('jsfiles/admin/admin-motion.js')) ? filemtime(public_path('jsfiles/admin/admin-motion.js')) : time() }}"></script>
 <!-- ================= PAGE SCRIPTS ================= -->
 
 @stack('scripts')

@@ -756,6 +756,8 @@ Route::prefix('agency-admin')
             ->name('collaboration.targets');
         Route::get('/analytics', [\App\Http\Controllers\AgencyAdminController::class, 'analytics'])
             ->name('analytics');
+        Route::get('/analytics/data', [\App\Http\Controllers\AgencyAdminController::class, 'analytics'])
+            ->name('analytics.data');
         Route::get('/evaluations', [AgencyEvaluationManagementController::class, 'agencyIndex'])
             ->name('evaluations');
         Route::post('/evaluations/{evaluation}/response', [AgencyEvaluationManagementController::class, 'agencyAdminRespond'])

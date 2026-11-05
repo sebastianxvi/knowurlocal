@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use App\Services\AuditLogService;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 use Illuminate\Validation\Rule;
 
 class AgencyAdminController extends Controller
@@ -43,7 +44,10 @@ class AgencyAdminController extends Controller
     {
         $agency = $this->agency();
 
+        $totalRequests = SupportRequest::query()->where('agency_id', $agency->id)->whereNull('deleted_at')->count();
+
         $counts = [
+            'total' => $totalRequests,
             'pending' => SupportRequest::query()->where('agency_id', $agency->id)->whereNull('deleted_at')->where('status', 'pending')->count(),
             'follow_up' => SupportRequest::query()->where('agency_id', $agency->id)->whereNull('deleted_at')->where('status', 'needs_follow_up')->count(),
             'awaiting_confirmation' => SupportRequest::query()->where('agency_id', $agency->id)->whereNull('deleted_at')->where('status', 'awaiting_confirmation')->count(),
@@ -126,38 +130,80 @@ class AgencyAdminController extends Controller
     /**
      * Agency-scoped support analytics. Never accepts an agency ID from the request.
      */
-    public function analytics()
+    /**
+     * Agency-scoped analytics page and period data endpoint.
+     * Agency identity always comes from the authenticated account.
+     */
+    public function analytics(Request $request)
     {
         $agency = $this->agency();
+        $period = $request->query('period', '7d');
+        if (!in_array($period, ['7d', '30d', 'month'], true)) {
+            $period = '7d';
+        }
+
+        $selectedMonth = $request->query('month');
+        if ($period === 'month') {
+            try {
+                $monthDate = $selectedMonth
+                    ? Carbon::createFromFormat('!Y-m', $selectedMonth)
+                    : now()->startOfMonth();
+                if (!$monthDate || $monthDate->format('Y-m') !== $selectedMonth) {
+                    $monthDate = now()->startOfMonth();
+                }
+            } catch (\Throwable $e) {
+                $monthDate = now()->startOfMonth();
+            }
+            $start = $monthDate->copy()->startOfMonth();
+            $end = $monthDate->copy()->endOfMonth();
+            $selectedMonth = $start->format('Y-m');
+            $periodLabel = $start->format('F Y');
+        } elseif ($period === '30d') {
+            $start = now()->startOfDay()->subDays(29);
+            $end = now()->endOfDay();
+            $periodLabel = '30 days';
+            $selectedMonth = now()->format('Y-m');
+        } else {
+            $start = now()->startOfDay()->subDays(6);
+            $end = now()->endOfDay();
+            $periodLabel = '7 days';
+            $selectedMonth = now()->format('Y-m');
+        }
+
         $base = SupportRequest::query()
             ->where('agency_id', $agency->id)
             ->whereNull('deleted_at');
 
         $total = (clone $base)->count();
         $statusCounts = (clone $base)->selectRaw('status, COUNT(*) as aggregate')
-            ->groupBy('status')->pluck('aggregate', 'status');
+            ->groupBy('status')->pluck('aggregate', 'status')->map(fn ($value) => (int) $value);
 
-        $since = now()->subDays(29)->startOfDay();
-        $dailyRows = (clone $base)->where('created_at', '>=', $since)
+        $submittedByDay = (clone $base)->whereBetween('created_at', [$start, $end])
             ->selectRaw('DATE(created_at) as day, COUNT(*) as aggregate')
-            ->groupBy('day')->orderBy('day')->pluck('aggregate', 'day');
+            ->groupBy('day')->pluck('aggregate', 'day');
+        $answeredByDay = (clone $base)->where('status', 'answered')
+            ->whereNotNull('answered_at')->whereBetween('answered_at', [$start, $end])
+            ->selectRaw('DATE(answered_at) as day, COUNT(*) as aggregate')
+            ->groupBy('day')->pluck('aggregate', 'day');
 
-        $dailyLabels = [];
-        $dailyValues = [];
-        for ($i = 0; $i < 30; $i++) {
-            $day = $since->copy()->addDays($i);
-            $key = $day->toDateString();
-            $dailyLabels[] = $day->format('M j');
-            $dailyValues[] = (int) ($dailyRows[$key] ?? 0);
-        }
+        $trend = collect(range(0, $start->diffInDays($end)))
+            ->map(function (int $offset) use ($start, $submittedByDay, $answeredByDay) {
+                $date = $start->copy()->addDays($offset);
+                $key = $date->format('Y-m-d');
+                return [
+                    'date' => $key,
+                    'label' => $date->format('M j'),
+                    'submitted' => (int) ($submittedByDay[$key] ?? 0),
+                    'answered' => (int) ($answeredByDay[$key] ?? 0),
+                ];
+            })->values()->all();
 
         $faqCount = Faq::query()->where('agency_id', $agency->id)->count();
         $answered = (int) ($statusCounts['answered'] ?? 0);
         $responseRate = $total > 0 ? round(($answered / $total) * 100) : 0;
-        $openCount = (int) ($statusCounts['pending'] ?? 0)
-            + (int) ($statusCounts['needs_follow_up'] ?? 0)
-            + (int) ($statusCounts['awaiting_confirmation'] ?? 0);
+        $openCount = (int) ($statusCounts['pending'] ?? 0) + (int) ($statusCounts['needs_follow_up'] ?? 0);
 
+        // Recurring questions are intentionally agency-scoped and limited to 90 days.
         $topQuestions = (clone $base)->whereNotNull('question')->where('question', '<>', '')
             ->where('created_at', '>=', now()->subDays(89))
             ->orderByDesc('created_at')->limit(2500)->pluck('question');
@@ -172,9 +218,24 @@ class AgencyAdminController extends Controller
         $popularQuestions = collect($groups)->filter(fn ($item) => $item['count'] >= 2)
             ->sortByDesc('count')->take(8)->values();
 
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'period' => $period,
+                'selected_month' => $selectedMonth,
+                'period_label' => $periodLabel,
+                'trend' => $trend,
+                'metrics' => [
+                    'period_submitted' => collect($trend)->sum('submitted'),
+                    'period_answered' => collect($trend)->sum('answered'),
+                ],
+                'updated_at' => now()->toIso8601String(),
+            ]);
+        }
+
         return view('agency-admin.analytics', compact(
-            'agency', 'total', 'statusCounts', 'dailyLabels', 'dailyValues',
-            'faqCount', 'responseRate', 'openCount', 'popularQuestions'
+            'agency', 'total', 'statusCounts', 'trend', 'faqCount',
+            'responseRate', 'openCount', 'popularQuestions', 'period',
+            'selectedMonth', 'periodLabel'
         ));
     }
 
@@ -428,7 +489,7 @@ class AgencyAdminController extends Controller
         }
 
         try {
-            broadcast(new SupportRequestUpdated($ticketId, 'force_deleted', null, $userId));
+            broadcast(new SupportRequestUpdated($ticketId, 'force_deleted', null, $userId, (int) $agency->id));
         } catch (\Throwable $e) {
             \Log::warning('Agency ticket permanent deletion broadcast failed.', ['ticket_id' => $ticketId, 'error' => $e->getMessage()]);
         }

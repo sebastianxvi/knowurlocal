@@ -384,16 +384,18 @@
                         <select name="assigned_to_id" required>
                             <option value="">Choose administrator</option>
                             @foreach(\App\Models\User::query()->with('agency')->whereIn('role', ['admin', 'superadmin', 'agency_admin'])->where('status', 'active')->where('id', '<>', auth()->id())->orderBy('role')->orderBy('first_name')->orderBy('last_name')->get() as $admin)
-                                <option value="{{ $admin->id }}">{{ trim($admin->first_name . ' ' . $admin->last_name) ?: $admin->email }}{{ $admin->role === 'agency_admin' ? ' — ' . ($admin->agency?->agency_name ?? 'Agency Admin') : ' — ' . ucfirst($admin->role) }}</option>
+                                <option value="{{ $admin->id }}" data-role="{{ $admin->role }}" data-agency-id="{{ $admin->agency_id }}">{{ trim($admin->first_name . ' ' . $admin->last_name) ?: $admin->email }}{{ $admin->role === 'agency_admin' ? ' — ' . ($admin->agency?->agency_name ?? 'Agency Admin') : ' — ' . ucfirst($admin->role) }}</option>
                             @endforeach
                         </select>
                     </label>
                 </div>
 
+                <p class="dashboard-collaboration-guidance" data-collaboration-guidance role="note">Choose work that matches the recipient’s responsibilities and link the relevant record when applicable.</p>
+
                 <label>
-                    <span>Related data</span>
+                    <span>Related record <em>required</em></span>
                     <div class="dashboard-target-row">
-                        <select name="target_type" id="collaboration-target-type">
+                        <select name="target_type" id="collaboration-target-type" required>
                             <option value="">No specific record</option>
                             <option value="agency">Agency</option>
                             <option value="faq">FAQ</option>
@@ -401,7 +403,7 @@
                             <option value="support_request">Support request</option>
                             <option value="user">Account</option>
                         </select>
-                        <select name="target_id" id="collaboration-target-id" disabled>
+                        <select name="target_id" id="collaboration-target-id" required disabled>
                             <option value="">Choose a record</option>
                         </select>
                     </div>
@@ -413,8 +415,8 @@
                 </label>
 
                 <label>
-                    <span>Note <em>optional</em></span>
-                    <textarea name="description" rows="3" maxlength="1000" placeholder="Add context for the administrator taking this over..."></textarea>
+                    <span>Instructions <em>required</em></span>
+                    <textarea name="description" rows="3" maxlength="1000" required placeholder="Explain the specific action, expected result, and relevant context..."></textarea>
                 </label>
 
                 <label>

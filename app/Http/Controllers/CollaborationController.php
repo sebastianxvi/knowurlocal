@@ -32,14 +32,17 @@ class CollaborationController extends Controller
             'assigned_to_id' => ['required', 'integer'],
             'title' => ['required', 'string', 'max:140'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'target_type' => ['nullable', 'string'],
+            'target_type' => ['nullable', 'string', 'in:agency,faq,category,support_request,user'],
             'target_id' => ['nullable', 'integer'],
-            'due_at' => ['nullable', 'date'],
+            'due_at' => ['nullable', 'date', 'after:now'],
         ]);
 
-        $assignableRoles = auth()->user()->role === 'agency_admin'
-            ? ['admin', 'superadmin']
-            : ['admin', 'superadmin', 'agency_admin'];
+        $actor = $request->user();
+        $assignableRoles = match ($actor->role) {
+            'agency_admin' => ['admin', 'superadmin'],
+            'admin', 'superadmin' => ['admin', 'superadmin', 'agency_admin'],
+            default => [],
+        };
 
         $assignee = User::query()
             ->whereIn('role', $assignableRoles)
@@ -52,7 +55,9 @@ class CollaborationController extends Controller
             ], 422);
         }
 
-        [$targetType, $targetId, $targetLabel] = $this->resolveTarget($data);
+        $this->validateAssignmentScope($actor, $assignee, $data);
+
+        [$targetType, $targetId, $targetLabel] = $this->resolveTarget($data, $assignee);
 
         $task = CollaborationTask::create([
             'created_by_id' => auth()->id(),
@@ -114,13 +119,17 @@ class CollaborationController extends Controller
         }
 
         if ($model === User::class) {
-            $query->whereIn('role', auth()->user()->role === 'agency_admin'
-                    ? ['admin', 'superadmin']
-                    : ['admin', 'superadmin', 'agency_admin'])
-                ->where('status', 'active');
+            $actor = auth()->user();
+            $roles = match ($actor->role) {
+                'agency_admin' => ['admin', 'superadmin'],
+                'admin', 'superadmin' => ['admin', 'superadmin', 'agency_admin'],
+                default => [],
+            };
+            $query->whereIn('role', $roles)->where('status', 'active');
         }
 
-        $this->scopeAgencyTargets($query, $model);
+        $assignee = User::query()->find($request->query('assigned_to_id'));
+        $this->scopeAgencyTargets($query, $model, $assignee);
 
         $this->applyTargetSearch($query, $model, $search);
 
@@ -134,7 +143,7 @@ class CollaborationController extends Controller
         ]);
     }
 
-    private function resolveTarget(array $data): array
+    private function resolveTarget(array $data, User $assignee): array
     {
         if (blank($data['target_type'] ?? null) && blank($data['target_id'] ?? null)) {
             return [null, null, null];
@@ -157,12 +166,11 @@ class CollaborationController extends Controller
         }
 
         if ($model === User::class) {
-            $query->whereIn('role', auth()->user()->role === 'agency_admin'
-                ? ['admin', 'superadmin']
-                : ['admin', 'superadmin', 'agency_admin']);
+            $query->whereIn('role', ['admin', 'superadmin', 'agency_admin'])
+                ->where('status', 'active');
         }
 
-        $this->scopeAgencyTargets($query, $model);
+        $this->scopeAgencyTargets($query, $model, $assignee);
 
         $target = $query->findOrFail($id);
 
@@ -170,21 +178,61 @@ class CollaborationController extends Controller
     }
 
     /**
-     * Agency administrators may link tasks only to records belonging to
-     * their own agency. System administrators retain cross-agency oversight.
+     * Assignment scope is determined by the recipient as well as the actor.
+     * Agency administrators may only receive work tied to records in their
+     * own agency, never global account/category administration.
      */
-    private function scopeAgencyTargets($query, string $model): void
+    private function validateAssignmentScope(User $actor, User $assignee, array $data): void
     {
-        $user = auth()->user();
+        if ($actor->role === 'agency_admin') {
+            if (!in_array($assignee->role, ['admin', 'superadmin'], true)) {
+                abort(403, 'Agency administrators may request assistance only from the system administration team.');
+            }
 
-        if ($user?->role !== 'agency_admin') {
+            if (in_array($data['target_type'] ?? null, ['category', 'user'], true)) {
+                abort(422, 'Agency collaboration can only reference agency, FAQ, or support-request records.');
+            }
+        }
+
+        if (blank($data['target_type'] ?? null) || empty($data['target_id'])) {
+            throw ValidationException::withMessages([
+                'target_id' => 'Link the task to the specific record or module that needs action.',
+            ]);
+        }
+
+        if (blank($data['description'] ?? null)) {
+            throw ValidationException::withMessages([
+                'description' => 'Provide clear instructions and the expected outcome for this task.',
+            ]);
+        }
+
+        if ($assignee->role === 'agency_admin'
+            && !in_array($data['target_type'], ['agency', 'faq', 'support_request'], true)) {
+            throw ValidationException::withMessages([
+                'target_type' => 'Agency Admin tasks must concern an agency profile, FAQ, or support request.',
+            ]);
+        }
+    }
+
+    private function scopeAgencyTargets($query, string $model, ?User $assignee = null): void
+    {
+        $actor = auth()->user();
+        $agencyAdmin = $assignee?->role === 'agency_admin' ? $assignee : null;
+
+        if ($actor?->role === 'agency_admin') {
+            $agencyAdmin = $actor;
+        }
+
+        if (!$agencyAdmin) {
             return;
         }
 
         if ($model === Agency::class) {
-            $query->whereKey($user->agency_id);
+            $query->whereKey($agencyAdmin->agency_id);
         } elseif (in_array($model, [Faq::class, SupportRequest::class], true)) {
-            $query->where('agency_id', $user->agency_id);
+            $query->where('agency_id', $agencyAdmin->agency_id);
+        } elseif (in_array($model, [Category::class, User::class], true)) {
+            $query->whereRaw('1 = 0');
         }
     }
 

@@ -814,3 +814,79 @@
         transition:none;
     }
 }
+
+/* Align icon glyphs consistently and add metric color rhythm */
+.dashboard-kpi-icon{display:grid;place-items:center;line-height:1}
+.dashboard-kpi-icon i{display:block;line-height:1}
+.dashboard-kpi:nth-child(4n+2) .dashboard-kpi-icon{background:#fff3df;color:#c58a2b}
+.dashboard-kpi:nth-child(4n+3) .dashboard-kpi-icon{background:#f1edff;color:#8066cf}
+.dashboard-kpi:nth-child(4n+4) .dashboard-kpi-icon{background:#e4f7f1;color:#259c83}
+.dashboard-kpi strong{font-variant-numeric:tabular-nums}
+
+.dashboard-kpi{animation:dashboard-kpi-arrive .48s cubic-bezier(.2,.75,.2,1) both}
+.dashboard-kpi:nth-child(2){animation-delay:.045s}
+.dashboard-kpi:nth-child(3){animation-delay:.09s}
+.dashboard-kpi:nth-child(4){animation-delay:.135s}
+@keyframes dashboard-kpi-arrive{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.dashboard-kpi{animation:none!important}}
+
+
+/* Dashboard motion: animate metric values and supporting content, not only charts. */
+.dashboard-content .dashboard-hero,
+.dashboard-content .dashboard-kpi,
+.dashboard-content .dashboard-attention-item,
+.dashboard-content .dashboard-analytics-link,
+.dashboard-content .dashboard-card,
+.dashboard-content .dashboard-panel {
+    animation: dashboard-content-enter .52s cubic-bezier(.2,.75,.2,1) both;
+}
+.dashboard-content .dashboard-hero { animation-delay: .02s; }
+.dashboard-content .dashboard-kpi:nth-child(1) { animation-delay: .06s; }
+.dashboard-content .dashboard-kpi:nth-child(2) { animation-delay: .11s; }
+.dashboard-content .dashboard-kpi:nth-child(3) { animation-delay: .16s; }
+.dashboard-content .dashboard-kpi:nth-child(4) { animation-delay: .21s; }
+.dashboard-content .dashboard-progress span {
+    transform-origin: left center;
+    animation: dashboard-progress-fill .9s cubic-bezier(.22,.7,.2,1) both;
+}
+@keyframes dashboard-content-enter {
+    from { opacity: 0; transform: translateY(9px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes dashboard-progress-fill {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-content .dashboard-hero,
+    .dashboard-content .dashboard-kpi,
+    .dashboard-content .dashboard-attention-item,
+    .dashboard-content .dashboard-analytics-link,
+    .dashboard-content .dashboard-card,
+    .dashboard-content .dashboard-panel,
+    .dashboard-content .dashboard-progress span {
+        animation: none !important;
+    }
+}
+
+/* Collaboration policy guidance: concise, readable instructions in the task composer. */
+.dashboard-collaboration-guidance {
+    margin: -2px 0 2px;
+    padding: 11px 13px;
+    border: 1px solid rgba(99, 102, 241, .18);
+    border-radius: 11px;
+    background: rgba(99, 102, 241, .055);
+    color: var(--text-secondary, #64748b);
+    font-size: 12px;
+    line-height: 1.55;
+}
+.dashboard-collaboration-form label > span em {
+    color: var(--text-secondary, #64748b);
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 600;
+}
+.dashboard-collaboration-form select:disabled {
+    cursor: not-allowed;
+    opacity: .65;
+}

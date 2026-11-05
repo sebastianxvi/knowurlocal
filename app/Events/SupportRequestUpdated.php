@@ -17,6 +17,7 @@ class SupportRequestUpdated implements ShouldBroadcastNow
         public string $action = 'updated',
         public ?int $responseId = null,
         public ?int $userId = null,
+        public ?int $agencyId = null,
     ) {
     }
 
@@ -28,7 +29,7 @@ class SupportRequestUpdated implements ShouldBroadcastNow
 
         // Agency inboxes receive the same authoritative ticket-change event,
         // but only on the private channel for the ticket's assigned agency.
-        $agencyId = SupportRequest::withTrashed()
+        $agencyId = $this->agencyId ?? SupportRequest::withTrashed()
             ->whereKey($this->id)
             ->value('agency_id');
 
@@ -67,6 +68,7 @@ class SupportRequestUpdated implements ShouldBroadcastNow
             return [
                 'id' => $this->id,
                 'action' => $this->action,
+                'agency_id' => $this->agencyId,
                 'deleted' => true,
             ];
         }
@@ -77,9 +79,9 @@ class SupportRequestUpdated implements ShouldBroadcastNow
             'response_id' => $this->responseId,
             'status' => (string) $supportRequest->status,
             'question' => (string) $supportRequest->question,
-            'agency_id' => $supportRequest->agency_id !== null
+            'agency_id' => $this->agencyId ?? ($supportRequest->agency_id !== null
                 ? (int) $supportRequest->agency_id
-                : null,
+                : null),
             'agency_name' => $supportRequest->agency?->agency_name,
             'user_name' => $supportRequest->user?->first_name ?? 'Guest',
             'created_at' => $supportRequest->created_at?->toIso8601String(),

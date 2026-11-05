@@ -209,11 +209,23 @@ class AppServiceProvider extends ServiceProvider
                         ->with(['user', 'agency'])
                         ->latest('created_at');
 
+                    $agencyAdminId = (int) auth()->id();
+                    $agencyCollaborationQuery = CollaborationTask::query()
+                        ->whereIn('status', ['open', 'in_progress'])
+                        ->where(function ($query) use ($agencyAdminId) {
+                            $query->where('assigned_to_id', $agencyAdminId)
+                                ->orWhere('created_by_id', $agencyAdminId);
+                        })
+                        ->with(['creator', 'assignee'])
+                        ->orderByRaw('CASE WHEN assigned_to_id = ? THEN 0 ELSE 1 END', [$agencyAdminId])
+                        ->orderByRaw("CASE WHEN due_at IS NOT NULL AND due_at < ? THEN 0 ELSE 1 END", [now()])
+                        ->latest('created_at');
+
                     $view->with([
                         'adminNotificationSupportCount' => (clone $agencySupportQuery)->count(),
                         'adminNotificationSupportRequests' => $agencySupportQuery->limit(5)->get(),
-                        'adminNotificationCollaborationCount' => 0,
-                        'adminNotificationCollaborationTasks' => collect(),
+                        'adminNotificationCollaborationCount' => (clone $agencyCollaborationQuery)->count(),
+                        'adminNotificationCollaborationTasks' => $agencyCollaborationQuery->limit(5)->get(),
                     ]);
                     return;
                 }

@@ -317,18 +317,189 @@
     const subscribe = () => {
         if (subscriptionsStarted) return;
 
-        // Agency Admins do not subscribe to the legacy global admin channel:
-        // it is not agency-scoped and must never expose cross-agency events.
-        // Their server-rendered notification list remains safely scoped until
-        // agency-private realtime channels are introduced.
-        if (document.body.dataset.adminRole === 'agency_admin') return;
-
         const echo = window.Echo;
         const adminId = document.body.dataset.adminUserId;
+        const role = document.body.dataset.adminRole;
+        const agencyId = document.body.dataset.adminAgencyId;
+
         if (!echo || !adminId) return;
 
         try {
             subscriptionsStarted = true;
+
+            // Agency admins subscribe only to their agency's private inbox.
+            // The server authorizes agency.{id}.support-requests against the
+            // authenticated user's agency_id, and event payloads are checked
+            // again here before they can alter the notification UI.
+            if (role === 'agency_admin') {
+                if (!agencyId) {
+                    subscriptionsStarted = false;
+                    return;
+                }
+
+                const agencyHref = (status) =>
+                    `/agency-admin/tickets?status=${encodeURIComponent(
+                        ['pending', 'needs_follow_up'].includes(String(status))
+                            ? String(status)
+                            : 'pending'
+                    )}`;
+
+                const belongsToAgency = (event) =>
+                    event &&
+                    event.agency_id !== null &&
+                    event.agency_id !== undefined &&
+                    Number(event.agency_id) === Number(agencyId);
+
+                const handleAgencyCreated = (event) => {
+                    if (!event?.id || !belongsToAgency(event)) return;
+                    const status = String(event.status || 'pending');
+                    if (!['pending', 'needs_follow_up'].includes(status)) return;
+
+                    const added = prependNotification({
+                        kind: 'support',
+                        id: event.id,
+                        status,
+                        title: event.question || 'New support request',
+                        meta: event.user_name
+                            ? `${event.user_name} · ${status === 'needs_follow_up' ? 'Follow-up needed' : 'Pending'}`
+                            : (status === 'needs_follow_up' ? 'Follow-up needed' : 'New pending request'),
+                        icon: status === 'needs_follow_up'
+                            ? 'ph-arrow-counter-clockwise'
+                            : 'ph-chat-circle-text',
+                        href: agencyHref(status),
+                    });
+
+                    if (added) {
+                        supportCount += 1;
+                        updateSummary();
+                        open();
+                    }
+                };
+
+                const handleAgencyUpdated = (event) => {
+                    if (!event?.id || !belongsToAgency(event)) return;
+                    const id = String(event.id);
+                    const status = String(event.status || '');
+                    const existing = getNotificationItems('support')
+                        .find((item) => String(item.dataset.notificationId) === id);
+
+                    if (event.deleted) {
+                        removeSupportNotification(id);
+                        supportCount = Math.max(0, supportCount - 1);
+                        updateSummary();
+                        return;
+                    }
+
+                    const actionable = ['pending', 'needs_follow_up'].includes(status);
+                    if (!actionable) {
+                        // An official response moves a ticket out of the
+                        // agency's actionable queue, so remove its bell item.
+                        if (existing) removeSupportNotification(id);
+                        if (event.action === 'response_created' || existing) {
+                            supportCount = Math.max(0, supportCount - 1);
+                            updateSummary();
+                        }
+                        return;
+                    }
+
+                    const added = prependNotification({
+                        kind: 'support',
+                        id,
+                        status,
+                        title: event.question || `Support request #${id} updated`,
+                        meta: `${status === 'needs_follow_up' ? 'Follow-up needed' : 'Pending support request'}${event.user_name ? ` · ${event.user_name}` : ''}`,
+                        icon: status === 'needs_follow_up'
+                            ? 'ph-arrow-counter-clockwise'
+                            : 'ph-chat-circle-text',
+                        href: agencyHref(status),
+                    });
+
+                    if (added) {
+                        supportCount += 1;
+                        updateSummary();
+                        open();
+                    }
+                };
+
+                const isMyCollaborationTask = (task) =>
+                    task && (
+                        Number(task.assigned_to_id) === Number(adminId) ||
+                        Number(task.created_by_id) === Number(adminId)
+                    );
+
+                const collaborationIcon = (task) =>
+                    task.task_type === 'review'
+                        ? 'ph-check-square'
+                        : (task.task_type === 'assist' ? 'ph-handshake' : 'ph-arrow-bend-up-right');
+
+                const collaborationHref = (taskId) =>
+                    `/agency-admin#collaboration-task-${encodeURIComponent(taskId)}`;
+
+                const handleAgencyCollaboration = (event) => {
+                    const task = event?.task;
+                    if (!task?.id || !isMyCollaborationTask(task)) return;
+
+                    const action = String(event.action || 'updated');
+                    const taskId = String(task.id);
+                    const existing = getNotificationItems('collaboration')
+                        .find((item) => String(item.dataset.notificationId) === taskId);
+                    const active = ['open', 'in_progress'].includes(String(task.status));
+
+                    if (!active) {
+                        if (existing) {
+                            existing.remove();
+                            seenCollaborationIds.delete(taskId);
+                            collaborationCount = Math.max(0, collaborationCount - 1);
+                            updateSummary();
+                            restoreEmptyStateIfNeeded();
+                        }
+                        return;
+                    }
+
+                    const statusLabel = task.status === 'in_progress' ? 'In progress' : 'Open';
+                    const meta = `${Number(task.assigned_to_id) === Number(adminId) ? 'Assigned to you' : 'You assigned it'} · ${statusLabel}`;
+
+                    if (existing) {
+                        const titleEl = existing.querySelector('strong');
+                        const metaEl = existing.querySelector('small');
+                        if (titleEl) titleEl.textContent = task.title || 'Collaboration task updated';
+                        if (metaEl) metaEl.textContent = meta;
+                        return;
+                    }
+
+                    const added = prependNotification({
+                        kind: 'collaboration',
+                        id: taskId,
+                        title: task.title || 'Collaboration task updated',
+                        meta: action === 'created' ? `${meta} · New` : meta,
+                        icon: collaborationIcon(task),
+                        href: collaborationHref(task.id),
+                    });
+
+                    if (added) {
+                        collaborationCount += 1;
+                        updateSummary();
+                        open();
+                    }
+                };
+
+                echo.private(`agency.${Number(agencyId)}.support-requests`)
+                    .listen('.support.request.created', handleAgencyCreated)
+                    .listen('.support.request.updated', handleAgencyUpdated);
+
+                // Collaboration events are delivered on each participant's
+                // private admin.{userId} channel. Agency admins use their own
+                // authenticated ID, and the payload is checked before rendering.
+                echo.private(`admin.${Number(adminId)}`)
+                    .listen('.collaboration.task.updated', handleAgencyCollaboration);
+
+                return;
+            }
+
+            if (!['admin', 'superadmin'].includes(role)) {
+                subscriptionsStarted = false;
+                return;
+            }
 
             echo.private('admin.support-requests')
                 .listen('.support.request.created', (event) => {
