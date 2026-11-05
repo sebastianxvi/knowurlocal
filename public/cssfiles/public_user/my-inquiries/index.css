@@ -5538,3 +5538,35 @@ body {
 .ticket-create-dialog select, .ticket-create-dialog textarea,
 .ticket-agency-input-wrap input { font-size: 15px; }
 .ticket-create-meta { font-size: 12px; }
+
+
+/* Mobile viewport stabilization:
+   The visible viewport can differ from 100dvh during browser-toolbar transitions.
+   Keep the outer shell and its inner inbox sized from the same measured value. */
+@media (max-width: 600px) {
+    .inquiries-page {
+        height: var(--my-inquiries-viewport-height, 100dvh) !important;
+        min-height: 0 !important;
+        max-height: var(--my-inquiries-viewport-height, 100dvh) !important;
+        box-sizing: border-box;
+    }
+
+    .messenger-inquiries {
+        height: 100% !important;
+        min-height: 0 !important;
+        max-height: 100% !important;
+        flex: 1 1 auto;
+        box-sizing: border-box;
+    }
+
+    .messenger-conversation,
+    .messenger-conversation-content,
+    .messenger-conversation-body.messenger-agency-thread {
+        min-height: 0;
+    }
+
+    .messenger-ticket-composer {
+        flex: 0 0 auto;
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+}

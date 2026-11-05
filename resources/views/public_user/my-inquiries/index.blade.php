@@ -49,7 +49,7 @@
     <!-- My Inquiries styles -->
     <link
         rel="stylesheet"
-        href="{{ asset('cssfiles/public_user/my-inquiries/index.css') }}?v={{ filemtime(public_path('cssfiles/public_user/my-inquiries/index.css')) }}-mobile-header-chatbot-composer-4"
+        href="{{ asset('cssfiles/public_user/my-inquiries/index.css') }}?v={{ filemtime(public_path('cssfiles/public_user/my-inquiries/index.css')) }}-mobile-header-chatbot-composer-5"
     >
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v=20261104-field-focus-reset&build={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
@@ -90,7 +90,7 @@
 <!-- Page JavaScript -->
 <script
     type="module"
-    src="{{ asset('jsfiles/public_user/my-inquiries/index.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/index.js')) }}-mobile-header-chatbot-composer-4"
+    src="{{ asset('jsfiles/public_user/my-inquiries/index.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/index.js')) }}-mobile-header-chatbot-composer-5"
 ></script>
 
 </body>

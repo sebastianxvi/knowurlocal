@@ -1,3 +1,27 @@
+// Keep the fixed mobile inbox shell aligned with the *visible* viewport.
+// Mobile browser chrome and the on-screen keyboard can change visualViewport
+// after initial page load; plain 100dvh may otherwise leave the composer clipped.
+function syncMyInquiriesViewportHeight() {
+    const visibleHeight = window.visualViewport?.height || window.innerHeight;
+    if (Number.isFinite(visibleHeight) && visibleHeight > 0) {
+        document.documentElement.style.setProperty(
+            '--my-inquiries-viewport-height',
+            `${Math.round(visibleHeight)}px`
+        );
+    }
+}
+
+syncMyInquiriesViewportHeight();
+window.addEventListener('resize', syncMyInquiriesViewportHeight, { passive: true });
+window.addEventListener('orientationchange', syncMyInquiriesViewportHeight, { passive: true });
+window.addEventListener('pageshow', syncMyInquiriesViewportHeight, { passive: true });
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', syncMyInquiriesViewportHeight, { passive: true });
+    window.visualViewport.addEventListener('scroll', syncMyInquiriesViewportHeight, { passive: true });
+}
+// Re-measure after browser layout settles on initial load and after returning to the page.
+requestAnimationFrame(() => requestAnimationFrame(syncMyInquiriesViewportHeight));
+
 import { renderInquiryQRCodes } from './components/inquiry-card.js';
 
 import {

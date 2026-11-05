@@ -25,7 +25,7 @@
                         <div class="evaluation-reviewer-identity">
                             <span class="evaluation-reviewer-avatar" aria-hidden="true">
     @if($evaluation->reviewer_avatar_url)
-        <img src="{ $evaluation->reviewer_avatar_url }" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
+        <img src="{{ $evaluation->reviewer_avatar_url }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
         <span class="evaluation-reviewer-avatar-fallback" hidden></span>
     @else
         <span class="evaluation-reviewer-avatar-fallback"></span>
