@@ -140,3 +140,201 @@ body.user-notifications-page .notifications-list::-webkit-scrollbar-thumb {
 
 /* Evaluation moderation notices share the public notification icon system. */
 .user-notification-icon.is-evaluation { background:#fff6e5; color:#9a6500; }
+
+
+/* Compact activity feed refinement (Nov 2026). */
+body.user-notifications-page .notifications-shell {
+    width: min(100% - 40px, 980px);
+}
+
+body.user-notifications-page .notifications-heading {
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+body.user-notifications-page .notifications-heading h1 {
+    font-size: clamp(25px, 3vw, 31px);
+    line-height: 1.2;
+    letter-spacing: -.035em;
+}
+
+body.user-notifications-page .notifications-heading-copy {
+    min-width: 0;
+}
+
+body.user-notifications-page .notifications-card-header {
+    position: relative;
+    padding: 15px 20px;
+}
+
+body.user-notifications-page .notifications-list {
+    padding: 7px 9px;
+}
+
+body.user-notifications-page .user-notification-item {
+    align-items: center;
+    gap: 12px;
+    padding: 12px 13px;
+    border-radius: 12px;
+}
+
+body.user-notifications-page .user-notification-icon {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    font-size: 19px;
+}
+
+body.user-notifications-page .user-notification-copy {
+    gap: 3px;
+    padding: 0;
+}
+
+body.user-notifications-page .user-notification-copy strong {
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 650;
+}
+
+body.user-notifications-page .user-notification-copy > span {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #64718a;
+}
+
+body.user-notifications-page .user-notification-copy small {
+    margin-top: 2px;
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+body.user-notifications-page .user-notification-arrow {
+    flex: 0 0 auto;
+    font-size: 16px;
+}
+
+body.user-notifications-page .user-notification-item.is-unread {
+    background: #f4f7ff;
+    border-color: #e5ecff;
+}
+
+body.user-notifications-page .user-notification-item:hover,
+body.user-notifications-page .user-notification-item:focus-visible {
+    background: #f7f9ff;
+    border-color: #dce6ff;
+    outline: none;
+}
+
+body.user-notifications-page .user-notification-item:focus-visible {
+    box-shadow: 0 0 0 3px rgba(59, 104, 220, .18);
+}
+
+@media (max-width: 640px) {
+    body.user-notifications-page .notifications-heading {
+        align-items: center;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 13px;
+    }
+
+    body.user-notifications-page .notifications-heading h1 {
+        font-size: 25px;
+    }
+
+    body.user-notifications-page .notifications-card-header {
+        padding: 13px 14px;
+    }
+
+    body.user-notifications-page .notifications-list {
+        padding: 5px;
+    }
+
+    body.user-notifications-page .user-notification-item {
+        gap: 9px;
+        padding: 11px 9px;
+    }
+
+    body.user-notifications-page .user-notification-icon {
+        flex-basis: 34px;
+        width: 34px;
+        height: 34px;
+        font-size: 17px;
+    }
+
+    body.user-notifications-page .user-notification-copy strong {
+        font-size: 12px;
+    }
+
+    body.user-notifications-page .user-notification-copy > span {
+        font-size: 11px;
+        -webkit-line-clamp: 2;
+    }
+
+    body.user-notifications-page .user-notification-copy small {
+        font-size: 10px;
+    }
+}
+
+
+/* Final spacing refinement: bring the feed closer to navigation and quieten the action. */
+body.user-notifications-page .notifications-shell {
+    margin-top: calc(72px + var(--kyl-install-banner-height, 0px));
+    height: calc(100dvh - 92px - var(--kyl-install-banner-height, 0px) - env(safe-area-inset-bottom, 0px));
+}
+
+body.user-notifications-page .notifications-heading {
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+body.user-notifications-page .notifications-heading h1 {
+    font-size: clamp(22px, 2.5vw, 27px);
+    letter-spacing: -.03em;
+}
+
+body.user-notifications-page .notifications-read-all {
+    min-height: 32px;
+    gap: 6px;
+    padding: 0 10px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+body.user-notifications-page .notifications-read-all i {
+    font-size: 13px;
+}
+
+@media (max-width: 640px) {
+    body.user-notifications-page .notifications-shell {
+        height: calc(100dvh - 76px - var(--kyl-install-banner-height, 0px) - env(safe-area-inset-bottom, 0px));
+        margin-top: calc(60px + env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px));
+    }
+
+    body.user-notifications-page .notifications-heading {
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    body.user-notifications-page .notifications-heading h1 {
+        font-size: 21px;
+    }
+
+    body.user-notifications-page .notifications-read-all {
+        min-height: 29px;
+        gap: 5px;
+        padding: 0 8px;
+        border-radius: 8px;
+        font-size: 10px;
+    }
+
+    body.user-notifications-page .notifications-read-all i {
+        font-size: 12px;
+    }
+}

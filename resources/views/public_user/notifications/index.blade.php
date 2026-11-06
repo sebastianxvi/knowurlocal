@@ -30,10 +30,8 @@
     <x-public.navbar :hideSearch="true" />
     <main class="notifications-shell">
         <header class="notifications-heading">
-            <div>
-                <span class="notifications-eyebrow">YOUR ACCOUNT</span>
+            <div class="notifications-heading-copy">
                 <h1>Notifications</h1>
-                <p>Updates about your support tickets, agency responses, and evaluations.</p>
             </div>
             <form method="POST" action="{{ route('user.notifications.read-all') }}">
                 @csrf
@@ -82,7 +80,7 @@
                         <span class="user-notification-copy">
                             <strong>{{ $notification->title }}</strong>
                             <span>{{ $notification->message }}</span>
-                            <small>{{ $notification->created_at?->timezone(config('app.timezone'))->format('M j, Y · g:i A') }}</small>
+                            <small>{{ $notification->created_at?->timezone(config('app.timezone'))->format('M j · g:i A') }}</small>
                         </span>
                         @if(!$notification->read_at)
                             <span class="user-notification-unread-dot" aria-label="Unread"></span>

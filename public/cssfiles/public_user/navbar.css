@@ -3177,3 +3177,34 @@ body :is(small, .helper-text, .field-hint, .form-hint) { font-size: 12px; }
         line-height: 34px;
     }
 }
+
+
+/* Unread notification badge on the mobile menu reflects the user's
+   notification inbox, not the separate My Inquiries response count. */
+.menu-notification-badge[data-user-notification-badge][hidden],
+.user-notification-nav-badge[hidden] {
+    display: none !important;
+}
+
+/* Subtle pulse for active unread counters. */
+@keyframes knowurlocal-unread-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.13); }
+}
+
+.menu-notification-badge:not([hidden]),
+.account-notification-badge:not([hidden]),
+.inquiry-notification-badge:not([hidden]),
+.user-notification-nav-badge:not([hidden]) {
+    transform-origin: center;
+    animation: knowurlocal-unread-pulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-notification-badge,
+    .account-notification-badge,
+    .inquiry-notification-badge,
+    .user-notification-nav-badge {
+        animation: none !important;
+    }
+}

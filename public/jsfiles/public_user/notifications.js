@@ -53,7 +53,7 @@
         const message = document.createElement('span');
         message.textContent = notification.message || 'There is an update to your ticket.';
         const time = document.createElement('small');
-        time.textContent = notification.created_at ? new Date(notification.created_at).toLocaleString() : 'Just now';
+        time.textContent = notification.created_at ? new Date(notification.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Just now';
         copy.append(title, message, time);
 
         const dot = document.createElement('span');

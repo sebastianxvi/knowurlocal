@@ -118,12 +118,12 @@
 
             <span
                 class="menu-notification-badge"
-                data-inquiry-notification-badge
-                data-count="{{ $unreadInquiryCount ?? 0 }}"
+                data-user-notification-badge
+                data-count="{{ $unreadNotificationCount ?? 0 }}"
                 aria-live="polite"
                 aria-atomic="true"
-                @if(($unreadInquiryCount ?? 0) <= 0) hidden @endif
-            >{{ ($unreadInquiryCount ?? 0) > 99 ? '99+' : ($unreadInquiryCount ?? 0) }}</span>
+                @if(($unreadNotificationCount ?? 0) <= 0) hidden @endif
+            >{{ ($unreadNotificationCount ?? 0) > 99 ? '99+' : ($unreadNotificationCount ?? 0) }}</span>
 
         </button>
 
