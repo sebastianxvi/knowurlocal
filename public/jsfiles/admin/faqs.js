@@ -1603,56 +1603,6 @@ if (sourceResponseIdInput) {
 
     /*
      * =========================================================
-     * SUCCESS ALERT
-     * =========================================================
-     */
-
-    if (window.__FLASH_SUCCESS__) {
-
-        showAlertModal({
-
-            title:
-                "Success",
-
-            text:
-                window.__FLASH_SUCCESS__,
-
-            icon:
-                "✓",
-
-            variant:
-                "success",
-
-            confirmText:
-                "OK",
-
-            showCancel:
-                false,
-
-            onConfirm: () => {
-
-                closeAlertModal();
-
-            }
-
-        });
-
-
-        setTimeout(() => {
-
-            closeAlertModal();
-
-        }, 1500);
-
-
-        window.__FLASH_SUCCESS__ =
-            null;
-
-    }
-
-
-    /*
-     * =========================================================
      * ENABLE / DISABLE INPUTS
      * =========================================================
      */
@@ -2181,6 +2131,13 @@ resetTextareaHeights();
                 }
 
                 faqInterventionPassword = password;
+
+                // Carry the password that was just verified into the
+                // hidden form field required by FaqController::update().
+                // Laravel still verifies it again server-side before saving.
+                const passwordField = document.getElementById('faq-current-password');
+                if (passwordField) passwordField.value = password;
+
                 window.closeAlertModal(true);
                 openFaqModalInternal(mode, data);
             }
@@ -2190,7 +2147,7 @@ resetTextareaHeights();
     window.openFaqModal = openFaqModal;
 
     if (form && window.FAQ_REQUIRES_INTERVENTION) {
-        form.addEventListener('submit', async function (event) {
+        form.addEventListener('submit', function (event) {
             if (form.dataset.faqInterventionReady === 'true') {
                 form.dataset.faqInterventionReady = 'false';
                 return;
@@ -2199,65 +2156,102 @@ resetTextareaHeights();
             event.preventDefault();
 
             const isAdding = methodInput?.value === 'POST';
-            const selectedAgency = agencySelect?.options[agencySelect.selectedIndex];
-            const agencyHasAdmin = selectedAgency?.dataset.hasAdmin === '1';
 
-            // Creating for an agency without an agency admin does not require intervention credentials or a reason.
-            if (isAdding && !agencyHasAdmin) {
-                const passwordField = document.getElementById('faq-current-password');
-                const reasonField = document.getElementById('faq-intervention-reason');
-                if (passwordField) passwordField.value = '';
-                if (reasonField) reasonField.value = '';
-                form.dataset.faqInterventionReady = 'true';
-                form.requestSubmit();
-                return;
-            }
+            const continueSubmission = () => {
+                const selectedAgency = agencySelect?.options[agencySelect.selectedIndex];
+                const agencyHasAdmin = selectedAgency?.dataset.hasAdmin === '1';
 
-            const csrf = form.querySelector('input[name="_token"]')?.value || '';
-
-            const askPassword = () => window.showAlertModal({
-                title: 'Administrative FAQ intervention',
-                text: 'Verify your identity before saving this FAQ intervention.',
-                icon: 'ph-light ph-shield-check',
-                variant: 'info',
-                input: {
-                    type: 'password',
-                    label: 'Confirm your administrator password',
-                    placeholder: 'Enter your current account password',
-                    required: true,
-                    maxLength: 255
-                },
-                confirmText: 'Verify and save',
-                showCancel: true,
-                onConfirm: async (password) => {
-                    const response = await fetch(window.FAQ_INTERVENTION_VERIFY_URL, {
-                        method: 'POST',
-                        credentials: 'same-origin',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': csrf
-                        },
-                        body: JSON.stringify({ password })
-                    });
-                    const payload = await response.json().catch(() => ({}));
-                    if (!response.ok || payload.verified !== true) {
-                        throw new Error(payload.message || 'Password verification failed.');
-                    }
-
-                    faqInterventionPassword = password;
+                // New FAQs for agencies without an agency admin need no intervention credentials/reason.
+                if (isAdding && !agencyHasAdmin) {
                     const passwordField = document.getElementById('faq-current-password');
-                    if (passwordField) passwordField.value = password;
-                    window.closeAlertModal(true);
+                    const reasonField = document.getElementById('faq-intervention-reason');
+                    if (passwordField) passwordField.value = '';
+                    if (reasonField) reasonField.value = '';
                     form.dataset.faqInterventionReady = 'true';
                     form.requestSubmit();
+                    return;
                 }
-            });
 
-            if (isAdding) {
+                const csrf = form.querySelector('input[name="_token"]')?.value || '';
+                const askPassword = () => window.showAlertModal({
+                    title: 'Administrative FAQ intervention',
+                    text: 'Verify your identity before saving this FAQ intervention.',
+                    icon: 'ph-light ph-shield-check',
+                    variant: 'info',
+                    input: {
+                        type: 'password',
+                        label: 'Confirm your administrator password',
+                        placeholder: 'Enter your current account password',
+                        required: true,
+                        maxLength: 255
+                    },
+                    confirmText: 'Verify and save',
+                    showCancel: true,
+                    onConfirm: async (password) => {
+                        const response = await fetch(window.FAQ_INTERVENTION_VERIFY_URL, {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': csrf
+                            },
+                            body: JSON.stringify({ password })
+                        });
+                        const payload = await response.json().catch(() => ({}));
+                        if (!response.ok || payload.verified !== true) {
+                            throw new Error(payload.message || 'Password verification failed.');
+                        }
+
+                        faqInterventionPassword = password;
+                        const passwordField = document.getElementById('faq-current-password');
+                        if (passwordField) passwordField.value = password;
+                        window.closeAlertModal(true);
+                        form.dataset.faqInterventionReady = 'true';
+                        form.requestSubmit();
+                    }
+                });
+
+                if (isAdding) {
+                    window.showAlertModal({
+                        title: 'Reason for FAQ creation',
+                        text: 'Provide the reason for adding this FAQ. This will be recorded and shared with the agency admin.',
+                        icon: 'ph-light ph-note-pencil',
+                        variant: 'info',
+                        input: {
+                            type: 'text',
+                            label: 'Reason for changes',
+                            placeholder: 'Enter a clear reason (at least 10 characters)',
+                            required: true,
+                            minLength: 10,
+                            maxLength: 1000,
+                            validationMessage: 'Please provide a reason with at least 10 characters.'
+                        },
+                        confirmText: 'Continue',
+                        showCancel: true,
+                        onConfirm: (reason) => {
+                            const reasonField = document.getElementById('faq-intervention-reason');
+                            if (reasonField) reasonField.value = reason.trim();
+                            window.closeAlertModal(true);
+                            askPassword();
+                        }
+                    });
+                    return;
+                }
+
+                if (!faqInterventionPassword) {
+                    window.showAlertModal({
+                        title: 'Verification required',
+                        text: 'Please verify your password before editing an FAQ.',
+                        variant: 'warning',
+                        confirmText: 'OK'
+                    });
+                    return;
+                }
+
                 window.showAlertModal({
-                    title: 'Reason for FAQ creation',
-                    text: 'Provide the reason for adding this FAQ. This will be recorded and shared with the agency admin.',
+                    title: 'Reason for FAQ changes',
+                    text: 'Explain why this FAQ is being changed. The reason will be recorded and shared with the assigned Agency Admin, if one is registered.',
                     icon: 'ph-light ph-note-pencil',
                     variant: 'info',
                     input: {
@@ -2275,46 +2269,28 @@ resetTextareaHeights();
                         const reasonField = document.getElementById('faq-intervention-reason');
                         if (reasonField) reasonField.value = reason.trim();
                         window.closeAlertModal(true);
-                        askPassword();
+
+                        // Ask for explicit save confirmation only after the reason is captured.
+                        window.showAlertModal({
+                            title: 'Save changes?',
+                            text: 'Make sure the FAQ question and response are correct before saving.',
+                            icon: '✓',
+                            variant: 'success',
+                            confirmText: 'Save',
+                            showCancel: true,
+                            onConfirm: () => {
+                                window.closeAlertModal(true);
+                                form.dataset.faqInterventionReady = 'true';
+                                form.requestSubmit();
+                            }
+                        });
                     }
                 });
-                return;
-            }
+            };
 
-            if (!faqInterventionPassword) {
-                showAlertModal({
-                    title: 'Verification required',
-                    text: 'Please verify your password before editing an FAQ.',
-                    variant: 'warning',
-                    confirmText: 'OK'
-                });
-                return;
-            }
-
-            window.showAlertModal({
-                title: 'Reason for FAQ changes',
-                text: 'Explain why this FAQ is being changed. The reason will be recorded and shared with the assigned Agency Admin, if one is registered.',
-                icon: 'ph-light ph-note-pencil',
-                variant: 'info',
-                input: {
-                    type: 'text',
-                    label: 'Reason for changes',
-                    placeholder: 'Enter a clear reason (at least 10 characters)',
-                    required: true,
-                    minLength: 10,
-                    maxLength: 1000,
-                    validationMessage: 'Please provide a reason with at least 10 characters.'
-                },
-                confirmText: 'Continue to save',
-                showCancel: true,
-                onConfirm: (reason) => {
-                    const reasonField = document.getElementById('faq-intervention-reason');
-                    if (reasonField) reasonField.value = reason.trim();
-                    window.closeAlertModal(true);
-                    form.dataset.faqInterventionReady = 'true';
-                    form.requestSubmit();
-                }
-            });
+            // For FAQ edits, continueSubmission asks for the reason first,
+            // then presents the explicit save confirmation before the PUT request.
+            continueSubmission();
         });
     }
 
@@ -2870,5 +2846,36 @@ resetTextareaHeights();
     }
 
     
+
+
+    // =====================================================
+    // FLASH SUCCESS
+    // =====================================================
+    //
+    // FAQ Management explicitly displays the server-side success
+    // flash after the page has initialized, matching NGA Management.
+    //
+    if (window.__FLASH_SUCCESS__) {
+        showAlertModal({
+            title: "Success",
+            text: window.__FLASH_SUCCESS__,
+            icon: "✓",
+            variant: "success",
+            confirmText: "OK",
+            showCancel: false,
+            loading: false,
+            onConfirm: () => {
+                closeAlertModal();
+            }
+        });
+
+        // Dismiss the transient success notice after 1.5 seconds.
+        setTimeout(() => {
+            closeAlertModal();
+        }, 1500);
+
+        // Consume the flash so it cannot be displayed a second time.
+        window.__FLASH_SUCCESS__ = null;
+    }
 
 });

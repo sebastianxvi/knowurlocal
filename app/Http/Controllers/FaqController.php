@@ -1361,9 +1361,12 @@ $faq->id
             // The Referer for a resource update can be /admin/faqs/{id},
             // which accepts PUT/PATCH/DELETE but not GET. Explicitly return
             // validation failures to the canonical FAQ index instead.
+            // Flash the first validation message so the shared alert modal
+            // makes a rejected save visible to the administrator.
             return redirect()
                 ->route('faqs.index')
                 ->withErrors($validator)
+                ->with('error', $validator->errors()->first())
                 ->withInput($request->except('current_password'));
         }
 
@@ -1371,9 +1374,12 @@ $faq->id
             (string) $request->input('current_password'),
             (string) $request->user()->password
         )) {
+            $passwordError = 'The administrator password is incorrect. No FAQ changes were saved.';
+
             return redirect()
                 ->route('faqs.index')
-                ->withErrors(['current_password' => 'The administrator password is incorrect. No FAQ changes were saved.'])
+                ->withErrors(['current_password' => $passwordError])
+                ->with('error', $passwordError)
                 ->withInput($request->except('current_password'));
         }
 

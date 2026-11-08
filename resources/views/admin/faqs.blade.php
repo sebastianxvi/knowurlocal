@@ -877,14 +877,8 @@ window.SUPPORT_FAQ_PREPARE_URL =
 <script src="{{ asset('jsfiles/admin/faq-response-builder.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/trash-reason.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/components/action-menu.js') }}"></script>
+
 <script src="{{ asset('jsfiles/admin/faqs.js') }}?v={{ filemtime(public_path('jsfiles/admin/faqs.js')) }}"></script>
 <script src="{{ asset('jsfiles/admin/faq-feedback-modal.js') }}?v={{ filemtime(public_path('jsfiles/admin/faq-feedback-modal.js')) }}"></script>
-
-<!-- 🔥 SUCCESS HANDLER (same pattern as NGA) -->
-@if(session('success'))
-<script>
-    window.__FLASH_SUCCESS__ = @json(session('success'));
-</script>
-@endif
 
 @endpush

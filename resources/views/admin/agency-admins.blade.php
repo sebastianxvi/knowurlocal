@@ -5,6 +5,49 @@
 <link rel="stylesheet" href="{{ asset('cssfiles/components/table.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/admin-modules.css') }}">
+<style>
+/* Keep the invite modal's floating label clear of the select's selected text. */
+#agency-invite-modal #agencyInviteForm .floating-group {
+    position: relative;
+    min-width: 0;
+}
+#agency-invite-modal #agencyInviteForm #agency-invite-searchable {
+    position: relative;
+    min-width: 0;
+}
+#agency-invite-modal #agencyInviteForm #agency-invite-agency-search {
+    min-height: 60px;
+    padding: 27px 42px 9px 12px;
+    line-height: 1.35;
+}
+#agency-invite-modal #agencyInviteForm #agency-invite-searchable > label {
+    top: 7px;
+    left: 12px;
+    z-index: 1;
+    padding: 0 3px;
+    background: #fff;
+    line-height: 1.2;
+}
+#agency-invite-modal #agencyInviteForm #agency-invite-agency-options {
+    max-height: 220px;
+}
+
+/* Let the custom searchable dropdown paint outside the modal's clipped edge. */
+#agency-invite-modal .modal {
+    overflow: visible;
+}
+#agency-invite-modal #agencyInviteForm,
+#agency-invite-modal #agencyInviteForm .form-card {
+    overflow: visible;
+}
+#agency-invite-modal #agency-invite-searchable {
+    z-index: 20;
+}
+#agency-invite-modal #agency-invite-agency-options {
+    z-index: 30;
+}
+</style>
+
 @endpush
 
 @section('title', 'KNOWURLOCAL | Agency Admin Management')
@@ -96,7 +139,18 @@
             @csrf
             <div class="form-card">
                 <div class="floating-group"><input id="agency-invite-email" type="email" name="email" value="{{ old('email') }}" maxlength="255" autocomplete="email" placeholder=" " required><label for="agency-invite-email">Official Email Address</label></div>
-                <div class="floating-group"><select id="agency-invite-agency" name="agency_id" required><option value="" disabled {{ old('agency_id') ? '' : 'selected' }}>Select an agency</option>@foreach($agencies as $agency)<option value="{{ $agency->id }}" @selected((string) old('agency_id') === (string) $agency->id)>{{ $agency->agency_name }}{{ $agency->agency_abbreviation ? ' · '.$agency->agency_abbreviation : '' }}</option>@endforeach</select><label for="agency-invite-agency">Assign Agency</label></div>
+                <div class="floating-group searchable-select" id="agency-invite-searchable">
+                    <input type="text" id="agency-invite-agency-search" class="searchable-select-input" placeholder=" " autocomplete="off" role="combobox" aria-expanded="false" aria-controls="agency-invite-agency-options" aria-autocomplete="list" required>
+                    <label for="agency-invite-agency-search" class="searchable-select-label">Assign Agency</label>
+                    <i class="ph-light ph-caret-down searchable-select-arrow" aria-hidden="true"></i>
+                    <div id="agency-invite-agency-options" class="searchable-select-options" role="listbox"></div>
+                    <select id="agency-invite-agency" name="agency_id" class="searchable-select-native" aria-hidden="true" tabindex="-1">
+                        <option value="">Select an agency</option>
+                        @foreach($agencies as $agency)
+                            <option value="{{ $agency->id }}" data-abbr="{{ strtolower($agency->agency_abbreviation ?? '') }}" data-full-name="{{ $agency->agency_name }}" @selected((string) old('agency_id') === (string) $agency->id)>{{ $agency->agency_name }}{{ $agency->agency_abbreviation ? ' · '.$agency->agency_abbreviation : '' }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 @if($agencies->isEmpty())<p>No active agencies are available. Add an agency before sending an invitation.</p>@endif
             </div>
         </form>
@@ -108,6 +162,25 @@
 <script>
 (function(){
  const modal=document.getElementById('agency-invite-modal'); const form=document.getElementById('agencyInviteForm'); let previousFocus=null;
+ const agencySelect=document.getElementById('agency-invite-agency');
+ const agencySearch=document.getElementById('agency-invite-agency-search');
+ const agencyOptions=document.getElementById('agency-invite-agency-options');
+ const agencyWrapper=document.getElementById('agency-invite-searchable');
+ let agencyList=[];
+ let agencyDropdownOpen=false;
+ const buildAgencyList=function(){if(!agencySelect)return;agencyList=Array.from(agencySelect.options).filter(o=>o.value).map(o=>{const fullName=(o.dataset.fullName||o.textContent).trim();const abbreviation=(o.dataset.abbr||'').trim();return {value:o.value,fullName,abbreviation,searchText:(fullName+' '+abbreviation).toLowerCase()};});};
+ const closeAgencyDropdown=function(){agencyDropdownOpen=false;agencyWrapper?.classList.remove('is-open');agencySearch?.setAttribute('aria-expanded','false');};
+ const renderAgencyOptions=function(term=''){if(!agencyOptions)return;const normalized=term.toLowerCase().trim();const matches=agencyList.filter(a=>a.searchText.includes(normalized));agencyOptions.replaceChildren();if(!matches.length){const empty=document.createElement('div');empty.className='searchable-select-empty';empty.textContent='No matching agencies found.';agencyOptions.appendChild(empty);return;}matches.forEach(a=>{const option=document.createElement('button');option.type='button';option.className='searchable-select-option';option.setAttribute('role','option');option.setAttribute('aria-selected',agencySelect.value===a.value?'true':'false');option.dataset.value=a.value;option.textContent=a.fullName+(a.abbreviation?' ('+a.abbreviation.toUpperCase()+')':'');if(agencySelect.value===a.value)option.classList.add('is-selected');option.addEventListener('click',()=>{agencySelect.value=a.value;agencySearch.value=a.fullName+(a.abbreviation?' · '+a.abbreviation.toUpperCase():'');agencySearch.setCustomValidity('');closeAgencyDropdown();});agencyOptions.appendChild(option);});};
+ const openAgencyDropdown=function(){if(!agencySearch||agencySearch.disabled)return;agencyDropdownOpen=true;agencyWrapper?.classList.add('is-open');agencySearch.setAttribute('aria-expanded','true');renderAgencyOptions(agencySearch.value===agencySelect.options[agencySelect.selectedIndex]?.textContent.trim()? '':agencySearch.value);};
+ if(agencySearch&&agencySelect){buildAgencyList();const selected=agencySelect.selectedOptions[0];if(selected&&selected.value){const a=agencyList.find(x=>x.value===selected.value);agencySearch.value=a?a.fullName+(a.abbreviation?' · '+a.abbreviation.toUpperCase():''):selected.textContent.trim();}
+ agencySearch.addEventListener('focus',()=>{agencySearch.select();openAgencyDropdown();});
+ agencySearch.addEventListener('click',openAgencyDropdown);
+ agencySearch.addEventListener('input',()=>{agencySelect.value='';agencySearch.setCustomValidity('Please select an agency from the results.');openAgencyDropdown();renderAgencyOptions(agencySearch.value);});
+ agencySearch.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAgencyDropdown();}else if(e.key==='Enter'&&agencyDropdownOpen){const first=agencyOptions.querySelector('.searchable-select-option');if(first){e.preventDefault();first.click();}}});
+ document.addEventListener('click',e=>{if(agencyWrapper&&!agencyWrapper.contains(e.target))closeAgencyDropdown();});
+ form?.addEventListener('submit',e=>{if(!agencySelect.value){e.preventDefault();agencySearch.setCustomValidity('Please select an agency from the results.');agencySearch.reportValidity();agencySearch.focus();}});
+ }
+
  window.openAgencyInviteModal=function(){if(!modal||!form)return;previousFocus=document.activeElement;modal.classList.remove('hidden');modal.style.display='flex';void modal.offsetWidth;modal.classList.add('active');modal.setAttribute('aria-hidden','false');const email=form.querySelector('input[name="email"]');if(email)email.focus();};
  window.closeAgencyInviteModal=function(){if(!modal)return;modal.classList.remove('active');modal.setAttribute('aria-hidden','true');window.setTimeout(function(){modal.style.display='none';modal.classList.add('hidden');if(previousFocus&&previousFocus.focus)previousFocus.focus();},200);};
  if(modal){modal.addEventListener('click',function(e){if(e.target===modal)window.closeAgencyInviteModal();});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modal.classList.contains('active'))window.closeAgencyInviteModal();});}
