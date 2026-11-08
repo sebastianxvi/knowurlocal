@@ -1,0 +1,30 @@
+/* Agency intervention history: accessible modal using admin design tokens */
+.agency-intervention-modal[hidden]{display:none!important}
+.agency-intervention-modal{position:fixed;inset:0;z-index:12000;display:grid;place-items:center;padding:20px}
+.agency-intervention-modal__backdrop{position:absolute;inset:0;background:rgba(15,23,42,.56);backdrop-filter:blur(3px)}
+.agency-intervention-modal__panel{position:relative;width:min(720px,100%);max-height:min(82vh,780px);overflow:hidden;display:flex;flex-direction:column;background:var(--admin-surface,#fff);color:var(--admin-text,#111827);border:1px solid var(--admin-border,#e5e7eb);border-radius:var(--admin-radius-lg,14px);box-shadow:var(--admin-shadow-lg,0 18px 48px rgba(15,23,42,.12));outline:none;animation:agency-intervention-modal-in .18s ease-out}
+.agency-intervention-modal__header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px;border-bottom:1px solid var(--admin-border,#e5e7eb)}
+.agency-intervention-modal__heading{display:flex;gap:12px;align-items:flex-start;min-width:0}
+.agency-intervention-modal__icon{display:grid;place-items:center;flex:0 0 42px;height:42px;border-radius:12px;background:var(--admin-primary-soft,#eff6ff);color:var(--admin-primary,#2563eb);font-size:22px}
+.agency-intervention-modal__eyebrow{margin:0 0 4px;color:var(--admin-muted,#8b95a5);font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.agency-intervention-modal__header h2{margin:0;font-size:19px;line-height:1.35;font-weight:700}
+.agency-intervention-modal__close{border:0;background:transparent;color:var(--admin-text-2,#4b5563);display:grid;place-items:center;width:36px;height:36px;border-radius:9px;cursor:pointer}
+.agency-intervention-modal__close:hover{background:var(--admin-surface-soft,#f8fafc)}
+.agency-intervention-modal__body{padding:22px 24px;overflow:auto}
+.agency-intervention-modal__summary{display:grid;gap:12px;padding:16px;background:var(--admin-surface-soft,#f8fafc);border:1px solid var(--admin-border,#e5e7eb);border-radius:12px}
+.agency-intervention-modal__summary p{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;margin:0}
+.agency-intervention-modal__summary span{color:var(--admin-muted,#8b95a5);font-size:13px}
+.agency-intervention-modal__summary strong{font-size:13px;font-weight:600;overflow-wrap:anywhere}
+.agency-intervention-modal__changes{margin-top:22px}
+.agency-intervention-modal__changes h3{margin:0 0 10px;font-size:14px;font-weight:700}
+.agency-intervention-modal__table-wrap{overflow-x:auto;border:1px solid var(--admin-border,#e5e7eb);border-radius:10px}
+.agency-intervention-modal__changes table{width:100%;border-collapse:collapse;font-size:13px}
+.agency-intervention-modal__changes th{text-align:left;background:var(--admin-surface-soft,#f8fafc);color:var(--admin-text-2,#4b5563);font-weight:600}
+.agency-intervention-modal__changes th,.agency-intervention-modal__changes td{padding:11px 12px;border-bottom:1px solid var(--admin-border,#e5e7eb);vertical-align:top;overflow-wrap:anywhere;min-width:110px}
+.agency-intervention-modal__changes tbody tr:last-child td{border-bottom:0}
+.agency-intervention-modal__footer{display:flex;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--admin-border,#e5e7eb)}
+.agency-intervention-modal__done{border:0;border-radius:9px;padding:10px 18px;background:var(--admin-primary,#2563eb);color:#fff;font-weight:600;cursor:pointer}
+.agency-intervention-modal__done:hover{filter:brightness(.95)}
+body.agency-intervention-modal-open{overflow:hidden}
+@keyframes agency-intervention-modal-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:600px){.agency-intervention-modal{padding:10px}.agency-intervention-modal__panel{max-height:90vh}.agency-intervention-modal__header,.agency-intervention-modal__body{padding:17px}.agency-intervention-modal__footer{padding:13px 17px}.agency-intervention-modal__summary p{grid-template-columns:1fr;gap:4px}.agency-intervention-modal__header h2{font-size:17px}}

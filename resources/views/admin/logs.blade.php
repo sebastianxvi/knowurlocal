@@ -267,7 +267,13 @@
                     
                     <!-- ACTION -->
                     <td>
-                        <span class="badge action {{ $log->action }}" title="{{ $log->action_group }}">
+                        @php
+                            // Legacy intervention records use the exact existing Update Agency tag.
+                            $displayAction = $log->action === 'intervene_agency'
+                                ? 'update_agency'
+                                : $log->action;
+                        @endphp
+                        <span class="badge action {{ $displayAction }}" title="{{ $log->action_group }}">
                             <i class="ph-light {{ $log->action_icon }}" aria-hidden="true"></i>
                             {{ $log->action_label }}
                         </span>
@@ -412,6 +418,7 @@
     @elseif(in_array($log->action, [
     'update_faq',
     'update_agency',
+    'intervene_agency',
     'update_category'
 ], true))
 

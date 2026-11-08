@@ -452,6 +452,9 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::post('/agencies', [AgencyController::class, 'store'])
         ->name('agencies.store');
 
+    Route::post('/agencies/verify-intervention-password', [AgencyController::class, 'verifyInterventionPassword'])
+        ->name('admin.agencies.verify-intervention-password');
+
     Route::put('/agencies/{agency}', [AgencyController::class, 'update'])
         ->name('admin.agencies.update');
 
@@ -483,6 +486,10 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::get('/faqs/{faq}/feedback', [FaqFeedbackController::class, 'forFaq'])
         ->whereNumber('faq')
         ->name('admin.faqs.feedback');
+
+    Route::post('/faqs/verify-intervention-password', [FaqController::class, 'verifyInterventionPassword'])
+        ->middleware('throttle:8,1')
+        ->name('faqs.verify-intervention-password');
 
     Route::resource('faqs', FaqController::class)
         ->only(['index', 'store', 'update', 'destroy']);
@@ -795,6 +802,11 @@ Route::prefix('agency-admin')
             ->whereNumber('faq')->name('faqs.feedback');
         Route::get('/faqs/{faqId}/response-attachments/{componentIndex}', [\App\Http\Controllers\AgencyAdminController::class, 'faqResponseAttachment'])
             ->whereNumber(['faqId', 'componentIndex'])->name('faqs.response-attachment');
+        Route::get('/notifications/{notificationId}/open', [\App\Http\Controllers\AgencyAdminController::class, 'openAgencyNotification'])
+            ->whereNumber('notificationId')
+            ->name('notifications.open');
+        Route::get('/agency/revision', [\App\Http\Controllers\AgencyAdminController::class, 'agencyProfileRevision'])
+            ->name('agency.revision');
         Route::get('/agency', [\App\Http\Controllers\AgencyAdminController::class, 'editAgency'])
             ->name('agency');
         Route::put('/agency', [\App\Http\Controllers\AgencyAdminController::class, 'updateAgency'])

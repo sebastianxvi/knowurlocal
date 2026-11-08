@@ -37,7 +37,12 @@ class UserNotificationCreated implements ShouldBroadcastNow
                 ? (int) $this->notification->support_request_id
                 : null,
             'created_at' => $this->notification->created_at?->toIso8601String(),
-            'open_url' => route('user.notifications.open', $this->notification->id),
+            'open_url' => in_array($this->notification->type, [
+                'agency_profile_admin_intervention',
+                'faq_admin_intervention',
+            ], true) && $this->notification->user?->role === 'agency_admin'
+                ? route('agency-admin.notifications.open', $this->notification->id)
+                : route('user.notifications.open', $this->notification->id),
         ];
     }
 }

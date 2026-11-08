@@ -861,4 +861,39 @@ window.SUPPORT_FAQ_PREPARE_URL =
 </script>
 @endif
 
+@if(session('faq_intervention_notice'))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const notice = @json(session('faq_intervention_notice'));
+        const faqId = Number(notice.faq_id || 0);
+        const reason = String(notice.reason || '').trim();
+        // Older notification records may already have the reason appended to the
+        // message. Remove that suffix because the reason is rendered separately.
+        const message = String(notice.message || '')
+            .replace(/\\s*(?:\\||\\n|\\r)*\\s*Reason(?: for change)?:\\s*[\\s\\S]*$/i, '')
+            .trim();
+
+        // Show the reason as its own readable paragraph, not a literal \\n sequence.
+        if (typeof window.showAlertModal === 'function') {
+            window.showAlertModal({
+                title: notice.title || 'Agency FAQ update',
+                text: [message, reason ? 'Reason for change:\n' + reason : ''].filter(Boolean).join('\n\n'),
+                icon: 'ph-light ph-info',
+                variant: 'info',
+                confirmText: 'Got it',
+                showConfirm: true
+            });
+        }
+
+        // Clicking the notification should land on this exact FAQ's edit modal.
+        if (faqId > 0) {
+            const editButton = document.querySelector('.edit-btn[data-id="' + faqId + '"]');
+            if (editButton) {
+                window.setTimeout(() => editButton.click(), 120);
+            }
+        }
+    });
+</script>
+@endif
+
 @endpush

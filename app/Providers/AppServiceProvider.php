@@ -197,6 +197,8 @@ class AppServiceProvider extends ServiceProvider
                         'adminNotificationSupportRequests' => collect(),
                         'adminNotificationCollaborationCount' => 0,
                         'adminNotificationCollaborationTasks' => collect(),
+                        'adminNotificationInterventionCount' => 0,
+                        'adminNotificationInterventions' => collect(),
                     ]);
                     return;
                 }
@@ -221,7 +223,16 @@ class AppServiceProvider extends ServiceProvider
                         ->orderByRaw("CASE WHEN due_at IS NOT NULL AND due_at < ? THEN 0 ELSE 1 END", [now()])
                         ->latest('created_at');
 
+                    $interventionQuery = UserNotification::query()
+                        ->where('user_id', auth()->id())
+                        ->whereIn('type', ['agency_profile_admin_intervention', 'faq_admin_intervention'])
+                        ->where('data->agency_id', (int) $agencyId)
+                        ->whereNull('read_at')
+                        ->latest('created_at');
+
                     $view->with([
+                        'adminNotificationInterventionCount' => (clone $interventionQuery)->count(),
+                        'adminNotificationInterventions' => $interventionQuery->limit(5)->get(),
                         'adminNotificationSupportCount' => (clone $agencySupportQuery)->count(),
                         'adminNotificationSupportRequests' => $agencySupportQuery->limit(5)->get(),
                         'adminNotificationCollaborationCount' => (clone $agencyCollaborationQuery)->count(),
@@ -236,6 +247,8 @@ class AppServiceProvider extends ServiceProvider
                         'adminNotificationSupportRequests' => collect(),
                         'adminNotificationCollaborationCount' => 0,
                         'adminNotificationCollaborationTasks' => collect(),
+                        'adminNotificationInterventionCount' => 0,
+                        'adminNotificationInterventions' => collect(),
                     ]);
                     return;
                 }
@@ -267,6 +280,8 @@ class AppServiceProvider extends ServiceProvider
                 $collaborationTasks = $collaborationQuery->limit(5)->get();
 
                 $view->with([
+                    'adminNotificationInterventionCount' => 0,
+                    'adminNotificationInterventions' => collect(),
                     'adminNotificationSupportCount' => $supportCount,
                     'adminNotificationSupportRequests' => $supportRequests,
                     'adminNotificationCollaborationCount' => $collaborationCount,

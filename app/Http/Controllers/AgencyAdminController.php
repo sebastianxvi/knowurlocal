@@ -12,6 +12,7 @@ use App\Models\ContactType;
 use App\Models\Faq;
 use App\Models\SupportRequest;
 use App\Models\SupportRequestResponse;
+use App\Models\UserNotification;
 use App\Services\SupportRequestResponseService;
 use App\Services\SupportRequestNotificationService;
 use App\Services\FaqSimilarityService;
@@ -748,6 +749,61 @@ class AgencyAdminController extends Controller
         return $faqController->responseAttachment($faqId, $componentIndex);
     }
 
+    public function openAgencyNotification(Request $request, int $notificationId)
+    {
+        $notification = UserNotification::query()
+            ->where('user_id', (int) $request->user()->id)
+            ->whereIn('type', ['agency_profile_admin_intervention', 'faq_admin_intervention'])
+            ->findOrFail($notificationId);
+
+        $data = is_array($notification->data) ? $notification->data : [];
+        abort_unless((int) ($data['agency_id'] ?? 0) === (int) $request->user()->agency_id, 404);
+
+        if ($notification->read_at === null) {
+            $notification->forceFill(['read_at' => now()])->save();
+        }
+
+        if ($notification->type === 'faq_admin_intervention') {
+            return redirect()
+                ->route('agency-admin.faqs')
+                ->with('faq_intervention_notice', [
+                    'title' => (string) $notification->title,
+                    'message' => (string) $notification->message,
+                    'reason' => (string) ($data['reason'] ?? ''),
+                    'actor_name' => (string) ($data['actor_name'] ?? 'System Administrator'),
+                    'operation' => (string) ($data['operation'] ?? ''),
+                    'faq_id' => (int) ($data['faq_id'] ?? 0),
+                    'faq_question' => (string) ($data['faq_question'] ?? ''),
+                    'changed_fields' => array_values((array) ($data['changed_fields'] ?? [])),
+                    'created_at' => $notification->created_at?->toIso8601String(),
+                ]);
+        }
+
+        return redirect()
+            ->route('agency-admin.agency')
+            ->with('agency_intervention_notice', [
+                'title' => (string) $notification->title,
+                'message' => (string) $notification->message,
+                'reason' => (string) ($data['reason'] ?? ''),
+                'actor_name' => (string) ($data['actor_name'] ?? 'System Administrator'),
+                'changed_fields' => array_values((array) ($data['changed_fields'] ?? [])),
+                'old_values' => (array) ($data['old_values'] ?? []),
+                'new_values' => (array) ($data['new_values'] ?? []),
+                'created_at' => $notification->created_at?->toIso8601String(),
+            ]);
+    }
+
+    public function agencyProfileRevision()
+    {
+        $agency = $this->agency();
+
+        return response()->json([
+            'agency_id' => (int) $agency->id,
+            'profile_revision' => (int) $agency->profile_revision,
+            'updated_at' => $agency->updated_at?->toIso8601String(),
+        ])->header('Cache-Control', 'no-store, private');
+    }
+
     public function editAgency()
     {
         $agency = $this->agency()->load(['type', 'category', 'contacts.contactType']);
@@ -765,6 +821,7 @@ class AgencyAdminController extends Controller
         // Blade's directive argument parser on this view).
         $agencyProfileData = [
             'id' => $agency->id,
+            'profile_revision' => old('expected_profile_revision', $agency->profile_revision),
             'name' => old('agency_name', $agency->agency_name),
             'abbreviation' => old('agency_abbreviation', $agency->agency_abbreviation),
             'type_id' => old('agency_type_id', $agency->agency_type_id),
@@ -806,6 +863,7 @@ class AgencyAdminController extends Controller
         $agency = $this->agency();
 
         $validated = $request->validate([
+            'expected_profile_revision' => ['required', 'integer', 'min:1'],
             'agency_name' => ['required', 'string', 'max:255', Rule::unique('agencies', 'agency_name')->ignore($agency->id)],
             'agency_abbreviation' => ['required', 'string', 'max:255', Rule::unique('agencies', 'agency_abbreviation')->ignore($agency->id)],
             'agency_type_id' => ['required', 'integer', 'exists:agency_types,id'],
@@ -849,12 +907,28 @@ class AgencyAdminController extends Controller
                 $hasHotline = true;
             }
         }
-        if (!$hasHotline || !$hasEmail) {
+        /*
+     * Enforce one primary contact per contact type on the server. The UI
+     * also keeps this state synchronized, but requests must remain valid
+     * even when submitted outside the browser interface.
+     */
+    $duplicatePrimaryContactType = collect($validated['contacts'])
+        ->filter(fn ($contact) => !empty($contact['is_primary']))
+        ->groupBy('contact_type_id')
+        ->first(fn ($contacts) => $contacts->count() > 1);
+
+    if ($duplicatePrimaryContactType) {
+        return back()
+            ->withErrors(['contacts' => 'Only one contact per contact type can be marked as primary.'])
+            ->withInput();
+    }
+
+    if (!$hasHotline || !$hasEmail) {
             $missing = array_filter(['Hotline' => !$hasHotline, 'Email' => !$hasEmail], fn ($required) => $required);
             return back()->withErrors(['contacts' => 'The following contact information is required: ' . implode(' and ', array_keys($missing)) . '.'])->withInput();
         }
 
-        $agencyFields = collect($validated)->except('contacts')->toArray();
+        $agencyFields = collect($validated)->except(['contacts', 'expected_profile_revision'])->toArray();
         $oldImage = $agency->agency_image;
         $newImage = null;
         if ($request->hasFile('agency_image')) {
@@ -885,11 +959,29 @@ class AgencyAdminController extends Controller
 
         try {
             DB::transaction(function () use ($agency, $agencyFields, $validated) {
-                $agency->fill($agencyFields)->save();
-                $agency->contacts()->delete();
+                /*
+                 * The agency admin can only save against the profile revision
+                 * they loaded. A row lock makes this check atomic with writes.
+                 */
+                $lockedAgency = Agency::query()
+                    ->whereKey($agency->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ((int) $lockedAgency->profile_revision !== (int) $validated['expected_profile_revision']) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'agency_version' => 'This agency profile changed while you were editing it. Your changes were not saved. Reload the latest profile and try again.',
+                    ]);
+                }
+
+                $lockedAgency->fill($agencyFields);
+                $lockedAgency->profile_revision = ((int) $lockedAgency->profile_revision) + 1;
+                $lockedAgency->save();
+
+                $lockedAgency->contacts()->delete();
                 foreach ($validated['contacts'] as $index => $contact) {
                     AgencyContact::query()->create([
-                        'agency_id' => $agency->id,
+                        'agency_id' => $lockedAgency->id,
                         'contact_type_id' => $contact['contact_type_id'],
                         'label' => $contact['label'] ?? null,
                         'value' => $contact['value'],

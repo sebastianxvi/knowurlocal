@@ -66,8 +66,12 @@
 #alert-modal .alert-modal-input { margin-top: 14px; }
 #alert-modal .alert-modal-input[hidden] { display: none !important; }
 #alert-modal .alert-modal-input label { display: block; margin-bottom: 7px; color: #43516b; font-size: 12px; font-weight: 700; }
+#alert-modal .alert-modal-input textarea[hidden] { display: none !important; }
 #alert-modal .alert-modal-input textarea { display: block; width: 100%; min-height: 92px; box-sizing: border-box; padding: 10px 11px; border: 1px solid #dce4f1; border-radius: 10px; background: #fff; color: #263650; font: inherit; font-size: 13px; line-height: 1.5; resize: vertical; }
 #alert-modal .alert-modal-input textarea:focus { outline: 3px solid rgba(78, 111, 208, .16); border-color: #8299e2; }
+#alert-modal .alert-modal-input input[type="password"] { display: block; width: 100%; min-height: 42px; box-sizing: border-box; padding: 10px 11px; border: 1px solid #dce4f1; border-radius: 10px; background: #fff; color: #263650; font: inherit; font-size: 13px; }
+#alert-modal .alert-modal-input input[type="password"]:focus { outline: 3px solid rgba(78, 111, 208, .16); border-color: #8299e2; }
+#alert-modal .alert-modal-input input[hidden] { display: none !important; }
 #alert-modal .alert-modal-input-error { margin: 6px 0 0; color: #b42332; font-size: 11px; line-height: 1.45; }
 #alert-modal .alert-modal-input-error[hidden] { display: none !important; }
 

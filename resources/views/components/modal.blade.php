@@ -26,6 +26,7 @@
         <!-- OPTIONAL INPUT (for audited actions such as moving a report to Trash) -->
         <div class="alert-modal-input" id="alert-modal-input-wrap" hidden>
             <label for="alert-modal-input" id="alert-modal-input-label"></label>
+            <input id="alert-modal-password-input" type="password" autocomplete="current-password" hidden />
             <textarea id="alert-modal-input" rows="3" hidden></textarea>
             <p class="alert-modal-input-error" id="alert-modal-input-error" hidden></p>
         </div>

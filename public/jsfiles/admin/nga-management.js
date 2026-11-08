@@ -48,6 +48,51 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let agencyImageProcessing = false;
 
+    // Edit mode tracks actual profile changes against the loaded baseline.
+    // Intervention credentials/reason are authorization metadata only.
+    let editFormBaseline = null;
+
+    function getAgencyFormState() {
+        if (!form) return "";
+
+        return JSON.stringify(Array.from(form.elements)
+            .filter(element => element.name &&
+                !["expected_profile_revision", "intervention_reason", "current_password"].includes(element.name) &&
+                element.type !== "submit" && element.type !== "button")
+            .map(element => {
+                if (element.type === "file") {
+                    const file = element.files && element.files[0];
+                    return [element.name, file ? {
+                        name: file.name, size: file.size, lastModified: file.lastModified
+                    } : null];
+                }
+                if (element.type === "checkbox" || element.type === "radio") {
+                    return [element.name, element.checked ? element.value : null];
+                }
+                return [element.name, element.value];
+            }));
+    }
+
+    function refreshEditUpdateButton() {
+        const saveBtn = document.querySelector(".btn-save");
+        if (!saveBtn) return;
+
+        if (currentMode === "view") {
+            saveBtn.disabled = true;
+        } else if (currentMode === "edit") {
+            saveBtn.disabled = editFormBaseline === null ||
+                getAgencyFormState() === editFormBaseline || agencyImageProcessing;
+        } else {
+            saveBtn.disabled = false;
+        }
+    }
+
+    function captureEditFormBaseline() {
+        editFormBaseline = getAgencyFormState();
+        refreshEditUpdateButton();
+    }
+
+
 
         // =====================================================
     // AUTO-GROWING AGENCY TEXTAREAS
@@ -1736,6 +1781,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =====================================================
+
+    // Re-evaluate edit dirtiness as fields and dynamically added contacts change.
+    if (form) {
+        ["input", "change"].forEach(eventName => {
+            form.addEventListener(eventName, () => {
+                if (currentMode === "edit") refreshEditUpdateButton();
+            });
+        });
+        form.addEventListener("click", () => {
+            if (currentMode === "edit") refreshEditUpdateButton();
+        });
+    }
+
     // FORM SUBMISSION VALIDATION
     // =====================================================
 
@@ -1744,6 +1802,12 @@ document.addEventListener("DOMContentLoaded", function () {
         form.addEventListener(
             "submit",
             async function (e) {
+
+                if (currentMode === "edit" &&
+                    (editFormBaseline === null || getAgencyFormState() === editFormBaseline)) {
+                    e.preventDefault();
+                    return;
+                }
 
                 /*
                  * View mode must never submit.
@@ -1860,6 +1924,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 }
 
+                // Ask for the intervention reason only after the administrator
+                // has made changes and is attempting to save.
+                const passwordInput = document.getElementById("intervention-password");
+                const reasonInput = document.getElementById("intervention-reason");
+                if (currentMode === "edit" && passwordInput && passwordInput.value && reasonInput && !reasonInput.value.trim()) {
+                    e.preventDefault();
+                    const agencyName = document.getElementById("agency_name")?.value || "this agency";
+                    const reason = await requestAgencyInterventionReason(agencyName);
+                    if (!reason) return;
+                    reasonInput.value = reason;
+                    form.requestSubmit();
+                    return;
+                }
 
                 /*
                  * Prepare the image before the request is allowed
@@ -2332,6 +2409,8 @@ document.addEventListener("DOMContentLoaded", function () {
             agencyImageProcessing =
                 false;
 
+            refreshEditUpdateButton();
+
         }
 
     }
@@ -2459,6 +2538,11 @@ document.addEventListener("DOMContentLoaded", function () {
     // =====================================================
 
     function fillForm(data) {
+
+        const revisionInput = document.getElementById("expected-profile-revision");
+        if (revisionInput) {
+            revisionInput.value = data.profile_revision || "";
+        }
 
         document.getElementById(
             "agency_name"
@@ -2764,6 +2848,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 currentMode =
             mode;
 
+        editFormBaseline = null;
+        refreshEditUpdateButton();
+
 
         /*
          * Store the agency ID currently being edited.
@@ -2831,7 +2918,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (saveBtn) {
 
             saveBtn.disabled =
-                mode === "view";
+                mode === "view" || mode === "edit";
 
         }
 
@@ -2884,6 +2971,14 @@ document.addEventListener("DOMContentLoaded", function () {
              */
             addContact();
 
+
+            /*
+             * New records do not have a profile revision yet.
+             */
+            const revisionInput = document.getElementById("expected-profile-revision");
+            if (revisionInput) {
+                revisionInput.value = "";
+            }
 
             /*
              * Add route.
@@ -3003,6 +3098,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 data
             );
 
+            captureEditFormBaseline();
 
             setMapToCoordinates(
                 data.lat,
@@ -3175,6 +3271,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     id:
                         row.dataset.id,
 
+                    profile_revision:
+                        row.dataset.profileRevision,
+
                     name:
                         row.dataset.name,
 
@@ -3262,6 +3361,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 clearContacts();
+
+                const interventionReason = document.getElementById("intervention-reason");
+                const interventionPassword = document.getElementById("intervention-password");
+                if (interventionReason) interventionReason.value = "";
+                if (interventionPassword) interventionPassword.value = "";
 
             },
             250
@@ -3839,12 +3943,84 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =====================================================
+    // SYSTEM ADMIN INTERVENTION RE-AUTHENTICATION
+    // =====================================================
+
+    function requestAgencyIntervention(agencyName) {
+        return new Promise((resolve) => {
+            if (typeof window.showAlertModal !== "function") {
+                resolve(null);
+                return;
+            }
+
+            window.showAlertModal({
+                title: "Administrative intervention",
+                name: agencyName,
+                text: "Verify your identity before editing this agency. Your password is checked securely by the server.",
+                icon: "ph-light ph-shield-check",
+                variant: "info",
+                input: {
+                    type: "password",
+                    label: "Confirm your administrator password",
+                    placeholder: "Enter your current account password",
+                    required: true,
+                    maxLength: 255,
+                    validationMessage: "Your password is required to continue."
+                },
+                confirmText: "Verify and continue",
+                cancelText: "Cancel",
+                showCancel: true,
+                loading: false,
+                onConfirm: (password) => {
+                    window.closeAlertModal();
+                    resolve({ password });
+                },
+                onCancel: () => resolve(null)
+            });
+        });
+    }
+
+    function requestAgencyInterventionReason(agencyName) {
+        return new Promise((resolve) => {
+            if (typeof window.showAlertModal !== "function") {
+                resolve(null);
+                return;
+            }
+
+            window.showAlertModal({
+                title: "Reason for changes",
+                name: agencyName,
+                text: "Explain why this agency information is being changed. This reason will be recorded in the activity log.",
+                icon: "ph-light ph-note-pencil",
+                variant: "warning",
+                input: {
+                    type: "textarea",
+                    label: "Administrative reason",
+                    placeholder: "Describe the reason for this update (at least 10 characters)…",
+                    required: true,
+                    minLength: 10,
+                    maxLength: 1000,
+                    validationMessage: "Please provide a meaningful reason (at least 10 characters)."
+                },
+                confirmText: "Continue to save",
+                cancelText: "Cancel",
+                showCancel: true,
+                loading: false,
+                onConfirm: (reason) => {
+                    window.closeAlertModal();
+                    resolve(reason.trim());
+                },
+                onCancel: () => resolve(null)
+            });
+        });
+    }
+
     // EDIT BUTTON
     // =====================================================
 
     document.addEventListener(
         "click",
-        function (e) {
+        async function (e) {
 
             const btn =
                 e.target.closest(
@@ -3893,12 +4069,73 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
 
+            let intervention = null;
+            const assignedAdminCount = Number(btn.dataset.adminCount || 0);
+            if (!window.agencyAdminProfileMode) {
+                intervention = await requestAgencyIntervention(btn.dataset.name || "this agency");
+                if (!intervention) return;
+
+                // Verify credentials before allowing access to the edit form.
+                try {
+                    const response = await fetch("/admin/agencies/verify-intervention-password", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Accept": "application/json",
+                            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.content || ""
+                        },
+                        body: JSON.stringify({ password: intervention.password })
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.verified) {
+                        if (typeof window.showAlertModal === "function") {
+                            window.showAlertModal({
+                                title: "Password verification failed",
+                                text: result.message || "Your password could not be verified.",
+                                icon: "!",
+                                variant: "danger",
+                                confirmText: "OK",
+                                showCancel: false
+                            });
+                        } else {
+                            alert(result.message || "Your password could not be verified.");
+                        }
+                        return;
+                    }
+                } catch (error) {
+                    if (typeof window.showAlertModal === "function") {
+                        window.showAlertModal({
+                            title: "Verification unavailable",
+                            text: "Could not verify your password. Please try again.",
+                            icon: "!",
+                            variant: "danger",
+                            confirmText: "OK",
+                            showCancel: false
+                        });
+                    } else {
+                        alert("Could not verify your password. Please try again.");
+                    }
+                    return;
+                }
+            }
+
+            const reasonInput = document.getElementById("intervention-reason");
+            const passwordInput = document.getElementById("intervention-password");
+            if (reasonInput) reasonInput.value = "";
+            if (passwordInput) passwordInput.value = intervention?.password || "";
+
             openModal(
                 "edit",
                 {
 
                     id:
                         btn.dataset.id,
+
+                    assigned_admin_count:
+                        assignedAdminCount,
+
+                    profile_revision:
+                        btn.dataset.profileRevision,
 
                     name:
                         btn.dataset.name,

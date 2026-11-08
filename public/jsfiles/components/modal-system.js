@@ -17,6 +17,7 @@
     const inputWrap = document.getElementById('alert-modal-input-wrap');
     const inputLabel = document.getElementById('alert-modal-input-label');
     const inputEl = document.getElementById('alert-modal-input');
+    const passwordEl = document.getElementById('alert-modal-password-input');
     const inputError = document.getElementById('alert-modal-input-error');
 
     let closeTimer = null;
@@ -90,17 +91,29 @@
         nameEl.textContent = config.name || '';
         nameEl.hidden = !config.name;
         textEl.textContent = config.text || '';
+        textEl.style.whiteSpace = 'pre-line';
 
         const inputConfig = config.input && typeof config.input === 'object' ? config.input : null;
         if (inputWrap && inputLabel && inputEl && inputError) {
             inputWrap.hidden = !inputConfig;
             inputEl.hidden = !inputConfig;
-            inputEl.value = inputConfig ? String(inputConfig.value || '') : '';
-            inputEl.required = Boolean(inputConfig?.required);
+            const isPassword = inputConfig?.type === 'password';
+            const activeInput = isPassword && passwordEl ? passwordEl : inputEl;
+            if (passwordEl) {
+                passwordEl.hidden = !isPassword;
+                passwordEl.value = isPassword ? String(inputConfig?.value || '') : '';
+                passwordEl.required = Boolean(isPassword && inputConfig?.required);
+                passwordEl.maxLength = Number.isFinite(inputConfig?.maxLength) ? inputConfig.maxLength : 255;
+                passwordEl.placeholder = isPassword ? (inputConfig?.placeholder || '') : '';
+                passwordEl.setAttribute('aria-describedby', 'alert-modal-input-error');
+            }
+            inputEl.hidden = isPassword;
+            inputEl.value = !isPassword && inputConfig ? String(inputConfig.value || '') : '';
+            inputEl.required = Boolean(!isPassword && inputConfig?.required);
             inputEl.minLength = Number.isFinite(inputConfig?.minLength) ? inputConfig.minLength : 0;
-            inputEl.maxLength = Number.isFinite(inputConfig?.maxLength) ? inputConfig.maxLength : 500;
-            inputEl.placeholder = inputConfig?.placeholder || '';
-            inputEl.setAttribute('aria-describedby', 'alert-modal-input-error');
+            inputEl.maxLength = Number.isFinite(inputConfig?.maxLength) ? inputConfig.maxLength : 1000;
+            inputEl.placeholder = !isPassword ? (inputConfig?.placeholder || '') : '';
+            activeInput.setAttribute('aria-describedby', 'alert-modal-input-error');
             inputLabel.textContent = inputConfig?.label || 'Additional information';
             inputError.textContent = '';
             inputError.hidden = true;
@@ -110,6 +123,14 @@
                 inputError.textContent = '';
                 inputEl.setAttribute('aria-invalid', 'false');
             };
+            if (passwordEl) {
+                passwordEl.setAttribute('aria-invalid', 'false');
+                passwordEl.oninput = () => {
+                    inputError.hidden = true;
+                    inputError.textContent = '';
+                    passwordEl.setAttribute('aria-invalid', 'false');
+                };
+            }
         }
 
         iconEl.replaceChildren();
@@ -172,15 +193,16 @@
         confirmBtn.addEventListener('click', () => {
             if (confirmBtn.disabled || confirmBtn.dataset.loading === 'true') return;
 
-            const inputValue = inputConfig && inputEl ? inputEl.value : undefined;
-            if (inputConfig && inputEl) {
+            const activeInput = inputConfig?.type === 'password' && passwordEl ? passwordEl : inputEl;
+            const inputValue = inputConfig && activeInput ? activeInput.value : undefined;
+            if (inputConfig && activeInput) {
                 const trimmedLength = inputValue.trim().length;
                 const minimum = Number.isFinite(inputConfig.minLength) ? inputConfig.minLength : 0;
                 if ((inputConfig.required && trimmedLength === 0) || trimmedLength < minimum) {
                     inputError.textContent = inputConfig.validationMessage || `Please enter at least ${minimum} characters.`;
                     inputError.hidden = false;
-                    inputEl.setAttribute('aria-invalid', 'true');
-                    inputEl.focus();
+                    activeInput.setAttribute('aria-invalid', 'true');
+                    activeInput.focus();
                     return;
                 }
             }
@@ -217,7 +239,7 @@
         setVisible(true);
 
         // Keep keyboard focus inside the action area without a heavy focus animation.
-        const focusTarget = inputConfig ? inputEl : showCancel ? cancelBtn : showConfirm ? confirmBtn : modal.querySelector('.modal');
+        const focusTarget = inputConfig ? (inputConfig.type === 'password' && passwordEl ? passwordEl : inputEl) : showCancel ? cancelBtn : showConfirm ? confirmBtn : modal.querySelector('.modal');
         if (focusTarget && typeof focusTarget.focus === 'function') {
             window.setTimeout(() => focusTarget.focus({ preventScroll: true }), 0);
         }

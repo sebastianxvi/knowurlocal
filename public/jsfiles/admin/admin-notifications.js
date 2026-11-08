@@ -10,6 +10,7 @@
     const list = root.querySelector('[data-notification-list]');
     const supportCountEl = root.querySelector('[data-support-count]');
     const collaborationCountEl = root.querySelector('[data-collaboration-count]');
+    const interventionCountEl = root.querySelector('[data-intervention-count]');
     const echoReadyEvent = 'knowurlocal:echo-ready';
 
     if (!trigger || !panel) return;
@@ -18,6 +19,7 @@
 
     let supportCount = Number.parseInt(supportCountEl?.textContent || '0', 10) || 0;
     let collaborationCount = Number.parseInt(collaborationCountEl?.textContent || '0', 10) || 0;
+    let interventionCount = Number.parseInt(interventionCountEl?.textContent || '0', 10) || 0;
     const seenSupportIds = new Set();
     const seenCollaborationIds = new Set();
 
@@ -29,7 +31,7 @@
     });
 
     const updateBadge = () => {
-        const total = Math.max(0, supportCount + collaborationCount);
+        const total = Math.max(0, supportCount + collaborationCount + interventionCount);
         if (!badge) return;
         badge.hidden = total < 1;
         badge.textContent = total > 99 ? '99+' : String(total);
@@ -39,6 +41,7 @@
     const updateSummary = () => {
         if (supportCountEl) supportCountEl.textContent = String(supportCount);
         if (collaborationCountEl) collaborationCountEl.textContent = String(collaborationCount);
+        if (interventionCountEl) interventionCountEl.textContent = String(interventionCount);
         updateBadge();
     };
 
@@ -84,6 +87,7 @@
         if (
             getNotificationItems('support').length ||
             getNotificationItems('collaboration').length ||
+            getNotificationItems('intervention').length ||
             list.querySelector('.admin-notification-empty')
         ) {
             return;
@@ -314,6 +318,54 @@
         return true;
     };
 
+    const prependInterventionNotification = ({ id, title, meta, href }) => {
+        if (!list || !id) return false;
+        const idString = String(id);
+        if (getNotificationItems('intervention').some((item) => String(item.dataset.notificationId) === idString)) {
+            return false;
+        }
+
+        removeEmptyState();
+        let section = list.querySelector('.admin-notification-section-label[data-section="intervention"]');
+        if (!section) {
+            section = document.createElement('div');
+            section.className = 'admin-notification-section-label';
+            section.dataset.section = 'intervention';
+            section.textContent = 'Agency profile updates';
+            list.prepend(section);
+        }
+
+        const item = document.createElement('a');
+        item.className = 'admin-notification-item is-new';
+        item.href = href || '/agency-admin/agency';
+        item.dataset.notificationKind = 'intervention';
+        item.dataset.notificationId = idString;
+
+        const iconWrap = document.createElement('span');
+        iconWrap.className = 'admin-notification-item-icon is-collaboration';
+        const icon = document.createElement('i');
+        icon.className = 'ph-light ph-shield-check';
+        icon.setAttribute('aria-hidden', 'true');
+        iconWrap.appendChild(icon);
+
+        const copy = document.createElement('span');
+        copy.className = 'admin-notification-item-copy';
+        const titleEl = document.createElement('strong');
+        titleEl.textContent = title || 'Agency profile updated by System Admin';
+        const metaEl = document.createElement('small');
+        metaEl.textContent = meta || 'Reason details available';
+        copy.append(titleEl, metaEl);
+
+        const arrow = document.createElement('i');
+        arrow.className = 'ph-light ph-arrow-up-right admin-notification-item-arrow';
+        arrow.setAttribute('aria-hidden', 'true');
+
+        item.append(iconWrap, copy, arrow);
+        section.after(item);
+        window.setTimeout(() => item.classList.remove('is-new'), 1600);
+        return true;
+    };
+
     const subscribe = () => {
         if (subscriptionsStarted) return;
 
@@ -492,6 +544,24 @@
                 // authenticated ID, and the payload is checked before rendering.
                 echo.private(`admin.${Number(adminId)}`)
                     .listen('.collaboration.task.updated', handleAgencyCollaboration);
+
+                // Persistent intervention notifications are scoped to the authenticated
+                // user's own private notification channel.
+                echo.private(`App.Models.User.${Number(adminId)}`)
+                    .listen('.user.notification.created', (event) => {
+                        if (!['agency_profile_admin_intervention', 'faq_admin_intervention'].includes(event?.type) || !event?.id) return;
+                        const added = prependInterventionNotification({
+                            id: event.id,
+                            title: event.title,
+                            meta: event.message,
+                            href: event.open_url || (event.type === 'faq_admin_intervention' ? '/agency-admin/faqs' : '/agency-admin/agency'),
+                        });
+                        if (added) {
+                            interventionCount += 1;
+                            updateSummary();
+                            open();
+                        }
+                    });
 
                 return;
             }

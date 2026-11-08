@@ -172,6 +172,7 @@
     class="agency-row"
 
     data-id="{{ $agency->id }}"
+    data-profile-revision="{{ $agency->profile_revision }}"
     data-name="{{ $agency->agency_name }}"
     data-abbreviation="{{ $agency->agency_abbreviation }}"
     data-type_id="{{ $agency->agency_type_id }}"
@@ -299,6 +300,8 @@
             aria-label="Edit {{ $agency->agency_name }}"
             title="Edit agency"
             data-id="{{ $agency->id }}"
+            data-profile-revision="{{ $agency->profile_revision }}"
+            data-admin-count="{{ (int) ($agency->administrators_count ?? 0) }}"
             data-name="{{ $agency->agency_name }}"
             data-abbreviation="{{ $agency->agency_abbreviation }}"
             data-type_id="{{ $agency->agency_type_id }}"
@@ -568,6 +571,9 @@
         >
             @csrf
             <input type="hidden" name="_method" id="form-method" value="POST">
+            <input type="hidden" name="expected_profile_revision" id="expected-profile-revision" value="">
+            <input type="hidden" name="intervention_reason" id="intervention-reason" value="">
+            <input type="hidden" name="current_password" id="intervention-password" value="">
 
             <!-- ================= IMAGE ================= -->
             <div class="form-card">

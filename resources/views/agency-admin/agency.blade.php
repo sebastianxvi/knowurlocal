@@ -4,6 +4,7 @@
 <link rel="stylesheet" href="{{ asset('cssfiles/theme.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/nga-management.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/agency-admin/agency-intervention-modal.css') }}">
 
 @endpush
 
@@ -31,6 +32,69 @@
         <div role="alert" class="alert alert-danger agency-profile-alert agency-profile-alert-error">
             <i class="ph-light ph-warning-circle" aria-hidden="true"></i>
             <div><strong>Please review the following:</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+        </div>
+    @endif
+
+    @if(session('agency_intervention_notice'))
+        @php($interventionNotice = session('agency_intervention_notice'))
+        <div
+            id="agency-intervention-history-modal"
+            class="agency-intervention-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-hidden="true"
+            aria-labelledby="agency-intervention-modal-title"
+            hidden
+        >
+            <div class="agency-intervention-modal__backdrop" data-intervention-close></div>
+            <section class="agency-intervention-modal__panel" role="document" tabindex="-1">
+                <header class="agency-intervention-modal__header">
+                    <div class="agency-intervention-modal__heading">
+                        <span class="agency-intervention-modal__icon" aria-hidden="true"><i class="ph-light ph-shield-check"></i></span>
+                        <div>
+                            <p class="agency-intervention-modal__eyebrow">Agency change history</p>
+                            <h2 id="agency-intervention-modal-title">{{ $interventionNotice['title'] }}</h2>
+                        </div>
+                    </div>
+                    <button type="button" class="agency-intervention-modal__close" aria-label="Close change history" data-intervention-close>
+                        <i class="ph-light ph-x" aria-hidden="true"></i>
+                    </button>
+                </header>
+
+                <div class="agency-intervention-modal__body">
+                    <div class="agency-intervention-modal__summary">
+                        <p><span>Updated by</span><strong>{{ $interventionNotice['actor_name'] }}</strong></p>
+                        <p><span>Reason</span><strong>{{ $interventionNotice['reason'] ?: $interventionNotice['message'] }}</strong></p>
+                        @if(!empty($interventionNotice['changed_fields']))
+                            <p><span>Changed fields</span><strong>{{ collect($interventionNotice['changed_fields'])->map(fn ($field) => \Illuminate\Support\Str::headline($field))->implode(', ') }}</strong></p>
+                        @endif
+                    </div>
+
+                    @if(!empty($interventionNotice['changed_fields']))
+                        <div class="agency-intervention-modal__changes">
+                            <h3>Before and after</h3>
+                            <div class="agency-intervention-modal__table-wrap">
+                                <table>
+                                    <thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead>
+                                    <tbody>
+                                    @foreach($interventionNotice['changed_fields'] as $field)
+                                        <tr>
+                                            <td>{{ \Illuminate\Support\Str::headline($field) }}</td>
+                                            <td>{{ is_array($interventionNotice['old_values'][$field] ?? null) ? json_encode($interventionNotice['old_values'][$field], JSON_UNESCAPED_UNICODE) : ($interventionNotice['old_values'][$field] ?? '—') }}</td>
+                                            <td>{{ is_array($interventionNotice['new_values'][$field] ?? null) ? json_encode($interventionNotice['new_values'][$field], JSON_UNESCAPED_UNICODE) : ($interventionNotice['new_values'][$field] ?? '—') }}</td>
+                                        </tr>
+                                    @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
+                <footer class="agency-intervention-modal__footer">
+                    <button type="button" class="agency-intervention-modal__done" data-intervention-close>Got it</button>
+                </footer>
+            </section>
         </div>
     @endif
 
@@ -321,7 +385,9 @@
 <script>
 window.agencyAdminProfileMode = true;
 window.agencyAdminProfileUpdateUrl = @json(route('agency-admin.agency.update'));
+window.agencyProfileRevisionUrl = @json(route('agency-admin.agency.revision'));
 window.agencyProfileData = @json($agencyProfileData);
+window.agencyProfileCurrentRevision = @json((int) $agency->profile_revision);
 window.agencyAdminProfileOpenOnLoad = @json($errors->any());
 
 window.agencyContactTypes = {!! $contactTypes->values()->toJson() !!};
@@ -357,6 +423,7 @@ window.agencyContactTypes = {!! $contactTypes->values()->toJson() !!};
         >
             @csrf
             <input type="hidden" name="_method" id="form-method" value="POST">
+            <input type="hidden" name="expected_profile_revision" id="expected-profile-revision" value="{{ old('expected_profile_revision', $agency->profile_revision) }}">
 
             <!-- ================= IMAGE ================= -->
             <div class="form-card">
@@ -719,9 +786,101 @@ Additional contact information may be added.
     });
 })();
 </script>
+<script>
+(() => {
+    const modal = document.getElementById('agency-intervention-history-modal');
+    if (!modal) return;
+    const panel = modal.querySelector('.agency-intervention-modal__panel');
+    const close = () => {
+        modal.hidden = true;
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('agency-intervention-modal-open');
+    };
+    modal.querySelectorAll('[data-intervention-close]').forEach(button => button.addEventListener('click', close));
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !modal.hidden) close();
+    });
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('agency-intervention-modal-open');
+    requestAnimationFrame(() => panel?.focus());
+})();
+</script>
 <script src="{{ asset('jsfiles/components/form-system.js') }}"></script>
 @endsection
 
 @push('scripts')
 <script src="{{ asset('jsfiles/admin/nga-management.js') }}"></script>
+<script>
+(() => {
+    const agencyId = Number(window.agencyProfileData?.id || 0);
+    if (!agencyId) return;
+
+    const form = document.getElementById('agencyForm');
+    let profileDirty = false;
+    let subscribed = false;
+    let newestRevision = Number(window.agencyProfileCurrentRevision || window.agencyProfileData?.profile_revision || 0);
+
+    form?.addEventListener('input', () => { profileDirty = true; });
+    form?.addEventListener('change', () => { profileDirty = true; });
+
+    const applyProfileRevision = (revision, reason = '') => {
+        if (!revision || revision <= newestRevision) return;
+        newestRevision = revision;
+
+        const message = 'The agency profile was updated by System Admin. ' +
+            (reason ? `Reason: ${reason}\n\n` : '') +
+            'Reload the latest profile now?';
+
+        if (profileDirty && !window.confirm(
+            'Your profile edit contains unsaved changes. Reloading will discard those edits.\n\n' + message
+        )) {
+            return;
+        }
+
+        window.location.reload();
+    };
+
+    const subscribeToAgencyProfile = () => {
+        if (subscribed || !window.Echo) return;
+        subscribed = true;
+
+        window.Echo.private(`agency.${agencyId}.profile`)
+            .listen('.agency.profile.updated', (event) => {
+                applyProfileRevision(
+                    Number(event?.profile_revision || 0),
+                    String(event?.reason || '')
+                );
+            });
+    };
+
+    // Reverb is the primary live channel. This lightweight authenticated
+    // revision check catches a missed event or a temporarily unavailable socket.
+    const checkProfileRevision = async () => {
+        if (!window.agencyProfileRevisionUrl || document.visibilityState === 'hidden') return;
+        try {
+            const response = await fetch(window.agencyProfileRevisionUrl, {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: { Accept: 'application/json' }
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            if (Number(data?.agency_id) !== agencyId) return;
+            applyProfileRevision(Number(data?.profile_revision || 0));
+        } catch (error) {
+            // Reverb remains the primary path; polling is best-effort only.
+        }
+    };
+
+    window.addEventListener('knowurlocal:echo-ready', subscribeToAgencyProfile);
+    window.addEventListener('focus', checkProfileRevision);
+    document.addEventListener('visibilitychange', checkProfileRevision);
+    window.setInterval(checkProfileRevision, 45000);
+    subscribeToAgencyProfile();
+    window.addEventListener('knowurlocal:echo-ready', subscribeToAgencyProfile);
+    subscribeToAgencyProfile();
+})();
+</script>
 @endpush

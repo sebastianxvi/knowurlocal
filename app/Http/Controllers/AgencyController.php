@@ -5,6 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use App\Events\AgencyProfileUpdated;
+use App\Events\UserNotificationCreated;
+use App\Models\UserNotification;
 
 use App\Models\Agency;
 use App\Models\UserLog;
@@ -12,6 +17,7 @@ use App\Models\AgencyType;
 use App\Models\Category;
 use App\Models\AgencyContact;
 use App\Models\ContactType;
+use App\Services\AuditLogService;
 
 class AgencyController extends Controller
 {
@@ -63,6 +69,7 @@ class AgencyController extends Controller
         if ($status === 'trashed') {
 
             $query = Agency::onlyTrashed()
+                ->withCount('administrators')
                 ->with([
                     'type',
                     'category',
@@ -72,6 +79,7 @@ class AgencyController extends Controller
         } else {
 
             $query = Agency::query()
+                ->withCount('administrators')
                 ->with([
                     'type',
                     'category',
@@ -669,6 +677,22 @@ public function getAll()
      * Stop the request before touching the database when
      * one of the mandatory contact types is missing.
      */
+    /*
+     * Enforce one primary contact per contact type on the server. The UI
+     * also keeps this state synchronized, but requests must remain valid
+     * even when submitted outside the browser interface.
+     */
+    $duplicatePrimaryContactType = collect($validated['contacts'])
+        ->filter(fn ($contact) => !empty($contact['is_primary']))
+        ->groupBy('contact_type_id')
+        ->first(fn ($contacts) => $contacts->count() > 1);
+
+    if ($duplicatePrimaryContactType) {
+        return back()
+            ->withErrors(['contacts' => 'Only one contact per contact type can be marked as primary.'])
+            ->withInput();
+    }
+
     if (!$hasHotline || !$hasEmail) {
 
         $missing = [];
@@ -701,7 +725,7 @@ public function getAll()
      * contacts belong to agency_contacts, not agencies.
      */
     $agencyData = collect($validated)
-        ->except('contacts')
+        ->except(['contacts', 'expected_profile_revision', 'intervention_reason', 'current_password'])
         ->toArray();
 
 
@@ -926,6 +950,26 @@ public function getAll()
      * ✏️ UPDATE AGENCY
      * =========================================================
      */
+    /**
+     * Verify the current administrator password before opening an agency
+     * intervention edit form. The password is still rechecked on update.
+     */
+    public function verifyInterventionPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'password' => ['required', 'string', 'max:255'],
+        ]);
+
+        if (!Hash::check((string) $validated['password'], (string) $request->user()->password)) {
+            return response()->json([
+                'message' => 'The administrator password is incorrect.',
+            ], 422);
+        }
+
+        return response()->json(['verified' => true]);
+    }
+
+
     public function update(Request $request, $id)
 {
     /*
@@ -937,13 +981,22 @@ public function getAll()
      */
     $agency = Agency::findOrFail($id);
 
+    abort_unless(in_array((string) $request->user()?->role, ['admin', 'superadmin'], true), 403);
+
+    $assignedAgencyAdmins = $agency->administrators()->get();
+    // Every System Admin/Admin agency edit is a privileged intervention, even when no Agency Admin is assigned.
+    $requiresIntervention = true;
+
 
     /*
      * =====================================================
      * VALIDATE AGENCY
      * =====================================================
      */
-    $validated = $request->validate([
+    $validationRules = [
+
+        'expected_profile_revision' =>
+            'required|integer|min:1',
 
         'agency_name' =>
             'required|string|max:255',
@@ -1005,7 +1058,52 @@ public function getAll()
 
         'contacts.*.sort_order' =>
             'nullable|integer|min:0',
-    ]);
+    ];
+
+    $validationRules['intervention_reason'] = $requiresIntervention
+        ? ['required', 'string', 'min:10', 'max:1000']
+        : ['nullable', 'string', 'max:1000'];
+    $validationRules['current_password'] = $requiresIntervention
+        ? ['required', 'string', 'max:255']
+        : ['nullable', 'string', 'max:255'];
+
+    $validated = $request->validate($validationRules);
+
+    if ($requiresIntervention && !Hash::check(
+        (string) $validated['current_password'],
+        (string) $request->user()->password
+    )) {
+        return back()
+            ->withErrors(['current_password' => 'The administrator password is incorrect. No agency changes were saved.'])
+            ->withInput($request->except('current_password'));
+    }
+
+    /*
+     * Keep agency identity uniqueness consistent with creation. Include
+     * soft-deleted rows so an agency cannot be duplicated and later collide
+     * with a restored record. Exclude the agency currently being edited.
+     */
+    $normalizeAgencyIdentity = static fn ($value) => strtolower(
+        preg_replace('/\\s+/', ' ', trim((string) $value))
+    );
+
+    $normalizedAgencyName = $normalizeAgencyIdentity($validated['agency_name']);
+    $normalizedAgencyAbbreviation = $normalizeAgencyIdentity($validated['agency_abbreviation']);
+
+    $duplicateAgency = Agency::withTrashed()
+        ->whereKeyNot($agency->id)
+        ->get(['id', 'agency_name', 'agency_abbreviation'])
+        ->first(function ($candidate) use ($normalizeAgencyIdentity, $normalizedAgencyName, $normalizedAgencyAbbreviation) {
+            return $normalizeAgencyIdentity($candidate->agency_name) === $normalizedAgencyName
+                && $normalizeAgencyIdentity($candidate->agency_abbreviation) === $normalizedAgencyAbbreviation;
+        });
+
+    if ($duplicateAgency) {
+        return back()
+            ->withErrors(['agency_name' => 'This agency already exists with the same name and abbreviation.'])
+            ->withInput();
+    }
+
 
 
     /*
@@ -1103,6 +1201,22 @@ public function getAll()
         }
     }
 
+
+    /*
+     * Enforce one primary contact per contact type on the server. The UI
+     * also keeps this state synchronized, but requests must remain valid
+     * even when submitted outside the browser interface.
+     */
+    $duplicatePrimaryContactType = collect($validated['contacts'])
+        ->filter(fn ($contact) => !empty($contact['is_primary']))
+        ->groupBy('contact_type_id')
+        ->first(fn ($contacts) => $contacts->count() > 1);
+
+    if ($duplicatePrimaryContactType) {
+        return back()
+            ->withErrors(['contacts' => 'Only one contact per contact type can be marked as primary.'])
+            ->withInput();
+    }
 
     if (!$hasHotline || !$hasEmail) {
 
@@ -1215,7 +1329,7 @@ public function getAll()
      * =====================================================
      */
     $agencyData = collect($validated)
-        ->except('contacts')
+        ->except(['contacts', 'expected_profile_revision', 'intervention_reason', 'current_password'])
         ->toArray();
 
 
@@ -1290,50 +1404,50 @@ public function getAll()
         DB::transaction(function () use (
             $agency,
             $agencyData,
-            $validated
+            $validated,
+            $requiresIntervention
         ) {
+            /*
+             * Serialize concurrent agency updates. The submitted revision
+             * must still match the latest row after acquiring this lock.
+             */
+            $lockedAgency = Agency::query()
+                ->whereKey($agency->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ((int) $lockedAgency->profile_revision !== (int) $validated['expected_profile_revision']) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'agency_version' => 'This agency was updated by another administrator while you were editing it. Your changes were not saved. Reload the latest agency information and try again.',
+                ]);
+            }
+
+            // If an Agency Admin was assigned after this edit form loaded,
+            // require the operator to restart through the intervention prompt.
+            if (!$requiresIntervention && $lockedAgency->administrators()->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'agency_intervention' => 'An Agency Admin is now assigned to this agency. Reload and complete the intervention confirmation before editing.',
+                ]);
+            }
+
+            $lockedAgency->fill($agencyData);
+            $lockedAgency->profile_revision = ((int) $lockedAgency->profile_revision) + 1;
+            $lockedAgency->save();
 
             /*
-             * Update the agency itself.
+             * Replace contacts under the same row lock and transaction.
+             * This prevents two profile editors from interleaving writes.
              */
-            $agency->update(
-                $agencyData
-            );
+            $lockedAgency->contacts()->delete();
 
-
-            /*
-             * Replace the agency's complete contact set.
-             *
-             * This is intentionally done inside the same
-             * transaction as the agency update.
-             */
-            $agency->contacts()->delete();
-
-
-            foreach (
-                $validated['contacts']
-                as $index => $contact
-            ) {
-
+            foreach ($validated['contacts'] as $index => $contact) {
                 AgencyContact::create([
-
-                    'agency_id' =>
-                        $agency->id,
-
-                    'contact_type_id' =>
-                        $contact['contact_type_id'],
-
-                    'label' =>
-                        $contact['label'] ?? null,
-
-                    'value' =>
-                        $contact['value'],
-
-                    'is_primary' =>
-                        !empty($contact['is_primary']),
-
-                    'sort_order' =>
-                        $contact['sort_order'] ?? $index,
+                    'agency_id' => $lockedAgency->id,
+                    'contact_type_id' => $contact['contact_type_id'],
+                    'label' => $contact['label'] ?? null,
+                    'value' => $contact['value'],
+                    'is_primary' => !empty($contact['is_primary']),
+                    'sort_order' => $contact['sort_order'] ?? $index,
                 ]);
             }
         });
@@ -1536,18 +1650,100 @@ public function getAll()
         !empty($changedOldValues)
     ) {
 
-        $this->logAction(
-            auth()->user()->role ?? 'admin',
-            auth()->id(),
-            $agency->id,
-            'update_agency',
-            'nga_ngo_management',
-            $changedOldValues,
-            $changedNewValues,
-            'Updated Agency: ' . $agency->agency_name
-        );
+        $description = $requiresIntervention
+            ? trim((string) $validated['intervention_reason'])
+            : 'Updated Agency: ' . $agency->agency_name;
+
+        if ($requiresIntervention) {
+            $reason = trim((string) $validated['intervention_reason']);
+            $newValuesForAudit = $changedNewValues;
+
+            app(AuditLogService::class)->record(
+                action: 'update_agency',
+                page: 'nga_ngo_management',
+                targetType: 'agency',
+                targetId: (int) $agency->id,
+                agencyId: (int) $agency->id,
+                oldValues: $changedOldValues,
+                newValues: $newValuesForAudit,
+                description: $description,
+                actorId: (int) auth()->id(),
+                role: auth()->user()->role ?? 'admin',
+            );
+        } else {
+            $this->logAction(
+                auth()->user()->role ?? 'admin',
+                auth()->id(),
+                $agency->id,
+                'update_agency',
+                'nga_ngo_management',
+                $changedOldValues,
+                $changedNewValues,
+                $description
+            );
+        }
     }
 
+
+    // Resolve current recipients after the write; agency-admin assignments
+    // may have changed while the administrator was working in the modal.
+    $assignedAgencyAdmins = $agency->administrators()->get();
+
+    if ($requiresIntervention && $assignedAgencyAdmins->isNotEmpty() && !empty($changedOldValues)) {
+        $reason = trim((string) $validated['intervention_reason']);
+        $changedFields = array_values(array_keys($changedOldValues));
+        $actor = $request->user();
+
+        foreach ($assignedAgencyAdmins as $agencyAdmin) {
+            try {
+                $notification = UserNotification::query()->create([
+                    'user_id' => (int) $agencyAdmin->id,
+                    'type' => 'agency_profile_admin_intervention',
+                    'title' => 'Your agency profile was updated',
+                    'message' => 'A System Administrator updated ' . $agency->agency_name . '. Reason: ' . $reason,
+                    'data' => [
+                        'agency_id' => (int) $agency->id,
+                        'agency_name' => (string) $agency->agency_name,
+                        'actor_id' => (int) $actor->id,
+                        'actor_name' => trim(($actor->first_name ?? '') . ' ' . ($actor->last_name ?? '')) ?: (string) $actor->email,
+                        'actor_role' => (string) $actor->role,
+                        'reason' => $reason,
+                        'changed_fields' => $changedFields,
+                        'old_values' => $changedOldValues,
+                        'new_values' => $changedNewValues,
+                        'profile_revision' => (int) $agency->profile_revision,
+                    ],
+                    'dedupe_key' => 'agency-intervention:' . $agency->id . ':' . $agency->profile_revision . ':' . $agencyAdmin->id,
+                ]);
+
+                if ($notification->wasRecentlyCreated) {
+                    broadcast(new UserNotificationCreated($notification));
+                }
+            } catch (\Throwable $exception) {
+                Log::warning('Unable to persist/broadcast agency intervention notification.', [
+                    'agency_id' => (int) $agency->id,
+                    'agency_admin_id' => (int) $agencyAdmin->id,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        try {
+            broadcast(new AgencyProfileUpdated(
+                agencyId: (int) $agency->id,
+                profileRevision: (int) $agency->profile_revision,
+                changedFields: $changedFields,
+                updatedBy: (int) $actor->id,
+                reason: $reason,
+            ));
+        } catch (\Throwable $exception) {
+            Log::warning('Agency profile realtime broadcast failed.', [
+                'agency_id' => (int) $agency->id,
+                'profile_revision' => (int) $agency->profile_revision,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
 
     return redirect()
         ->back()
@@ -1887,6 +2083,29 @@ public function restore($id)
             $deletedAt,
     ];
 
+
+    /*
+     * Prevent restoring an identity that now conflicts with an active
+     * agency. This is a safety check for legacy or manually altered data.
+     */
+    $normalizeAgencyIdentity = static fn ($value) => strtolower(
+        preg_replace('/\\s+/', ' ', trim((string) $value))
+    );
+
+    $duplicateAgency = Agency::query()
+        ->whereKeyNot($agency->id)
+        ->get(['id', 'agency_name', 'agency_abbreviation'])
+        ->first(function ($candidate) use ($agency, $normalizeAgencyIdentity) {
+            return $normalizeAgencyIdentity($candidate->agency_name) === $normalizeAgencyIdentity($agency->agency_name)
+                && $normalizeAgencyIdentity($candidate->agency_abbreviation) === $normalizeAgencyIdentity($agency->agency_abbreviation);
+        });
+
+    if ($duplicateAgency) {
+        return redirect()
+            ->back()
+            ->withErrors(['agency_restore' => 'This agency cannot be restored because an active agency already uses the same name and abbreviation.'])
+            ->withInput();
+    }
 
     /*
      * =====================================================

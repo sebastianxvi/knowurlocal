@@ -504,6 +504,8 @@
         value=""
     >
     <input type="hidden" name="source_response_id" id="source_response_id" value="">
+    <input type="hidden" name="current_password" id="faq-current-password" value="">
+    <input type="hidden" name="intervention_reason" id="faq-intervention-reason" value="">
 
             <div class="form-card">
 
@@ -579,6 +581,7 @@
                 value="{{ $agency->id }}"
                 data-abbr="{{ strtolower($agency->agency_abbreviation ?? '') }}"
                 data-full-name="{{ $agency->agency_name }}"
+                data-has-admin="{{ (int) ($agencyAdminCounts[$agency->id] ?? 0) > 0 ? '1' : '0' }}"
             >
                 {{ $agency->agency_name }}
             </option>
@@ -808,6 +811,18 @@
      */
     window.FAQ_TRANSLATE_URL =
         @json(route('faqs.translate'));
+
+    @php
+        $faqRequiresIntervention = in_array(
+            auth()->user()->role,
+            ['admin', 'superadmin'],
+            true
+        );
+    @endphp
+    window.FAQ_REQUIRES_INTERVENTION =
+        @json($faqRequiresIntervention);
+    window.FAQ_INTERVENTION_VERIFY_URL =
+        @json(route('faqs.verify-intervention-password'));
 
     /*
      * Private FAQ response attachment endpoint.

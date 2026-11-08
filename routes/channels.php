@@ -58,3 +58,19 @@ Broadcast::channel('agency.{agencyId}.support-requests', function ($user, $agenc
         && $user->agency_id !== null
         && (int) $user->agency_id === (int) $agencyId;
 });
+
+
+/*
+|--------------------------------------------------------------------------
+| Agency profile live updates
+|--------------------------------------------------------------------------
+|
+| An agency administrator may subscribe only to the profile stream for the
+| agency assigned to their authenticated account.
+|
+*/
+Broadcast::channel('agency.{agencyId}.profile', function ($user, $agencyId) {
+    return $user->role === 'agency_admin'
+        && $user->agency_id !== null
+        && (int) $user->agency_id === (int) $agencyId;
+});

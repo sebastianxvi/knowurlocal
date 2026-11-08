@@ -7,12 +7,16 @@ use App\Models\Faq;
 use App\Models\FaqVersion;
 use App\Models\Agency;
 use App\Models\UserLog;
+use App\Models\UserNotification;
+use App\Events\UserNotificationCreated;
 use App\Models\SupportRequest;
 use App\Models\SupportResponseComponent;
 use App\Services\FaqTranslationService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Support\PrivateStorageDiagnostics;
 
@@ -805,6 +809,13 @@ if ($status === 'trashed') {
         'agency_name'
     )->get();
 
+    $agencyAdminCounts = \App\Models\User::query()
+        ->where('role', 'agency_admin')
+        ->whereNotNull('agency_id')
+        ->selectRaw('agency_id, COUNT(*) as admin_count')
+        ->groupBy('agency_id')
+        ->pluck('admin_count', 'agency_id');
+
 
     /*
      * =========================================================
@@ -843,6 +854,7 @@ if ($status === 'trashed') {
         compact(
             'faqs',
             'agencies',
+            'agencyAdminCounts',
             'availableDates',
             'conversionSupport',
             'status',
@@ -857,6 +869,23 @@ if ($status === 'trashed') {
     /**
  * ➕ STORE FAQ
  */
+public function verifyInterventionPassword(Request $request)
+{
+    abort_unless(in_array((string) $request->user()?->role, ['admin', 'superadmin'], true), 403);
+    $validated = $request->validate(['password' => ['required', 'string', 'max:255']]);
+
+    if (!Hash::check((string) $validated['password'], (string) $request->user()->password)) {
+        return response()->json(['message' => 'The administrator password is incorrect.'], 422);
+    }
+
+    return response()->json(['verified' => true]);
+}
+
+private function faqInterventionRequired(Request $request): bool
+{
+    return in_array((string) $request->user()?->role, ['admin', 'superadmin'], true);
+}
+
 public function store(Request $request)
 {
     /*
@@ -870,6 +899,13 @@ public function store(Request $request)
     */
 
     $this->mergeResponseAnswersIntoRequest($request);
+
+    // Add intervention security only when the selected agency has an agency admin.
+    $requiresIntervention = $this->faqInterventionRequired($request)
+        && \App\Models\User::query()
+            ->where('agency_id', (int) $request->input('agency_id'))
+            ->where('role', 'agency_admin')
+            ->exists();
 
     $validated = $request->validate([
         'agency_id' => [
@@ -959,7 +995,19 @@ public function store(Request $request)
             'mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx',
             'max:5120',
         ],
+        'current_password' => $requiresIntervention
+            ? ['required', 'string', 'max:255'] : ['nullable', 'string', 'max:255'],
+        'intervention_reason' => $requiresIntervention
+            ? ['required', 'string', 'min:10', 'max:1000'] : ['nullable', 'string', 'max:1000'],
     ]);
+
+    if ($requiresIntervention && !Hash::check(
+        (string) $validated['current_password'],
+        (string) $request->user()->password
+    )) {
+        return back()->withErrors(['current_password' => 'The administrator password is incorrect. No FAQ was created.'])
+            ->withInput($request->except('current_password'));
+    }
 
     if (!empty($validated['support_request_id'])) {
         $sourceSupportId = (int) $validated['support_request_id'];
@@ -1226,17 +1274,25 @@ $faq = Faq::create([
     'image'        => $faq->image,
     'response_components' => $faq->response_components,
 ],
-            'Created FAQ: ' . $faq->question,
+            $requiresIntervention
+                ? trim((string) ($validated['intervention_reason'] ?? ''))
+                : 'Created FAQ: ' . $faq->question,
 null,
 $faq->id
 );
+
+        if ($requiresIntervention) {
+            $this->notifyAgencyAdminsOfFaqIntervention(
+                $faq, 'created', trim((string) $validated['intervention_reason']), auth()->user()
+            );
+        }
     
 
         // Return to the canonical FAQ index after creation. Redirecting back
         // can preserve ?convert_support=...&response_id=..., which reopens the
         // conversion modal and calls the bilingual preparation endpoint again.
         return redirect()
-            ->route(auth()->user()?->role === 'agency_admin' ? 'agency-admin.faqs' : 'admin.faqs.index')
+            ->route(auth()->user()?->role === 'agency_admin' ? 'agency-admin.faqs' : 'faqs.index')
             ->with('success', 'FAQ created successfully.');
     }
 
@@ -1251,7 +1307,7 @@ $faq->id
 
         $this->mergeResponseAnswersIntoRequest($request);
 
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'agency_id' => 'required|exists:agencies,id',
             'question' => 'required|string|max:255',
             'answer' => [
@@ -1295,7 +1351,31 @@ $faq->id
                 'mimes:jpg,jpeg,png,webp,pdf,doc,docx,xls,xlsx',
                 'max:5120',
             ],
+            'current_password' => $this->faqInterventionRequired($request)
+                ? ['required', 'string', 'max:255'] : ['nullable', 'string', 'max:255'],
+            'intervention_reason' => $this->faqInterventionRequired($request)
+                ? ['required', 'string', 'min:10', 'max:1000'] : ['nullable', 'string', 'max:1000'],
         ]);
+
+        if ($validator->fails()) {
+            // The Referer for a resource update can be /admin/faqs/{id},
+            // which accepts PUT/PATCH/DELETE but not GET. Explicitly return
+            // validation failures to the canonical FAQ index instead.
+            return redirect()
+                ->route('faqs.index')
+                ->withErrors($validator)
+                ->withInput($request->except('current_password'));
+        }
+
+        if ($this->faqInterventionRequired($request) && !Hash::check(
+            (string) $request->input('current_password'),
+            (string) $request->user()->password
+        )) {
+            return redirect()
+                ->route('faqs.index')
+                ->withErrors(['current_password' => 'The administrator password is incorrect. No FAQ changes were saved.'])
+                ->withInput($request->except('current_password'));
+        }
 
         $oldData = [
             'agency_id' => $faq->agency_id,
@@ -1345,8 +1425,10 @@ $faq->id
         $changes = $this->getChangedValues($oldData, $newData);
 
         if (empty($changes['old']) && empty($changes['new'])) {
+            // Never redirect back to the resource update URL: it only accepts
+            // PUT/PATCH. The FAQ index is the safe destination for browser GET.
             return redirect()
-                ->back()
+                ->route('faqs.index')
                 ->with('success', 'No changes were made.');
         }
 
@@ -1362,6 +1444,7 @@ $faq->id
         $responseChanged = $this->faqResponseChanged($responseBaseline, $newData);
 
         DB::transaction(function () use (
+            $request,
             $faq,
             $newData,
             $responseChanged,
@@ -1391,14 +1474,29 @@ $faq->id
                 'admin_faq',
                 $changes['old'],
                 $changes['new'],
-                'Updated FAQ: ' . $lockedFaq->question,
+                $this->faqInterventionRequired($request)
+                    ? trim((string) $request->input('intervention_reason'))
+                    : 'Updated FAQ: ' . $lockedFaq->question,
                 null,
                 $lockedFaq->id
             );
         });
 
+        if ($this->faqInterventionRequired($request)) {
+            $this->notifyAgencyAdminsOfFaqIntervention(
+                $faq->fresh(),
+                'updated',
+                trim((string) $request->input('intervention_reason')),
+                auth()->user(),
+                array_values(array_keys($changes['old'] ?? []))
+            );
+        }
+
+        // Return to the canonical FAQ management page after a successful
+        // resource update. redirect()->back() can point at /admin/faqs/{id}
+        // (the PUT endpoint) and cause the browser to follow with an invalid GET.
         return redirect()
-            ->back()
+            ->route('faqs.index')
             ->with('success', $responseChanged
                 ? 'FAQ updated successfully. A new response version is now collecting fresh feedback.'
                 : 'FAQ updated successfully.');
@@ -2271,6 +2369,63 @@ public function forceDestroy($id)
         }
 
         return implode(', ', $normalized);
+    }
+
+    /**
+     * Notify assigned Agency Admins of centrally managed FAQ changes.
+     * Notification errors do not undo an FAQ update already committed.
+     */
+    private function notifyAgencyAdminsOfFaqIntervention(
+        Faq $faq,
+        string $operation,
+        string $reason,
+        $actor,
+        array $changedFields = []
+    ): void {
+        $agency = Agency::query()->find($faq->agency_id);
+        if (!$agency) {
+            return;
+        }
+
+        $actorName = trim(($actor->first_name ?? '') . ' ' . ($actor->last_name ?? ''))
+            ?: (string) ($actor->email ?? 'System Administrator');
+
+        foreach ($agency->administrators()->get() as $agencyAdmin) {
+            try {
+                $notification = UserNotification::query()->create([
+                    'user_id' => (int) $agencyAdmin->id,
+                    'type' => 'faq_admin_intervention',
+                    'title' => $operation === 'created'
+                        ? 'A FAQ was added to your agency'
+                        : 'Your agency FAQ was updated',
+                    'message' => $actorName . ' ' . $operation . ' an FAQ for '
+                        . $agency->agency_name . '.',
+                    'data' => [
+                        'faq_id' => (int) $faq->id,
+                        'faq_question' => (string) $faq->question,
+                        'agency_id' => (int) $agency->id,
+                        'agency_name' => (string) $agency->agency_name,
+                        'actor_id' => (int) $actor->id,
+                        'actor_name' => $actorName,
+                        'actor_role' => (string) $actor->role,
+                        'operation' => $operation,
+                        'reason' => $reason,
+                        'changed_fields' => $changedFields,
+                    ],
+                    'dedupe_key' => 'faq-admin-intervention:' . $faq->id . ':' . $operation . ':' . Str::uuid() . ':' . $agencyAdmin->id,
+                ]);
+
+                if ($notification->wasRecentlyCreated) {
+                    broadcast(new UserNotificationCreated($notification));
+                }
+            } catch (\Throwable $exception) {
+                Log::warning('Unable to persist/broadcast FAQ intervention notification.', [
+                    'faq_id' => (int) $faq->id,
+                    'agency_admin_id' => (int) $agencyAdmin->id,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
     }
 
     /**

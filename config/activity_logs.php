@@ -37,6 +37,7 @@ return [
 
         'create_agency' => ['label' => 'Create Agency', 'icon' => 'ph-plus', 'group' => 'Agency Management', 'audience' => 'admin'],
         'update_agency' => ['label' => 'Update Agency', 'icon' => 'ph-pencil-simple', 'group' => 'Agency Management', 'audience' => 'admin'],
+        'intervene_agency' => ['label' => 'Update Agency', 'icon' => 'ph-pencil-simple', 'group' => 'Agency Management', 'audience' => 'admin'],
         'trash_agency' => ['label' => 'Move Agency to Trash', 'icon' => 'ph-trash', 'group' => 'Agency Management', 'audience' => 'admin'],
         'restore_agency' => ['label' => 'Restore Agency', 'icon' => 'ph-arrow-counter-clockwise', 'group' => 'Agency Management', 'audience' => 'admin'],
         'force_delete_agency' => ['label' => 'Permanently Delete Agency', 'icon' => 'ph-trash-simple', 'group' => 'Agency Management', 'audience' => 'admin'],
@@ -80,7 +81,7 @@ return [
 
     'admin_actions' => [
         'admin_login', 'admin_logout',
-        'create_agency', 'update_agency', 'trash_agency', 'restore_agency', 'force_delete_agency', 'delete_agency',
+        'create_agency', 'update_agency', 'intervene_agency', 'trash_agency', 'restore_agency', 'force_delete_agency', 'delete_agency',
         'create_faq', 'update_faq', 'delete_faq', 'restore_faq', 'force_delete_faq', 'convert_support_to_faq',
         'create_category', 'update_category', 'delete_category', 'restore_category', 'force_delete_category',
         'answer_support_request', 'update_support_answer', 'forward_support_response', 'delete_support_request', 'restore_support_request', 'force_delete_support_request',

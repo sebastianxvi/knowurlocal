@@ -38,9 +38,9 @@
                 <span
                     class="header-quick-badge admin-notification-badge"
                     data-notification-count
-                    @if(($adminNotificationSupportCount + $adminNotificationCollaborationCount) < 1) hidden @endif
+                    @if(($adminNotificationSupportCount + $adminNotificationCollaborationCount + $adminNotificationInterventionCount) < 1) hidden @endif
                     aria-live="polite"
-                >{{ min(99, $adminNotificationSupportCount + $adminNotificationCollaborationCount) }}</span>
+                >{{ min(99, $adminNotificationSupportCount + $adminNotificationCollaborationCount + $adminNotificationInterventionCount) }}</span>
             </button>
 
             <section
@@ -59,9 +59,31 @@
                 <div class="admin-notification-summary">
                     <span><strong data-support-count>{{ $adminNotificationSupportCount }}</strong> support</span>
                     <span><strong data-collaboration-count>{{ $adminNotificationCollaborationCount }}</strong> collaboration</span>
+                    @if(auth()->user()->role === 'agency_admin')
+                        <span><strong data-intervention-count>{{ $adminNotificationInterventionCount }}</strong> admin updates</span>
+                    @endif
                 </div>
 
                 <div class="admin-notification-list" data-notification-list>
+                    @if(auth()->user()->role === 'agency_admin' && $adminNotificationInterventions->isNotEmpty())
+                        <div class="admin-notification-section-label" data-section="intervention">Agency and FAQ updates</div>
+                        @foreach($adminNotificationInterventions as $intervention)
+                            <a
+                                class="admin-notification-item"
+                                href="{{ route('agency-admin.notifications.open', $intervention->id) }}"
+                                data-notification-kind="intervention"
+                                data-notification-id="{{ $intervention->id }}"
+                            >
+                                <span class="admin-notification-item-icon is-collaboration"><i class="ph-light ph-shield-check" aria-hidden="true"></i></span>
+                                <span class="admin-notification-item-copy">
+                                    <strong>{{ $intervention->title }}</strong>
+                                    <small>{{ \Illuminate\Support\Str::limit((string) ($intervention->data['reason'] ?? $intervention->message), 100) }}</small>
+                                </span>
+                                <i class="ph-light ph-arrow-up-right admin-notification-item-arrow" aria-hidden="true"></i>
+                            </a>
+                        @endforeach
+                    @endif
+
                     @if($adminNotificationSupportRequests->isNotEmpty())
                         <div class="admin-notification-section-label" data-section="support">Support requests</div>
                         @foreach($adminNotificationSupportRequests as $request)
@@ -114,11 +136,11 @@
                         @endforeach
                     @endif
 
-                    @if($adminNotificationSupportRequests->isEmpty() && $adminNotificationCollaborationTasks->isEmpty())
+                    @if($adminNotificationSupportRequests->isEmpty() && $adminNotificationCollaborationTasks->isEmpty() && (!isset($adminNotificationInterventions) || $adminNotificationInterventions->isEmpty()))
                         <div class="admin-notification-empty">
                             <i class="ph-light ph-check-circle" aria-hidden="true"></i>
                             <strong>You're all caught up.</strong>
-                            <span>No pending support requests or collaboration work needs your attention.</span>
+                            <span>No pending support requests, collaboration work, or agency profile updates need your attention.</span>
                         </div>
                     @endif
                 </div>
