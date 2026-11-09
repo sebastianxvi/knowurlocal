@@ -6,6 +6,7 @@ use App\Models\SupportRequest;
 use App\Models\User;
 use App\Models\UserLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -201,6 +202,44 @@ public function index(Request $request)
 }
     
 /**
+ * Verify the authenticated administrator's password before a public-user
+ * lifecycle action. The mutation endpoints independently verify the password
+ * again, so the verification response alone cannot authorize a change.
+ */
+public function verifyLifecyclePassword(Request $request)
+{
+    abort_unless(
+        in_array((string) $request->user()?->role, ['admin', 'superadmin'], true),
+        403
+    );
+
+    $validated = $request->validate([
+        'password' => ['required', 'string', 'max:255'],
+    ]);
+
+    if (!Hash::check((string) $validated['password'], (string) $request->user()->password)) {
+        return response()->json([
+            'message' => 'The administrator password is incorrect.',
+        ], 422);
+    }
+
+    return response()->json(['verified' => true]);
+}
+
+/**
+ * Check the current administrator password on the actual mutation request.
+ */
+private function lifecyclePasswordIsValid(Request $request): bool
+{
+    $admin = $request->user();
+
+    return $admin
+        && in_array((string) $admin->role, ['admin', 'superadmin'], true)
+        && $request->filled('current_password')
+        && Hash::check((string) $request->input('current_password'), (string) $admin->password);
+}
+
+/**
  * ⛔ DEACTIVATE PUBLIC USER
  *
  * Deactivates the account without deleting it.
@@ -208,8 +247,13 @@ public function index(Request $request)
  * The user remains in the database and can be
  * reactivated later.
  */
-public function deactivate($id)
+public function deactivate(Request $request, $id)
 {
+    abort_unless(in_array((string) $request->user()?->role, ['admin', 'superadmin'], true), 403);
+
+    if (!$this->lifecyclePasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
     /*
      * Only find accounts that belong to public users.
      *
@@ -299,8 +343,13 @@ return back()->with(
  *
  * Restores a previously deactivated account.
  */
-public function reactivate($id)
+public function reactivate(Request $request, $id)
 {
+    abort_unless(in_array((string) $request->user()?->role, ['admin', 'superadmin'], true), 403);
+
+    if (!$this->lifecyclePasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
     /*
      * Only find accounts belonging to public users.
      */
@@ -379,7 +428,7 @@ return back()->with(
  *
  * Permanently removes a public-user account.
  */
-public function destroy($id)
+public function destroy(Request $request, $id)
 {
     /*
      * Only find accounts belonging to public users.
@@ -400,6 +449,10 @@ public function destroy($id)
             403,
             'Unauthorized action.'
         );
+    }
+
+    if (!$this->lifecyclePasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
     }
 
 

@@ -102,6 +102,8 @@
 
                     data-email="{{ $user->email }}"
 
+                    data-profile-picture="{{ $user->profile_picture ? \Illuminate\Support\Facades\Storage::disk('public')->url($user->profile_picture) : '' }}"
+
                     data-status="{{ $user->status }}"
 
                     data-last-login="{{ $user->last_login_at
@@ -354,44 +356,36 @@
 
             <!-- ================= USER INFO ================= -->
 
-            <section class="user-profile-section">
+            <section class="user-profile-section user-profile-hero" aria-label="User profile">
+                <div class="user-profile-cover" aria-hidden="true">
+                    <span class="user-profile-cover-orb user-profile-cover-orb-one"></span>
+                    <span class="user-profile-cover-orb user-profile-cover-orb-two"></span>
+                    <span class="user-profile-cover-mark">KNOWURLOCAL</span>
+                </div>
 
-                <div class="user-profile-main">
-
-                    <div class="user-profile-icon">
-                        <i class="ph-light ph-user"></i>
+                <div class="user-profile-identity">
+                    <div class="user-profile-picture-wrap">
+                        <div class="user-profile-picture" id="user_profile_picture" role="img" aria-label="User profile picture">
+                            <i class="ph-light ph-user" id="user_profile_picture_fallback" aria-hidden="true"></i>
+                            <img id="user_profile_picture_image" alt="User profile picture" hidden>
+                        </div>
                     </div>
 
                     <div class="user-profile-copy">
-
-                        <h3 id="user_name_display">
-                            —
-                        </h3>
-
-                        <p id="user_email_display">
-                            —
-                        </p>
-
+                        <h3 id="user_name_display">—</h3>
+                        <p id="user_email_display">—</p>
+                        <div class="user-profile-subline">
+                            <i class="ph-light ph-user-circle" aria-hidden="true"></i>
+                            <span>KNOWURLOCAL public user</span>
+                        </div>
+                        <div class="user-profile-status-line">
+                            <span id="user_status_display" class="user-account-status">
+                                <i class="ph-light ph-circle" aria-hidden="true"></i>
+                                <span>—</span>
+                            </span>
+                        </div>
                     </div>
-
                 </div>
-
-
-                <!-- ACCOUNT STATUS -->
-
-                <div
-                    id="user_status_display"
-                    class="user-account-status"
-                >
-
-                    <i class="ph-light ph-circle"></i>
-
-                    <span>
-                        —
-                    </span>
-
-                </div>
-
             </section>
 
 
@@ -524,6 +518,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('jsfiles/admin/admin-password-confirmation.js') }}?v={{ filemtime(public_path('jsfiles/admin/admin-password-confirmation.js')) }}"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -568,6 +563,19 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById(
         "user_email_display"
     ).textContent = data.email;
+
+    const profileImage = document.getElementById("user_profile_picture_image");
+    const profileFallback = document.getElementById("user_profile_picture_fallback");
+
+    if (data.profilePicture) {
+        profileImage.src = data.profilePicture;
+        profileImage.hidden = false;
+        profileFallback.hidden = true;
+    } else {
+        profileImage.removeAttribute("src");
+        profileImage.hidden = true;
+        profileFallback.hidden = false;
+    }
 
 
     /*
@@ -941,6 +949,9 @@ document.addEventListener("DOMContentLoaded", function () {
     email:
         row.dataset.email,
 
+    profilePicture:
+        row.dataset.profilePicture,
+
     status:
         row.dataset.status,
 
@@ -1183,23 +1194,94 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
             /*
-             * Only submit the original form after the
-             * administrator explicitly confirms.
+             * Keep the existing confirmation as the first step.
+             * Only after an explicit confirmation do we request the
+             * administrator's password in the shared security modal.
              */
             onConfirm: () => {
+                window.closeAlertModal(true);
 
-                /*
-                 * Keep the original Laravel form intact.
-                 *
-                 * This preserves:
-                 *
-                 * - CSRF protection
-                 * - HTTP method spoofing
-                 * - Laravel route handling
-                 * - server-side authorization
-                 */
-                form.submit();
+                const csrf =
+                    form.querySelector('input[name="_token"]')?.value ||
+                    document.querySelector('meta[name="csrf-token"]')?.content ||
+                    '';
 
+                window.showAlertModal({
+                    title: 'Administrative security verification',
+                    text: `Confirm your identity before you ${deactivateBtn ? 'deactivate' : reactivateBtn ? 'reactivate' : 'permanently delete'} ${userName}.`,
+                    icon: 'ph-light ph-shield-check',
+                    variant: 'info',
+                    input: {
+                        type: 'password',
+                        label: 'Confirm your administrator password',
+                        placeholder: 'Enter your current account password',
+                        required: true,
+                        maxLength: 255,
+                        validationMessage: 'Your administrator password is required.'
+                    },
+                    confirmText: 'Verify and continue',
+                    cancelText: 'Cancel',
+                    showCancel: true,
+                    allowCancelDuringLoading: true,
+                    onCancel: () => {
+                        form.dataset.confirming = 'false';
+                        form.dataset.passwordCancelled = 'true';
+                    },
+                    onConfirm: async (password) => {
+                        form.dataset.passwordCancelled = 'false';
+                        const response = await fetch(
+                            @json(route('admin.users.verify-lifecycle-password')),
+                            {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': csrf
+                                },
+                                body: JSON.stringify({ password })
+                            }
+                        );
+
+                        const payload = await response.json().catch(() => ({}));
+
+                        if (form.dataset.passwordCancelled === 'true') return;
+
+                        if (!response.ok || payload.verified !== true) {
+                            throw new Error(
+                                payload.message || 'Password verification failed.'
+                            );
+                        }
+
+                        /*
+                         * Send the verified password with the original
+                         * lifecycle request. The controller validates it
+                         * again immediately before changing the account.
+                         */
+                        let passwordField =
+                            form.querySelector('input[name="current_password"]');
+
+                        if (!passwordField) {
+                            passwordField = document.createElement('input');
+                            passwordField.type = 'hidden';
+                            passwordField.name = 'current_password';
+                            form.appendChild(passwordField);
+                        }
+
+                        passwordField.value = password;
+
+                        window.closeAlertModal(true);
+
+                        /*
+                         * Preserve Laravel CSRF and DELETE method spoofing.
+                         * The actual controller independently checks password.
+                         */
+                        form.submit();
+                    }
+                });
+            },
+            onCancel: () => {
+                form.dataset.confirming = 'false';
             }
 
         });

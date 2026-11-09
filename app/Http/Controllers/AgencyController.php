@@ -956,6 +956,8 @@ public function getAll()
      */
     public function verifyInterventionPassword(Request $request)
     {
+        abort_unless(in_array((string) $request->user()?->role, ['admin', 'superadmin'], true), 403);
+
         $validated = $request->validate([
             'password' => ['required', 'string', 'max:255'],
         ]);
@@ -1765,8 +1767,32 @@ public function getAll()
      *
      * The database record remains available for recovery.
      */
-    public function destroy(Request $request, $id)
+        /**
+     * Verify the authenticated administrator password on every agency
+     * lifecycle mutation request. Client-side verification is not trusted.
+     */
+    private function lifecyclePasswordIsValid(Request $request): bool
+    {
+        $admin = $request->user();
+
+        return $admin
+            && in_array((string) $admin->role, ['admin', 'superadmin'], true)
+            && $request->filled('current_password')
+            && Hash::check(
+                (string) $request->input('current_password'),
+                (string) $admin->password
+            );
+    }
+
+
+public function destroy(Request $request, $id)
 {
+    abort_unless(in_array((string) $request->user()?->role, ['admin', 'superadmin'], true), 403);
+
+    if (!$this->lifecyclePasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
+
     $request->validate([
         'reason' => ['required', 'string', 'min:3', 'max:1000'],
     ]);
@@ -2014,8 +2040,14 @@ public function getAll()
  * permanently deleted. The restore log must remain
  * understandable even after that happens.
  */
-public function restore($id)
+public function restore(Request $request, $id)
 {
+    abort_unless(in_array((string) $request->user()?->role, ['admin', 'superadmin'], true), 403);
+
+    if (!$this->lifecyclePasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
+
     /*
      * Retrieve only a soft-deleted agency.
      */
@@ -2183,8 +2215,14 @@ public function restore($id)
      *
      * The route must be protected by SuperAdminOnly.
      */
-    public function forceDestroy($id)
+    public function forceDestroy(Request $request, $id)
 {
+    abort_unless(in_array((string) $request->user()?->role, ['admin', 'superadmin'], true), 403);
+
+    if (!$this->lifecyclePasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
+
     /*
      * =====================================================
      * FIND TRASHED AGENCY

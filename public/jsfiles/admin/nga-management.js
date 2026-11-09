@@ -4320,7 +4320,13 @@ document.addEventListener("DOMContentLoaded", function () {
                             deleteForm.appendChild(reasonInput);
                         }
                         reasonInput.value = String(reason || "").trim();
-                        deleteForm.submit();
+
+                        window.requestAdminPasswordForForm({
+                            form: deleteForm,
+                            verificationUrl: window.AGENCY_LIFECYCLE_VERIFY_URL,
+                            actionDescription: "move this agency to the trash",
+                            subject: btn.dataset.agencyName || "this agency"
+                        });
                     }
 
             });
@@ -4389,9 +4395,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 onConfirm:
                     () => {
-
-                        restoreForm.submit();
-
+                        window.requestAdminPasswordForForm({
+                            form: restoreForm,
+                            verificationUrl: window.AGENCY_LIFECYCLE_VERIFY_URL,
+                            actionDescription: "restore",
+                            subject: agencyName
+                        });
                     }
 
             });
@@ -4460,9 +4469,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 onConfirm:
                     () => {
-
-                        forceDeleteForm.submit();
-
+                        window.requestAdminPasswordForForm({
+                            form: forceDeleteForm,
+                            verificationUrl: window.AGENCY_LIFECYCLE_VERIFY_URL,
+                            actionDescription: "permanently delete",
+                            subject: agencyName
+                        });
                     }
 
             });

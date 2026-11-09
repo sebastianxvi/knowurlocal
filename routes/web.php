@@ -453,6 +453,7 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
         ->name('agencies.store');
 
     Route::post('/agencies/verify-intervention-password', [AgencyController::class, 'verifyInterventionPassword'])
+        ->middleware('throttle:8,1')
         ->name('admin.agencies.verify-intervention-password');
 
     Route::put('/agencies/{agency}', [AgencyController::class, 'update'])
@@ -467,6 +468,19 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::post('/agency-admins/invite', [AdminInviteController::class, 'sendAgencyInvite'])
         ->middleware('throttle:admin-invite')
         ->name('admin.agency-admins.invite');
+
+    Route::post('/agency-admins/verify-lifecycle-password', [AdminInviteController::class, 'verifyAgencyAdminLifecyclePassword'])
+        ->middleware('throttle:8,1')
+        ->name('admin.agency-admins.verify-lifecycle-password');
+    // Accept PATCH (canonical) and POST (browser form fallback) for lifecycle actions.
+    // The client submits native forms after password verification; this also
+    // prevents a method-override failure from blocking the protected action.
+    Route::match(['patch', 'post'], '/agency-admins/{id}/deactivate', [AdminInviteController::class, 'deactivateAgencyAdmin'])
+        ->whereNumber('id')->name('admin.agency-admins.deactivate');
+    Route::match(['patch', 'post'], '/agency-admins/{id}/reactivate', [AdminInviteController::class, 'reactivateAgencyAdmin'])
+        ->whereNumber('id')->name('admin.agency-admins.reactivate');
+    Route::delete('/agency-admins/{id}/permanently-delete', [AdminInviteController::class, 'permanentlyDeleteAgencyAdmin'])
+        ->whereNumber('id')->name('admin.agency-admins.permanently-delete');
 
 
     // ================= CATEGORY MANAGEMENT =================
@@ -704,6 +718,16 @@ Route::post(
 | PUBLIC USER ACCOUNT MANAGEMENT
 |--------------------------------------------------------------------------
 */
+
+/*
+ * Verify the acting administrator's password before continuing a user
+ * lifecycle action. Rate-limited to mitigate password-guessing attempts.
+ */
+Route::post(
+    '/admin/users/verify-lifecycle-password',
+    [UserController::class, 'verifyLifecyclePassword']
+)->middleware('throttle:8,1')->name('admin.users.verify-lifecycle-password');
+
 
 /*
  * Deactivate a public-user account.

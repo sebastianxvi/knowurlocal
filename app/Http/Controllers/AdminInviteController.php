@@ -9,6 +9,8 @@ use App\Models\UserLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 use Illuminate\Support\Str;
 
 class AdminInviteController extends Controller
@@ -357,4 +359,113 @@ class AdminInviteController extends Controller
 
         return back()->with('success', 'Agency Admin invitation sent. The invitation expires in 24 hours.');
     }
+
+
+    /**
+     * Verify the authenticated central administrator before Agency Admin lifecycle changes.
+     * The mutation endpoints verify the password again, independently.
+     */
+    public function verifyAgencyAdminLifecyclePassword(Request $request)
+    {
+        abort_unless(auth()->check() && in_array(auth()->user()->role, ['admin', 'superadmin'], true), 403);
+        $validated = $request->validate(['password' => ['required', 'string', 'max:255']]);
+
+        if (!Hash::check((string) $validated['password'], (string) $request->user()->password)) {
+            return response()->json(['message' => 'The administrator password is incorrect.'], 422);
+        }
+
+        return response()->json(['verified' => true]);
+    }
+
+    private function validAgencyAdminLifecyclePassword(Request $request): bool
+    {
+        $actor = $request->user();
+        return $actor
+            && in_array((string) $actor->role, ['admin', 'superadmin'], true)
+            && $request->filled('current_password')
+            && Hash::check((string) $request->input('current_password'), (string) $actor->password);
+    }
+
+    public function deactivateAgencyAdmin(Request $request, int $id)
+    {
+        abort_unless(auth()->check() && in_array(auth()->user()->role, ['admin', 'superadmin'], true), 403);
+        if (!$this->validAgencyAdminLifecyclePassword($request)) {
+            return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+        }
+
+        $target = User::where('role', 'agency_admin')->findOrFail($id);
+        abort_if($target->status === 'deactivated', 409, 'This Agency Admin is already deactivated.');
+        $old = ['status' => $target->status];
+        $target->update(['status' => 'deactivated']);
+
+        app(\App\Services\AuditLogService::class)->record(
+            action: 'deactivate_agency_admin',
+            page: 'agency_admin_management',
+            targetType: 'user',
+            targetId: (int) $target->id,
+            targetUserId: (int) $target->id,
+            oldValues: $old,
+            newValues: ['status' => $target->status],
+            description: 'Deactivated Agency Admin account.'
+        );
+
+        return back()->with('success', 'Agency Admin account deactivated.');
+    }
+
+    public function reactivateAgencyAdmin(Request $request, int $id)
+    {
+        abort_unless(auth()->check() && in_array(auth()->user()->role, ['admin', 'superadmin'], true), 403);
+        if (!$this->validAgencyAdminLifecyclePassword($request)) {
+            return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+        }
+
+        $target = User::where('role', 'agency_admin')->findOrFail($id);
+        abort_if($target->status === 'active', 409, 'This Agency Admin is already active.');
+        $old = ['status' => $target->status];
+        $target->update(['status' => 'active']);
+
+        app(\App\Services\AuditLogService::class)->record(
+            action: 'reactivate_agency_admin',
+            page: 'agency_admin_management',
+            targetType: 'user',
+            targetId: (int) $target->id,
+            targetUserId: (int) $target->id,
+            oldValues: $old,
+            newValues: ['status' => $target->status],
+            description: 'Reactivated Agency Admin account.'
+        );
+
+        return back()->with('success', 'Agency Admin account reactivated.');
+    }
+
+    public function permanentlyDeleteAgencyAdmin(Request $request, int $id)
+    {
+        abort_unless(auth()->check() && auth()->user()->role === 'superadmin', 403);
+        if (!$this->validAgencyAdminLifecyclePassword($request)) {
+            return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+        }
+
+        $target = User::where('role', 'agency_admin')->findOrFail($id);
+        $old = [
+            'name' => trim(($target->first_name ?? '') . ' ' . ($target->last_name ?? '')) ?: $target->name,
+            'email' => $target->email,
+            'agency_id' => $target->agency_id,
+            'status' => $target->status,
+        ];
+
+        app(\App\Services\AuditLogService::class)->record(
+            action: 'permanently_delete_agency_admin',
+            page: 'agency_admin_management',
+            targetType: 'user',
+            targetId: (int) $target->id,
+            targetUserId: (int) $target->id,
+            oldValues: $old,
+            newValues: [],
+            description: 'Permanently deleted Agency Admin account.'
+        );
+
+        $target->delete();
+        return back()->with('success', 'Agency Admin account permanently deleted.');
+    }
+
 }

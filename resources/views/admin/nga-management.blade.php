@@ -926,9 +926,13 @@ Additional contact information may be added.
 </script>
 
 
+<script src="{{ asset('jsfiles/admin/admin-password-confirmation.js') }}?v={{ filemtime(public_path('jsfiles/admin/admin-password-confirmation.js')) }}"></script>
+<script>
+    window.AGENCY_LIFECYCLE_VERIFY_URL = @json(route('admin.agencies.verify-intervention-password'));
+</script>
 <script src="{{ asset('jsfiles/admin/trash-reason.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/components/action-menu.js') }}"></script>
-<script src="{{ asset('jsfiles/admin/nga-management.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/nga-management.js') }}?v={{ filemtime(public_path('jsfiles/admin/nga-management.js')) }}"></script>
 
 @if(session('success'))
 <script>

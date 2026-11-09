@@ -881,6 +881,19 @@ public function verifyInterventionPassword(Request $request)
     return response()->json(['verified' => true]);
 }
 
+private function lifecyclePasswordIsValid(Request $request): bool
+{
+    $admin = $request->user();
+
+    return $admin
+        && in_array((string) $admin->role, ['admin', 'superadmin'], true)
+        && $request->filled('current_password')
+        && Hash::check(
+            (string) $request->input('current_password'),
+            (string) $admin->password
+        );
+}
+
 private function faqInterventionRequired(Request $request): bool
 {
     return in_array((string) $request->user()?->role, ['admin', 'superadmin'], true);
@@ -1513,6 +1526,12 @@ $faq->id
      */
     public function destroy(Request $request, $id)
     {
+        abort_unless(in_array((string) $request->user()?->role, ['admin', 'superadmin'], true), 403);
+
+        if (!$this->lifecyclePasswordIsValid($request)) {
+            return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+        }
+
         $request->validate([
             'reason' => ['required', 'string', 'min:3', 'max:1000'],
         ]);
@@ -1565,8 +1584,14 @@ $faq->id
  *
  * Restores a soft-deleted FAQ back into the active dataset.
  */
-public function restore($id)
+public function restore(Request $request, $id)
 {
+    abort_unless(in_array((string) $request->user()?->role, ['admin', 'superadmin'], true), 403);
+
+    if (!$this->lifecyclePasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
+
     /*
      * onlyTrashed() guarantees that we are operating on
      * something currently inside the recycle bin.
@@ -1624,8 +1649,14 @@ public function restore($id)
  *
  * This operation cannot be undone.
  */
-public function forceDestroy($id)
+public function forceDestroy(Request $request, $id)
 {
+    abort_unless(in_array((string) $request->user()?->role, ['admin', 'superadmin'], true), 403);
+
+    if (!$this->lifecyclePasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
+
     /*
      * Only retrieve FAQs that are already in the recycle bin.
      *

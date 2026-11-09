@@ -2678,8 +2678,14 @@ resetTextareaHeights();
                         reasonInput.name = "reason";
                         deleteForm.appendChild(reasonInput);
                     }
-                    reasonInput.value = reason.trim();
-                    deleteForm.submit();
+                    reasonInput.value = String(reason || "").trim();
+
+                    window.requestAdminPasswordForForm({
+                        form: deleteForm,
+                        verificationUrl: window.FAQ_INTERVENTION_VERIFY_URL,
+                        actionDescription: "move this FAQ to the trash",
+                        subject: question
+                    });
                 }
 
             });
@@ -2747,9 +2753,12 @@ resetTextareaHeights();
                     true,
 
                 onConfirm: () => {
-
-                    restoreForm.submit();
-
+                    window.requestAdminPasswordForForm({
+                        form: restoreForm,
+                        verificationUrl: window.FAQ_INTERVENTION_VERIFY_URL,
+                        actionDescription: "restore",
+                        subject: question
+                    });
                 }
 
             });
@@ -2817,9 +2826,12 @@ resetTextareaHeights();
                     true,
 
                 onConfirm: () => {
-
-                    forceDeleteForm.submit();
-
+                    window.requestAdminPasswordForForm({
+                        form: forceDeleteForm,
+                        verificationUrl: window.FAQ_INTERVENTION_VERIFY_URL,
+                        actionDescription: "permanently delete",
+                        subject: question
+                    });
                 }
 
             });

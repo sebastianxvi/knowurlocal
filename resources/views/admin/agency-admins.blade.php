@@ -46,6 +46,16 @@
 #agency-invite-modal #agency-invite-agency-options {
     z-index: 30;
 }
+
+.agency-admin-actions { display:flex; align-items:center; justify-content:flex-end; gap:5px; flex-wrap:nowrap; }
+.agency-admin-actions form { margin:0; padding:0; }
+.agency-admin-actions .admin-table-icon-action {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:34px; min-width:34px; height:34px; min-height:34px;
+    padding:0; gap:0; border-radius:8px; line-height:1;
+}
+.agency-admin-actions .admin-table-icon-action i { margin:0; font-size:15px; }
+@media (max-width: 700px) { .agency-admin-actions { justify-content:flex-start; } }
 </style>
 
 @endpush
@@ -57,6 +67,7 @@
 @section('content')
 <div class="admin-page agency-admin-page">
     @if(session('success'))<script>window.__AGENCY_ADMIN_FLASH_SUCCESS__ = @json(session('success'));</script>@endif
+    @if(session('error'))<div class="aa-alert error" role="alert">{{ session('error') }}</div>@endif
     @if($errors->any())<div class="aa-alert error" role="alert">{{ $errors->first() }}</div>@endif
 
     @include('admin.components.status-tabs', [
@@ -107,20 +118,43 @@
     </section>
     @else
     <section class="agency-admin-table-section">
-        <div class="admin-section-heading"><div><h3>{{ $status === 'active' ? 'Active Agency Admins' : 'Deactivated Agency Admins' }}</h3><p class="aa-muted">Each account is restricted to the agency assigned to it.</p></div><span class="support-dataset-count">{{ $agencyAdmins->count() }} shown</span></div>
+        <div class="admin-section-heading"><span class="support-dataset-count">{{ $agencyAdmins->count() }} shown</span></div>
         <div class="table-wrapper aa-table-wrap">
             <table class="table">
-                <thead><tr><th>Administrator</th><th>Agency</th><th>Email</th><th>Account status</th></tr></thead>
+                <thead><tr><th>Administrator</th><th>Agency</th><th>Email</th><th>Account status</th><th>Actions</th></tr></thead>
                 <tbody>
                 @forelse($agencyAdmins as $admin)
-                    <tr>
+                    <tr class="agency-admin-row" data-name="{{ trim(($admin->first_name ?? '').' '.($admin->last_name ?? '')) ?: $admin->name }}">
                         <td><div class="actor-cell"><span class="actor-name">{{ trim(($admin->first_name ?? '').' '.($admin->last_name ?? '')) ?: $admin->name }}</span></div></td>
                         <td>{{ $admin->agency?->agency_name ?? 'Agency unavailable' }}</td>
                         <td>{{ $admin->email }}</td>
                         <td><span class="badge {{ $admin->status ?? 'active' }}">{{ ucfirst($admin->status ?? 'active') }}</span></td>
+                        <td class="tablebtn agency-admin-actions">
+                            @if(($admin->status ?? 'active') === 'active')
+                                <form method="POST" action="{{ route('admin.agency-admins.deactivate', $admin->id) }}" class="agency-admin-lifecycle-form">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-danger deactivate-agency-admin-btn admin-table-icon-action" title="Deactivate" aria-label="Deactivate {{ $admin->email }}"><i class="ph-light ph-user-minus" aria-hidden="true"></i><span class="sr-only">Deactivate</span></button>
+                                </form>
+                            @else
+                                {{-- Deactivated accounts can be reactivated or permanently deleted. --}}
+                                <form method="POST" action="{{ route('admin.agency-admins.reactivate', $admin->id) }}" class="agency-admin-lifecycle-form">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-primary reactivate-agency-admin-btn admin-table-icon-action" title="Reactivate" aria-label="Reactivate {{ $admin->email }}"><i class="ph-light ph-user-check" aria-hidden="true"></i><span class="sr-only">Reactivate</span></button>
+                                </form>
+                                @if(auth()->user()->role === 'superadmin')
+                                    <form method="POST" action="{{ route('admin.agency-admins.permanently-delete', $admin->id) }}" class="agency-admin-lifecycle-form">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger delete-agency-admin-btn admin-table-icon-action" title="Delete Permanently" aria-label="Permanently delete {{ $admin->email }}"><i class="ph-light ph-trash" aria-hidden="true"></i><span class="sr-only">Delete Permanently</span></button>
+                                    </form>
+                                @endif
+                            @endif
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="empty">No {{ $status }} Agency Admin accounts match your search.</td></tr>
+                    <tr><td colspan="5" class="empty">No {{ $status }} Agency Admin accounts match your search.</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -187,5 +221,70 @@
  if(window.__AGENCY_ADMIN_FLASH_SUCCESS__){const message=window.__AGENCY_ADMIN_FLASH_SUCCESS__;window.__AGENCY_ADMIN_FLASH_SUCCESS__=null;if(typeof window.showAlertModal==='function')window.showAlertModal({title:'Success',text:message,icon:'✓',variant:'success',confirmText:'OK',showCancel:false,onConfirm:function(){if(typeof window.closeAlertModal==='function')window.closeAlertModal();}});}
  @if($errors->any() && old('email')) window.openAgencyInviteModal(); @endif
 })();
+</script>
+<script src="{{ asset('jsfiles/admin/admin-password-confirmation.js') }}?v={{ filemtime(public_path('jsfiles/admin/admin-password-confirmation.js')) }}"></script>
+<script>
+document.addEventListener('submit', function(e) {
+    const form = e.target.closest('form.agency-admin-lifecycle-form');
+    if (!form) return;
+    e.preventDefault();
+    if (form.dataset.confirming === 'true') return;
+    form.dataset.confirming = 'true';
+
+    const deactivate = form.querySelector('.deactivate-agency-admin-btn');
+    const reactivate = form.querySelector('.reactivate-agency-admin-btn');
+    const permanentlyDelete = form.querySelector('.delete-agency-admin-btn');
+    const name = form.closest('.agency-admin-row')?.dataset.name || 'this Agency Admin';
+    const config = deactivate
+        ? {title:'Deactivate Agency Admin', text:`Are you sure you want to deactivate ${name}? The account can be reactivated later.`, icon:'!', variant:'danger', confirmText:'Deactivate', verb:'deactivate'}
+        : reactivate
+        ? {title:'Reactivate Agency Admin', text:`Are you sure you want to reactivate ${name}? This restores the account's active status.`, icon:'✓', variant:'success', confirmText:'Reactivate', verb:'reactivate'}
+        : permanentlyDelete
+        ? {title:'Delete Agency Admin Permanently', text:`This permanently deletes ${name}'s account and cannot be undone. Are you sure you want to continue?`, icon:'!', variant:'danger', confirmText:'Delete Permanently', verb:'permanently delete'}
+        : null;
+
+    if (!config) {
+        form.dataset.confirming = 'false';
+        return;
+    }
+
+    window.showAlertModal({
+        ...config,
+        showCancel:true,
+        onCancel:()=>{form.dataset.confirming='false'; form.dataset.passwordCancelled='true';},
+        onConfirm:()=>{
+            window.closeAlertModal(true);
+            const csrf = form.querySelector('input[name="_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.content || '';
+            window.showAlertModal({
+                title:'Administrative security verification',
+                text:`Confirm your identity before you ${config.verb} ${name}.`,
+                icon:'ph-light ph-shield-check',
+                variant:'info',
+                input:{type:'password',label:'Confirm your administrator password',placeholder:'Enter your current account password',required:true,maxLength:255,validationMessage:'Your administrator password is required.'},
+                confirmText:'Verify and continue',
+                cancelText:'Cancel',
+                showCancel:true,
+                allowCancelDuringLoading:true,
+                onCancel:()=>{form.dataset.confirming='false';form.dataset.passwordCancelled='true';},
+                onConfirm:async password=>{
+                    form.dataset.passwordCancelled='false';
+                    const response=await fetch(@json(route('admin.agency-admins.verify-lifecycle-password')),{
+                        method:'POST',credentials:'same-origin',
+                        headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':csrf},
+                        body:JSON.stringify({password})
+                    });
+                    const payload=await response.json().catch(()=>({}));
+                    if(form.dataset.passwordCancelled==='true')return;
+                    if(!response.ok||payload.verified!==true)throw new Error(payload.message||'Password verification failed.');
+                    let field=form.querySelector('input[name="current_password"]');
+                    if(!field){field=document.createElement('input');field.type='hidden';field.name='current_password';form.appendChild(field);}
+                    field.value=password;
+                    window.closeAlertModal(true);
+                    form.submit();
+                }
+            });
+        }
+    });
+});
 </script>
 @endpush

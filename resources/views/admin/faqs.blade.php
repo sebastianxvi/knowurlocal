@@ -874,6 +874,7 @@ window.SUPPORT_FAQ_PREPARE_URL =
     );
 </script>
 
+<script src="{{ asset('jsfiles/admin/admin-password-confirmation.js') }}?v={{ filemtime(public_path('jsfiles/admin/admin-password-confirmation.js')) }}"></script>
 <script src="{{ asset('jsfiles/admin/faq-response-builder.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/trash-reason.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/components/action-menu.js') }}"></script>

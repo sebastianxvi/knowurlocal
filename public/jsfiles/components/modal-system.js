@@ -163,6 +163,17 @@
         cancelBtn.className = 'btn cancel';
         confirmBtn.dataset.loading = 'false';
         confirmBtn.disabled = false;
+
+        /*
+         * These buttons are cloned from the previous dialog above. Cloning
+         * preserves their disabled state, so a Cancel button disabled during
+         * an earlier async operation can remain disabled in the next dialog.
+         * Reset both controls for every new modal before applying this modal's
+         * own loading policy.
+         */
+        cancelBtn.disabled = false;
+        cancelBtn.removeAttribute('aria-disabled');
+
         cancelBtn.textContent = config.cancelText || 'Cancel';
         confirmBtn.hidden = !showConfirm;
         cancelBtn.hidden = !showCancel;
@@ -217,7 +228,12 @@
                 confirmBtn.dataset.loading = 'true';
                 confirmBtn.disabled = true;
                 confirmBtn.textContent = config.loadingText || 'Working…';
-                cancelBtn.disabled = true;
+                // Password verification may take time. Allow explicit cancellation
+                // when requested, and let the callback invalidate pending work.
+                cancelBtn.disabled = !config.allowCancelDuringLoading;
+                if (config.allowCancelDuringLoading) {
+                    cancelBtn.removeAttribute('aria-disabled');
+                }
             }
 
             try {
