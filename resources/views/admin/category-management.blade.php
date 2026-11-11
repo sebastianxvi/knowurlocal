@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="{{ asset('cssfiles/components/table.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/components/action-menu.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-layout.css') }}">
-<link rel="stylesheet" href="{{ asset('cssfiles/admin/category-management.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/category-management.css') }}?v={{ filemtime(public_path('cssfiles/admin/category-management.css')) }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
 @endpush
 
@@ -485,7 +485,7 @@
     type="hidden"
     name="display_color"
     id="display_color"
-    value="#3B82F6">
+    value="#2563EB">
 
 <div class="color-section">
 
@@ -499,77 +499,33 @@
         @php
 
 $colors = [
-    // Blue
-    '#2563EB',
+    // Blues and blue-greens
+    '#2563EB', '#3B82F6', '#1D4ED8', '#0EA5E9',
+    '#0284C7', '#06B6D4', '#0891B2', '#0F766E',
 
-    // Sky
-    '#0284C7',
+    // Greens and natural tones
+    '#14B8A6', '#10B981', '#16A34A', '#22C55E',
+    '#65A30D', '#84CC16', '#A3E635', '#166534',
 
-    // Cyan
-    '#0891B2',
+    // Yellows, golds and oranges
+    '#EAB308', '#CA8A04', '#F59E0B', '#D97706',
+    '#F97316', '#EA580C', '#C2410C', '#92400E',
 
-    // Teal
-    '#0F766E',
+    // Reds and warm pinks
+    '#EF4444', '#DC2626', '#B91C1C', '#F43F5E',
+    '#E11D48', '#BE123C', '#EC4899', '#DB2777',
 
-    // Green
-    '#16A34A',
+    // Purples and violets
+    '#D946EF', '#C026D3', '#A21CAF', '#A855F7',
+    '#9333EA', '#7E22CE', '#8B5CF6', '#6D28D9',
 
-    // Lime
-    '#65A30D',
+    // Indigo, navy and cool neutrals
+    '#6366F1', '#4F46E5', '#3730A3', '#1E3A8A',
+    '#0F172A', '#334155', '#64748B', '#475569',
 
-    // Yellow
-    '#CA8A04',
-
-    // Amber
-    '#D97706',
-
-    // Orange
-    '#EA580C',
-
-    // Red
-    '#DC2626',
-
-    // Rose
-    '#E11D48',
-
-    // Pink
-    '#DB2777',
-
-    // Magenta
-    '#C026D3',
-
-    // Purple
-    '#9333EA',
-
-    // Violet
-    '#7C3AED',
-
-    // Indigo
-    '#4F46E5',
-
-    // Slate
-    '#475569',
-
-    // Brown
-    '#92400E',
-
-    // Neutral
-    '#525252',
-
-    // Deep Navy
-    '#1E3A5F',
-
-    // Forest
-    '#166534',
-
-    // Burgundy
-    '#9F1239',
-
-    // Plum
-    '#701A75',
-
-    // Steel
-    '#334155'
+    // Distinct additional accents
+    '#795548', '#A16207', '#0D9488', '#7C2D12',
+    '#3F6212', '#115E59', '#701A75'
 ];
 
 @endphp
@@ -582,6 +538,8 @@ $colors = [
     type="button"
     class="color-chip {{ $index === 0 ? 'active' : '' }}"
     data-color="{{ $color }}"
+    aria-label="Select {{ $color }}"
+    title="{{ $color }}"
     style="background: {{ $color }}">
 </button>
 
@@ -661,9 +619,8 @@ $colors = [
 <script>
 
 window.categoryRoutes = {
-
-    store: "{{ route('admin.categories.store') }}"
-
+    store: "{{ route('admin.categories.store') }}",
+    verifyLifecyclePassword: "{{ route('admin.categories.verify-lifecycle-password') }}"
 };
 
 
@@ -678,6 +635,7 @@ window.categoryRoutes = {
 window.categoryColorUsage = @json($categoryColorUsage);
 
 window.categoryAgencyDirectory = @json($categoryAgencyDirectory);
+window.agencyViewOnLoad = null;
 
 </script>
 
@@ -696,9 +654,10 @@ window.__FLASH_ERROR__ = @json(session('error'));
 
 
 
+<script src="{{ asset('jsfiles/admin/admin-password-confirmation.js') }}?v={{ filemtime(public_path('jsfiles/admin/admin-password-confirmation.js')) }}"></script>
 <script src="{{ asset('jsfiles/admin/trash-reason.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/components/action-menu.js') }}"></script>
-<script src="{{ asset('jsfiles/admin/category-management.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/category-management.js') }}?v={{ filemtime(public_path('jsfiles/admin/category-management.js')) }}"></script>
 
 
 @endpush

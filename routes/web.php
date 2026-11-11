@@ -487,6 +487,10 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::get('/categories', [CategoryController::class, 'index'])
         ->name('admin.categories');
 
+    Route::post('/categories/verify-lifecycle-password', [CategoryController::class, 'verifyLifecyclePassword'])
+        ->middleware('throttle:8,1')
+        ->name('admin.categories.verify-lifecycle-password');
+
     Route::post('/categories', [CategoryController::class, 'store'])
         ->name('admin.categories.store');
 

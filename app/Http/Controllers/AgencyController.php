@@ -231,6 +231,53 @@ class AgencyController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        /*
+         * A category directory can deep-link to one active agency.
+         * Load the full view-model expected by nga-management.js so
+         * the existing View Agency modal can be opened directly.
+         */
+        $agencyViewOnLoad = null;
+        if ($request->filled('view_agency')) {
+            $viewAgency = Agency::query()
+                ->with(['type', 'category', 'contacts.contactType'])
+                ->findOrFail((int) $request->query('view_agency'));
+
+            $agencyViewOnLoad = [
+                'id' => $viewAgency->id,
+                'profile_revision' => $viewAgency->profile_revision,
+                'name' => $viewAgency->agency_name,
+                'abbreviation' => $viewAgency->agency_abbreviation,
+                'type_id' => $viewAgency->agency_type_id,
+                'category_id' => $viewAgency->category_id,
+                'description' => $viewAgency->agency_description,
+                'office_head_name' => $viewAgency->office_head_name,
+                'office_head_position' => $viewAgency->office_head_position,
+                'services_offered' => $viewAgency->services_offered,
+                'location' => $viewAgency->agency_location,
+                'office' => $viewAgency->office_hours,
+                'lat' => $viewAgency->lat,
+                'lng' => $viewAgency->lng,
+                'image' => $viewAgency->agency_image,
+                'imageUrl' => $viewAgency->agency_image
+                    ? (Storage::disk('agency_local')->exists($viewAgency->agency_image)
+                        ? Storage::disk('agency_local')->url($viewAgency->agency_image)
+                        : Storage::disk('public')->url($viewAgency->agency_image))
+                    : null,
+                'contacts' => $viewAgency->contacts->map(function ($contact) {
+                    return [
+                        'id' => $contact->id,
+                        'contact_type_id' => $contact->contact_type_id,
+                        'type_name' => $contact->contactType?->name,
+                        'type_slug' => $contact->contactType?->slug,
+                        'label' => $contact->label,
+                        'value' => $contact->value,
+                        'is_primary' => (bool) $contact->is_primary,
+                        'sort_order' => $contact->sort_order,
+                    ];
+                })->values()->all(),
+            ];
+        }
+
 
         /*
          * =====================================================
@@ -284,7 +331,8 @@ $contactTypes = ContactType::where('is_active', true)
                 'contactTypes',
                 'activeCount',
                 'trashedCount',
-                'status'
+                'status',
+                'agencyViewOnLoad'
             )
         );
     }

@@ -4543,6 +4543,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // remain editable instead of forcing the agency admin to re-enter them.
     if (window.agencyAdminProfileMode && window.agencyAdminProfileOpenOnLoad && window.agencyProfileData) {
         openModal("edit", window.agencyProfileData);
+    } else if (window.agencyViewOnLoad && !window.agencyAdminProfileMode) {
+        openModal("view", window.agencyViewOnLoad);
     }
 
 });

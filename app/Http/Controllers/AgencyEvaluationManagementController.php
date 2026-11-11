@@ -9,6 +9,7 @@ use App\Models\AgencyEvaluationReport;
 use App\Models\AgencyEvaluationResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use App\Services\AgencyEvaluationNotificationService;
 
@@ -149,13 +150,14 @@ class AgencyEvaluationManagementController extends Controller
             ->withAvg(['evaluations as average_rating' => fn ($q) => $q->where('status', 'published')], 'rating')
             ->orderBy('agency_name')->paginate(25)->withQueryString();
 
-        $summary = AgencyEvaluation::query()->where('status', 'published')
-            ->selectRaw('COUNT(*) total, COALESCE(AVG(rating),0) average')->first();
+        // Keep the moderation queue discoverable without presenting its
+        // system-wide count as an agency-specific performance metric.
         $pendingReports = AgencyEvaluationReport::where('status', 'pending')->count();
-        $unanswered = AgencyEvaluation::where('status', 'published')->whereDoesntHave('response')->count();
 
+        // The overview is an agency directory. Detailed evaluation metrics
+        // belong on the selected agency page.
         return view('admin.evaluations.overview', compact(
-            'agencies', 'summary', 'pendingReports', 'unanswered', 'search', 'ratingFilter'
+            'agencies', 'pendingReports', 'search', 'ratingFilter'
         ));
     }
 
@@ -165,6 +167,7 @@ class AgencyEvaluationManagementController extends Controller
         $base = $agency->evaluations()->where('status', 'published');
         $stats = (clone $base)->selectRaw('COUNT(*) total, COALESCE(AVG(rating),0) average')->first();
         $distribution = (clone $base)->selectRaw('rating, COUNT(*) total')->groupBy('rating')->pluck('total', 'rating');
+        $unanswered = (clone $base)->whereDoesntHave('response')->count();
         $evaluations = (clone $base)->with(['response', 'user:id,first_name,last_name,profile_picture'])
             ->withCount(['reports', 'helpfulVotes'])->latest()->paginate(50)->withQueryString();
         $evaluations->getCollection()->each(function (AgencyEvaluation $evaluation) {
@@ -176,7 +179,7 @@ class AgencyEvaluationManagementController extends Controller
             $evaluation->setAttribute('reviewer_is_anonymous', !$identityVisible);
         });
         $canRespond = $this->mayRespond(auth()->user(), $agency);
-        return view('admin.evaluations.agency', compact('agency', 'stats', 'distribution', 'evaluations', 'canRespond'));
+        return view('admin.evaluations.agency', compact('agency', 'stats', 'distribution', 'evaluations', 'canRespond', 'unanswered'));
     }
 
 
@@ -194,8 +197,25 @@ class AgencyEvaluationManagementController extends Controller
         abort_unless($this->mayRespond($request->user(), $agency), 403, 'You are not authorized to respond to this agency evaluation.');
 
         $validated = $request->validate(['body' => ['required', 'string', 'min:3', 'max:2000']]);
+
+        // Central administrators may respond only when no active Agency Admin
+        // is assigned. Require their current password for both first replies
+        // and edits, and verify it again on this mutation endpoint.
+        if (in_array((string) $request->user()->role, ['admin', 'superadmin'], true)) {
+            $currentPassword = (string) $request->input('current_password', '');
+            if ($currentPassword === '' || !Hash::check($currentPassword, (string) $request->user()->password)) {
+                return back()
+                    ->with('error', 'Administrator password is incorrect. No response was published.')
+                    ->withInput($request->only('body'));
+            }
+        }
+
         $responseWasCreated = false;
-        $response = DB::transaction(function () use ($request, $evaluation, $validated, &$responseWasCreated) {
+        $response = DB::transaction(function () use ($request, $agency, $evaluation, $validated, &$responseWasCreated) {
+            // Recheck response authority inside the transaction so an assignment
+            // change between page load and submit cannot grant stale permission.
+            abort_unless($this->mayRespond($request->user(), $agency), 403, 'An active Agency Administrator is assigned to this agency. System administrators cannot respond.');
+
             $existing = AgencyEvaluationResponse::where('agency_evaluation_id', $evaluation->id)->lockForUpdate()->first();
             if ($existing) {
                 // Response authority follows the agency's current assignment.

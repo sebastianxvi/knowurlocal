@@ -586,14 +586,11 @@
 
 .color-grid{
     display:grid;
-
-    grid-template-columns:repeat(6,44px);
-
-    gap:14px;
-
+    grid-template-columns:repeat(8,38px);
+    gap:10px;
     width:max-content;
-
-    margin:auto;
+    max-width:100%;
+    margin:4px auto 0;
 }
 
 
@@ -602,10 +599,10 @@
    ========================================================= */
 
 .color-chip{
-    width:44px;
-    height:44px;
+    width:38px;
+    height:38px;
 
-    border:none;
+    border:2px solid rgba(255,255,255,.92);
 
     border-radius:50%;
 
@@ -657,6 +654,40 @@
     font-size:16px;
 
     font-weight:700;
+}
+
+/* A compact count badge marks colors already assigned elsewhere. */
+.color-chip.has-usage{
+    outline:1px solid rgba(100,116,139,.28);
+    outline-offset:1px;
+}
+
+.color-chip-usage-count{
+    position:absolute;
+    top:-7px;
+    right:-8px;
+    z-index:2;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-width:17px;
+    height:17px;
+    padding:0 4px;
+    border:1px solid #f59e0b;
+    border-radius:999px;
+    background:#fff;
+    color:#92400e;
+    box-shadow:0 1px 4px rgba(15,23,42,.18);
+    font-size:9px;
+    font-weight:800;
+    line-height:1;
+    white-space:nowrap;
+    pointer-events:none;
+}
+
+.color-chip:focus-visible{
+    outline:3px solid rgba(37,99,235,.35);
+    outline-offset:4px;
 }
 
 /* =========================================================
@@ -772,9 +803,13 @@
 
 
     .color-grid{
-        grid-template-columns:repeat(5,44px);
+        grid-template-columns:repeat(7,34px);
+        gap:9px;
+    }
 
-        gap:12px;
+    .color-chip{
+        width:34px;
+        height:34px;
     }
 
 }
@@ -810,9 +845,13 @@
 
 
     .color-grid{
-        grid-template-columns:repeat(4,44px);
+        grid-template-columns:repeat(6,32px);
+        gap:8px;
+    }
 
-        gap:10px;
+    .color-chip{
+        width:32px;
+        height:32px;
     }
 
 }
@@ -1020,6 +1059,34 @@ button.category-agency-count:focus-visible {
     background: #fff;
 }
 
+.category-agency-item {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
+}
+
+.category-agency-item:hover,
+.category-agency-item:focus-visible {
+    border-color: #93b4ff;
+    background: #f8fbff;
+    box-shadow: 0 3px 12px rgba(37, 99, 235, .08);
+    outline: none;
+}
+
+.category-agency-item-link-icon {
+    flex: 0 0 auto;
+    color: #64748b;
+    font-size: 16px;
+    transition: transform .18s ease, color .18s ease;
+}
+
+.category-agency-item:hover .category-agency-item-link-icon,
+.category-agency-item:focus-visible .category-agency-item-link-icon {
+    color: #2563eb;
+    transform: translate(2px, -2px);
+}
+
 .category-agency-item-icon {
     display: grid;
     place-items: center;
@@ -1110,4 +1177,21 @@ button.category-agency-count:focus-visible {
 
 body.modal-open {
     overflow: hidden;
+}
+
+
+/* Keep the edit action visibly unavailable until a real change exists. */
+.btn-save:disabled,
+.btn-save[aria-disabled="true"]{
+    opacity:.45;
+    cursor:not-allowed;
+    box-shadow:none;
+    filter:saturate(.55);
+    transform:none;
+}
+
+.btn-save:disabled:hover,
+.btn-save[aria-disabled="true"]:hover{
+    transform:none;
+    box-shadow:none;
 }

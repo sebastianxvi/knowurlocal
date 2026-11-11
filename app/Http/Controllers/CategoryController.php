@@ -6,9 +6,43 @@ use App\Models\Category;
 use App\Models\Agency;
 use App\Models\UserLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class CategoryController extends Controller
 {
+    public function verifyLifecyclePassword(Request $request)
+    {
+        abort_unless(
+            auth()->check() && in_array((string) $request->user()->role, ['admin', 'superadmin'], true),
+            403
+        );
+
+        $validated = $request->validate([
+            'password' => ['required', 'string', 'max:255'],
+        ]);
+
+        if (!Hash::check((string) $validated['password'], (string) $request->user()->password)) {
+            return response()->json([
+                'message' => 'The administrator password is incorrect.',
+            ], 422);
+        }
+
+        return response()->json(['verified' => true]);
+    }
+
+    private function lifecyclePasswordIsValid(Request $request): bool
+    {
+        $actor = $request->user();
+
+        return $actor
+            && in_array((string) $actor->role, ['admin', 'superadmin'], true)
+            && $request->filled('current_password')
+            && Hash::check(
+                (string) $request->input('current_password'),
+                (string) $actor->password
+            );
+    }
+
     /**
      * Display categories.
      *
@@ -142,6 +176,7 @@ class CategoryController extends Controller
                                 'name' => $agency->agency_name,
                                 'abbreviation' => $agency->agency_abbreviation,
                                 'type' => $agency->type?->name,
+                                'view_url' => route('admin.nga', ['view_agency' => $agency->id]),
                             ];
                         })
                         ->values()
@@ -198,6 +233,10 @@ $categoryColorUsage = Category::query()
      */
     public function store(Request $request)
     {
+        if (!$this->lifecyclePasswordIsValid($request)) {
+            return back()->with('error', 'Administrator password is incorrect. No changes were made.')->withInput();
+        }
+
         /*
          * Validate the incoming category data before
          * interacting with the database.
@@ -243,6 +282,10 @@ $categoryColorUsage = Category::query()
         Request $request,
         Category $category
     ) {
+        if (!$this->lifecyclePasswordIsValid($request)) {
+            return back()->with('error', 'Administrator password is incorrect. No changes were made.')->withInput();
+        }
+
         /*
          * Validate the updated category.
          *
@@ -326,6 +369,10 @@ $categoryColorUsage = Category::query()
      */
     public function destroy(Request $request, Category $category)
     {
+        if (!$this->lifecyclePasswordIsValid($request)) {
+            return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+        }
+
         $request->validate([
             'reason' => ['required', 'string', 'min:3', 'max:1000'],
         ]);
@@ -374,13 +421,17 @@ $categoryColorUsage = Category::query()
     /**
      * Restore a category from the trash.
      */
-    public function restore(int $id)
+    public function restore(Request $request, int $id)
     {
 
     abort_unless(
     auth()->user()->role === 'superadmin',
     403
 );
+        if (!$this->lifecyclePasswordIsValid($request)) {
+            return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+        }
+
         /*
          * Only retrieve records that are actually
          * soft-deleted.
@@ -428,7 +479,7 @@ $this->logAction(
  * historical category information is captured while the
  * category still exists.
  */
-public function forceDestroy(int $id)
+public function forceDestroy(Request $request, int $id)
 {
     /*
      * Only Superadmins may permanently delete categories.
@@ -439,6 +490,10 @@ public function forceDestroy(int $id)
         auth()->user()->role === 'superadmin',
         403
     );
+    if (!$this->lifecyclePasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
+
 
     /*
      * Only retrieve categories that are already in the trash.

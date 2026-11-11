@@ -1,14 +1,40 @@
 @extends('layouts.admin')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/dashboard.css') }}">
+@endpush
 @section('title', $agency->agency_name.' Evaluations')
 @section('page-title', 'Agency Evaluations')
 @section('page-subtitle', $agency->agency_name.' · Individual public feedback')
 @section('content')
 <div class="admin-page evaluation-admin-page">
     <a href="{{ route('admin.evaluations.overview', request()->only(['search', 'rating_filter'])) }}" class="btn btn-secondary evaluation-back-link"><i class="ph-light ph-arrow-left" aria-hidden="true"></i><span>Back to Agency Satisfaction</span></a>
-    <div class="admin-stats-grid">
-        <div class="admin-stat-card"><span>Evaluations</span><strong>{{ number_format($stats->total) }}</strong></div>
-        <div class="admin-stat-card"><span>Average satisfaction</span><strong>{{ number_format((float)$stats->average,1) }} <small>/ 5</small></strong></div>
-    </div>
+    <section class="dashboard-kpi-grid evaluation-agency-kpis" aria-label="{{ $agency->agency_name }} evaluation summary">
+        <div class="dashboard-kpi">
+            <span class="dashboard-kpi-icon is-blue"><i class="ph-light ph-chat-circle-text" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy">
+                <span class="dashboard-kpi-label">Published evaluations</span>
+                <strong>{{ number_format((int) $stats->total) }}</strong>
+                <small>Public feedback for this agency</small>
+            </span>
+        </div>
+        <div class="dashboard-kpi">
+            <span class="dashboard-kpi-icon is-violet"><i class="ph-light ph-star" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy">
+                <span class="dashboard-kpi-label">Average satisfaction</span>
+                <strong data-no-count-animation="true">{{ number_format((float) $stats->average, 1) }}</strong>
+                <small>Average rating out of 5</small>
+            </span>
+        </div>
+        <div class="dashboard-kpi dashboard-kpi-support {{ $unanswered > 0 ? 'is-attention' : '' }}">
+            <span class="dashboard-kpi-icon"><i class="ph-light ph-clock" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy">
+                <span class="dashboard-kpi-label">Awaiting official response</span>
+                <strong>{{ number_format((int) $unanswered) }}</strong>
+                <small>{{ $unanswered > 0 ? 'Published evaluations still need a reply' : 'No evaluations waiting for a reply' }}</small>
+            </span>
+        </div>
+    </section>
     <section class="admin-card">
         <div class="admin-card-heading"><div><h2>Rating distribution</h2><p>Published evaluations only.</p></div></div>
         @foreach(range(5,1) as $rating)
@@ -66,7 +92,7 @@
                             <small>Published by {{ $evaluation->response->responder_role === 'agency_admin' ? 'Agency Administrator' : 'System Administrator' }}</small>
                         </div>
                         @if($canRespond)
-                            <form id="admin-response-form-{{ $evaluation->id }}" method="POST" action="{{ route('admin.evaluations.respond', [$agency, $evaluation]) }}" class="evaluation-response-form evaluation-response-inline-form" hidden>
+                            <form id="admin-response-form-{{ $evaluation->id }}" method="POST" action="{{ route('admin.evaluations.respond', [$agency, $evaluation]) }}" class="evaluation-response-form evaluation-response-inline-form" data-requires-admin-password="true" data-agency-name="{{ $agency->agency_name }}" data-password-verification-url="{{ route('admin.categories.verify-lifecycle-password') }}" hidden>
                                 @csrf
                                 <label for="admin-response-{{ $evaluation->id }}">Edit official response</label>
                                 <textarea id="admin-response-{{ $evaluation->id }}" name="body" rows="3" maxlength="2000" required placeholder="Acknowledge the feedback and explain any follow-up...">{{ old('body', $evaluation->response->body) }}</textarea>
@@ -84,7 +110,7 @@
                     <div class="evaluation-admin-actions" id="admin-response-actions-{{ $evaluation->id }}">
                         <button type="button" class="btn btn-primary evaluation-compose-toggle" data-target="admin-response-form-{{ $evaluation->id }}"><i class="ph-light ph-chat-circle" aria-hidden="true"></i> Reply</button>
                     </div>
-                    <form id="admin-response-form-{{ $evaluation->id }}" method="POST" action="{{ route('admin.evaluations.respond', [$agency, $evaluation]) }}" class="evaluation-response-form" hidden>
+                    <form id="admin-response-form-{{ $evaluation->id }}" method="POST" action="{{ route('admin.evaluations.respond', [$agency, $evaluation]) }}" class="evaluation-response-form" data-requires-admin-password="true" data-agency-name="{{ $agency->agency_name }}" data-password-verification-url="{{ route('admin.categories.verify-lifecycle-password') }}" hidden>
                         @csrf
                         <label for="admin-response-{{ $evaluation->id }}">Write official response</label>
                         <textarea id="admin-response-{{ $evaluation->id }}" name="body" rows="3" maxlength="2000" required placeholder="Acknowledge the feedback and explain any follow-up...">{{ old('body') }}</textarea>
@@ -107,6 +133,9 @@
 @endsection
 @push('styles')
 <style>
+.evaluation-agency-kpis{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:0}
+@media(max-width:900px){.evaluation-agency-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.evaluation-agency-kpis{grid-template-columns:1fr}}
 .evaluation-reviewer-identity{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .evaluation-reviewer-avatar{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;flex:0 0 28px;border-radius:50%;overflow:hidden;background:#e8edf3;color:#94a3b8;position:relative}
 .evaluation-reviewer-avatar img{width:100%;height:100%;object-fit:cover}
@@ -179,6 +208,8 @@
 @endpush
 
 @push('scripts')
+<script src="{{ asset('jsfiles/admin/dashboard.js') }}?v={{ filemtime(public_path('jsfiles/admin/dashboard.js')) }}"></script>
+<script src="{{ asset('jsfiles/admin/admin-password-confirmation.js') }}?v={{ filemtime(public_path('jsfiles/admin/admin-password-confirmation.js')) }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const closeMenus = (except = null) => document.querySelectorAll('.evaluation-response-menu.is-open').forEach(menu => {
@@ -236,11 +267,62 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         form.querySelector('textarea')?.blur();
     }));
-    document.querySelectorAll('.evaluation-response-form').forEach(form => form.addEventListener('submit', () => {
+    document.querySelectorAll('.evaluation-response-form').forEach(form => form.addEventListener('submit', event => {
         const submit = form.querySelector('button[type="submit"]');
         if (!submit) return;
-        submit.disabled = true;
+
         const isEditing = form.classList.contains('evaluation-response-inline-form');
+
+        // Central administrators must confirm the response, then verify their
+        // password through the shared security modal before the form is posted.
+        if (form.dataset.requiresAdminPassword === 'true') {
+            event.preventDefault();
+
+            if (form.dataset.passwordGateStarted === 'true') return;
+            form.dataset.passwordGateStarted = 'true';
+
+            const agencyName = form.dataset.agencyName || 'this agency';
+            const verificationUrl = form.dataset.passwordVerificationUrl;
+
+            const continueWithPassword = () => {
+                if (typeof window.requestAdminPasswordForForm !== 'function') {
+                    form.dataset.passwordGateStarted = 'false';
+                    window.showAlertModal({
+                        title: 'Security verification unavailable',
+                        text: 'Please refresh the page and try again.',
+                        variant: 'danger',
+                        confirmText: 'OK',
+                        showCancel: false
+                    });
+                    return;
+                }
+
+                window.requestAdminPasswordForForm({
+                    form,
+                    verificationUrl,
+                    actionDescription: isEditing ? 'update the official response for' : 'publish an official response for',
+                    subject: agencyName,
+                    onCancel: () => { form.dataset.passwordGateStarted = 'false'; }
+                });
+            };
+
+            window.showAlertModal({
+                title: isEditing ? 'Save official response changes?' : 'Publish official response?',
+                text: isEditing
+                    ? 'Review your changes before updating the public response for ' + agencyName + '.'
+                    : 'Your response will be visible to the public alongside this evaluation for ' + agencyName + '.',
+                icon: 'ph-light ph-shield-check',
+                variant: 'success',
+                confirmText: isEditing ? 'Continue' : 'Publish',
+                cancelText: 'Cancel',
+                showCancel: true,
+                onCancel: () => { form.dataset.passwordGateStarted = 'false'; },
+                onConfirm: continueWithPassword
+            });
+            return;
+        }
+
+        submit.disabled = true;
         submit.innerHTML = '<i class="ph-light ph-spinner-gap" aria-hidden="true"></i><span>' + (isEditing ? 'Updating…' : 'Publishing…') + '</span>';
     }));
     document.querySelectorAll('.evaluation-delete-response-trigger').forEach(button => button.addEventListener('click', () => {

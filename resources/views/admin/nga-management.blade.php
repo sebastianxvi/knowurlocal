@@ -923,6 +923,7 @@ Additional contact information may be added.
      * JavaScript can safely consume.
      */
     window.agencyContactTypes = {!! $contactTypes->values()->toJson() !!};
+    window.agencyViewOnLoad = @json($agencyViewOnLoad ?? null);
 </script>
 
 

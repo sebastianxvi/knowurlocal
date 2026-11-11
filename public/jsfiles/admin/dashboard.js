@@ -301,7 +301,7 @@
     const initDashboardMetricMotion = () => {
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
         const formatter = new Intl.NumberFormat();
-        document.querySelectorAll('.dashboard-kpi-copy strong, .dashboard-kpi strong').forEach(node => {
+        document.querySelectorAll('.dashboard-kpi-copy strong:not([data-no-count-animation]), .dashboard-kpi strong:not([data-no-count-animation])').forEach(node => {
             const raw = (node.textContent || '').trim();
             const target = Number(raw.replace(/[^\d.-]/g, ''));
             if (!raw || !Number.isFinite(target) || target <= 0) return;

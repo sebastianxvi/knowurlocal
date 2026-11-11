@@ -39,6 +39,34 @@ let currentMode = "add";
  * a new category.
  */
 let currentCategoryId = null;
+let originalCategoryName = "";
+let originalCategoryColor = "";
+
+const categorySaveButton = document.querySelector(
+    'button[type="submit"][form="categoryForm"]'
+);
+
+function setCategorySaveEnabled(enabled) {
+    if (!categorySaveButton) return;
+
+    categorySaveButton.disabled = !enabled;
+    categorySaveButton.setAttribute("aria-disabled", String(!enabled));
+}
+
+function updateEditSaveState() {
+    if (currentMode !== "edit") {
+        setCategorySaveEnabled(true);
+        return;
+    }
+
+    const nameChanged =
+        categoryName.value.trim() !== originalCategoryName;
+
+    const colorChanged =
+        colorInput.value.trim().toUpperCase() !== originalCategoryColor;
+
+    setCategorySaveEnabled(nameChanged || colorChanged);
+}
 
 // ================= OPEN =================
 function openModal(){
@@ -49,6 +77,8 @@ function openModal(){
      * No existing category is being edited.
      */
     currentCategoryId = null;
+    originalCategoryName = "";
+    originalCategoryColor = "";
 
     categoryForm.reset();
 
@@ -64,7 +94,7 @@ function openModal(){
 
     categoryName.value = "";
 
-    colorInput.value = "#3B82F6";
+    colorInput.value = "#2563EB";
 
     /*
  * Check the default color immediately when the
@@ -78,13 +108,14 @@ updateColorUsage(
 
         chip.classList.toggle(
             "active",
-            chip.dataset.color === "#3B82F6"
+            chip.dataset.color === "#2563EB"
         );
 
     });
 
-    console.log(categoryForm.action);
-console.log(formMethod.value);
+    updateColorChipUsage();
+    setCategorySaveEnabled(true);
+
     modalBack.classList.add('active');
 
 }
@@ -110,8 +141,10 @@ function openEditModal(button){
     modalTitle.textContent = "Edit Category";
 
     categoryName.value = button.dataset.name;
-
     colorInput.value = button.dataset.color;
+
+    originalCategoryName = categoryName.value.trim();
+    originalCategoryColor = colorInput.value.trim().toUpperCase();
 
     /*
  * Check the category's current color.
@@ -133,6 +166,7 @@ updateColorUsage(
 
     });
 
+    updateEditSaveState();
     modalBack.classList.add("active");
 
 }
@@ -165,112 +199,78 @@ const colorChips =
 
 
 /*
- * Existing category color information supplied by
- * the Laravel controller.
- *
- * This data is used only to inform the administrator
- * about colors that are already being used.
+ * Existing category color information supplied by Laravel.
+ * Used only for informative picker indicators.
  */
-const categoryColorUsage =
-    window.categoryColorUsage || [];
+const categoryColorUsage = window.categoryColorUsage || [];
 
+function categoriesUsingColor(selectedColor) {
+    const normalizedColor = String(selectedColor || "").toUpperCase();
 
-
-/*
- * Check whether the selected color is already being used
- * by another category.
- *
- * This is an informational UX feature only.
- * It does not prevent the administrator from using the color.
- */
-function updateColorUsage(selectedColor){
-
-    /*
-     * Normalize the selected color so comparisons are
-     * case-insensitive.
-     *
-     * Example:
-     * #3b82f6 and #3B82F6 are treated as the same color.
-     */
-    const normalizedColor =
-        selectedColor.toUpperCase();
-
-
-    /*
-     * Find all categories that currently use this color.
-     *
-     * The category being edited is excluded because a
-     * category using its own existing color is not a conflict.
-     */
-    const matchingCategories =
-        categoryColorUsage.filter(category => {
-
-            return (
-                category.display_color.toUpperCase() === normalizedColor &&
-                category.id !== currentCategoryId
-            );
-
-        });
-
-
-    /*
-     * Find the small information area underneath
-     * the color palette.
-     */
-    const usageElement =
-        document.getElementById("color-usage");
-
-
-    /*
-     * Stop safely if the indicator has not been added
-     * to the Blade yet.
-     */
-    if(!usageElement){
-        return;
-    }
-
-
-    /*
-     * No other category uses this color.
-     */
-    if(matchingCategories.length === 0){
-
-    /*
-     * No other category uses this color.
-     *
-     * Because duplicate colors are allowed, there is
-     * no need to display an "Available" message.
-     *
-     * Leaving the area empty keeps the color picker
-     * visually clean.
-     */
-    usageElement.innerHTML = "";
-
-    return;
+    return categoryColorUsage.filter(category => (
+        String(category.display_color || "").toUpperCase() === normalizedColor &&
+        Number(category.id) !== currentCategoryId
+    ));
 }
 
+/*
+ * Mark every palette swatch that is already used by another
+ * active category. Duplicate colors remain allowed.
+ */
+function updateColorChipUsage() {
+    colorChips.forEach(chip => {
+        const matches = categoriesUsingColor(chip.dataset.color);
+        const names = matches.map(category => category.category_name).filter(Boolean);
+        const badge = chip.querySelector(".color-chip-usage-count");
 
-    /*
-     * Collect the names of categories using this color.
-     */
-    const categoryNames =
-        matchingCategories
-            .map(category => category.category_name)
-            .join(", ");
+        chip.classList.toggle("has-usage", matches.length > 0);
+        chip.title = matches.length
+            ? `Already used by: ${names.join(", ")}`
+            : `${chip.dataset.color} — not used by another category`;
 
+        chip.setAttribute(
+            "aria-label",
+            matches.length
+                ? `Select ${chip.dataset.color}. Already used by ${names.join(", ")}.`
+                : `Select ${chip.dataset.color}. Not used by another category.`
+        );
 
-    /*
-     * Inform the administrator that the color is already
-     * being used.
-     *
-     * This is intentionally NOT treated as an error.
-     */
-    usageElement.innerHTML = `
-        <span class="color-usage-used">
-            <i class="ph-light ph-info"></i>
-            Used by ${categoryNames}
-        </span>
-    `;
+        if (badge) badge.remove();
+
+        if (matches.length) {
+            const countBadge = document.createElement("span");
+            countBadge.className = "color-chip-usage-count";
+            countBadge.textContent = matches.length > 99 ? "99+" : String(matches.length);
+            countBadge.setAttribute("aria-hidden", "true");
+            chip.appendChild(countBadge);
+        }
+    });
+}
+
+/*
+ * Show the names of other categories using the currently
+ * selected color. This is informational, not a validation error.
+ */
+function updateColorUsage(selectedColor) {
+    const usageElement = document.getElementById("color-usage");
+    if (!usageElement) return;
+
+    const matches = categoriesUsingColor(selectedColor);
+    usageElement.replaceChildren();
+
+    if (!matches.length) return;
+
+    const icon = document.createElement("i");
+    icon.className = "ph-light ph-info";
+    icon.setAttribute("aria-hidden", "true");
+
+    const message = document.createElement("span");
+    message.textContent = `Also used by ${matches.map(category => category.category_name).join(", ")}`;
+
+    const wrapper = document.createElement("span");
+    wrapper.className = "color-usage-used";
+    wrapper.append(icon, message);
+    usageElement.appendChild(wrapper);
 }
 
 colorChips.forEach(chip => {
@@ -302,13 +302,15 @@ colorChips.forEach(chip => {
          * Check whether another category already
          * uses this color.
          */
-        updateColorUsage(
-            chip.dataset.color
-        );
+        updateColorUsage(chip.dataset.color);
+        updateEditSaveState();
 
     });
 
 });
+
+// Track category-name edits and return Save to disabled if reverted.
+categoryName.addEventListener("input", updateEditSaveState);
 
 
 document.querySelectorAll('.edit-category').forEach(button => {
@@ -321,35 +323,64 @@ document.querySelectorAll('.edit-category').forEach(button => {
 
 });
 
-// ================= CONFIRM EDIT =================
-categoryForm.addEventListener("submit", function(e){
-
-    // Creating a category? Submit immediately.
-    if(currentMode === "add"){
+// ================= CONFIRM + ADMIN PASSWORD =================
+function requestCategoryAdminPassword(form, actionDescription, subject) {
+    if (typeof window.requestAdminPasswordForForm !== "function") {
+        showAlertModal({
+            title: "Security verification unavailable",
+            text: "Please refresh the page and try again.",
+            variant: "danger",
+            confirmText: "OK",
+            showCancel: false
+        });
         return;
     }
 
-    // Editing? Ask for confirmation.
+    window.requestAdminPasswordForForm({
+        form,
+        verificationUrl: window.categoryRoutes.verifyLifecyclePassword,
+        actionDescription,
+        subject
+    });
+}
+
+// Create and edit both require an explicit confirmation followed by password verification.
+categoryForm.addEventListener("submit", function(e) {
     e.preventDefault();
 
+    updateEditSaveState();
+
+    if (currentMode === "edit" && categorySaveButton?.disabled) {
+        return;
+    }
+
+    const isCreate = currentMode === "add";
+    const subject = isCreate
+        ? "this new category"
+        : `"${categoryName.value.trim() || "this category"}"`;
+
     showAlertModal({
-        title: "Save changes?",
-        text: "Make sure the category information is correct.",
+        title: isCreate ? "Create category?" : "Save changes?",
+        text: isCreate
+            ? "Review the category name and display color before creating this category."
+            : "Make sure the category information is correct.",
         icon: "✓",
         variant: "success",
-        confirmText: "Save",
+        confirmText: isCreate ? "Create" : "Save",
+        cancelText: "Cancel",
         showCancel: true,
-
         onConfirm: () => {
-            categoryForm.submit();
+            requestCategoryAdminPassword(
+                categoryForm,
+                isCreate ? "create" : "update",
+                subject
+            );
         }
     });
-
 });
 
-// ================= DELETE WITH MODAL =================
+// ================= MOVE TO TRASH =================
 document.addEventListener("click", function (e) {
-
     const btn = e.target.closest(".delete-category");
     if (!btn) return;
 
@@ -358,14 +389,16 @@ document.addEventListener("click", function (e) {
 
     e.preventDefault();
 
+    const name = btn.dataset.categoryName || "this category";
+
     showAlertModal({
         title: "Move category to Trash?",
-        text: "This category will be moved to the Trashed records.",
+        text: `"${name}" will be moved to the Trashed records.`,
         icon: "!",
         variant: "danger",
         confirmText: "Move to Trash",
+        cancelText: "Cancel",
         showCancel: true,
-
         input: {
             label: "Reason for trashing",
             placeholder: "Explain why this category is being moved to the trash…",
@@ -374,7 +407,6 @@ document.addEventListener("click", function (e) {
             maxLength: 1000,
             validationMessage: "Please provide a reason (at least 3 characters)."
         },
-
         onConfirm: (reason) => {
             let reasonInput = form.querySelector('input[name="reason"]');
             if (!reasonInput) {
@@ -384,147 +416,66 @@ document.addEventListener("click", function (e) {
                 form.appendChild(reasonInput);
             }
             reasonInput.value = reason.trim();
-            form.submit();
+
+            requestCategoryAdminPassword(
+                form,
+                "move",
+                `"${name}" to the trash`
+            );
         }
     });
-
 });
 
-// ================= RESTORE WITH MODAL =================
+// ================= RESTORE =================
 document.addEventListener("click", function (e) {
-
-    /*
-     * Detect a click on the Restore button.
-     *
-     * closest() also works when the administrator clicks
-     * the icon inside the button.
-     */
     const btn = e.target.closest(".restore-category");
-
-    /*
-     * Ignore clicks that are unrelated to restoration.
-     */
     if (!btn) return;
 
-    /*
-     * Find the form containing the Restore button.
-     *
-     * The form already contains the correct route,
-     * CSRF token, and PATCH method from Blade.
-     */
     const form = btn.closest("form");
-
-    /*
-     * Safety check before attempting submission.
-     */
     if (!form) return;
 
-    /*
-     * Prevent the browser from submitting automatically.
-     */
     e.preventDefault();
 
-    /*
-     * Get the category name supplied by Blade.
-     *
-     * This gives the administrator useful context
-     * in the confirmation dialog.
-     */
-    const categoryName =
-        btn.dataset.categoryName || "this category";
+    const name = btn.dataset.categoryName || "this category";
 
-    /*
-     * Show a confirmation dialog before restoring.
-     */
     showAlertModal({
-
         title: "Restore this category?",
-
-        text:
-            `"${categoryName}" will be restored and returned to the active category list.`,
-
+        text: `"${name}" will be restored and returned to the active category list.`,
         icon: "↶",
-
         variant: "success",
-
         confirmText: "Restore",
-
+        cancelText: "Cancel",
         showCancel: true,
-
-        /*
-         * Submit only after explicit confirmation.
-         */
         onConfirm: () => {
-            form.submit();
+            requestCategoryAdminPassword(form, "restore", `"${name}"`);
         }
-
     });
-
 });
 
-
-// ================= PERMANENT DELETE WITH MODAL =================
+// ================= PERMANENT DELETE =================
 document.addEventListener("click", function (e) {
-
-    /*
-     * Detect a click on the permanent-delete button.
-     */
     const btn = e.target.closest(".force-delete-category");
-
-    /*
-     * Ignore unrelated clicks.
-     */
     if (!btn) return;
 
-    /*
-     * Find the form containing the button.
-     */
     const form = btn.closest("form");
-
-    /*
-     * Safety check before submitting.
-     */
     if (!form) return;
 
-    /*
-     * Prevent immediate form submission.
-     */
     e.preventDefault();
 
-    /*
-     * Retrieve the category name for the confirmation dialog.
-     */
-    const categoryName =
-        btn.dataset.categoryName || "this category";
+    const name = btn.dataset.categoryName || "this category";
 
-    /*
-     * Permanent deletion is irreversible,
-     * so use the danger confirmation style.
-     */
     showAlertModal({
-
         title: "Delete this category permanently?",
-
-        text:
-            `"${categoryName}" will be permanently deleted. This action cannot be undone.`,
-
+        text: `"${name}" will be permanently deleted. This action cannot be undone.`,
         icon: "!",
-
         variant: "danger",
-
         confirmText: "Delete Permanently",
-
+        cancelText: "Cancel",
         showCancel: true,
-
-        /*
-         * Only submit the form after confirmation.
-         */
         onConfirm: () => {
-            form.submit();
+            requestCategoryAdminPassword(form, "permanently delete", `"${name}"`);
         }
-
     });
-
 });
 
 // ================= FLASH ERROR =================
@@ -595,7 +546,11 @@ document.addEventListener("DOMContentLoaded", () => {
             if (agency.type) meta.push(`<span class="category-agency-item-dot">•</span><span>${escapeHtml(agency.type)}</span>`);
 
             return `
-                <div class="category-agency-item">
+                <a
+                    class="category-agency-item"
+                    href="${escapeHtml(agency.view_url || '#')}"
+                    aria-label="View ${escapeHtml(agency.name)} in NGA and NGO Management"
+                >
                     <div class="category-agency-item-icon" aria-hidden="true">
                         <i class="ph-light ph-buildings"></i>
                     </div>
@@ -603,7 +558,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         <p class="category-agency-item-name">${escapeHtml(agency.name)}</p>
                         ${meta.length ? `<div class="category-agency-item-meta">${meta.join('')}</div>` : ''}
                     </div>
-                </div>
+                    <i class="ph-light ph-arrow-up-right category-agency-item-link-icon" aria-hidden="true"></i>
+                </a>
             `;
         }).join('');
     }
@@ -640,3 +596,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (event.key === 'Escape' && modal.classList.contains('active')) close();
     });
 })();
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    updateColorChipUsage();
+});
