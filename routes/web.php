@@ -645,6 +645,12 @@ Route::delete(
     // ADMIN MANAGEMENT PAGE
     Route::get('/admins', [AdminManagementController::class, 'admins'])
         ->name('admin.admins');
+
+    // Verify the acting Superadmin before any Admin Management mutation.
+    Route::post(
+        '/admins/verify-lifecycle-password',
+        [AdminManagementController::class, 'verifyLifecyclePassword']
+    )->middleware('throttle:8,1')->name('admin.admins.verify-lifecycle-password');
     Route::patch('/admins/{id}/evaluation-moderation', [AdminManagementController::class, 'toggleEvaluationModeration'])
         ->whereNumber('id')->name('admin.admins.evaluation-moderation');
 

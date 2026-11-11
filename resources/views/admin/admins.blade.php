@@ -13,8 +13,15 @@
 @section('page-subtitle', 'Manage administrators and invitations')
 
 @section('content')
+@if($errors->any() && old('email'))
+    <script>
+        window.__ADMIN_INVITE_VALIDATION_ERROR__ = @json($errors->first());
+        window.__ADMIN_INVITE_OLD_EMAIL__ = @json(old('email'));
+    </script>
+@endif
 
-<div class="admin-page">
+
+<div class="admin-page" data-lifecycle-password-url="{{ route('admin.admins.verify-lifecycle-password') }}">
 
     {{-- Shared status navigation --}}
     @if(auth()->user()->role === 'superadmin')
@@ -89,14 +96,7 @@
         </form>
 
     </section>
-
-    @if(session('success'))
-<script>
-    window.__FLASH_SUCCESS__ = @json(session('success'));
-</script>
-@endif
-
-    <!-- ================= TABLE ================= -->
+<!-- ================= TABLE ================= -->
     @include('admin.components.list-result-meta', [
     'count' => $admins->total(),
     'label' => 'administrator',
@@ -171,7 +171,7 @@
                 @csrf
                 @method('PATCH')
                 <input type="hidden" name="can_moderate_evaluations" value="{{ $admin->can_moderate_evaluations ? 0 : 1 }}">
-                <button type="submit" class="btn {{ $admin->can_moderate_evaluations ? 'btn-success' : 'btn-secondary' }} admin-table-icon-action"
+                <button type="submit" class="btn {{ $admin->can_moderate_evaluations ? 'btn-success' : 'btn-secondary' }} admin-table-icon-action evaluation-moderation-btn" type="button"
                     title="{{ $admin->can_moderate_evaluations ? 'Revoke evaluation moderation' : 'Grant evaluation moderation' }}"
                     aria-label="{{ $admin->can_moderate_evaluations ? 'Revoke evaluation moderation' : 'Grant evaluation moderation' }}">
                     <i class="ph-light {{ $admin->can_moderate_evaluations ? 'ph-shield-check' : 'ph-shield-plus' }}"></i>
@@ -400,7 +400,7 @@
             <div class="form-card">
 
                 <div class="floating-group">
-                    <input type="email" name="email" placeholder=" " required>
+                    <input type="email" name="email" value="{{ old('email') }}" placeholder=" " required>
                     <label>Email Address</label>
                 </div>
 
@@ -415,6 +415,6 @@
 @endsection
 
 @push('scripts')
-
-<script src="{{ asset('jsfiles/admin/admins.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/admin-password-confirmation.js') }}?v={{ filemtime(public_path('jsfiles/admin/admin-password-confirmation.js')) }}"></script>
+<script src="{{ asset('jsfiles/admin/admins.js') }}?v={{ filemtime(public_path('jsfiles/admin/admins.js')) }}"></script>
 @endpush

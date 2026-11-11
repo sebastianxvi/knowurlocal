@@ -679,7 +679,7 @@ document.addEventListener("DOMContentLoaded", function () {
             const res = await fetch(`{{ url('/admin/users') }}/${userId}/inquiries`);
             const data = await res.json();
 
-            renderInquiries(data.logs);
+            renderInquiries(data);
 
         }catch(err){
             container.innerHTML = `<p style="color:red;">Failed to load</p>`;
@@ -707,220 +707,73 @@ document.addEventListener("DOMContentLoaded", function () {
         .replace(/'/g, "&#039;");
 }
 
-    function renderInquiries(logs){
+    function renderInquiries(payload){
 
-    /*
-     * Make sure the response is actually an array.
-     *
-     * This prevents malformed API responses from breaking
-     * the modal.
-     */
-    if (!Array.isArray(logs)) {
+        const stats = payload?.stats || {};
 
-        logs = [];
+        document.getElementById("inquiry-total").textContent =
+            Number(stats.total || 0);
 
-    }
+        document.getElementById("inquiry-answered").textContent =
+            Number(stats.answered || 0);
 
+        document.getElementById("inquiry-pending").textContent =
+            Number(stats.pending || 0);
 
-    /*
-     * Calculate inquiry statistics.
-     */
-    const total =
-        logs.length;
+        const agencies = Array.isArray(payload?.agencies)
+            ? payload.agencies
+            : [];
 
+        if (!agencies.length) {
+            container.innerHTML = `
+                <div class="user-inquiries-empty">
+                    <i class="ph-light ph-chat-circle-dots" aria-hidden="true"></i>
+                    <strong>No inquiries yet</strong>
+                    <span>This user has not submitted any questions.</span>
+                </div>
+            `;
+            return;
+        }
 
-    const answered =
-        logs.filter(
-            log => log.status === "answered"
-        ).length;
+        const html = agencies.map(agency => {
+            const agencyName = escapeUserText(agency.name || "Agency");
+            const agencyUrl = escapeUserText(agency.url || "#");
+            const ticketCount = Math.max(0, Number(agency.ticket_count) || 0);
+            const pendingCount = Math.max(0, Number(agency.pending_count) || 0);
+            const countLabel = ticketCount > 99 ? "99+" : String(ticketCount);
+            const pendingLabel = pendingCount > 99 ? "99+" : String(pendingCount);
+            const accessibleCount = ticketCount === 1
+                ? "1 ticket"
+                : `${ticketCount} tickets`;
+            const accessiblePending = pendingCount > 0
+                ? `, ${pendingCount} pending`
+                : "";
 
-
-    const pending =
-        logs.filter(
-            log => log.status === "pending"
-        ).length;
-
-
-    /*
-     * Update the summary.
-     */
-    document.getElementById(
-        "inquiry-total"
-    ).textContent = total;
-
-
-    document.getElementById(
-        "inquiry-answered"
-    ).textContent = answered;
-
-
-    document.getElementById(
-        "inquiry-pending"
-    ).textContent = pending;
-
-
-    /*
-     * Display an empty state when the user
-     * has never submitted an inquiry.
-     */
-    if (!logs.length) {
-
-        container.innerHTML = `
-            <div class="user-inquiries-empty">
-
-                <i class="ph-light ph-chat-circle-dots"></i>
-
-                <strong>
-                    No inquiries yet
-                </strong>
-
-                <span>
-                    This user has not submitted
-                    any questions.
-                </span>
-
-            </div>
-        `;
-
-        return;
-    }
-
-
-    /*
-     * Build the inquiry list.
-     */
-    let html = "";
-
-
-    logs.forEach(log => {
-
-        /*
-         * Determine whether the inquiry has
-         * already received an answer.
-         */
-        const isAnswered =
-            log.status === "answered";
-
-
-        /*
-         * Escape question/answer text before inserting
-         * it into innerHTML.
-         *
-         * The API response contains user-generated
-         * content, so it must never be inserted directly.
-         */
-        const question =
-            escapeUserText(
-                log.question
-            );
-
-
-        const answer =
-            escapeUserText(
-                log.answer || ""
-            );
-
-
-        /*
-         * Format the inquiry date.
-         */
-        const date =
-            new Date(
-                log.created_at
-            ).toLocaleDateString(
-                undefined,
-                {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric"
-                }
-            );
-
-
-        html += `
-
-            <article class="user-inquiry-card">
-
-                <!-- HEADER -->
-
-                <div class="user-inquiry-header">
-
-                    <div
-                        class="user-inquiry-status
-                        ${isAnswered ? "answered" : "pending"}"
-                    >
-
-                        <i class="ph-light
-                            ${
-                                isAnswered
-                                    ? "ph-check-circle"
-                                    : "ph-clock"
-                            }
-                        "></i>
-
-                        <span>
-                            ${
-                                isAnswered
-                                    ? "Answered"
-                                    : "Pending"
-                            }
+            return `
+                <a
+                    class="user-agency-inquiry-row"
+                    href="${agencyUrl}"
+                    aria-label="View ${agencyName}, ${accessibleCount}${accessiblePending}"
+                >
+                    <span class="user-agency-inquiry-main">
+                        <span class="user-agency-inquiry-icon" aria-hidden="true">
+                            <i class="ph-light ph-buildings"></i>
                         </span>
+                        <span class="user-agency-inquiry-name">${agencyName}</span>
+                    </span>
+                    <span class="user-agency-inquiry-meta">
+                        <span class="user-agency-inquiry-count">${countLabel}</span>
+                        ${pendingCount > 0 ? `
+                            <span class="user-agency-inquiry-pending" title="${pendingCount} pending ${pendingCount === 1 ? "ticket" : "tickets"}" aria-label="${pendingCount} pending ${pendingCount === 1 ? "ticket" : "tickets"}">${pendingLabel}</span>
+                        ` : ""}
+                        <i class="ph-light ph-caret-right" aria-hidden="true"></i>
+                    </span>
+                </a>
+            `;
+        }).join("");
 
-                    </div>
-
-
-                    <time>
-                        ${date}
-                    </time>
-
-                </div>
-
-
-                <!-- QUESTION -->
-
-                <div class="user-inquiry-question">
-
-                    ${question}
-
-                </div>
-
-
-                <!-- ANSWER -->
-
-                ${
-                    isAnswered
-
-                    ? `
-                        <div class="user-inquiry-answer">
-
-                            ${answer}
-
-                        </div>
-                    `
-
-                    : `
-                        <div class="user-inquiry-pending">
-
-                            <i class="ph-light ph-clock"></i>
-
-                            <span>
-                                Waiting for response
-                            </span>
-
-                        </div>
-                    `
-                }
-
-            </article>
-        `;
-    });
-
-
-    /*
-     * Insert the finished inquiry list.
-     */
-    container.innerHTML = html;
-}
+        container.innerHTML = html;
+    }
 
     window.closeUserModal = function(){
         modal.classList.remove("active");

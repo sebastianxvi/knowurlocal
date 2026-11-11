@@ -239,8 +239,18 @@ public function admins(Request $request)
      */
     public function invite(Request $request)
     {
+        // The invitation UI verifies first, but enforce the same check here
+        // so direct requests cannot bypass administrator re-authentication.
+        if (!$this->adminActionPasswordIsValid($request)) {
+            return back()->with('error', 'Administrator password is incorrect. No invitation was created.');
+        }
+
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email', ''))),
+        ]);
+
         $request->validate([
-            'email' => 'required|email|unique:users,email',
+            'email' => 'required|email|max:255|unique:users,email',
         ]);
 
         $user = User::create([
@@ -287,10 +297,51 @@ public function admins(Request $request)
  
 
     /**
+ * Verify the authenticated Superadmin's password before an Admin Management
+ * action. Every mutation endpoint independently checks current_password too.
+ */
+public function verifyLifecyclePassword(Request $request)
+{
+    abort_unless(
+        auth()->check() && (string) $request->user()->role === 'superadmin',
+        403
+    );
+
+    $validated = $request->validate([
+        'password' => ['required', 'string', 'max:255'],
+    ]);
+
+    if (!Hash::check((string) $validated['password'], (string) $request->user()->password)) {
+        return response()->json([
+            'message' => 'The administrator password is incorrect.',
+        ], 422);
+    }
+
+    return response()->json(['verified' => true]);
+}
+
+/**
+ * Recheck the acting Superadmin's password on the actual mutation request.
+ */
+private function adminActionPasswordIsValid(Request $request): bool
+{
+    $actor = $request->user();
+
+    return $actor
+        && (string) $actor->role === 'superadmin'
+        && $request->filled('current_password')
+        && Hash::check((string) $request->input('current_password'), (string) $actor->password);
+}
+
+/**
  * ✅ APPROVE ADMIN
  */
-public function approve($id)
+public function approve(Request $request, $id)
 {
+    if (!$this->adminActionPasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
+
     /*
      * Find the administrator being approved.
      *
@@ -412,8 +463,12 @@ public function approve($id)
  * The account remains in the database so it can be
  * reactivated later by a Super Admin.
  */
-public function deactivate($id)
+public function deactivate(Request $request, $id)
 {
+    if (!$this->adminActionPasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
+
     /*
      * Find the administrator account being deactivated.
      */
@@ -481,8 +536,12 @@ public function deactivate($id)
  * Restores a previously deactivated administrator account
  * to the active state.
  */
-public function reactivate($id)
+public function reactivate(Request $request, $id)
 {
+    if (!$this->adminActionPasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
+
     /*
      * Find the administrator account.
      */
@@ -545,8 +604,12 @@ public function reactivate($id)
     /**
  * ⬆ PROMOTE ADMIN
  */
-public function promote($id)
+public function promote(Request $request, $id)
 {
+    if (!$this->adminActionPasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
+
     /*
      * Find the administrator being promoted.
      */
@@ -597,8 +660,12 @@ public function promote($id)
     /**
  * ⬇ DEMOTE ADMIN
  */
-public function demote($id)
+public function demote(Request $request, $id)
 {
+    if (!$this->adminActionPasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
+
     /*
      * Find the administrator being demoted.
      */
@@ -649,8 +716,12 @@ public function demote($id)
     /**
  * ❌ DELETE ADMIN
  */
-public function delete($id)
+public function delete(Request $request, $id)
 {
+    if (!$this->adminActionPasswordIsValid($request)) {
+        return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+    }
+
     /*
      * Find the administrator before deletion.
      */
@@ -810,6 +881,10 @@ private function logAdminAction(
      */
     public function toggleEvaluationModeration(Request $request, int $id)
     {
+        if (!$this->adminActionPasswordIsValid($request)) {
+            return back()->with('error', 'Administrator password is incorrect. No changes were made.');
+        }
+
         $admin = User::query()->where('role', 'admin')->findOrFail($id);
         abort_unless($admin->status === 'active', 422, 'Only active System Admin accounts can receive moderation permissions.');
         abort_if((int) $admin->id === (int) $request->user()->id, 403);

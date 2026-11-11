@@ -22,6 +22,18 @@ class AdminInviteController extends Controller
      */
     public function sendInvite(Request $request)
 {
+    // Recheck the authenticated Superadmin password on the invitation
+    // endpoint itself so a direct POST cannot bypass the UI verification.
+    $actor = $request->user();
+    if (
+        !$actor
+        || (string) $actor->role !== 'superadmin'
+        || !$request->filled('current_password')
+        || !Hash::check((string) $request->input('current_password'), (string) $actor->password)
+    ) {
+        return back()->with('error', 'Administrator password is incorrect. No invitation was created.');
+    }
+
     // Normalize the recipient before validation and persistence so
     // invitations use the same canonical email representation as auth.
     $request->merge([
@@ -239,6 +251,18 @@ class AdminInviteController extends Controller
     public function sendAgencyInvite(Request $request)
     {
         abort_unless(auth()->check() && in_array(auth()->user()->role, ['admin', 'superadmin'], true), 403);
+
+        // Revalidate on the mutation endpoint; the modal verification alone
+        // must never authorize creation of an Agency Admin invitation.
+        $actor = $request->user();
+        if (
+            !$actor
+            || !in_array((string) $actor->role, ['admin', 'superadmin'], true)
+            || !$request->filled('current_password')
+            || !Hash::check((string) $request->input('current_password'), (string) $actor->password)
+        ) {
+            return back()->with('error', 'Administrator password is incorrect. No invitation was created.');
+        }
 
         $request->merge([
             'email' => strtolower(trim((string) $request->input('email', ''))),

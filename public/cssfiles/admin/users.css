@@ -731,3 +731,127 @@
     }
 
 }
+
+
+/* ================= USER INQUIRY AGENCY SHORTCUTS ================= */
+
+.user-agency-inquiry-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    min-width: 0;
+    padding: 11px 13px;
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+    background: #fff;
+    color: #334155;
+    text-decoration: none;
+    transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.user-agency-inquiry-row:hover {
+    border-color: #b8c9ee;
+    background: #fbfcff;
+    box-shadow: 0 4px 12px rgba(37, 72, 130, .07);
+    transform: translateY(-1px);
+}
+
+.user-agency-inquiry-row:focus-visible {
+    outline: 3px solid rgba(49, 99, 220, .22);
+    outline-offset: 2px;
+    border-color: #4772dc;
+}
+
+.user-agency-inquiry-main,
+.user-agency-inquiry-meta {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.user-agency-inquiry-main {
+    gap: 10px;
+}
+
+.user-agency-inquiry-icon {
+    display: grid;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border: 1px solid #e3eaf7;
+    border-radius: 9px;
+    background: #f5f8ff;
+    color: #5275c5;
+    font-size: 17px;
+}
+
+.user-agency-inquiry-name {
+    min-width: 0;
+    color: #26364e;
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.user-agency-inquiry-meta {
+    flex: 0 0 auto;
+    gap: 9px;
+    color: #8492a7;
+}
+
+.user-agency-inquiry-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 29px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: 8px;
+    background: #edf3ff;
+    color: #315fc1;
+    font-size: 11px;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+
+.user-agency-inquiry-pending {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 21px;
+    height: 21px;
+    padding: 0 6px;
+    border: 1px solid #fecaca;
+    border-radius: 999px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 1px 2px rgba(185, 28, 28, .08);
+}
+
+.user-agency-inquiry-meta > i {
+    font-size: 15px;
+}
+
+@media (max-width: 600px) {
+    .user-agency-inquiry-row {
+        gap: 9px;
+        padding: 10px;
+    }
+
+    .user-agency-inquiry-name {
+        font-size: 11px;
+    }
+
+    .user-agency-inquiry-icon {
+        flex-basis: 33px;
+        width: 33px;
+        height: 33px;
+    }
+}

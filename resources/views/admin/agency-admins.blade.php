@@ -66,9 +66,9 @@
 
 @section('content')
 <div class="admin-page agency-admin-page">
-    @if(session('success'))<script>window.__AGENCY_ADMIN_FLASH_SUCCESS__ = @json(session('success'));</script>@endif
-    @if(session('error'))<div class="aa-alert error" role="alert">{{ session('error') }}</div>@endif
-    @if($errors->any())<div class="aa-alert error" role="alert">{{ $errors->first() }}</div>@endif
+    @if($errors->any())
+        <script>window.__AGENCY_ADMIN_VALIDATION_ERROR__ = @json($errors->first());</script>
+    @endif
 
     @include('admin.components.status-tabs', [
         'ariaLabel' => 'Agency administrator status',
@@ -200,6 +200,7 @@
  const agencySearch=document.getElementById('agency-invite-agency-search');
  const agencyOptions=document.getElementById('agency-invite-agency-options');
  const agencyWrapper=document.getElementById('agency-invite-searchable');
+ const verifyUrl=@json(route('admin.agency-admins.verify-lifecycle-password'));
  let agencyList=[];
  let agencyDropdownOpen=false;
  const buildAgencyList=function(){if(!agencySelect)return;agencyList=Array.from(agencySelect.options).filter(o=>o.value).map(o=>{const fullName=(o.dataset.fullName||o.textContent).trim();const abbreviation=(o.dataset.abbr||'').trim();return {value:o.value,fullName,abbreviation,searchText:(fullName+' '+abbreviation).toLowerCase()};});};
@@ -215,11 +216,80 @@
  form?.addEventListener('submit',e=>{if(!agencySelect.value){e.preventDefault();agencySearch.setCustomValidity('Please select an agency from the results.');agencySearch.reportValidity();agencySearch.focus();}});
  }
 
- window.openAgencyInviteModal=function(){if(!modal||!form)return;previousFocus=document.activeElement;modal.classList.remove('hidden');modal.style.display='flex';void modal.offsetWidth;modal.classList.add('active');modal.setAttribute('aria-hidden','false');const email=form.querySelector('input[name="email"]');if(email)email.focus();};
- window.closeAgencyInviteModal=function(){if(!modal)return;modal.classList.remove('active');modal.setAttribute('aria-hidden','true');window.setTimeout(function(){modal.style.display='none';modal.classList.add('hidden');if(previousFocus&&previousFocus.focus)previousFocus.focus();},200);};
+  form?.addEventListener('submit',async function(e){
+    if(form.dataset.passwordVerified==='true')return;
+    e.preventDefault();
+    if(form.dataset.inviteConfirming==='true')return;
+    if(!agencySelect?.value){
+      agencySearch?.setCustomValidity('Please select an agency from the results.');
+      agencySearch?.reportValidity();
+      agencySearch?.focus();
+      return;
+    }
+
+    form.dataset.inviteConfirming='true';
+    const email=form.querySelector('input[name="email"]')?.value.trim()||'this email address';
+    const selectedAgency=agencySelect.selectedOptions[0];
+    const agencyName=(selectedAgency?.dataset.fullName||selectedAgency?.textContent||'the selected agency').trim();
+    // Match the existing NGA/NGO "Save changes?" confirmation:
+    // shared confirmation modal, success styling, and a clear Send action.
+    const confirmed=await window.showConfirmModal({
+      title:'Confirm Agency Admin Invitation',
+      text:`Make sure the email address and assigned agency are correct. You are inviting ${email} as the Agency Admin for ${agencyName}.`,
+      icon:'✓',
+      variant:'success',
+      confirmText:'Send',
+      cancelText:'Cancel'
+    });
+
+    if(!confirmed){
+      form.dataset.inviteConfirming='false';
+      return;
+    }
+
+    if(typeof window.requestAdminPasswordForForm!=='function'){
+      form.dataset.inviteConfirming='false';
+      window.showAlertModal({
+        title:'Security verification unavailable',
+        text:'Please refresh the page and try again.',
+        variant:'danger',
+        confirmText:'OK',
+        showCancel:false
+      });
+      return;
+    }
+
+    window.requestAdminPasswordForForm({
+      form,
+      verificationUrl:verifyUrl,
+      actionDescription:'invite',
+      subject:`${email} for ${agencyName}`,
+      onCancel:()=>{form.dataset.inviteConfirming='false';}
+    });
+  });
+
+  window.openAgencyInviteModal=function(){if(!modal||!form)return;previousFocus=document.activeElement;modal.classList.remove('hidden');modal.style.display='flex';void modal.offsetWidth;modal.classList.add('active');modal.setAttribute('aria-hidden','false');const email=form.querySelector('input[name="email"]');if(email)email.focus();};
+ window.closeAgencyInviteModal=function(){if(!modal)return;modal.classList.remove('active');modal.setAttribute('aria-hidden','true');window.setTimeout(function(){modal.style.display='none';modal.classList.add('hidden');if(previousFocus&&previousFocus.focus)previousFocus.focus();},200);}; 
+ const validationMessage=window.__AGENCY_ADMIN_VALIDATION_ERROR__;
+ window.__AGENCY_ADMIN_VALIDATION_ERROR__=null;
+ if(validationMessage&&typeof window.showAlertModal==='function'){
+   window.showAlertModal({
+     title:'Invitation could not be sent',
+     text:String(validationMessage),
+     icon:'ph-light ph-warning-circle',
+     variant:'danger',
+     confirmText:'OK',
+     showCancel:false,
+     onConfirm:()=>{
+       window.closeAlertModal();
+       @if($errors->any() && old('email'))
+         window.openAgencyInviteModal();
+       @endif
+     }
+   });
+ }
+
  if(modal){modal.addEventListener('click',function(e){if(e.target===modal)window.closeAgencyInviteModal();});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modal.classList.contains('active'))window.closeAgencyInviteModal();});}
- if(window.__AGENCY_ADMIN_FLASH_SUCCESS__){const message=window.__AGENCY_ADMIN_FLASH_SUCCESS__;window.__AGENCY_ADMIN_FLASH_SUCCESS__=null;if(typeof window.showAlertModal==='function')window.showAlertModal({title:'Success',text:message,icon:'✓',variant:'success',confirmText:'OK',showCancel:false,onConfirm:function(){if(typeof window.closeAlertModal==='function')window.closeAlertModal();}});}
- @if($errors->any() && old('email')) window.openAgencyInviteModal(); @endif
 })();
 </script>
 <script src="{{ asset('jsfiles/admin/admin-password-confirmation.js') }}?v={{ filemtime(public_path('jsfiles/admin/admin-password-confirmation.js')) }}"></script>

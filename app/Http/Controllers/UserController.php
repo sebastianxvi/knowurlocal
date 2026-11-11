@@ -537,14 +537,62 @@ return back()->with(
 
     public function inquiries($id)
 {
-    $user = User::findOrFail($id);
+    // Confirm the requested account exists before returning any activity.
+    User::findOrFail($id);
 
-    $logs = SupportRequest::where('user_id', $id)
-        ->latest()
-        ->get();
+    // Keep the existing summary semantics: counts exclude soft-deleted tickets.
+    $stats = SupportRequest::where('user_id', $id)
+        ->selectRaw(
+            'COUNT(*) as total,
+             SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as answered,
+             SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as pending',
+            ['answered', 'pending']
+        )
+        ->first();
+
+    /*
+     * The admin Support Requests inbox includes trashed tickets in its
+     * citizen/agency navigation. Use the same dataset here so the count
+     * shown beside each agency agrees with the tickets available there.
+     * Agencies without a valid agency record are omitted, matching the
+     * inbox's existing agency grouping behavior.
+     */
+    $agencies = SupportRequest::withTrashed()
+        ->where('support_requests.user_id', $id)
+        ->join('agencies', 'agencies.id', '=', 'support_requests.agency_id')
+        ->select([
+            'agencies.id as agency_id',
+            'agencies.agency_name as agency_name',
+        ])
+        ->selectRaw('COUNT(support_requests.id) as ticket_count')
+        ->selectRaw(
+            'SUM(CASE WHEN support_requests.deleted_at IS NULL AND support_requests.status = ? THEN 1 ELSE 0 END) as pending_count',
+            ['pending']
+        )
+        ->groupBy('agencies.id', 'agencies.agency_name')
+        ->orderBy('agencies.agency_name')
+        ->get()
+        ->map(function ($agency) use ($id) {
+            return [
+                'id' => (int) $agency->agency_id,
+                'name' => (string) $agency->agency_name,
+                'ticket_count' => (int) $agency->ticket_count,
+                'pending_count' => (int) ($agency->pending_count ?? 0),
+                'url' => route('admin.support.requests', [
+                    'user' => (int) $id,
+                    'agency' => (int) $agency->agency_id,
+                ]),
+            ];
+        })
+        ->values();
 
     return response()->json([
-        'logs' => $logs
+        'stats' => [
+            'total' => (int) ($stats->total ?? 0),
+            'answered' => (int) ($stats->answered ?? 0),
+            'pending' => (int) ($stats->pending ?? 0),
+        ],
+        'agencies' => $agencies,
     ]);
 }
 }
