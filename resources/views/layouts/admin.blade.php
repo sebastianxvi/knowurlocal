@@ -86,7 +86,7 @@
          styles can refine it without creating unrelated visual systems. --}}
     <link
         rel="stylesheet"
-        href="{{ asset('cssfiles/admin/admin-design-system.css') }}"
+        href="{{ asset('cssfiles/admin/admin-design-system.css') }}?v={{ filemtime(public_path('cssfiles/admin/admin-design-system.css')) }}"
     >
 
     {{-- Mobile-only admin layout and modal refinements. --}}

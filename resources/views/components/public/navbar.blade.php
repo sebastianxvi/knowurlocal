@@ -7,9 +7,9 @@
         {{-- =====================================================
              SEARCH AREA
              ===================================================== --}}
-        <div class="search-area">
+        <div class="search-area{{ request()->routeIs('map') && !isset($hideSearch) ? '' : ' search-area--brand-only' }}">
 
-            <div class="logo-search">
+            <div class="logo-search{{ request()->routeIs('map') && !isset($hideSearch) ? '' : ' logo-search--brand-only' }}">
 
                 {{-- BRAND --}}
                 <a
@@ -84,14 +84,22 @@
 
 
             {{-- =================================================
-                 CATEGORY FILTERS
+                 ORGANIZATION TYPE + SERVICE CATEGORY FILTERS
                  ================================================= --}}
             @if(request()->routeIs('map') && !isset($hideSearch))
 
                 <div
+                    id="agencyTypeFilters"
+                    class="agency-type-filters"
+                    role="group"
+                    aria-label="Organization type filters"
+                ></div>
+
+                <div
                     id="categoryFilters"
                     class="category-filters"
-                    aria-label="Agency category filters"
+                    role="group"
+                    aria-label="Service category filters"
                 ></div>
 
             @endif
@@ -150,11 +158,6 @@
                 href="{{ route('map') }}"
                 class="nav-link {{ request()->routeIs('map') ? 'active' : '' }}"
             >
-                <i
-                    class="ph-light ph-map-trifold"
-                    aria-hidden="true"
-                ></i>
-
                 <span>Map</span>
             </a>
 
@@ -166,11 +169,6 @@
                 href="{{ url('about') }}"
                 class="nav-link {{ request()->is('about') ? 'active' : '' }}"
             >
-                <i
-                    class="ph-light ph-info"
-                    aria-hidden="true"
-                ></i>
-
                 <span>About</span>
             </a>
 
@@ -184,7 +182,6 @@
                 aria-label="Notifications"
                 title="Notifications"
             >
-                <i class="ph-light ph-bell" aria-hidden="true"></i>
                 <span>Notifications</span>
                 <span
                     class="user-notification-nav-badge"
@@ -213,11 +210,6 @@
 
                     <span class="account-label">
 
-                        <i
-                            class="ph-light ph-user"
-                            aria-hidden="true"
-                        ></i>
-
                         <span>Account</span>
 
                     </span>
@@ -233,10 +225,6 @@
                     >{{ ($unreadInquiryCount ?? 0) > 99 ? '99+' : ($unreadInquiryCount ?? 0) }}</span>
 
 
-                    <i
-                        class="ph-light ph-caret-down account-chevron"
-                        aria-hidden="true"
-                    ></i>
 
                 </div>
 
@@ -251,24 +239,18 @@
 
                     <a
                         href="{{ route('user.profile') }}"
-                        class="dropdown-item profile-link"
+                        class="dropdown-item profile-link {{ request()->routeIs('user.profile') ? 'active' : '' }}"
                     >
                         <span class="dropdown-item-label">
-                            <i class="ph-light ph-user-circle" aria-hidden="true"></i>
                             <span>My Profile</span>
                         </span>
                     </a>
 
                     <a
                         href="{{ route('user.inquiries') }}"
-                        class="dropdown-item inquiry-link"
+                        class="dropdown-item inquiry-link {{ request()->routeIs('user.inquiries') ? 'active' : '' }}"
                     >
                         <span class="dropdown-item-label">
-
-                            <i
-                                class="ph-light ph-chats-circle"
-                                aria-hidden="true"
-                            ></i>
 
                             <span>My Inquiries</span> 
 
@@ -296,11 +278,6 @@
                             type="submit"
                             class="dropdown-item logout"
                         >
-                            <i
-                                class="ph-light ph-sign-out"
-                                aria-hidden="true"
-                            ></i>
-
                             <span>Sign out</span>
                         </button>
 

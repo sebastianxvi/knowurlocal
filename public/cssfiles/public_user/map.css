@@ -157,6 +157,31 @@ html, body {
     border: none;
 }
 
+/*
+ * Marker entrance feedback is applied to the inner circle rather than
+ * Leaflet's positioned outer icon. This keeps Leaflet's translate3d
+ * positioning intact while the marker gently pops into view.
+ */
+@keyframes agencyMarkerPopIn {
+    0% {
+        opacity: 0;
+        transform: translateY(8px) scale(0.58);
+    }
+    68% {
+        opacity: 1;
+        transform: translateY(-1px) scale(1.07);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.category-marker-circle.agency-marker-pop {
+    animation: agencyMarkerPopIn 380ms cubic-bezier(0.2, 0.85, 0.25, 1) both;
+    transform-origin: center;
+}
+
 .category-marker-circle {
     --marker-color: #3B82F6;
 
@@ -2463,7 +2488,8 @@ a.agency-contact-value:focus-visible {
     .map-legend,
     .map-legend-content,
     .map-legend-chevron,
-    .category-marker-circle {
+    .category-marker-circle,
+    .category-marker-circle.agency-marker-pop {
         animation: none !important;
         transition: none !important;
     }
@@ -3152,4 +3178,156 @@ a.agency-contact-value:focus-visible {
     height:10px;
     border-radius:10px 10px 6px 6px;
     background:#94a3b8;
+}
+
+
+/* =========================================================
+   OPEN CLUSTER FOCUS
+   During spiderfying, keep only the organizations from the
+   opened cluster visible. The JS removes this class when the
+   cluster is closed, restoring normal map interaction.
+   ========================================================= */
+/* While a cluster is open, hide every map marker and every permanent
+   agency label by default. Only DOM elements explicitly allow-listed by
+   applySpiderfiedClusterFocus() are allowed to remain visible. */
+#map.cluster-focus-active .leaflet-marker-icon,
+#map.cluster-focus-active .leaflet-tooltip {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+#map.cluster-focus-active .leaflet-marker-icon.cluster-focus-visible,
+#map.cluster-focus-active .leaflet-tooltip.cluster-focus-visible {
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+#map .cluster-focus-hidden {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+
+/* =========================================================
+   MAP FILTERS — HIGH-CONTRAST SELECTED STATE
+   Deliberately different from navigation's text underline:
+   selected filters use a filled brand-blue chip with a clear
+   border, white label, and contrasting count badge.
+   ========================================================= */
+#agencyTypeFilters .agency-type-filter,
+#categoryFilters .category-filter {
+    position: relative;
+    min-height: 32px;
+    height: 32px;
+    border: 1px solid #d7dfeb;
+    border-radius: 999px;
+    background: #fff;
+    color: #526174;
+    box-shadow: 0 1px 2px rgba(24, 43, 75, .045);
+    transition:
+        background-color 160ms ease,
+        border-color 160ms ease,
+        color 160ms ease,
+        box-shadow 160ms ease,
+        transform 140ms ease;
+}
+
+#agencyTypeFilters .agency-type-filter:hover,
+#categoryFilters .category-filter:hover {
+    background: #f1f5ff;
+    border-color: #9bb5ed;
+    color: #2857b8;
+    box-shadow: 0 3px 9px rgba(48, 91, 190, .10);
+}
+
+#agencyTypeFilters .agency-type-filter.active,
+#categoryFilters .category-filter.active {
+    background: #315fbd;
+    border: 1px solid #244f9f;
+    color: #fff;
+    font-weight: 700;
+    box-shadow:
+        0 0 0 2px rgba(49, 95, 189, .16),
+        0 3px 8px rgba(35, 78, 160, .22);
+}
+
+#agencyTypeFilters .agency-type-filter.active .category-filter-label,
+#categoryFilters .category-filter.active .category-filter-label {
+    color: #fff;
+}
+
+#agencyTypeFilters .agency-type-filter.active .category-filter-count,
+#categoryFilters .category-filter.active .category-filter-count {
+    background: rgba(255, 255, 255, .19);
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
+}
+
+#agencyTypeFilters .agency-type-filter.active[data-agency-type="NGA"] .category-filter-label::before,
+#agencyTypeFilters .agency-type-filter.active[data-agency-type="NGO"] .category-filter-label::before {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, .72);
+}
+
+#categoryFilters .category-filter.active .category-color-dot {
+    box-shadow:
+        0 0 0 2px rgba(255, 255, 255, .88),
+        0 0 0 4px rgba(255, 255, 255, .18);
+}
+
+#agencyTypeFilters .agency-type-filter:focus-visible,
+#categoryFilters .category-filter:focus-visible {
+    outline: 2px solid #315fbd;
+    outline-offset: 3px;
+}
+
+#agencyTypeFilters .agency-type-filter:active,
+#categoryFilters .category-filter:active {
+    transform: scale(.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #agencyTypeFilters .agency-type-filter,
+    #categoryFilters .category-filter {
+        transition: none !important;
+    }
+}
+
+
+/* =========================================================
+   MAP FILTERS — MUTED BLUE ACTIVE STATE
+   Slightly stronger than the previous pale treatment while
+   avoiding saturated/royal blue fills.
+   ========================================================= */
+#agencyTypeFilters .agency-type-filter.active,
+#categoryFilters .category-filter.active {
+    background: #e4ecf7 !important;
+    border: 1px solid #afc2dd !important;
+    color: #36577f !important;
+    font-weight: 650;
+    box-shadow:
+        inset 0 0 0 1px rgba(75, 111, 160, .055),
+        0 2px 7px rgba(48, 75, 110, .085) !important;
+}
+
+#agencyTypeFilters .agency-type-filter.active .category-filter-label,
+#categoryFilters .category-filter.active .category-filter-label {
+    color: #36577f !important;
+}
+
+#agencyTypeFilters .agency-type-filter.active .category-filter-count,
+#categoryFilters .category-filter.active .category-filter-count {
+    background: #d6e2f1 !important;
+    color: #36577f !important;
+    box-shadow: inset 0 0 0 1px rgba(75, 111, 160, .10) !important;
+}
+
+#agencyTypeFilters .agency-type-filter.active[data-agency-type="NGA"] .category-filter-label::before,
+#agencyTypeFilters .agency-type-filter.active[data-agency-type="NGO"] .category-filter-label::before {
+    box-shadow: 0 0 0 2px #e4ecf7 !important;
+}
+
+#categoryFilters .category-filter.active .category-color-dot {
+    box-shadow:
+        0 0 0 2px #e4ecf7,
+        0 0 0 3px rgba(75, 111, 160, .22) !important;
 }

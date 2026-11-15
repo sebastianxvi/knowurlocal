@@ -53,6 +53,13 @@ class ContactTypeSeeder extends Seeder
                 'is_active' => true,
                 'sort_order' => 5,
             ],
+
+            [
+                'name' => 'Phone',
+                'slug' => 'phone',
+                'is_active' => true,
+                'sort_order' => 6,
+            ],
         ];
 
 

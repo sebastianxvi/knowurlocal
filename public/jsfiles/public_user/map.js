@@ -72,8 +72,8 @@ document.addEventListener("DOMContentLoaded", () => {
     /*
      * Create the central marker-clustering layer.
      *
-     * All agency markers are managed by this group instead
-     * of being added directly to the map.
+     * Only matching agency markers in the buffered viewport are
+     * registered here. Off-screen markers remain in the search index.
      */
     const markerClusterGroup =
         L.markerClusterGroup({
@@ -277,6 +277,21 @@ document.addEventListener("DOMContentLoaded", () => {
  */
 const markers = {};
 
+/*
+ * Complete API dataset used by the map filters and search.
+ * The API records remain available, while only markers in the
+ * buffered viewport are registered with MarkerCluster.
+ */
+let agencyRecords = [];
+
+/*
+ * Tracks markers that were individually visible during the last
+ * completed viewport pass. This lets entrance animation replay when
+ * a marker leaves the screen and later becomes visible again.
+ */
+const visibleAgencyMarkers = new Set();
+const markerAnimationTargets = new WeakMap();
+
 
 /*
  * Complete collection of agency markers.
@@ -306,6 +321,13 @@ const allAgencyMarkers = [];
  */
 let selectedMarker =
     null;   
+
+/*
+ * Tracks the individual organizations exposed by an opened (spiderfied)
+ * MarkerCluster group. Other markers and cluster icons stay hidden until
+ * MarkerCluster emits its unspiderfied event.
+ */
+let activeSpiderfiedMarkers = null;
 
     // =========================================================
     // CATEGORY COLOR VALIDATION
@@ -2107,6 +2129,21 @@ const agencyOfficeHeadSection =
         },
 
 
+        phone: {
+
+            icon:
+                'ph-phone',
+
+            label:
+                'Phone',
+
+            buildHref:
+                value =>
+                    `tel:${value}`
+
+        },
+
+
         landline: {
 
             icon:
@@ -3122,6 +3159,8 @@ if (agencyOfficeHeadSection) {
  */
 function closeAgencyDetails() {
 
+    closeSpiderfiedClusterFocus();
+
     /*
      * Stop if the agency details panel doesn't exist.
      */
@@ -3198,77 +3237,17 @@ function closeAgencyDetails() {
 
 
     /*
-     * Start with an empty MarkerCluster layer.
-     *
-     * This prevents duplicate markers when restoring
-     * the normal map state.
-     */
-    markerClusterGroup.clearLayers();
-
-
-    /*
-     * Restore every original agency marker that
-     * belongs to the currently active category.
-     */
-    allAgencyMarkers.forEach(
-        marker => {
-
-            /*
-             * Retrieve the agency associated with
-             * the original marker.
-             */
-            const agency =
-                marker.agencyData;
-
-
-            /*
-             * Retrieve the agency's category.
-             */
-            const agencyCategoryId =
-                agency?.category?.id;
-
-
-            /*
-             * Check whether this agency should currently
-             * be visible according to the active filter.
-             */
-            const shouldShow =
-                activeCategoryId === 'all' ||
-                String(
-                    agencyCategoryId
-                ) ===
-                    String(
-                        activeCategoryId
-                    );
-
-
-            /*
-             * Restore only markers belonging to
-             * the currently selected category.
-             */
-            if (shouldShow) {
-
-                markerClusterGroup.addLayer(
-                    marker
-                );
-
-            }
-
-        }
-    );
-
-
-    /*
-     * Clear the selected agency state.
+     * Clear the selected agency state before restoring normal markers.
      */
     selectedAgencyId =
         null;
 
 
     /*
-     * Refresh the marker/tooltip state after
-     * MarkerCluster has been rebuilt.
+     * Restore only filtered markers inside the buffered viewport.
+     * This avoids rebuilding every marker whenever details are closed.
      */
+    syncVisibleAgencyMarkers();
     updateAgencyLabels();
 
 }
@@ -3288,12 +3267,12 @@ function closeAgencyDetails() {
 
 
     // =========================================================
-    // CATEGORY FILTER STATE
+    // ORGANIZATION TYPE + CATEGORY FILTER STATE
     // =========================================================
 
     /*
      * "all" means every agency should participate
-     * in the cluster layer.
+     * in the cluster layer. Clicking an active filter toggles it back to all.
      */
     let activeCategoryId =
         'all';
@@ -3306,6 +3285,219 @@ function closeAgencyDetails() {
         document.getElementById(
             'categoryFilters'
         );
+
+    const agencyTypeFilters =
+        document.getElementById('agencyTypeFilters');
+
+    /*
+     * Organization type and service category are independent filters.
+     * "all" keeps the corresponding dimension unrestricted.
+     */
+    let activeAgencyType = 'all';
+
+    function getAgencyTypeName(agency) {
+        return String(
+            agency?.type?.name ||
+            agency?.agency_type?.name ||
+            agency?.agency_type_name ||
+            ''
+        ).trim().toUpperCase();
+    }
+
+    function matchesActiveFilters(agency) {
+        if (!agency) return false;
+
+        const typeName = getAgencyTypeName(agency);
+        const matchesType =
+            activeAgencyType === 'all' ||
+            typeName === activeAgencyType;
+
+        const categoryId = agency.category?.id;
+        const matchesCategory =
+            activeCategoryId === 'all' ||
+            String(categoryId) === String(activeCategoryId);
+
+        return matchesType && matchesCategory;
+    }
+
+    function clearAgencySearchResults() {
+        if (resultsContainer) {
+            resultsContainer.innerHTML = '';
+        }
+    }
+
+    function refreshVisibleMarkerAnimations() {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const viewport = map.getBounds();
+                const newlyVisible = new Set();
+
+                allAgencyMarkers.forEach(marker => {
+                    const element = marker.getElement();
+                    const isInsideViewport = viewport.contains([
+                        marker.databaseLat,
+                        marker.databaseLng
+                    ]);
+
+                    const isVisible =
+                        Boolean(element) &&
+                        isInsideViewport &&
+                        matchesActiveFilters(marker.agencyData);
+
+                    if (!isVisible) return;
+
+                    newlyVisible.add(marker);
+
+                    const animationTarget =
+                        element.querySelector('.category-marker-circle') || element;
+
+                    const wasVisible =
+                        visibleAgencyMarkers.has(marker);
+
+                    const previousTarget =
+                        markerAnimationTargets.get(marker);
+
+                    if (!wasVisible || previousTarget !== animationTarget) {
+                        animationTarget.classList.remove('agency-marker-pop');
+                        // Force style recalculation so the same animation can replay.
+                        void animationTarget.offsetWidth;
+                        animationTarget.classList.add('agency-marker-pop');
+                        markerAnimationTargets.set(marker, animationTarget);
+                    }
+                });
+
+                visibleAgencyMarkers.clear();
+                newlyVisible.forEach(marker => visibleAgencyMarkers.add(marker));
+            });
+        });
+    }
+
+    /*
+     * While a cluster is spiderfied, show only its member organizations.
+     * The event supplies the original marker instances, so no coordinate
+     * matching or marker recreation is needed.
+     */
+    function applySpiderfiedClusterFocus() {
+        if (!activeSpiderfiedMarkers) return;
+
+        const mapContainer = map.getContainer();
+        mapContainer.classList.add('cluster-focus-active');
+
+        // Reset the allow-list on every pass. Leaflet may recreate marker
+        // icons/tooltips during spiderfy transitions, so visibility must be
+        // applied to the actual DOM elements currently attached to the map.
+        mapContainer.querySelectorAll('.cluster-focus-visible').forEach(element => {
+            element.classList.remove('cluster-focus-visible');
+        });
+
+        allAgencyMarkers.forEach(marker => {
+            const isInOpenedCluster = activeSpiderfiedMarkers.has(marker);
+            const markerElement = marker.getElement?.() || marker._icon;
+
+            if (markerElement) {
+                markerElement.classList.toggle(
+                    'cluster-focus-visible',
+                    isInOpenedCluster
+                );
+            }
+
+            // Permanent Leaflet tooltips live in a separate pane, not inside
+            // the marker icon. Explicitly allow only labels for this cluster.
+            const tooltipElement =
+                marker.getTooltip?.()?.getElement?.() ||
+                marker._tooltip?._container ||
+                null;
+
+            if (tooltipElement) {
+                tooltipElement.classList.toggle(
+                    'cluster-focus-visible',
+                    isInOpenedCluster
+                );
+            }
+        });
+    }
+
+    function clearSpiderfiedClusterFocus() {
+        activeSpiderfiedMarkers = null;
+
+        const mapContainer = map.getContainer();
+        mapContainer.classList.remove('cluster-focus-active');
+
+        mapContainer.querySelectorAll('.cluster-focus-visible').forEach(element => {
+            element.classList.remove('cluster-focus-visible');
+        });
+
+        mapContainer.querySelectorAll('.cluster-focus-hidden').forEach(element => {
+            element.classList.remove('cluster-focus-hidden');
+        });
+    }
+
+    function closeSpiderfiedClusterFocus() {
+        if (!activeSpiderfiedMarkers) return;
+
+        if (typeof markerClusterGroup.unspiderfy === 'function') {
+            markerClusterGroup.unspiderfy();
+        }
+
+        // Defensive fallback if the plugin does not emit unspiderfied.
+        if (activeSpiderfiedMarkers) {
+            clearSpiderfiedClusterFocus();
+        }
+    }
+
+    /*
+     * Keep MarkerCluster limited to the current viewport plus a modest
+     * prefetch buffer. Marker objects remain indexed for search, but
+     * off-screen markers are not registered/rendered on the map.
+     */
+    function syncVisibleAgencyMarkers() {
+        if (!allAgencyMarkers.length) return;
+
+        // Do not change cluster membership while its spiderfied view is open.
+        if (activeSpiderfiedMarkers) {
+            applySpiderfiedClusterFocus();
+            return;
+        }
+
+        // focusMarker deliberately replaces the normal cluster with one
+        // temporary selected marker. Do not repopulate normal markers until
+        // closeAgencyDetails has cleared that selected state.
+        if (selectedMarker || selectedAgencyId !== null) return;
+
+        const bufferedBounds = map.getBounds().pad(0.2);
+        const markersToAdd = [];
+        const markersToRemove = [];
+
+        allAgencyMarkers.forEach(marker => {
+            const inBufferedViewport = bufferedBounds.contains([
+                marker.databaseLat,
+                marker.databaseLng
+            ]);
+
+            const shouldBeOnMap =
+                inBufferedViewport &&
+                matchesActiveFilters(marker.agencyData);
+
+            const isOnMap = markerClusterGroup.hasLayer(marker);
+
+            if (shouldBeOnMap && !isOnMap) {
+                markersToAdd.push(marker);
+            } else if (!shouldBeOnMap && isOnMap) {
+                markersToRemove.push(marker);
+            }
+        });
+
+        if (markersToRemove.length) {
+            markerClusterGroup.removeLayers(markersToRemove);
+        }
+
+        if (markersToAdd.length) {
+            markerClusterGroup.addLayers(markersToAdd);
+        }
+
+        updateAgencyLabels();
+        refreshVisibleMarkerAnimations();
+    }
 
 
     // =========================================================
@@ -3367,36 +3559,29 @@ function closeAgencyDetails() {
 
 
     // =========================================================
-    // CATEGORY HORIZONTAL SCROLL
+    // FILTER ROW HORIZONTAL SCROLL
     // =========================================================
 
-    if (categoryFilters) {
-        categoryFilters.addEventListener(
+    [agencyTypeFilters, categoryFilters].forEach(filterRow => {
+        if (!filterRow) return;
+
+        filterRow.addEventListener(
             'wheel',
             event => {
-                /*
-                 * Trackpads commonly send horizontal movement in deltaX,
-                 * while a traditional mouse wheel usually sends deltaY.
-                 * Use whichever axis has the stronger intent. Vertical
-                 * wheel movement is mapped to the horizontal chip row.
-                 */
                 const horizontalIntent =
                     Math.abs(event.deltaX) > Math.abs(event.deltaY)
                         ? event.deltaX
                         : event.deltaY;
 
-                if (!horizontalIntent) {
-                    return;
-                }
+                if (!horizontalIntent) return;
 
                 event.preventDefault();
                 event.stopPropagation();
-
-                categoryFilters.scrollLeft += horizontalIntent;
+                filterRow.scrollLeft += horizontalIntent;
             },
             { passive: false }
         );
-    }
+    });
 
 
     // =========================================================
@@ -3421,7 +3606,7 @@ function closeAgencyDetails() {
                  */
                 if (
                     event.target.closest(
-                        '#categoryFilters, #searchResults'
+                        '#agencyTypeFilters, #categoryFilters, #searchResults'
                     )
                 ) {
 
@@ -3494,18 +3679,13 @@ function closeAgencyDetails() {
              * Check whether this agency belongs
              * to the currently selected category.
              */
-            const agencyCategoryId =
-                agency.category?.id;
-
-            const matchesCategory =
-                activeCategoryId === 'all' ||
-                String(agencyCategoryId) ===
-                    String(activeCategoryId);
+            const matchesFilters =
+                matchesActiveFilters(agency);
 
             /*
              * Hide labels belonging to filtered-out agencies.
              */
-            if (!matchesCategory) {
+            if (!matchesFilters) {
 
                 tooltip.setOpacity(0);
 
@@ -3575,104 +3755,143 @@ function refreshAgencyLabels() {
 
 
     // =========================================================
-    // CATEGORY FILTER CREATION
+    // ORGANIZATION TYPE FILTERS
     // =========================================================
 
-    /*
-     * Build category filter buttons from the agency data.
-     */
-    function buildCategoryFilters(
-        data
-    ) {
+    function buildAgencyTypeFilters(data) {
+        if (!agencyTypeFilters) return;
 
-        /*
-         * Stop when the filter container doesn't exist.
-         */
-        if (!categoryFilters) {
+        const counts = {
+            NGA: 0,
+            NGO: 0
+        };
 
-            return;
-
-        }
-
-
-        /*
-         * Map prevents duplicate category buttons.
-         */
-        const categories =
-            new Map();
-
-
-        /*
-         * Extract unique categories.
-         */
-        data.forEach(
-            agency => {
-
-                const category =
-                    agency.category;
-
-
-                /*
-                 * Ignore invalid category records.
-                 */
-                if (
-                    !category ||
-                    !category.id
-                ) {
-
-                    return;
-
-                }
-
-
-                /*
-                 * Keep one entry per category and count actual agency
-                 * records returned by the existing public agencies API.
-                 * This count is independent of map zoom and clustering.
-                 */
-                const categoryKey = String(category.id);
-
-                if (!categories.has(categoryKey)) {
-                    categories.set(categoryKey, {
-                        category,
-                        count: 1
-                    });
-                } else {
-                    categories.get(categoryKey).count += 1;
-                }
-
+        data.forEach(agency => {
+            const typeName = getAgencyTypeName(agency);
+            if (Object.prototype.hasOwnProperty.call(counts, typeName)) {
+                counts[typeName] += 1;
             }
-        );
+        });
 
+        agencyTypeFilters.innerHTML = '';
 
-        /*
-         * Clear previous category controls.
-         */
-        categoryFilters.innerHTML =
-            '';
+        const options = [
+            { id: 'all', label: 'All', count: data.length },
+            { id: 'NGA', label: 'NGA', count: counts.NGA },
+            { id: 'NGO', label: 'NGO', count: counts.NGO }
+        ];
 
+        options.forEach(option => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'category-filter agency-type-filter';
+            button.dataset.agencyType = option.id;
+            button.setAttribute('aria-pressed', String(option.id === activeAgencyType));
 
-        // -----------------------------------------------------
-        // ALL CATEGORY
-        // -----------------------------------------------------
+            const label = document.createElement('span');
+            label.className = 'category-filter-label';
+            label.textContent = option.label;
 
-        const allButton =
-            document.createElement(
-                'button'
+            const count = document.createElement('span');
+            count.className = 'category-filter-count';
+            count.textContent = String(option.count);
+            count.setAttribute(
+                'aria-label',
+                `${option.count} ${option.id === 'all' ? 'organizations' : option.id + ' organizations'}`
             );
 
+            button.append(label, count);
+            button.classList.toggle('active', option.id === activeAgencyType);
 
-        allButton.type =
-            'button';
+            button.addEventListener('click', () => {
+                const nextAgencyType =
+                    activeAgencyType === option.id
+                        ? 'all'
+                        : option.id;
+
+                closeSpiderfiedClusterFocus();
+                activeAgencyType = nextAgencyType;
+
+                /*
+                 * A category selected under the previous type may not
+                 * exist under the newly selected type. Reset it only when
+                 * that category has no records in the new type scope.
+                 */
+                const scopedData = agencyRecords.filter(agency =>
+                    activeAgencyType === 'all' ||
+                    getAgencyTypeName(agency) === activeAgencyType
+                );
+
+                const selectedCategoryStillExists =
+                    activeCategoryId === 'all' ||
+                    scopedData.some(agency =>
+                        String(agency.category?.id) === String(activeCategoryId)
+                    );
+
+                if (!selectedCategoryStillExists) {
+                    activeCategoryId = 'all';
+                }
+
+                clearAgencySearchResults();
+                buildAgencyTypeFilters(agencyRecords);
+                buildCategoryFilters(agencyRecords);
+                updateActiveCategoryButton();
+
+                if (
+                    selectedAgencyId !== null &&
+                    !matchesActiveFilters(
+                        allAgencyMarkers.find(marker =>
+                            String(marker.agencyData?.id) === String(selectedAgencyId)
+                        )?.agencyData
+                    )
+                ) {
+                    closeAgencyDetails();
+                }
+
+                syncVisibleAgencyMarkers();
+            });
+
+            agencyTypeFilters.appendChild(button);
+        });
+    }
 
 
-        allButton.className =
-            'category-filter active';
+    // =========================================================
+    // SERVICE CATEGORY FILTERS
+    // =========================================================
 
+    function buildCategoryFilters(data) {
+        if (!categoryFilters) return;
 
-        allButton.dataset.categoryId =
-            'all';
+        const scopedData = data.filter(agency =>
+            activeAgencyType === 'all' ||
+            getAgencyTypeName(agency) === activeAgencyType
+        );
 
+        const categories = new Map();
+
+        scopedData.forEach(agency => {
+            const category = agency.category;
+            if (!category?.id) return;
+
+            const key = String(category.id);
+
+            if (!categories.has(key)) {
+                categories.set(key, {
+                    category,
+                    count: 1
+                });
+            } else {
+                categories.get(key).count += 1;
+            }
+        });
+
+        categoryFilters.innerHTML = '';
+
+        const allButton = document.createElement('button');
+        allButton.type = 'button';
+        allButton.className = 'category-filter';
+        allButton.dataset.categoryId = 'all';
 
         const allLabel = document.createElement('span');
         allLabel.className = 'category-filter-label';
@@ -3680,324 +3899,77 @@ function refreshAgencyLabels() {
 
         const allCount = document.createElement('span');
         allCount.className = 'category-filter-count';
-        allCount.textContent = String(data.length);
-        allCount.setAttribute('aria-label', `${data.length} agencies`);
+        allCount.textContent = String(scopedData.length);
+        allCount.setAttribute('aria-label', `${scopedData.length} organizations`);
 
         allButton.append(allLabel, allCount);
+        allButton.addEventListener('click', () => applyCategoryFilter('all'));
+        categoryFilters.appendChild(allButton);
 
+        categories.forEach(({ category, count }) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'category-filter';
+            button.dataset.categoryId = String(category.id);
 
-        /*
-         * Show every agency when All is selected.
-         */
-        allButton.addEventListener(
-            'click',
-            () => {
+            const colorDot = document.createElement('span');
+            colorDot.className = 'category-color-dot';
+            colorDot.style.backgroundColor = getSafeCategoryColor(category.display_color);
 
-                applyCategoryFilter(
-                    'all'
-                );
+            const categoryName = document.createElement('span');
+            categoryName.className = 'category-filter-label';
+            categoryName.textContent = category.category_name;
 
-            }
-        );
+            const categoryCount = document.createElement('span');
+            categoryCount.className = 'category-filter-count';
+            categoryCount.textContent = String(count);
+            categoryCount.setAttribute(
+                'aria-label',
+                `${count} ${count === 1 ? 'organization' : 'organizations'}`
+            );
 
+            button.append(colorDot, categoryName, categoryCount);
+            button.addEventListener('click', () => applyCategoryFilter(category.id));
+            categoryFilters.appendChild(button);
+        });
 
-        categoryFilters.appendChild(
-            allButton
-        );
-
-
-        // -----------------------------------------------------
-        // INDIVIDUAL CATEGORIES
-        // -----------------------------------------------------
-
-        categories.forEach(
-            ({ category, count }) => {
-
-                /*
-                 * Create the category button.
-                 */
-                const button =
-                    document.createElement(
-                        'button'
-                    );
-
-
-                button.type =
-                    'button';
-
-
-                button.className =
-                    'category-filter';
-
-
-                button.dataset.categoryId =
-                    category.id;
-
-
-                /*
-                 * Create the category color indicator.
-                 */
-                const colorDot =
-                    document.createElement(
-                        'span'
-                    );
-
-
-                colorDot.className =
-                    'category-color-dot';
-
-
-                /*
-                 * Validate the category color.
-                 */
-                const categoryColor =
-                    getSafeCategoryColor(
-                        category.display_color
-                    );
-
-
-                colorDot.style.backgroundColor =
-                    categoryColor;
-
-
-                /*
-                 * Create the category label.
-                 */
-                const categoryName =
-                    document.createElement(
-                        'span'
-                    );
-
-
-                categoryName.textContent =
-                    category.category_name;
-
-
-                /*
-                 * Add both elements to the button.
-                 */
-                button.appendChild(
-                    colorDot
-                );
-
-
-                categoryName.className = 'category-filter-label';
-
-                const categoryCount = document.createElement('span');
-                categoryCount.className = 'category-filter-count';
-                categoryCount.textContent = String(count);
-                categoryCount.setAttribute(
-                    'aria-label',
-                    `${count} ${count === 1 ? 'agency' : 'agencies'}`
-                );
-
-                button.append(
-                    categoryName,
-                    categoryCount
-                );
-
-
-                /*
-                 * Activate this category when clicked.
-                 */
-                button.addEventListener(
-                    'click',
-                    () => {
-
-                        applyCategoryFilter(
-                            category.id
-                        );
-
-                    }
-                );
-
-
-                /*
-                 * Add the button to the navbar.
-                 */
-                categoryFilters.appendChild(
-                    button
-                );
-
-            }
-        );
-
+        updateActiveCategoryButton();
     }
 
 
     // =========================================================
-    // APPLY CATEGORY FILTER
+    // APPLY SERVICE CATEGORY FILTER
     // =========================================================
 
-    /*
-     * Apply a category filter to the actual
-     * MarkerCluster layer.
-     */
-    function applyCategoryFilter(
-        categoryId
-    ) {
-
-        /*
-         * Normalize the category ID.
-         */
+    function applyCategoryFilter(categoryId) {
+        const requestedCategoryId = String(categoryId);
         const normalizedCategoryId =
-            String(categoryId);
+            requestedCategoryId !== 'all' &&
+            requestedCategoryId === activeCategoryId
+                ? 'all'
+                : requestedCategoryId;
 
+        if (normalizedCategoryId !== 'all') {
+            logCategoryActivity(normalizedCategoryId);
+        }
 
-        /*
-         * Record specific category interactions.
-         */
+        closeSpiderfiedClusterFocus();
+        activeCategoryId = normalizedCategoryId;
+        clearAgencySearchResults();
+
         if (
-            normalizedCategoryId !== 'all'
+            selectedAgencyId !== null &&
+            !matchesActiveFilters(
+                allAgencyMarkers.find(marker =>
+                    String(marker.agencyData?.id) === String(selectedAgencyId)
+                )?.agencyData
+            )
         ) {
-
-            logCategoryActivity(
-                normalizedCategoryId
-            );
-
+            closeAgencyDetails();
         }
 
-
-        /*
-         * Store the current filter.
-         */
-        activeCategoryId =
-            normalizedCategoryId;
-
-
-        /*
-         * Clear active search results.
-         */
-        if (resultsContainer) {
-
-            resultsContainer.innerHTML =
-                '';
-
-        }
-
-
-        /*
-         * Process every agency marker.
-         */
-        Object.values(markers).forEach(
-            marker => {
-
-                /*
-                 * Get its agency data.
-                 */
-                const agency =
-                    marker.agencyData;
-
-
-                /*
-                 * Get its category ID.
-                 */
-                const agencyCategoryId =
-                    agency?.category?.id;
-
-
-                /*
-                 * Determine whether it belongs
-                 * to the active category.
-                 */
-                const shouldShow =
-                    activeCategoryId === 'all' ||
-                    String(agencyCategoryId) ===
-                        activeCategoryId;
-
-
-                /*
-                 * Matching markers remain inside
-                 * the cluster manager.
-                 */
-                if (shouldShow) {
-
-                    /*
-                     * Avoid adding an existing marker twice.
-                     */
-                    if (
-                        !markerClusterGroup.hasLayer(
-                            marker
-                        )
-                    ) {
-
-                        markerClusterGroup.addLayer(
-                            marker
-                        );
-
-                    }
-
-                }
-
-
-                /*
-                 * Non-matching markers are removed
-                 * from the cluster system entirely.
-                 */
-                else {
-
-                    if (
-                        markerClusterGroup.hasLayer(
-                            marker
-                        )
-                    ) {
-
-                        markerClusterGroup.removeLayer(
-                            marker
-                        );
-
-                    }
-
-                }
-
-
-                /*
-                 * Keep tooltip state synchronized
-                 * with category visibility.
-                 */
-                const tooltip =
-                    marker.getTooltip();
-
-
-                if (tooltip) {
-
-                    tooltip.setOpacity(
-                        0
-                    );
-
-                }
-
-
-                /*
-                 * Close the agency details panel when
-                 * its agency is filtered out.
-                 */
-                if (
-                    !shouldShow &&
-                    selectedAgencyId !== null &&
-                    String(agency.id) ===
-                        String(selectedAgencyId)
-                ) {
-
-                    closeAgencyDetails();
-
-                }
-
-            }
-        );
-
-
-        /*
-         * Update active category styling.
-         */
         updateActiveCategoryButton();
-
-
-        /*
-         * Refresh label state.
-         */
-        updateAgencyLabels();
-
+        syncVisibleAgencyMarkers();
     }
 
 
@@ -4120,15 +4092,18 @@ function refreshAgencyLabels() {
 
 
                 /*
-                 * Build the category filter interface.
+                 * Keep the complete API dataset as the source of truth.
+                 * The type and category controls are independent filters.
                  */
-                buildCategoryFilters(
-                    data
-                );
+                agencyRecords = data;
+
+                buildAgencyTypeFilters(agencyRecords);
+                buildCategoryFilters(agencyRecords);
 
 
                 /*
-                 * Create a Leaflet marker for each agency.
+                 * Create marker objects for valid records. Only markers
+                 * within the buffered viewport are added to MarkerCluster.
                  */
                 data.forEach(
                     agency => {
@@ -4289,14 +4264,6 @@ allAgencyMarkers.push(
 );
 
 
-                        /*
-                         * Add the marker to MarkerCluster.
-                         */
-                        markerClusterGroup.addLayer(
-                            marker
-                        );
-
-
                         // -------------------------------------------------
                         // MARKER CLICK
                         // -------------------------------------------------
@@ -4419,11 +4386,12 @@ allAgencyMarkers.push(
 
 
                 /*
-                 * Initialize the label state.
-                 *
-                 * At the default zoom of 14, labels remain hidden.
+                 * Register only matching markers in the buffered viewport.
+                 * Off-screen records remain searchable but are not rendered
+                 * by Leaflet until the user pans/zooms toward them.
                  */
-                updateAgencyLabels();
+                syncVisibleAgencyMarkers();
+                refreshVisibleMarkerAnimations();
                 setAgencyMapStatus('hidden');
 
                 // Evaluation moderation notifications link back to the affected
@@ -4431,7 +4399,7 @@ allAgencyMarkers.push(
                 // can see the current evaluation state or submit a replacement.
                 const requestedAgencyId = new URLSearchParams(window.location.search).get('agency_id');
                 if (requestedAgencyId) {
-                    const requestedMarker = markerClusterGroup.getLayers().find(
+                    const requestedMarker = allAgencyMarkers.find(
                         marker => String(marker.agencyData?.id) === String(requestedAgencyId)
                     );
                     if (requestedMarker) {
@@ -4503,9 +4471,10 @@ allAgencyMarkers.push(
 
 
             /*
-             * Refresh label state after movement.
+             * Load/unload marker layers for the new viewport, then
+             * animate markers that have newly become individually visible.
              */
-            refreshAgencyLabels();
+            syncVisibleAgencyMarkers();
 
         }
     );
@@ -4522,7 +4491,7 @@ allAgencyMarkers.push(
         'zoomend',
         () => {
 
-            refreshAgencyLabels();
+            syncVisibleAgencyMarkers();
 
         }
     );
@@ -4537,11 +4506,37 @@ allAgencyMarkers.push(
 markerClusterGroup.on(
     'animationend',
     () => {
-
         refreshAgencyLabels();
-
+        if (activeSpiderfiedMarkers) {
+            applySpiderfiedClusterFocus();
+        }
+        refreshVisibleMarkerAnimations();
     }
 );
+
+// Keep the opened cluster isolated until MarkerCluster closes spiderfying.
+markerClusterGroup.on('spiderfied', event => {
+    activeSpiderfiedMarkers = new Set(event.markers || []);
+
+    // Apply immediately and again after Leaflet has completed DOM placement.
+    // CSS hides all map markers/tooltips during focus; this allow-list reveals
+    // only the spiderfied cluster's members and their corresponding labels.
+    applySpiderfiedClusterFocus();
+
+    requestAnimationFrame(() => {
+        applySpiderfiedClusterFocus();
+        refreshVisibleMarkerAnimations();
+
+        requestAnimationFrame(() => {
+            applySpiderfiedClusterFocus();
+        });
+    });
+});
+
+markerClusterGroup.on('unspiderfied', () => {
+    clearSpiderfiedClusterFocus();
+    refreshVisibleMarkerAnimations();
+});
 
 
     // =========================================================
@@ -4639,8 +4634,7 @@ markerClusterGroup.on(
 
 
         /*
-         * Find agencies matching the query and
-         * current category filter.
+         * Find agencies matching the query and both active filters.
          */
         const matches =
             entries.filter(
@@ -4649,32 +4643,11 @@ markerClusterGroup.on(
                     /*
                      * Read the agency category.
                      */
-                    const agencyCategoryId =
-                        marker
-                            .agencyData
-                            ?.category
-                            ?.id;
-
-
                     /*
-                     * Only search agencies belonging
-                     * to the selected category.
+                     * Search is constrained by both organization type
+                     * and service category, just like the visible map.
                      */
-                    const matchesCategory =
-                        activeCategoryId ===
-                            'all' ||
-                        String(
-                            agencyCategoryId
-                        ) ===
-                            String(
-                                activeCategoryId
-                            );
-
-
-                    /*
-                     * Exclude filtered-out agencies.
-                     */
-                    if (!matchesCategory) {
+                    if (!matchesActiveFilters(marker.agencyData)) {
 
                         return false;
 
@@ -4962,6 +4935,10 @@ function enterAgencyFocusMode(marker) {
      */
     markerClusterGroup.clearLayers();
 
+    // The original markers are hidden during selected-agency focus mode.
+    // Reset visibility history so restored markers animate when shown again.
+    visibleAgencyMarkers.clear();
+
 
     /*
      * Create a completely independent Leaflet marker.
@@ -5041,6 +5018,8 @@ function enterAgencyFocusMode(marker) {
 function focusMarker(
     marker
 ) {
+
+    closeSpiderfiedClusterFocus();
 
     /*
      * Make sure a marker was supplied.

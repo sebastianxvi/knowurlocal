@@ -4739,3 +4739,216 @@ body, .layout { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Bli
         animation: none !important;
     }
 }
+
+
+
+
+/* Keep legacy high-specificity header/sidebar rules on the same dimensions. */
+.header-quick-badge {
+    min-width: 18px !important;
+    height: 18px !important;
+    padding: 0 4px !important;
+    background: #e5484d !important;
+    font-size: 9px !important;
+    font-weight: 750 !important;
+    box-shadow: 0 2px 6px rgba(229, 72, 77, .24) !important;
+}
+
+.admin-sidebar-collapsed .sidebar-notification {
+    min-width: 18px !important;
+    height: 18px !important;
+    padding: 0 4px !important;
+    font-size: 9px !important;
+    background: #e5484d !important;
+    border: 2px solid #fff !important;
+}
+
+.layout .ai-unread-count {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    background: #e5484d;
+    border: 2px solid #fff;
+    font-size: 9px;
+    font-weight: 750;
+    box-shadow: 0 2px 6px rgba(229, 72, 77, .24);
+}
+
+/* =========================================================
+   KNOWURLOCAL — SHARED NOTIFICATION INDICATORS
+   Same compact counter and unread-dot treatment as the public UI.
+   Component-specific positioning and dot dimensions remain local.
+   ========================================================= */
+@keyframes knowurlocal-notification-halo {
+    0%, 100% {
+        box-shadow: 0 1px 2px rgba(190, 65, 76, .16);
+    }
+    55% {
+        box-shadow: 0 1px 2px rgba(190, 65, 76, .16),
+                    0 0 0 3px rgba(214, 91, 100, .10);
+    }
+}
+
+.header-quick-badge,
+.admin-notification-badge,
+.sidebar-notification,
+.js-support-pending-badge,
+.ai-unread-count {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 15px !important;
+    width: auto;
+    height: 15px !important;
+    padding: 0 4px !important;
+    border: 0 !important;
+    border-radius: 999px;
+    background: #d65b64 !important;
+    color: #fff !important;
+    font-family: inherit;
+    font-size: 8px !important;
+    font-weight: 650 !important;
+    line-height: 1;
+    letter-spacing: 0 !important;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(190, 65, 76, .16) !important;
+    text-shadow: none;
+    transform-origin: center;
+}
+
+.header-quick-badge:not([hidden]),
+.admin-notification-badge:not([hidden]),
+.sidebar-notification:not([hidden]),
+.js-support-pending-badge:not([hidden]),
+.ai-unread-count:not([hidden]) {
+    animation: knowurlocal-notification-halo 2.4s ease-in-out infinite;
+}
+
+.header-quick-badge[hidden],
+.admin-notification-badge[hidden],
+.sidebar-notification[hidden],
+.js-support-pending-badge[hidden],
+.ai-unread-count[hidden] {
+    display: none !important;
+}
+
+/* Collapsed sidebar has a higher-specificity legacy counter rule. */
+.admin-sidebar-collapsed .sidebar-notification {
+    min-width: 15px !important;
+    height: 15px !important;
+    padding: 0 4px !important;
+    border: 0 !important;
+    background: #d65b64 !important;
+    font-size: 8px !important;
+    font-weight: 650 !important;
+    box-shadow: 0 1px 2px rgba(190, 65, 76, .16) !important;
+}
+
+/* Dot-only indicators retain their contextual size and placement. */
+.ai-unread-dot {
+    background-color: #d65b64 !important;
+    box-shadow: 0 0 0 2px rgba(214, 91, 100, .12) !important;
+    transform-origin: center;
+    animation: knowurlocal-notification-halo 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-quick-badge,
+    .admin-notification-badge,
+    .sidebar-notification,
+    .js-support-pending-badge,
+    .ai-unread-count,
+    .ai-unread-dot {
+        animation: none !important;
+    }
+}
+
+
+/* =========================================================
+   ALL ADMIN MODULES — COMPACT SHARED NOTIFICATION INDICATORS
+   One size, color, alignment and pulse for superadmin,
+   standard admin and agency-admin navigation/header counters.
+   ========================================================= */
+@keyframes kyl-admin-notification-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(214, 91, 100, 0);
+    }
+    50% {
+        box-shadow: 0 0 0 3px rgba(214, 91, 100, .13);
+    }
+}
+
+.header-quick-badge,
+.admin-notification-badge,
+.sidebar-notification,
+.js-support-pending-badge,
+.ai-unread-count {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 13px !important;
+    width: auto !important;
+    height: 13px !important;
+    min-height: 13px !important;
+    padding: 0 3px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: #d65b64 !important;
+    color: #fff !important;
+    font-family: inherit;
+    font-size: 8px !important;
+    font-weight: 650 !important;
+    line-height: 13px !important;
+    letter-spacing: 0 !important;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    text-shadow: none !important;
+    box-shadow: 0 1px 2px rgba(190, 65, 76, .15) !important;
+    transform-origin: center;
+}
+
+.header-quick-badge:not([hidden]),
+.admin-notification-badge:not([hidden]),
+.sidebar-notification:not([hidden]),
+.js-support-pending-badge:not([hidden]),
+.ai-unread-count:not([hidden]) {
+    animation: kyl-admin-notification-pulse 2s ease-in-out infinite !important;
+}
+
+.header-quick-badge[hidden],
+.admin-notification-badge[hidden],
+.sidebar-notification[hidden],
+.js-support-pending-badge[hidden],
+.ai-unread-count[hidden] {
+    display: none !important;
+}
+
+/* Collapsed sidebar keeps the same compact counter dimensions. */
+.admin-sidebar-collapsed .sidebar-notification {
+    min-width: 13px !important;
+    width: auto !important;
+    height: 13px !important;
+    min-height: 13px !important;
+    padding: 0 3px !important;
+    border: 0 !important;
+    font-size: 8px !important;
+}
+
+.ai-unread-dot {
+    transform-origin: center;
+    animation: kyl-admin-notification-pulse 2s ease-in-out infinite !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-quick-badge,
+    .admin-notification-badge,
+    .sidebar-notification,
+    .js-support-pending-badge,
+    .ai-unread-count,
+    .ai-unread-dot {
+        animation: none !important;
+    }
+}

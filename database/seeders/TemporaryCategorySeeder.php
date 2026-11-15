@@ -98,6 +98,11 @@ class TemporaryCategorySeeder extends Seeder
                 'category_name' => 'Taxation & Revenue',
                 'display_color' => '#B45309',
             ],
+
+            [
+                'category_name' => 'Water & Sanitation Services',
+                'display_color' => '#0D9488',
+            ],
         ];
 
         /*
@@ -142,6 +147,10 @@ class TemporaryCategorySeeder extends Seeder
                  * If the category already exists, leave it untouched.
                  */
                 if ($existingCategory) {
+                    if ($existingCategory->trashed()) {
+                        $existingCategory->restore();
+                    }
+
                     $skipped++;
 
                     continue;

@@ -338,3 +338,163 @@ body.user-notifications-page .notifications-read-all i {
         font-size: 12px;
     }
 }
+
+/* =========================================================
+   KNOWURLOCAL — SHARED NOTIFICATION INDICATORS
+   Compact counters and unread dots used throughout the public UI.
+   Component-specific positioning and dot dimensions remain local.
+   ========================================================= */
+@keyframes knowurlocal-notification-halo {
+    0%, 100% {
+        box-shadow: 0 1px 2px rgba(190, 65, 76, .16);
+    }
+    55% {
+        box-shadow: 0 1px 2px rgba(190, 65, 76, .16),
+                    0 0 0 3px rgba(214, 91, 100, .10);
+    }
+}
+
+.menu-notification-badge,
+.account-notification-badge,
+.inquiry-notification-badge,
+.user-notification-nav-badge,
+.inquiries-filter-trigger-unread {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 15px !important;
+    width: auto;
+    height: 15px !important;
+    padding: 0 4px !important;
+    border: 0 !important;
+    border-radius: 999px;
+    background: #d65b64 !important;
+    color: #fff !important;
+    font-family: inherit;
+    font-size: 8px !important;
+    font-weight: 650 !important;
+    line-height: 1;
+    letter-spacing: 0 !important;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(190, 65, 76, .16);
+    text-shadow: none;
+    transform-origin: center;
+}
+
+.menu-notification-badge:not([hidden]),
+.account-notification-badge:not([hidden]),
+.inquiry-notification-badge:not([hidden]),
+.user-notification-nav-badge:not([hidden]),
+.inquiries-filter-trigger-unread:not([hidden]) {
+    animation: knowurlocal-notification-halo 2.4s ease-in-out infinite;
+}
+
+.menu-notification-badge[hidden],
+.account-notification-badge[hidden],
+.inquiry-notification-badge[hidden],
+.user-notification-nav-badge[hidden],
+.inquiries-filter-trigger-unread[hidden] {
+    display: none !important;
+}
+
+/* Keep counters visually attached to their labels, not floating like stickers. */
+.account-notification-badge,
+.user-notification-nav-badge {
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.inquiry-notification-badge {
+    margin-left: auto;
+}
+
+/* Unread-only dots share the same restrained red and soft halo. */
+.user-notification-unread-dot,
+.messenger-unread-dot,
+.messenger-agency-unread-dot,
+.menu-notification-dot {
+    background-color: #d65b64 !important;
+    box-shadow: 0 0 0 2px rgba(214, 91, 100, .12) !important;
+    transform-origin: center;
+    animation: knowurlocal-notification-halo 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-notification-badge,
+    .account-notification-badge,
+    .inquiry-notification-badge,
+    .user-notification-nav-badge,
+    .inquiries-filter-trigger-unread,
+    .user-notification-unread-dot,
+    .messenger-unread-dot,
+    .messenger-agency-unread-dot,
+    .menu-notification-dot {
+        animation: none !important;
+    }
+}
+
+
+/* =========================================================
+   NOTIFICATIONS PAGE — FULLER CONTENT WIDTH
+   Use the same desktop content width as the shared public navbar.
+   The feed rows stretch across the available activity-card width.
+   ========================================================= */
+body.user-notifications-page .notifications-shell {
+    width: min(calc(100% - 48px), 1180px);
+}
+
+body.user-notifications-page .notifications-card {
+    width: 100%;
+    min-width: 0;
+}
+
+body.user-notifications-page .notifications-list {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+body.user-notifications-page .user-notification-item {
+    width: 100%;
+    min-width: 0;
+    align-self: stretch;
+    box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+    body.user-notifications-page .notifications-shell {
+        width: calc(100% - 24px);
+    }
+}
+
+
+/* Keep the notifications-page navbar counter identical to every public page. */
+.user-notifications-page .user-notification-nav-badge {
+    box-sizing: border-box;
+    min-width: 13px !important;
+    height: 13px !important;
+    margin-left: 6px;
+    padding: 0 3px !important;
+    border: 0 !important;
+    border-radius: 999px;
+    background: #d65b64 !important;
+    color: #fff !important;
+    font-size: 8px !important;
+    font-weight: 650 !important;
+    line-height: 13px !important;
+    box-shadow: 0 1px 2px rgba(190, 65, 76, .15);
+}
+
+.user-notifications-page .user-notification-nav-badge:not([hidden]),
+.user-notifications-page .user-notification-unread-dot {
+    animation: kyl-public-notification-pulse 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .user-notifications-page .user-notification-nav-badge,
+    .user-notifications-page .user-notification-unread-dot {
+        animation: none !important;
+    }
+}
