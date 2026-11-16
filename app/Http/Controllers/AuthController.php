@@ -1274,10 +1274,7 @@ public function resetPassword(Request $request)
      */
     public function login(Request $request)
     {
-        /*
-         * Normalize the canonical account identifier before validation.
-         * This keeps login consistent with registration and recovery.
-         */
+        // Normalize the canonical account identifier before validation.
         $request->merge([
             'email' => strtolower(trim((string) $request->input('email', ''))),
         ]);
@@ -1287,83 +1284,138 @@ public function resetPassword(Request $request)
             'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $email = $request->email;
+        $user = User::where('email', $email)->first();
 
         /*
-         * Always return the same authentication failure response for
-         * unknown, unverified, inactive, and wrong-password accounts.
-         * This avoids exposing useful account-state information.
+         * An account may not exist in users yet because registration is
+         * intentionally staged in email_verifications until OTP succeeds.
          */
-        if (
-            !$user ||
-            !Hash::check(
-                $request->password,
-                $user->password
-            )
-        ) {
+        if (!$user) {
+            $pendingRegistration = \App\Models\EmailVerification::where('email', $email)->exists();
+
+            if ($pendingRegistration) {
+                return back()
+                    ->withInput($request->only('email'))
+                    ->withErrors([
+                        'email' => 'Your registration is not complete yet. Please verify the email address using the OTP we sent you. If the code has expired, restart registration.',
+                    ]);
+            }
+
+            $pendingInvite = AdminInvite::where('email', $email)
+                ->where('used', false)
+                ->where('expires_at', '>', now())
+                ->exists();
+
+            if ($pendingInvite) {
+                return back()
+                    ->withInput($request->only('email'))
+                    ->withErrors([
+                        'email' => 'An administrator invitation exists for this email, but the account has not been registered yet. Open your invitation link to complete registration.',
+                    ]);
+            }
+
             return back()
                 ->withInput($request->only('email'))
                 ->withErrors([
-                    'email' => 'We couldn\'t sign you in. Check your email, password, and account status, then try again.',
+                    'email' => 'No KNOWURLOCAL account was found with that email address. Check the email or create an account.',
                 ]);
         }
 
-        /*
-         * Credentials are correct. Only now enforce the account's
-         * verification and activation state. We deliberately do not
-         * authenticate an account that is not ready to sign in.
-         */
-        if (!$user->email_verified_at || $user->status !== 'active') {
+        // Do not reveal account state unless the supplied password is correct.
+        if (!Hash::check($request->password, $user->password)) {
             return back()
                 ->withInput($request->only('email'))
                 ->withErrors([
-                    'email' => 'We couldn\'t sign you in. Your account may still need email verification or administrator approval.',
+                    'email' => 'The password you entered is incorrect. Please try again.',
                 ]);
+        }
+
+        if ($user->status === 'deactivated') {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'This account has been deactivated. Please contact the KNOWURLOCAL system administrator if you believe this is a mistake.',
+                ]);
+        }
+
+        if ($user->status === 'pending') {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'Your account is still pending approval. You will be able to sign in once it has been activated.',
+                ]);
+        }
+
+        if ($user->status !== 'active') {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'This account is not currently eligible to sign in. Please contact the system administrator for assistance.',
+                ]);
+        }
+
+        if (!$user->email_verified_at) {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'Your email address has not been verified. Please complete email verification before signing in.',
+                ]);
+        }
+
+        // Agency administrators must also belong to an agency that still exists.
+        if ($user->role === 'agency_admin') {
+            $agencyExists = \App\Models\Agency::withTrashed()
+                ->whereKey($user->agency_id)
+                ->exists();
+
+            if (!$agencyExists) {
+                return back()
+                    ->withInput($request->only('email'))
+                    ->withErrors([
+                        'email' => 'The agency associated with this administrator account is no longer available. Please contact the system administrator.',
+                    ]);
+            }
+
+            $agencyIsDeleted = \App\Models\Agency::onlyTrashed()
+                ->whereKey($user->agency_id)
+                ->exists();
+
+            if ($agencyIsDeleted) {
+                return back()
+                    ->withInput($request->only('email'))
+                    ->withErrors([
+                        'email' => 'The agency associated with this administrator account has been archived and access is currently unavailable. Please contact the system administrator.',
+                    ]);
+            }
         }
 
         Auth::login($user);
 
-        /*
-         * Regenerate the session ID after successful authentication
-         * to prevent session fixation.
-         */
+        // Regenerate the session ID after successful authentication.
         $request->session()->regenerate();
 
-        /*
-         * Record the most recent successful login.
-         */
         $user = Auth::user();
-
         $user->update([
             'last_login_at' => now(),
         ]);
 
         UserLog::create([
             'user_id' => Auth::id(),
-            'action' => in_array(
-                $user->role,
-                ['admin', 'superadmin'],
-                true
-            ) ? 'admin_login' : 'login',
+            'action' => in_array($user->role, ['admin', 'superadmin'], true)
+                ? 'admin_login'
+                : 'login',
             'page' => 'login',
             'role' => $user->role,
             'ip_address' => $request->ip(),
-            'device' => substr(
-                $request->userAgent(),
-                0,
-                255
-            ),
+            'device' => substr($request->userAgent(), 0, 255),
         ]);
 
-        if (Auth::user()->role === 'agency_admin') {
+        if ($user->role === 'agency_admin') {
             return redirect()->route('agency-admin.dashboard');
         }
 
-        if (in_array(
-            Auth::user()->role,
-            ['admin', 'superadmin'],
-            true
-        )) {
+        if (in_array($user->role, ['admin', 'superadmin'], true)) {
             return redirect('/admin/dashboard');
         }
 

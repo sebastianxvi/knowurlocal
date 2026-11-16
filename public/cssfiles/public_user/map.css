@@ -155,6 +155,20 @@ html, body {
 .category-map-marker {
     background: transparent;
     border: none;
+
+    /*
+     * The Leaflet icon is a 44px transparent hit target. Flex centering
+     * keeps the original 25px visual marker exactly on its coordinates.
+     */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
 }
 
 /*
@@ -3196,10 +3210,18 @@ a.agency-contact-value:focus-visible {
     pointer-events: none !important;
 }
 
-#map.cluster-focus-active .leaflet-marker-icon.cluster-focus-visible,
-#map.cluster-focus-active .leaflet-tooltip.cluster-focus-visible {
+#map.cluster-focus-active .leaflet-marker-icon.cluster-focus-visible {
     visibility: visible !important;
     pointer-events: auto !important;
+}
+
+/*
+ * Spiderfied agency labels are visual-only. Never let their wide,
+ * overlapping tooltip boxes intercept taps intended for nearby markers.
+ */
+#map.cluster-focus-active .leaflet-tooltip.cluster-focus-visible {
+    visibility: visible !important;
+    pointer-events: none !important;
 }
 
 #map .cluster-focus-hidden {

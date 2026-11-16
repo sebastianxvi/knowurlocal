@@ -4751,7 +4751,7 @@ body, .layout { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Bli
     background: #e5484d !important;
     font-size: 9px !important;
     font-weight: 750 !important;
-    box-shadow: 0 2px 6px rgba(229, 72, 77, .24) !important;
+    box-shadow: 0 2px 6px rgba(229, 72, 77, .24);
 }
 
 .admin-sidebar-collapsed .sidebar-notification {
@@ -4813,7 +4813,7 @@ body, .layout { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Bli
     letter-spacing: 0 !important;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
-    box-shadow: 0 1px 2px rgba(190, 65, 76, .16) !important;
+    box-shadow: 0 1px 2px rgba(190, 65, 76, .16);
     text-shadow: none;
     transform-origin: center;
 }
@@ -4843,13 +4843,13 @@ body, .layout { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Bli
     background: #d65b64 !important;
     font-size: 8px !important;
     font-weight: 650 !important;
-    box-shadow: 0 1px 2px rgba(190, 65, 76, .16) !important;
+    box-shadow: 0 1px 2px rgba(190, 65, 76, .16);
 }
 
 /* Dot-only indicators retain their contextual size and placement. */
 .ai-unread-dot {
     background-color: #d65b64 !important;
-    box-shadow: 0 0 0 2px rgba(214, 91, 100, .12) !important;
+    box-shadow: 0 0 0 2px rgba(214, 91, 100, .12);
     transform-origin: center;
     animation: knowurlocal-notification-halo 2.4s ease-in-out infinite;
 }
@@ -4906,7 +4906,7 @@ body, .layout { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Bli
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     text-shadow: none !important;
-    box-shadow: 0 1px 2px rgba(190, 65, 76, .15) !important;
+    box-shadow: 0 1px 2px rgba(190, 65, 76, .15);
     transform-origin: center;
 }
 
@@ -4951,4 +4951,190 @@ body, .layout { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Bli
     .ai-unread-dot {
         animation: none !important;
     }
+}
+
+/* =========================================================
+   ADMIN + AGENCY ADMIN — SHARED NOTIFICATION COUNTERS
+   Stable 16px minimum geometry; only the halo animates so the
+   numeral never moves or changes its alignment during a pulse.
+   ========================================================= */
+@keyframes kyl-admin-notification-halo {
+    0%, 100% {
+        box-shadow: 0 1px 2px rgba(190, 65, 76, .16),
+                    0 0 0 0 rgba(214, 91, 100, 0);
+    }
+    50% {
+        box-shadow: 0 1px 2px rgba(190, 65, 76, .18),
+                    0 0 0 3px rgba(214, 91, 100, .22);
+    }
+}
+
+.header-quick-badge,
+.admin-notification-badge,
+.sidebar-notification,
+.js-support-pending-badge,
+.ai-unread-count {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 16px !important;
+    width: auto !important;
+    height: 16px !important;
+    min-height: 16px !important;
+    padding: 0 3px !important;
+    border: 1px solid #fff !important;
+    border-radius: 999px !important;
+    background: #d65b64 !important;
+    color: #fff !important;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-size: 8px !important;
+    font-weight: 700 !important;
+    line-height: 16px !important;
+    letter-spacing: 0 !important;
+    font-variant-numeric: tabular-nums !important;
+    font-feature-settings: "tnum" 1 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    flex: 0 0 auto !important;
+    vertical-align: middle;
+    text-shadow: none !important;
+    box-shadow: 0 1px 2px rgba(190, 65, 76, .16);
+    transform: none !important;
+    animation: none;
+}
+
+.header-quick-badge:not([hidden]),
+.admin-notification-badge:not([hidden]),
+.sidebar-notification:not([hidden]),
+.js-support-pending-badge:not([hidden]),
+.ai-unread-count:not([hidden]) {
+    animation: kyl-admin-notification-halo 1.8s ease-in-out infinite !important;
+}
+
+.header-quick-badge[hidden],
+.admin-notification-badge[hidden],
+.sidebar-notification[hidden],
+.js-support-pending-badge[hidden],
+.ai-unread-count[hidden] {
+    display: none !important;
+}
+
+/* Preserve the compact sidebar anchor when the sidebar is collapsed. */
+.admin-sidebar-collapsed .sidebar-notification {
+    min-width: 16px !important;
+    width: auto !important;
+    height: 16px !important;
+    min-height: 16px !important;
+    padding: 0 3px !important;
+    font-size: 8px !important;
+    line-height: 16px !important;
+}
+
+/* Dot-only AI indicators keep their component-defined dimensions. */
+.ai-unread-dot {
+    transform: none !important;
+    animation: kyl-admin-notification-halo 1.8s ease-in-out infinite !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-quick-badge,
+    .admin-notification-badge,
+    .sidebar-notification,
+    .js-support-pending-badge,
+    .ai-unread-count,
+    .ai-unread-dot {
+        animation: none !important;
+        transform: none !important;
+    }
+}
+
+/* Final shared admin counter geometry. Fixed circular single-digit counters;
+   animation is halo-only so the numeral stays optically and geometrically still. */
+@keyframes kyl-admin-counter-halo-final {
+    0%, 100% {
+        box-shadow: 0 1px 2px rgba(190, 65, 76, .16),
+                    0 0 0 0 rgba(214, 91, 100, 0);
+    }
+    50% {
+        box-shadow: 0 1px 2px rgba(190, 65, 76, .18),
+                    0 0 0 3px rgba(214, 91, 100, .20);
+    }
+}
+
+.header-quick-badge,
+.admin-notification-badge,
+.sidebar-notification,
+.js-support-pending-badge,
+.ai-unread-count {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 14px !important;
+    max-width: none !important;
+    height: 14px !important;
+    min-height: 14px !important;
+    padding: 0 3px !important;
+    border: 1px solid #fff !important;
+    border-radius: 50% !important;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-size: 8px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+    letter-spacing: 0 !important;
+    font-variant-numeric: tabular-nums !important;
+    font-feature-settings: "tnum" 1 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    background: #d65b64 !important;
+    color: #fff !important;
+    text-shadow: none !important;
+    vertical-align: middle !important;
+    transform: none !important;
+    transform-origin: center !important;
+    box-shadow: 0 1px 2px rgba(190, 65, 76, .16);
+}
+
+.header-quick-badge:not([hidden]),
+.admin-notification-badge:not([hidden]),
+.sidebar-notification:not([hidden]),
+.js-support-pending-badge:not([hidden]),
+.ai-unread-count:not([hidden]) {
+    animation: kyl-admin-counter-halo-final 1.8s ease-in-out infinite !important;
+}
+
+.header-quick-badge[hidden],
+.admin-notification-badge[hidden],
+.sidebar-notification[hidden],
+.js-support-pending-badge[hidden],
+.ai-unread-count[hidden] {
+    display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-quick-badge,
+    .admin-notification-badge,
+    .sidebar-notification,
+    .js-support-pending-badge,
+    .ai-unread-count {
+        animation: none !important;
+    }
+}
+
+
+.admin-sidebar-collapsed .sidebar-notification {
+    width: auto !important;
+    min-width: 14px !important;
+    max-width: none !important;
+    height: 14px !important;
+    min-height: 14px !important;
+    padding: 0 3px !important;
+    border-radius: 999px !important;
+    line-height: 1 !important;
 }

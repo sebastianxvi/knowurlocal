@@ -109,10 +109,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             /*
-             * Increase the distance between spiderfied
-             * markers slightly so they are easier to select.
+             * Give spiderfied agencies enough separation for touch input.
+             * The larger multiplier is limited to touch-capable devices;
+             * desktop keeps a restrained expansion while still gaining
+             * a little more breathing room than the previous setting.
              */
-            spiderfyDistanceMultiplier: 1.15,
+            spiderfyDistanceMultiplier:
+                (
+                    window.matchMedia?.('(pointer: coarse)').matches ||
+                    (navigator.maxTouchPoints || 0) > 0
+                )
+                    ? 1.6
+                    : 1.25,
 
 
             /*
@@ -4143,21 +4151,23 @@ function refreshAgencyLabels() {
                                 `,
 
                                 /*
-                                 * This now matches the CSS marker
-                                 * dimensions of 25px × 25px.
+                                 * Use a 44px interaction box while keeping
+                                 * the visible category circle at 25px.
+                                 * The larger transparent area makes the
+                                 * marker substantially easier to tap.
                                  */
                                 iconSize: [
-                                    25,
-                                    25
+                                    44,
+                                    44
                                 ],
 
                                 /*
-                                 * Center the geographic coordinate
-                                 * inside the 25px marker.
+                                 * Keep the geographic coordinate at the
+                                 * exact visual center of the marker.
                                  */
                                 iconAnchor: [
-                                    12.5,
-                                    12.5
+                                    22,
+                                    22
                                 ]
 
                             });

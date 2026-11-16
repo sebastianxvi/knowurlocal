@@ -3294,8 +3294,7 @@ body :is(small, .helper-text, .field-hint, .form-hint) { font-size: 12px; }
 .menu-notification-badge,
 .account-notification-badge,
 .inquiry-notification-badge,
-.user-notification-nav-badge,
-.inquiries-filter-trigger-unread {
+.user-notification-nav-badge {
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
@@ -3323,8 +3322,7 @@ body :is(small, .helper-text, .field-hint, .form-hint) { font-size: 12px; }
 .menu-notification-badge:not([hidden]),
 .account-notification-badge:not([hidden]),
 .inquiry-notification-badge:not([hidden]),
-.user-notification-nav-badge:not([hidden]),
-.inquiries-filter-trigger-unread:not([hidden]) {
+.user-notification-nav-badge:not([hidden]) {
     animation: knowurlocal-notification-halo 2.4s ease-in-out infinite;
 }
 
@@ -3353,7 +3351,7 @@ body :is(small, .helper-text, .field-hint, .form-hint) { font-size: 12px; }
 .messenger-agency-unread-dot,
 .menu-notification-dot {
     background-color: #d65b64 !important;
-    box-shadow: 0 0 0 2px rgba(214, 91, 100, .12) !important;
+    box-shadow: 0 0 0 2px rgba(214, 91, 100, .12);
     transform-origin: center;
     animation: knowurlocal-notification-halo 2.4s ease-in-out infinite;
 }
@@ -4170,3 +4168,665 @@ body :is(small, .helper-text, .field-hint, .form-hint) { font-size: 12px; }
         transition: none !important;
     }
 }
+
+
+/* =========================================================
+   ACCOUNT DROPDOWN — FULL CONTENT UNDERLINE
+   Keep the underline sized to the complete label + optional
+   notification counter, rather than the label alone.
+   ========================================================= */
+.nav-drawer .account-dropdown .dropdown-item {
+    justify-content: flex-start;
+}
+
+.nav-drawer .account-dropdown .dropdown-item-content {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: max-content;
+    max-width: 100%;
+    min-width: 0;
+    gap: 6px;
+    line-height: 1;
+}
+
+.nav-drawer .account-dropdown .dropdown-item-label {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    padding: 0 !important;
+    line-height: 1 !important;
+}
+
+/* Disable only the former text-only underline.
+   The logout button's direct content span is also the shared
+   underline wrapper, so its ::after must remain available. */
+.nav-drawer .account-dropdown .dropdown-item-label > span::after {
+    content: none !important;
+}
+
+.nav-drawer .account-dropdown .dropdown-item-content::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -5px;
+    height: 2px;
+    border-radius: 999px;
+    background: #5272c9;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 240ms cubic-bezier(.22, .8, .25, 1);
+    pointer-events: none;
+    will-change: transform;
+}
+
+.nav-drawer .account-dropdown .dropdown-item:hover .dropdown-item-content::after,
+.nav-drawer .account-dropdown .dropdown-item.active .dropdown-item-content::after {
+    transform: scaleX(1);
+}
+
+.nav-drawer .account-dropdown .inquiry-notification-badge {
+    flex: 0 0 auto;
+    margin: 0 !important;
+    align-self: center;
+}
+
+.nav-drawer .account-dropdown .dropdown-item.logout:hover .dropdown-item-content::after {
+    background: #d66a70;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nav-drawer .account-dropdown .dropdown-item-content::after {
+        transition: none !important;
+    }
+}
+
+/* =========================================================
+   PUBLIC UI — SHARED NOTIFICATION COUNTERS
+   Geometry is stable; the pulse animates only the halo, never
+   the badge box or numeral. Component placement remains local.
+   ========================================================= */
+@keyframes kyl-public-notification-halo {
+    0%, 100% {
+        box-shadow: 0 1px 2px rgba(190, 65, 76, .16),
+                    0 0 0 0 rgba(214, 91, 100, 0);
+    }
+    50% {
+        box-shadow: 0 1px 2px rgba(190, 65, 76, .18),
+                    0 0 0 3px rgba(214, 91, 100, .22);
+    }
+}
+
+.menu-notification-badge,
+.account-notification-badge,
+.inquiry-notification-badge,
+.user-notification-nav-badge {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 16px !important;
+    width: auto !important;
+    height: 16px !important;
+    min-height: 16px !important;
+    padding: 0 3px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: #d65b64 !important;
+    color: #fff !important;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-size: 8px !important;
+    font-weight: 700 !important;
+    line-height: 16px !important;
+    letter-spacing: 0 !important;
+    font-variant-numeric: tabular-nums !important;
+    font-feature-settings: "tnum" 1 !important;
+    text-align: center !important;
+    text-transform: none !important;
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    flex: 0 0 auto !important;
+    vertical-align: middle;
+    text-shadow: none !important;
+    box-shadow: 0 1px 2px rgba(190, 65, 76, .16);
+    transform: none !important;
+    animation: none;
+}
+
+.menu-notification-badge:not([hidden]),
+.account-notification-badge:not([hidden]),
+.inquiry-notification-badge:not([hidden]),
+.user-notification-nav-badge:not([hidden]) {
+    animation: kyl-public-notification-halo 1.8s ease-in-out infinite !important;
+}
+
+.account-notification-badge,
+.user-notification-nav-badge {
+    margin-left: 6px !important;
+}
+
+.inquiry-notification-badge {
+    margin-left: auto !important;
+}
+
+.menu-notification-badge[hidden],
+.account-notification-badge[hidden],
+.inquiry-notification-badge[hidden],
+.user-notification-nav-badge[hidden] {
+    display: none !important;
+}
+
+/* Dot-only indicators and contextual unread counters keep their own size.
+   Their halo pulses without scaling or moving their content. */
+.menu-notification-dot,
+.user-notification-unread-dot,
+.messenger-unread-dot,
+.messenger-agency-unread-dot,
+.inquiries-filter-trigger-unread,
+.inquiries-filter-unread-badge {
+    transform: none !important;
+    animation: kyl-public-notification-halo 1.8s ease-in-out infinite !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-notification-badge,
+    .account-notification-badge,
+    .inquiry-notification-badge,
+    .user-notification-nav-badge,
+    .menu-notification-dot,
+    .user-notification-unread-dot,
+    .messenger-unread-dot,
+    .messenger-agency-unread-dot,
+    .inquiries-filter-trigger-unread,
+    .inquiries-filter-unread-badge {
+        animation: none !important;
+        transform: none !important;
+    }
+}
+
+/* Final notification counter geometry: fixed circular single-digit badges.
+   The pulse changes only the halo; it never transforms the counter or text. */
+@keyframes kyl-notification-counter-halo {
+    0%, 100% {
+        box-shadow: 0 1px 2px rgba(190, 65, 76, .16),
+                    0 0 0 0 rgba(214, 91, 100, 0);
+    }
+    50% {
+        box-shadow: 0 1px 2px rgba(190, 65, 76, .18),
+                    0 0 0 3px rgba(214, 91, 100, .20);
+    }
+}
+
+.menu-notification-badge,
+.account-notification-badge,
+.inquiry-notification-badge,
+.user-notification-nav-badge,
+.inquiries-filter-trigger-unread {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 14px !important;
+    max-width: none !important;
+    height: 14px !important;
+    min-height: 14px !important;
+    padding: 0 3px !important;
+    border: 1px solid #fff !important;
+    border-radius: 50% !important;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-size: 8px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+    letter-spacing: 0 !important;
+    font-variant-numeric: tabular-nums !important;
+    font-feature-settings: "tnum" 1 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    background: #d65b64 !important;
+    color: #fff !important;
+    text-shadow: none !important;
+    vertical-align: middle !important;
+    transform: none !important;
+    transform-origin: center !important;
+    box-shadow: 0 1px 2px rgba(190, 65, 76, .16);
+}
+
+.menu-notification-badge:not([hidden]),
+.account-notification-badge:not([hidden]),
+.inquiry-notification-badge:not([hidden]),
+.user-notification-nav-badge:not([hidden]),
+.inquiries-filter-trigger-unread:not([hidden]) {
+    animation: kyl-notification-counter-halo 1.8s ease-in-out infinite !important;
+}
+
+.menu-notification-badge[hidden],
+.account-notification-badge[hidden],
+.inquiry-notification-badge[hidden],
+.user-notification-nav-badge[hidden],
+.inquiries-filter-trigger-unread[hidden] {
+    display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-notification-badge,
+    .account-notification-badge,
+    .inquiry-notification-badge,
+    .user-notification-nav-badge,
+    .inquiries-filter-trigger-unread {
+        animation: none !important;
+    }
+}
+
+
+/* Final badge numeral alignment override.
+   Grid centers the text glyph itself without changing the badge's geometry
+   or the halo-only pulse animation. */
+.menu-notification-badge,
+.account-notification-badge,
+.inquiry-notification-badge,
+.user-notification-nav-badge,
+.inquiries-filter-trigger-unread {
+    display: inline-grid !important;
+    place-items: center !important;
+    align-content: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    height: 14px !important;
+    min-height: 14px !important;
+    min-width: 14px !important;
+    padding: 0 2px !important;
+    line-height: 12px !important;
+    font-size: 8px !important;
+    font-family: Arial, sans-serif !important;
+    font-variant-numeric: tabular-nums !important;
+    font-feature-settings: "tnum" 1 !important;
+    text-align: center !important;
+    text-indent: 0 !important;
+    letter-spacing: 0 !important;
+    vertical-align: middle !important;
+}
+
+
+/* =========================================================
+   ACCOUNT DROPDOWN — CONSISTENT INLINE UNDERLINES + BADGE SPACING
+   Keep the underline to the intrinsic width of the label and
+   its optional counter. The counter stays adjacent to its label.
+   ========================================================= */
+.nav-drawer > .account-wrapper > .account-toggle {
+    gap: 5px !important;
+}
+
+.nav-drawer > .account-wrapper > .account-toggle .account-label {
+    gap: 0 !important;
+}
+
+.nav-drawer > .account-wrapper > .account-toggle .account-notification-badge {
+    margin-left: 0 !important;
+}
+
+.nav-drawer .account-dropdown .dropdown-item,
+.nav-drawer .account-dropdown .dropdown-item.inquiry-link {
+    justify-content: flex-start !important;
+    gap: 0 !important;
+}
+
+.nav-drawer .account-dropdown form {
+    width: 100%;
+    margin: 0;
+}
+
+.nav-drawer .account-dropdown .dropdown-item-content {
+    position: relative;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: flex-start;
+    width: max-content !important;
+    max-width: 100%;
+    min-width: 0;
+    gap: 6px !important;
+    padding: 0 0 4px !important;
+    line-height: 1 !important;
+}
+
+.nav-drawer .account-dropdown .dropdown-item-label {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    gap: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+}
+
+.nav-drawer .account-dropdown .inquiry-notification-badge {
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    align-self: center;
+}
+
+/* One underline spans the actual content group, including a badge. */
+.nav-drawer .account-dropdown .dropdown-item-content::after,
+.nav-drawer .account-dropdown button.dropdown-item.logout .dropdown-item-content::after {
+    content: "" !important;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    border-radius: 999px;
+    background: #5272c9;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 240ms cubic-bezier(.22, .8, .25, 1);
+    pointer-events: none;
+    will-change: transform;
+}
+
+.nav-drawer .account-dropdown .dropdown-item:hover .dropdown-item-content::after,
+.nav-drawer .account-dropdown .dropdown-item:focus-visible .dropdown-item-content::after,
+.nav-drawer .account-dropdown .dropdown-item.active .dropdown-item-content::after {
+    transform: scaleX(1);
+}
+
+.nav-drawer .account-dropdown .dropdown-item.logout:hover .dropdown-item-content::after,
+.nav-drawer .account-dropdown .dropdown-item.logout:focus-visible .dropdown-item-content::after {
+    content: "" !important;
+    background: #d66a70;
+    transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nav-drawer .account-dropdown .dropdown-item-content::after {
+        transition: none !important;
+    }
+}
+
+
+
+/* =========================================================
+   KNOWURLOCAL — MOBILE NAVIGATION REFINEMENT
+   Text-only navigation, matching the desktop visual language.
+   Focuses on drawer hierarchy, touch targets and account submenu.
+   ========================================================= */
+@media (max-width: 767px) {
+    .nav-drawer {
+        width: min(286px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+        max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 82px);
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        padding: 13px 12px 12px;
+        gap: 3px;
+        border-radius: 18px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(100, 116, 139, .25) transparent;
+    }
+
+    .nav-drawer #greet {
+        margin: 3px 5px 10px;
+        padding: 2px 2px 12px;
+        font-size: 13px;
+        line-height: 1.35;
+        letter-spacing: -.015em;
+    }
+
+    /* Main navigation stays text-only, like desktop. */
+    .nav-drawer > .nav-link,
+    .nav-drawer > .account-wrapper > .account-toggle {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 40px;
+        padding: 0 11px;
+        border-radius: 9px;
+        font-size: 10.5px;
+        font-weight: 500;
+        letter-spacing: .075em;
+        line-height: 1;
+        text-transform: uppercase;
+        transform: none !important;
+        box-shadow: none;
+    }
+
+    .nav-drawer > .nav-link > span:not(.user-notification-nav-badge),
+    .nav-drawer > .account-wrapper > .account-toggle .account-label,
+    .nav-drawer > .account-wrapper > .account-toggle .account-label > span {
+        font-size: inherit;
+        font-weight: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
+    }
+
+    .nav-drawer > .nav-link:hover,
+    .nav-drawer > .account-wrapper > .account-toggle:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+
+    .nav-drawer > .nav-link.active {
+        background: rgba(82, 114, 201, .075);
+        border-color: rgba(82, 114, 201, .09);
+        color: #315fc0;
+    }
+
+    .nav-drawer > .nav-link::after,
+    .nav-drawer > .account-wrapper > .account-toggle::before {
+        left: 11px;
+        right: 11px;
+        top: calc(50% + 8px);
+        height: 2px;
+    }
+
+    .nav-drawer > .nav-link .user-notification-nav-badge,
+    .nav-drawer > .account-wrapper > .account-toggle .account-notification-badge {
+        margin-left: 6px !important;
+    }
+
+    .nav-drawer > .account-wrapper {
+        margin-top: 7px;
+        padding-top: 8px;
+        border-top: 1px solid var(--nav-border-soft);
+        gap: 2px;
+    }
+
+    .nav-drawer > .account-wrapper > .account-toggle {
+        justify-content: flex-start;
+        gap: 6px !important;
+        background: transparent;
+    }
+
+    .nav-drawer > .account-wrapper > .account-toggle.is-open {
+        color: #315fc0;
+        background: rgba(82, 114, 201, .055);
+    }
+
+    .nav-drawer > .account-wrapper > .account-toggle .account-label {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 0;
+        min-width: 0;
+    }
+
+    .nav-drawer > .account-wrapper > .account-toggle .account-notification-badge {
+        flex: 0 0 auto;
+        margin: 0 !important;
+    }
+
+    /* The disclosure chevron is structural feedback, not a menu icon. */
+    .nav-drawer > .account-wrapper > .account-toggle::after {
+        flex: 0 0 6px;
+        margin-left: auto;
+    }
+
+    .nav-drawer > .account-wrapper > .account-toggle.is-open::after {
+        margin-top: 3px;
+    }
+
+    /* Account submenu is visually grouped, but remains text-only. */
+    .nav-drawer .account-dropdown {
+        position: static;
+        box-sizing: border-box;
+        width: 100%;
+        max-height: 0;
+        margin-top: 0;
+        padding: 0 0 0 9px;
+        overflow: hidden;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: none;
+        transition:
+            max-height 260ms cubic-bezier(.22, .8, .25, 1),
+            opacity 180ms ease,
+            padding 180ms ease,
+            visibility 180ms ease;
+    }
+
+    .nav-drawer .account-dropdown.active {
+        max-height: 190px;
+        margin-top: 3px;
+        padding-top: 3px;
+        padding-bottom: 3px;
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    .nav-drawer .account-dropdown form {
+        width: 100%;
+        margin: 0;
+    }
+
+    .nav-drawer .account-dropdown .dropdown-item {
+        box-sizing: border-box;
+        display: flex;
+        width: 100%;
+        min-height: 39px;
+        padding: 0 11px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--nav-text-muted);
+        font-family: inherit;
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: .075em;
+        line-height: 1;
+        text-align: left;
+        text-transform: uppercase;
+        transform: none !important;
+    }
+
+    .nav-drawer .account-dropdown .dropdown-item:hover,
+    .nav-drawer .account-dropdown .dropdown-item:focus-visible {
+        background: rgba(82, 114, 201, .055);
+        color: #315fc0;
+    }
+
+    .nav-drawer .account-dropdown .dropdown-item-content {
+        display: inline-flex !important;
+        width: max-content !important;
+        max-width: 100%;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 6px !important;
+        padding: 0 0 4px !important;
+        line-height: 1 !important;
+    }
+
+    .nav-drawer .account-dropdown .dropdown-item-label {
+        display: inline-flex;
+        align-items: center;
+        min-width: 0;
+        font-size: inherit;
+        font-weight: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
+    }
+
+    .nav-drawer .account-dropdown .inquiry-notification-badge {
+        flex: 0 0 auto !important;
+        margin: 0 !important;
+        align-self: center;
+    }
+
+    .nav-drawer .account-dropdown .dropdown-item-content::after {
+        bottom: 0;
+        height: 2px;
+    }
+
+    .nav-drawer .account-dropdown .dropdown-item.logout {
+        color: #c85c64;
+    }
+
+    .nav-drawer .account-dropdown .dropdown-item.logout:hover,
+    .nav-drawer .account-dropdown .dropdown-item.logout:focus-visible {
+        background: rgba(214, 91, 100, .055);
+        color: #c64a50;
+    }
+
+    .nav-drawer .account-dropdown .dropdown-item.logout .dropdown-item-content::after {
+        background: #d66a70;
+    }
+
+    .nav-drawer .nav-link:focus-visible,
+    .nav-drawer > .account-wrapper > .account-toggle:focus-visible,
+    .nav-drawer .account-dropdown .dropdown-item:focus-visible {
+        outline: 2px solid rgba(82, 114, 201, .42);
+        outline-offset: 2px;
+    }
+}
+
+@media (max-width: 380px) {
+    .nav-drawer {
+        width: min(278px, calc(100vw - 20px));
+        max-width: calc(100vw - 20px);
+        right: 10px;
+        padding: 11px 10px;
+    }
+
+    .nav-drawer > .nav-link,
+    .nav-drawer > .account-wrapper > .account-toggle {
+        min-height: 39px;
+    }
+}
+
+@media (max-height: 560px) and (max-width: 767px) {
+    .nav-drawer {
+        max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 70px);
+    }
+
+    .nav-drawer #greet {
+        margin-bottom: 6px;
+        padding-bottom: 8px;
+    }
+
+    .nav-drawer > .nav-link,
+    .nav-drawer > .account-wrapper > .account-toggle {
+        min-height: 36px;
+    }
+
+    .nav-drawer .account-dropdown .dropdown-item {
+        min-height: 35px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nav-drawer,
+    .nav-drawer .account-dropdown,
+    .nav-drawer .account-dropdown .dropdown-item-content::after {
+        transition: none !important;
+    }
+}
+

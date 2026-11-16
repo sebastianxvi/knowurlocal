@@ -241,8 +241,10 @@
                         href="{{ route('user.profile') }}"
                         class="dropdown-item profile-link {{ request()->routeIs('user.profile') ? 'active' : '' }}"
                     >
-                        <span class="dropdown-item-label">
-                            <span>My Profile</span>
+                        <span class="dropdown-item-content">
+                            <span class="dropdown-item-label">
+                                <span>My Profile</span>
+                            </span>
                         </span>
                     </a>
 
@@ -250,20 +252,20 @@
                         href="{{ route('user.inquiries') }}"
                         class="dropdown-item inquiry-link {{ request()->routeIs('user.inquiries') ? 'active' : '' }}"
                     >
-                        <span class="dropdown-item-label">
+                        <span class="dropdown-item-content">
+                            <span class="dropdown-item-label">
+                                <span>My Inquiries</span>
+                            </span>
 
-                            <span>My Inquiries</span> 
-
-                        </span>
-
-                        <span
+                            <span
                             class="inquiry-notification-badge"
                             data-inquiry-notification-badge
                             data-count="{{ $unreadInquiryCount ?? 0 }}"
                             aria-live="polite"
                             aria-atomic="true"
                             @if(($unreadInquiryCount ?? 0) <= 0) hidden @endif
-                        >{{ ($unreadInquiryCount ?? 0) > 99 ? '99+' : ($unreadInquiryCount ?? 0) }}</span>
+                            >{{ ($unreadInquiryCount ?? 0) > 99 ? '99+' : ($unreadInquiryCount ?? 0) }}</span>
+                        </span>
                     </a>
 
 
@@ -278,7 +280,9 @@
                             type="submit"
                             class="dropdown-item logout"
                         >
-                            <span>Sign out</span>
+                            <span class="dropdown-item-content">
+                                <span>Sign out</span>
+                            </span>
                         </button>
 
                     </form>
