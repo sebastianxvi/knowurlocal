@@ -69,14 +69,14 @@
                             ></i>
                         </button>
 
-                        <div
-                            id="searchResults"
-                            class="search-results"
-                            role="listbox"
-                            aria-label="Agency search results"
-                        ></div>
-
                     </div>
+
+                    <div
+                        id="searchResults"
+                        class="search-results"
+                        role="listbox"
+                        aria-label="Agency search results"
+                    ></div>
 
                 @endif
 

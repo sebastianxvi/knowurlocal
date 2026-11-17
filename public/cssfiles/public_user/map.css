@@ -3353,3 +3353,56 @@ a.agency-contact-value:focus-visible {
         0 0 0 2px #e4ecf7,
         0 0 0 3px rgba(75, 111, 160, .22) !important;
 }
+
+/* =========================================================
+   CONTEXT-AWARE MAP FILTER VISIBILITY
+   Hide filter rows while an agency details panel is open.
+   Keep the rows mounted so active filters and scroll state persist.
+   ========================================================= */
+.site-header .agency-type-filters,
+.site-header .category-filters {
+    max-height: 48px;
+    transition:
+        max-height 240ms ease,
+        min-height 240ms ease,
+        height 240ms ease,
+        margin 240ms ease,
+        padding 240ms ease,
+        opacity 180ms ease,
+        transform 240ms ease;
+}
+
+body.agency-details-open .site-header .agency-type-filters,
+body.agency-details-open .site-header .category-filters {
+    max-height: 0 !important;
+    min-height: 0 !important;
+    height: 0 !important;
+    margin-block: 0 !important;
+    padding-block: 0 !important;
+    border-block-width: 0 !important;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transform: translateY(-5px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .site-header .agency-type-filters,
+    .site-header .category-filters {
+        transition: none;
+    }
+}
+
+.site-header .search-area {
+    transition: gap 240ms ease;
+}
+
+body.agency-details-open .site-header .search-area {
+    gap: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .site-header .search-area {
+        transition: none;
+    }
+}

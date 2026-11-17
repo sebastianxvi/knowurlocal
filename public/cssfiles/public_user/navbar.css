@@ -4918,3 +4918,38 @@ body :is(small, .helper-text, .field-hint, .form-hint) { font-size: 12px; }
     background-color: #fff;
 }
 
+/* =========================================================
+   MAP SEARCH RESULTS — FULL LOGO + SEARCH CONTAINER WIDTH
+   =========================================================
+   #searchResults is a direct child of .logo-search (not .search-form),
+   so its absolute positioning and 100% width are measured against the
+   complete logo + input + action-button surface on desktop and mobile.
+*/
+.site-header .logo-search {
+    position: relative;
+}
+
+.site-header .logo-search > .search-results {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    box-sizing: border-box;
+    z-index: 10023;
+}
+
+/* Override the older viewport-fixed mobile dropdown behavior. */
+@media (max-width: 600px) {
+    .site-header .logo-search > .search-results {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: none;
+        max-height: min(64dvh, calc(100dvh - 88px));
+    }
+}

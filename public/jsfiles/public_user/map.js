@@ -471,6 +471,25 @@ function createSelectedAgencyIcon() {
             'agencyDetails'
         );
 
+    /*
+     * Keep the map filters subordinate to the agency details panel.
+     * The filter rows stay mounted so their selected state and horizontal
+     * scroll positions are preserved while they are temporarily hidden.
+     */
+    const mapFilterRows = [
+        document.getElementById('agencyTypeFilters'),
+        document.getElementById('categoryFilters')
+    ].filter(Boolean);
+
+    function setMapFiltersHidden(hidden) {
+        document.body.classList.toggle('agency-details-open', hidden);
+
+        mapFilterRows.forEach((filterRow) => {
+            filterRow.setAttribute('aria-hidden', String(hidden));
+            filterRow.inert = hidden;
+        });
+    }
+
     // Agency evaluations are loaded independently so the map's agency payload
     // remains lightweight and review data is refreshed whenever a panel opens.
     const evaluationSummary = document.getElementById('agencyEvaluationSummary');
@@ -1648,6 +1667,25 @@ if (imageModal) {
         'click',
         event => {
 
+            /*
+             * This image preview is a top-level overlay above the
+             * agency details panel. Keep its clicks from reaching
+             * document-level outside-click handlers (especially the
+             * agency panel auto-dismiss listener).
+             *
+             * This must happen for both the backdrop and its controls.
+             * The close button removes the active class before this
+             * event bubbles, so relying only on the modal's active state
+             * in the document handler would be too late.
+             */
+            event.stopPropagation();
+
+
+            /*
+             * Close only when the actual dark backdrop is clicked.
+             * Clicking the image or close control must not trigger
+             * the backdrop-dismiss behavior.
+             */
             if (
                 event.target ===
                 imageModal
@@ -3145,6 +3183,9 @@ if (agencyOfficeHeadSection) {
             'active'
         );
 
+        // The details panel is now the primary map overlay.
+        setMapFiltersHidden(true);
+
 
         /*
          * Update the accessibility state.
@@ -3210,6 +3251,9 @@ function closeAgencyDetails() {
     agencyDetails.classList.remove(
         'active'
     );
+
+    // Restore the filter controls without resetting their selections.
+    setMapFiltersHidden(false);
 
 
     /*
@@ -3289,14 +3333,6 @@ function closeAgencyDetails() {
     /*
      * Category filter container.
      */
-    const categoryFilters =
-        document.getElementById(
-            'categoryFilters'
-        );
-
-    const agencyTypeFilters =
-        document.getElementById('agencyTypeFilters');
-
     /*
      * Organization type and service category are independent filters.
      * "all" keeps the corresponding dimension unrestricted.
@@ -5215,9 +5251,8 @@ map.flyTo(
              * user is interacting with the search form.
              */
             if (
-                searchForm.contains(
-                    event.target
-                )
+                searchForm.contains(event.target) ||
+                resultsContainer.contains(event.target)
             ) {
 
                 return;
@@ -5250,6 +5285,25 @@ map.flyTo(
                 !agencyDetails ||
                 !agencyDetails.classList.contains(
                     'active'
+                )
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+             * The image preview is a separate, higher-priority overlay.
+             * Never dismiss agency details while it is open, and ignore
+             * clicks originating from it even if the image close handler
+             * has already removed its active class earlier in bubbling.
+             */
+            if (
+                imageModal &&
+                (
+                    imageModal.classList.contains('active') ||
+                    imageModal.contains(event.target)
                 )
             ) {
 
