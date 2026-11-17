@@ -1794,16 +1794,17 @@ body.support-modal-open {
     }
 
     .support-modal-back {
-        align-items: flex-end;
+        align-items: center;
+        justify-content: center;
 
         padding: 0;
     }
 
     .support-modal {
         width: 100%;
-        max-height: 92vh;
-
-        border-radius: 14px 14px 0 0;
+        max-height: 88dvh;
+        margin: auto;
+        border-radius: 14px;
     }
 
     .support-request-details-grid {

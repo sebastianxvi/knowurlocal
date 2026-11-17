@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/profile.css') }}?v={{ filemtime(public_path('cssfiles/public_user/profile.css')) }}">
     <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}?v={{ filemtime(public_path('cssfiles/components/modal.css')) }}">
     <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/light/style.css">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/image-placeholders.css') }}?v={{ file_exists(public_path('cssfiles/components/image-placeholders.css')) ? filemtime(public_path('cssfiles/components/image-placeholders.css')) : time() }}">
 </head>
 <body class="profile-page">
     <x-public.navbar :hideSearch="true" />
@@ -24,9 +25,10 @@
                 <div class="profile-picture-wrap">
                     <button type="button" class="profile-picture profile-picture-open" id="profilePicture" aria-label="Profile picture options" aria-haspopup="dialog">
                         @if($user->profile_picture)
-                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($user->profile_picture) }}" alt="Profile picture" id="profilePictureImage">
+                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($user->profile_picture) }}" alt="Profile picture" id="profilePictureImage" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                            <x-image-placeholder type="user" class="profile-picture-default-avatar" id="profilePictureDefaultAvatar" :hidden="true" />
                         @else
-                            <span class="profile-picture-default-avatar" id="profilePictureDefaultAvatar" aria-label="Default profile picture" role="img"></span>
+                            <x-image-placeholder type="user" class="profile-picture-default-avatar" id="profilePictureDefaultAvatar" />
                         @endif
                     </button>
                     <button type="button" class="profile-picture-edit" id="chooseProfilePicture" aria-label="Profile picture options" title="Profile picture options">
@@ -84,9 +86,10 @@
                             <div class="profile-evaluation-main">
                                 <div class="profile-agency-avatar">
                                     @if($evaluation->agency?->agency_image)
-                                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($evaluation->agency->agency_image) }}" alt="" loading="lazy">
+                                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($evaluation->agency->agency_image) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                                        <x-image-placeholder type="agency" :hidden="true" />
                                     @else
-                                        <i class="ph-light ph-buildings" aria-hidden="true"></i>
+                                        <x-image-placeholder type="agency" />
                                     @endif
                                 </div>
                                 <div class="profile-evaluation-copy">
@@ -139,7 +142,8 @@
     <div class="profile-picture-viewer-backdrop" id="profilePictureViewerBackdrop" hidden>
         <section class="profile-picture-viewer" role="dialog" aria-modal="true" aria-label="Current profile picture">
             <button type="button" id="profilePictureViewerClose" aria-label="Close image viewer"><i class="ph-light ph-x" aria-hidden="true"></i></button>
-            <img id="profilePictureViewerImage" src="" alt="Your current profile picture">
+            <img id="profilePictureViewerImage" src="" alt="Your current profile picture" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+            <x-image-placeholder type="user" class="profile-picture-viewer-placeholder" :hidden="true" />
         </section>
     </div>
 

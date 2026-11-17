@@ -10,6 +10,7 @@
 
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -19,10 +20,11 @@
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/agency-info.css') }}">
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}">
-    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}?v={{ filemtime(public_path('cssfiles/components/modal.css')) }}">
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v=20261104-field-focus-reset&build={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/image-placeholders.css') }}?v={{ file_exists(public_path('cssfiles/components/image-placeholders.css')) ? filemtime(public_path('cssfiles/components/image-placeholders.css')) : time() }}">
 </head>
 <body>
 
@@ -40,7 +42,8 @@
 <div class="agency-cover">
     <img src="{{ $agency->profile_pic 
         ? Storage::disk('public')->url($agency->profile_pic) 
-        : asset('images/default-profile.png') }}">
+        : asset('images/admin/placeholder.jpg') }}" alt="{{ $agency->agency_name }} image" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+    <x-image-placeholder type="agency" class="agency-cover-placeholder" :hidden="true" />
 
     <div class="cover-text">
         <h2>{{ $agency->agency_name }}</h2>

@@ -1,0 +1,173 @@
+/*
+ * KNOWURLOCAL shared image placeholders.
+ * These styles standardize missing/broken image presentation only;
+ * image URLs, storage disks, and retrieval behavior remain page-owned.
+ */
+.kyl-image-placeholder {
+    box-sizing: border-box;
+    display: grid;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    place-items: center;
+    overflow: hidden;
+    border-radius: inherit;
+    background: linear-gradient(145deg, #edf2ff 0%, #e3ebff 100%);
+    color: #5576c7;
+}
+
+.kyl-image-placeholder > i {
+    display: block;
+    font-size: clamp(18px, 4vw, 34px);
+    font-weight: 400;
+    line-height: 1;
+}
+
+.kyl-image-placeholder--user,
+.kyl-image-placeholder--agency,
+.kyl-image-placeholder--image {
+    /* Semantic icon changes; the visual treatment stays shared. */
+}
+
+.kyl-image-placeholder[hidden] {
+    display: none !important;
+}
+
+/* Circular and compact avatar contexts inherit their host dimensions. */
+.ai-avatar > .kyl-image-placeholder,
+.support-user-avatar > .kyl-image-placeholder,
+.messenger-avatar > .kyl-image-placeholder,
+.evaluation-reviewer-avatar > .kyl-image-placeholder,
+.profile-agency-avatar > .kyl-image-placeholder,
+.profile-picture > .kyl-image-placeholder,
+.agency-profile-logo-frame > .kyl-image-placeholder {
+    flex: 1 1 auto;
+}
+
+/* Large image surfaces keep a useful placeholder footprint when the image is hidden. */
+.agency-cover-placeholder {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.agency-details-cover {
+    position: relative;
+}
+
+.agency-details-image-placeholder {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.profile-picture-viewer-placeholder,
+.chatbot-image-preview-placeholder,
+.map-image-preview-placeholder,
+.inquiry-lightbox-placeholder {
+    min-width: min(72vw, 320px);
+    min-height: min(48vh, 240px);
+    border-radius: 12px;
+}
+
+.ai-response-image-trigger > .kyl-image-placeholder,
+.response-image-trigger > .kyl-image-placeholder {
+    width: 100%;
+    min-height: 140px;
+}
+
+.ai-image-grid .ai-response-image-trigger > .kyl-image-placeholder {
+    min-height: 88px;
+}
+
+.support-response-saved-image-preview > .kyl-image-placeholder {
+    width: 100%;
+    min-height: 150px;
+    max-height: 330px;
+}
+
+.chat-faq-image-fallback.kyl-image-placeholder {
+    display: none;
+    flex-direction: column;
+    gap: 7px;
+    min-height: 54px;
+    padding: 10px;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.chat-faq-image-button.is-image-unavailable .chat-faq-image-fallback.kyl-image-placeholder {
+    display: flex;
+}
+
+/* Preview/lightbox placeholders occupy the same centered surface as their images. */
+#image-modal > .kyl-image-placeholder {
+    width: min(900px, 90vw);
+    min-height: min(55vh, 420px);
+    max-height: 85vh;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .18);
+}
+
+.profile-picture-viewer > .kyl-image-placeholder {
+    max-width: min(92vw, 760px);
+    max-height: 86vh;
+    min-height: min(48vh, 320px);
+}
+
+.image-lightbox-content > .kyl-image-placeholder {
+    width: min(80vw, 760px);
+    min-height: min(55vh, 420px);
+    max-height: calc(100vh - 56px);
+    border-radius: 9px;
+}
+
+.support-user-avatar > i {
+    color: #5576c7;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.messenger-avatar-fallback > i {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.ai-image-lightbox-placeholder {
+    width: min(80vw, 640px);
+    min-height: min(55vh, 360px);
+    max-height: 82vh;
+    border-radius: 10px;
+}
+
+.ai-avatar > .kyl-image-placeholder > i,
+.support-user-avatar > .kyl-image-placeholder > i {
+    font-size: 18px;
+}
+
+.messenger-avatar > .kyl-image-placeholder > i {
+    font-size: 20px;
+}
+
+.evaluation-reviewer-avatar > .kyl-image-placeholder > i {
+    font-size: 16px;
+}
+
+.profile-agency-avatar > .kyl-image-placeholder > i {
+    font-size: 23px;
+}
+
+.profile-picture > .kyl-image-placeholder > i,
+.agency-profile-logo-frame > .kyl-image-placeholder > i {
+    font-size: 44px;
+}
+
+.agency-evaluation-review-avatar.kyl-image-placeholder > i {
+    font-size: 16px;
+}
+
+.response-image-grid .response-image-trigger > .kyl-image-placeholder {
+    min-height: 88px;
+    height: 100%;
+}

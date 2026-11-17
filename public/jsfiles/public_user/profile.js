@@ -131,6 +131,9 @@
     function openPictureViewer() {
         const currentImage = document.querySelector('#profilePictureImage');
         if (!currentImage || !pictureViewerBackdrop || !pictureViewerImage) return;
+        pictureViewerImage.hidden = false;
+        const pictureViewerFallback = pictureViewerBackdrop.querySelector('.profile-picture-viewer-placeholder');
+        if (pictureViewerFallback) pictureViewerFallback.hidden = true;
         pictureViewerImage.src = currentImage.src;
         closePictureOptions();
         pictureViewerBackdrop.hidden = false;
@@ -416,8 +419,16 @@
             const image = document.createElement('img');
             image.id = 'profilePictureImage';
             image.alt = 'Profile picture';
+            const profilePicture = document.getElementById('profilePicture');
+            const profileFallback = document.getElementById('profilePictureDefaultAvatar');
+            image.onerror = () => {
+                image.hidden = true;
+                if (profileFallback) profileFallback.hidden = false;
+            };
             image.src = result.url;
-            document.getElementById('profilePicture').replaceChildren(image);
+            if (profileFallback) profileFallback.hidden = true;
+            profilePicture.replaceChildren(image);
+            if (profileFallback) profilePicture.appendChild(profileFallback);
             window.showAlertModal?.({ title: 'Profile picture updated', text: result.message, variant: 'success', showConfirm: false });
         } catch (error) {
             window.showAlertModal?.({ title: 'Could not update picture', text: error.message, variant: 'error' });

@@ -1392,11 +1392,17 @@ export const prepareSupportRequest = async (
             image.alt = '';
             image.addEventListener('error', () => {
                 modalUserAvatar.replaceChildren();
-                modalUserAvatar.textContent = userName.split(/\s+/).map(part => part.charAt(0)).slice(0, 2).join('').toUpperCase() || 'G';
+                const fallbackIcon = document.createElement('i');
+                fallbackIcon.className = 'ph-light ph-user';
+                fallbackIcon.setAttribute('aria-hidden', 'true');
+                modalUserAvatar.appendChild(fallbackIcon);
             }, { once: true });
             modalUserAvatar.appendChild(image);
         } else {
-            modalUserAvatar.textContent = userName.split(/\s+/).map(part => part.charAt(0)).slice(0, 2).join('').toUpperCase() || 'G';
+            const fallbackIcon = document.createElement('i');
+            fallbackIcon.className = 'ph-light ph-user';
+            fallbackIcon.setAttribute('aria-hidden', 'true');
+            modalUserAvatar.appendChild(fallbackIcon);
         }
     }
 

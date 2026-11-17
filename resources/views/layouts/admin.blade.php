@@ -69,7 +69,7 @@
 
     <link
         rel="stylesheet"
-        href="{{ asset('cssfiles/components/modal.css') }}"
+        href="{{ asset('cssfiles/components/modal.css') }}?v={{ filemtime(public_path('cssfiles/components/modal.css')) }}"
     >
 
 
@@ -99,6 +99,7 @@
     <link rel="stylesheet" href="{{ asset('cssfiles/accessibility-typography.css') }}?v={{ file_exists(public_path('cssfiles/accessibility-typography.css')) ? filemtime(public_path('cssfiles/accessibility-typography.css')) : time() }}">
 
     <link rel="stylesheet" href="{{ asset('cssfiles/admin/admin-motion.css') }}?v={{ file_exists(public_path('cssfiles/admin/admin-motion.css')) ? filemtime(public_path('cssfiles/admin/admin-motion.css')) : time() }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/image-placeholders.css') }}?v={{ file_exists(public_path('cssfiles/components/image-placeholders.css')) ? filemtime(public_path('cssfiles/components/image-placeholders.css')) : time() }}">
 </head>
 
 

@@ -36,9 +36,9 @@
             <div class="messenger-avatar" aria-hidden="true">
                 @if ($req->agency && $req->agency->agency_image)
                     <img src="{{ asset('storage/' . ltrim($req->agency->agency_image, '/')) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
-                    <span class="messenger-avatar-fallback" hidden>{{ strtoupper(mb_substr($req->agency->agency_abbreviation ?: $req->agency->agency_name, 0, 2)) }}</span>
+                    <x-image-placeholder type="agency" class="messenger-avatar-fallback" :hidden="true" />
                 @else
-                    <span class="messenger-avatar-fallback">{{ strtoupper(mb_substr(optional($req->agency)->agency_abbreviation ?: (optional($req->agency)->agency_name ?? 'AG'), 0, 2)) }}</span>
+                    <x-image-placeholder type="agency" class="messenger-avatar-fallback" />
                 @endif
             </div>
             <div class="messenger-row-copy">
@@ -201,7 +201,8 @@
                                         <span class="response-component-label">{{ $component->label }}</span>
                                     @endif
                                     <button type="button" class="response-image-trigger" data-image-url="{{ $component->attachment_url }}" aria-label="View response image">
-                                        <img src="{{ $component->attachment_url }}" alt="{{ $component->label ?: 'Official response image' }}" loading="lazy">
+                                        <img src="{{ $component->attachment_url }}" alt="{{ $component->label ?: 'Official response image' }}" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                                        <x-image-placeholder type="image" :hidden="true" />
                                     </button>
                                 </div>
                             @endif

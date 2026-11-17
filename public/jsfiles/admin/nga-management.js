@@ -22,6 +22,23 @@ document.addEventListener("DOMContentLoaded", function () {
     const placeholder =
         document.getElementById("agency-upload-placeholder");
 
+    // Keep a failed saved-image preview inside the same local agency
+    // placeholder system without changing the uploaded-image URL resolution.
+    if (previewImg && placeholder) {
+        previewImg.addEventListener("error", () => {
+            const agencyPlaceholderUrl = "/images/admin/placeholder.jpg";
+
+            if (!previewImg.src.endsWith(agencyPlaceholderUrl)) {
+                previewImg.src = agencyPlaceholderUrl;
+                previewImg.style.display = "block";
+                placeholder.style.display = "none";
+            } else {
+                previewImg.style.display = "none";
+                placeholder.style.display = "flex";
+            }
+        });
+    }
+
     const contactsContainer =
         document.getElementById("agency-contacts");
 
@@ -3006,7 +3023,7 @@ document.addEventListener("DOMContentLoaded", function () {
              * Reset image preview.
              */
             previewImg.src =
-                "https://via.placeholder.com/150";
+                "/images/admin/placeholder.jpg";
 
 
             previewImg.style.display =
@@ -3111,7 +3128,7 @@ document.addEventListener("DOMContentLoaded", function () {
             ) {
 
                 previewImg.src =
-                    data.imageUrl || "https://via.placeholder.com/150";
+                    data.imageUrl || "/images/admin/placeholder.jpg";
 
 
                 previewImg.style.display =
@@ -3125,7 +3142,7 @@ document.addEventListener("DOMContentLoaded", function () {
             else {
 
                 previewImg.src =
-                    "https://via.placeholder.com/150";
+                    "/images/admin/placeholder.jpg";
 
 
                 previewImg.style.display =
@@ -3172,7 +3189,7 @@ document.addEventListener("DOMContentLoaded", function () {
             ) {
 
                 previewImg.src =
-                    data.imageUrl || "https://via.placeholder.com/150";
+                    data.imageUrl || "/images/admin/placeholder.jpg";
 
 
                 previewImg.style.display =
@@ -3186,7 +3203,7 @@ document.addEventListener("DOMContentLoaded", function () {
             else {
 
                 previewImg.src =
-                    "https://via.placeholder.com/150";
+                    "/images/admin/placeholder.jpg";
 
 
                 previewImg.style.display =

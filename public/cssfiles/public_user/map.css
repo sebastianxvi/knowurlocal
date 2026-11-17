@@ -3171,27 +3171,7 @@ a.agency-contact-value:focus-visible {
 .agency-evaluation-review-avatar.is-anonymous{
     position:relative;
     overflow:hidden;
-    font-size:0;
-}
-.agency-evaluation-review-avatar.is-anonymous::before{
-    content:"";
-    position:absolute;
-    top:6px;
-    left:10px;
-    width:8px;
-    height:8px;
-    border-radius:50%;
-    background:#94a3b8;
-}
-.agency-evaluation-review-avatar.is-anonymous::after{
-    content:"";
-    position:absolute;
-    left:5px;
-    bottom:4px;
-    width:18px;
-    height:10px;
-    border-radius:10px 10px 6px 6px;
-    background:#94a3b8;
+    font-size:15px;
 }
 
 
@@ -3368,7 +3348,7 @@ a.agency-contact-value:focus-visible {
         height 240ms ease,
         margin 240ms ease,
         padding 240ms ease,
-        opacity 180ms ease,
+        opacity 240ms ease,
         transform 240ms ease;
 }
 

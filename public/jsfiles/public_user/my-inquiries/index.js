@@ -165,8 +165,12 @@ function initializeMessengerInbox() {
             return avatar;
         }
         const fallback = document.createElement('div');
-        fallback.className = 'messenger-avatar messenger-avatar-fallback';
-        fallback.textContent = 'AG';
+        fallback.className = 'messenger-avatar messenger-avatar-fallback kyl-image-placeholder kyl-image-placeholder--agency';
+        fallback.setAttribute('aria-hidden', 'true');
+        const icon = document.createElement('i');
+        icon.className = 'ph-light ph-buildings';
+        icon.setAttribute('aria-hidden', 'true');
+        fallback.appendChild(icon);
         return fallback;
     }
 
@@ -265,18 +269,18 @@ function initializeMessengerInbox() {
             statusLabel.textContent = statusInfo.label;
             status.append(statusIcon, statusLabel);
             ticketCopy.append(ticketTop, subject, status);
+            const chevron = document.createElement('i');
+            chevron.className = 'ph-light ph-caret-down';
+            chevron.setAttribute('aria-hidden', 'true');
+            ticketButton.append(ticketCopy, chevron);
             if (card.querySelector('[data-unread-response], .inquiry-unread-badge')) {
                 const unreadDot = document.createElement('span');
                 unreadDot.className = 'messenger-unread-dot';
                 unreadDot.setAttribute('role', 'img');
                 unreadDot.setAttribute('aria-label', 'New admin response');
                 unreadDot.title = 'New admin response';
-                ticketCopy.appendChild(unreadDot);
+                ticketButton.appendChild(unreadDot);
             }
-            const chevron = document.createElement('i');
-            chevron.className = 'ph-light ph-caret-down';
-            chevron.setAttribute('aria-hidden', 'true');
-            ticketButton.append(ticketCopy, chevron);
 
             const details = card.querySelector('.inquiry-details');
             const detailClone = details?.cloneNode(true);
@@ -537,7 +541,11 @@ function initializeMessengerInbox() {
             if (!question || !agencyId) return;
             send.disabled = true;
             send.setAttribute('aria-busy', 'true');
-            send.innerHTML = '<i class="ph-light ph-spinner" aria-hidden="true"></i><span>Sending…</span>';
+            send.setAttribute('aria-label', 'Sending ticket');
+            send.classList.add('is-loading');
+            // Match the admin response composer: keep the send control compact
+            // and communicate progress with the spinner alone.
+            send.innerHTML = '<span class="messenger-send-spinner" aria-hidden="true"></span>';
             try {
                 const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
                 const response = await fetch('/chat/support', {
@@ -570,6 +578,8 @@ function initializeMessengerInbox() {
                 alert.textContent = error.message || 'Unable to send your ticket. Please try again.';
                 send.disabled = false;
                 send.removeAttribute('aria-busy');
+                send.setAttribute('aria-label', 'Send ticket');
+                send.classList.remove('is-loading');
                 send.innerHTML = '<i class="ph-light ph-arrow-up" aria-hidden="true"></i>';
             }
         });
@@ -656,13 +666,22 @@ function initializeMessengerInbox() {
             time.textContent = latest.querySelector('.messenger-row-time')?.textContent.trim()
                 || latest.querySelector('.inquiry-date')?.textContent.trim() || '';
             heading.append(name, time);
-            if (group.some(card => card.querySelector('[data-unread-response], .inquiry-unread-badge'))) {
-                const unreadDot = document.createElement('span');
-                unreadDot.className = 'messenger-agency-unread-dot';
-                unreadDot.setAttribute('role', 'img');
-                unreadDot.setAttribute('aria-label', 'Unread admin response');
-                unreadDot.title = 'Unread admin response';
-                heading.appendChild(unreadDot);
+            const unreadTicketCount = group.filter(card =>
+                !card.classList.contains('is-trashed')
+                && (card.dataset.status || '').toLowerCase() !== 'trashed'
+                && Boolean(card.querySelector('[data-unread-response], .inquiry-unread-badge'))
+            ).length;
+            if (unreadTicketCount > 0) {
+                const unreadBadge = document.createElement('span');
+                unreadBadge.className = 'inquiry-notification-badge messenger-agency-unread-count';
+                unreadBadge.textContent = unreadTicketCount > 99 ? '99+' : String(unreadTicketCount);
+                unreadBadge.setAttribute('role', 'status');
+                unreadBadge.setAttribute(
+                    'aria-label',
+                    `${unreadTicketCount} ${unreadTicketCount === 1 ? 'ticket has' : 'tickets have'} a new admin response`
+                );
+                unreadBadge.title = `${unreadTicketCount} unread ${unreadTicketCount === 1 ? 'ticket' : 'tickets'}`;
+                heading.appendChild(unreadBadge);
             }
             const last = document.createElement('span');
             last.className = 'messenger-row-preview';
@@ -709,27 +728,36 @@ function initializeMessengerInbox() {
     selectedKey = requestedCard ? agencyKey(requestedCard) : null;
     renderAgencyRows();
 
-    function syncAgencyUnreadDots() {
+    function syncAgencyUnreadCounts() {
         const groups = groupsFromVisible();
         originalList.querySelectorAll('.messenger-agency-row').forEach(row => {
             const group = groups.get(row.dataset.agencyKey) || [];
-            const hasUnread = group.some(card => card.querySelector('[data-unread-response], .inquiry-unread-badge'));
+            const unreadTicketCount = group.filter(card =>
+                !card.classList.contains('is-trashed')
+                && (card.dataset.status || '').toLowerCase() !== 'trashed'
+                && Boolean(card.querySelector('[data-unread-response], .inquiry-unread-badge'))
+            ).length;
             const heading = row.querySelector('.messenger-row-heading');
-            const current = heading?.querySelector('.messenger-agency-unread-dot');
-            if (hasUnread && !current && heading) {
-                const dot = document.createElement('span');
-                dot.className = 'messenger-agency-unread-dot';
-                dot.setAttribute('role', 'img');
-                dot.setAttribute('aria-label', 'Unread admin response');
-                dot.title = 'Unread admin response';
-                heading.appendChild(dot);
-            } else if (!hasUnread) {
+            const current = heading?.querySelector('.messenger-agency-unread-count');
+
+            if (unreadTicketCount > 0 && heading) {
+                const badge = current || document.createElement('span');
+                badge.className = 'inquiry-notification-badge messenger-agency-unread-count';
+                badge.textContent = unreadTicketCount > 99 ? '99+' : String(unreadTicketCount);
+                badge.setAttribute('role', 'status');
+                badge.setAttribute(
+                    'aria-label',
+                    `${unreadTicketCount} ${unreadTicketCount === 1 ? 'ticket has' : 'tickets have'} a new admin response`
+                );
+                badge.title = `${unreadTicketCount} unread ${unreadTicketCount === 1 ? 'ticket' : 'tickets'}`;
+                if (!current) heading.appendChild(badge);
+            } else {
                 current?.remove();
             }
         });
     }
 
-    window.addEventListener('inquiry:notification-changed', syncAgencyUnreadDots);
+    window.addEventListener('inquiry:notification-changed', syncAgencyUnreadCounts);
 
     // Reconcile the red dot in the visible conversation whenever authoritative
     // Reverb data updates the canonical ticket record.
@@ -738,21 +766,21 @@ function initializeMessengerInbox() {
         const id = String(card?.dataset?.id || event.detail?.id || '');
         if (!id) return;
         const thread = pane.querySelector(`.messenger-ticket-thread[data-ticket-id="${CSS.escape(id)}"]`);
-        const copy = thread?.querySelector('.messenger-ticket-copy');
-        if (!thread || !copy || !card) return;
+        const ticketButton = thread?.querySelector('.messenger-ticket-bubble');
+        if (!thread || !ticketButton || !card) return;
         const shouldShow = Boolean(card.querySelector('[data-unread-response], .inquiry-unread-badge'));
-        const current = copy.querySelector('.messenger-unread-dot');
+        const current = ticketButton.querySelector('.messenger-unread-dot');
         if (shouldShow && !current) {
             const dot = document.createElement('span');
             dot.className = 'messenger-unread-dot';
             dot.setAttribute('role', 'img');
             dot.setAttribute('aria-label', 'New admin response');
             dot.title = 'New admin response';
-            copy.appendChild(dot);
+            ticketButton.appendChild(dot);
         } else if (!shouldShow) {
             current?.remove();
         }
-        syncAgencyUnreadDots();
+        syncAgencyUnreadCounts();
     });
 
     document.addEventListener('click', async event => {
@@ -775,19 +803,32 @@ function initializeMessengerInbox() {
         }
         const sendRequest = async (message = '') => {
             button.disabled = true;
+            const controller = new AbortController();
+            const timeoutId = window.setTimeout(() => controller.abort(), 45000);
             try {
                 const response = await fetch(`/my-inquiries/${encodeURIComponent(id)}${isDelete ? '' : '/reopen'}`, {
                     method: isDelete ? 'DELETE' : 'POST', credentials: 'same-origin',
                     headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(isDelete ? {} : { message })
+                    body: JSON.stringify(isDelete ? {} : { message }),
+                    signal: controller.signal
                 });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || data.success !== true) throw new Error(data.message || 'The ticket could not be updated.');
+                if (!isDelete) window.closeAlertModal();
                 window.showAlertModal({ title: 'Success', text: data.message || (isDelete ? 'Ticket deleted.' : 'Ticket reopened.'), variant: 'success', showConfirm: false, showCancel: false, autoCloseMs: 900 });
                 window.setTimeout(() => window.location.reload(), 850);
             } catch (error) {
                 button.disabled = false;
-                window.showAlertModal({ title: 'Unable to complete action', text: error.message || 'Please try again.', variant: 'danger', confirmText: 'OK' });
+                if (error?.name === 'AbortError') {
+                    throw new Error('The request is taking longer than expected. Refresh the page to verify the ticket status before trying again.');
+                }
+                if (isDelete) {
+                    window.showAlertModal({ title: 'Unable to complete action', text: error.message || 'Please try again.', variant: 'danger', confirmText: 'OK' });
+                    return;
+                }
+                throw error;
+            } finally {
+                window.clearTimeout(timeoutId);
             }
         };
         if (isDelete) {
@@ -800,8 +841,9 @@ function initializeMessengerInbox() {
             window.showAlertModal({
                 title: 'Reopen ticket', text: 'Tell the agency what you still need help with. Your message will be sent with the reopening request.',
                 variant: 'info', icon: 'ph-light ph-arrow-counter-clockwise', confirmText: 'Reopen and send', showCancel: true,
+                loadingIndicator: 'spinner', loadingText: 'Sending follow-up…',
                 input: { label: 'Your follow-up question', placeholder: 'Explain what you need help with...', required: true, minLength: 3, maxLength: 2000, validationMessage: 'Please enter at least 3 characters.' },
-                onConfirm: (message) => { window.closeAlertModal(); sendRequest(String(message || '').trim()); }
+                onConfirm: async (message) => { await sendRequest(String(message || '').trim()); }
             });
         }
     });

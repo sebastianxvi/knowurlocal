@@ -64,7 +64,7 @@
 .profile-editor-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:22px; }
 .profile-cancel-button { min-height:42px; padding:0 16px; border:1px solid #dce4f0; border-radius:10px; background:#fff; color:#4d5c73; font:inherit; font-size:13px; font-weight:650; cursor:pointer; }
 .profile-save-button:disabled { opacity:.65; cursor:wait; }
-@media(max-width:700px) { .profile-shell{width:calc(100% - 28px);padding:27px 0 50px}.profile-page-heading{align-items:flex-start}.profile-page-heading p:not(.profile-eyebrow){max-width:430px;font-size:13px}.profile-edit-trigger{padding:0 12px;white-space:nowrap}.profile-summary-card{padding:17px;gap:13px}.profile-avatar{width:52px;height:52px;flex-basis:52px;border-radius:15px}.profile-summary-copy h2{font-size:17px}.profile-evaluation-card{align-items:flex-start;flex-direction:column;gap:13px;padding:16px}.profile-evaluation-action{align-self:flex-end}.profile-editor-overlay{align-items:flex-end;padding:10px}.profile-editor-modal{max-height:88vh;padding:21px;border-radius:18px} }
+@media(max-width:700px) { .profile-shell{width:calc(100% - 28px);padding:27px 0 50px}.profile-page-heading{align-items:flex-start}.profile-page-heading p:not(.profile-eyebrow){max-width:430px;font-size:13px}.profile-edit-trigger{padding:0 12px;white-space:nowrap}.profile-summary-card{padding:17px;gap:13px}.profile-avatar{width:52px;height:52px;flex-basis:52px;border-radius:15px}.profile-summary-copy h2{font-size:17px}.profile-evaluation-card{align-items:flex-start;flex-direction:column;gap:13px;padding:16px}.profile-evaluation-action{align-self:flex-end}.profile-editor-overlay{align-items:center;justify-content:center;padding: max(14px, env(safe-area-inset-top)) 10px max(14px, env(safe-area-inset-bottom))}.profile-editor-modal{max-height:88dvh;padding:21px;border-radius:18px;margin:auto} }
 @media(max-width:480px) { .profile-page-heading{flex-direction:column;gap:15px}.profile-form-grid{grid-template-columns:1fr}.profile-form-grid .profile-form-full{grid-column:auto}.profile-summary-edit{display:none}.profile-evaluation-main{gap:11px}.profile-agency-avatar{width:44px;height:44px;flex-basis:44px}.profile-evaluation-copy h3{font-size:14px}.profile-evaluation-meta{gap:7px}.profile-editor-actions button{flex:1}.profile-evaluation-action{align-self:stretch;justify-content:center} }
 @media(prefers-reduced-motion:reduce){.profile-editor-overlay *{transition:none!important}}
 
@@ -157,8 +157,8 @@ body.profile-editor-open{overflow:hidden}
  .profile-evaluation-card{padding:15px}
  .profile-evaluation-card{align-items:flex-start;flex-direction:column;gap:12px}
  .profile-evaluation-action{align-self:stretch;justify-content:center}
- .profile-modal-backdrop{align-items:flex-end;padding:9px}
- .profile-modal{max-height:88vh;padding:21px;border-radius:18px}
+ .profile-modal-backdrop{align-items:center;justify-content:center;padding:max(14px, env(safe-area-inset-top)) 9px max(14px, env(safe-area-inset-bottom))}
+ .profile-modal{max-height:88dvh;padding:21px;border-radius:18px;margin:auto}
  .profile-modal-form footer button{flex:1}
 }
 @media(max-width:420px){
@@ -364,33 +364,11 @@ body.profile-editor-open{overflow:hidden}
 .profile-otp-resend button:disabled{color:#8b96a8;cursor:not-allowed}
 
 
-/* Shared KNOWURLOCAL default avatar silhouette, scaled from the evaluation avatar. */
-.profile-picture-default-avatar{
-    position:relative;
-    display:block;
-    width:100%;
-    height:100%;
-    overflow:hidden;
-    border-radius:50%;
-    background:#e8edf3;
-}
-.profile-picture-default-avatar::before{
-    content:"";
-    position:absolute;
-    top:22%;
-    left:40%;
-    width:20%;
-    height:20%;
-    border-radius:50%;
-    background:#94a3b8;
-}
-.profile-picture-default-avatar::after{
-    content:"";
-    position:absolute;
-    left:22%;
-    bottom:13%;
-    width:56%;
-    height:28%;
-    border-radius:50% 50% 32% 32%;
-    background:#94a3b8;
+/* Shared user placeholder; visual treatment is provided by image-placeholders.css. */
+.profile-picture-default-avatar {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: inherit;
 }

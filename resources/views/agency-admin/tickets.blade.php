@@ -404,9 +404,9 @@
                 <div class="ai-item-top"><span class="ai-avatar ai-citizen-avatar" aria-hidden="true">
                     @if($person?->profile_picture)
                         <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($person->profile_picture) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
-                        <span hidden>{{ strtoupper(substr($person?->first_name ?? 'C',0,1).substr($person?->last_name ?? '',0,1)) }}</span>
+                        <x-image-placeholder type="user" :hidden="true" />
                     @else
-                        {{ strtoupper(substr($person?->first_name ?? 'C',0,1).substr($person?->last_name ?? '',0,1)) }}
+                        <x-image-placeholder type="user" />
                     @endif
                 </span><span class="ai-item-name">{{ $personName }}</span><span class="ai-item-date">{{ ($latest?->trashed() ? $latest?->created_at : $latest?->updated_at)?->format('M j') }}</span>@if($unreadTicketCount > 0)<span class="ai-unread-count" aria-label="{{ $unreadTicketCount }} unread tickets" title="{{ $unreadTicketCount }} unread tickets">{{ $unreadTicketCount }}</span>@endif</div>
                 <div class="ai-preview">{{ '#'.$latest?->id }} · {{ $latest?->trashed() ? ($latest?->user_deleted_at ? 'Trashed by citizen' : 'Trashed by administration') : \Illuminate\Support\Str::limit($latest?->question ?? 'No ticket details', 55) }}</div>
@@ -421,9 +421,9 @@
         <header class="ai-chat-head"><a class="ai-mobile-inbox-back" href="{{ route('agency-admin.tickets', ['search' => $search ?: null]) }}" aria-label="Back to conversations"><i class="ph ph-arrow-left" aria-hidden="true"></i><span>Inbox</span></a><span class="ai-avatar ai-citizen-avatar" aria-hidden="true">
                 @if($selectedUser->profile_picture)
                     <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($selectedUser->profile_picture) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
-                    <span hidden>{{ strtoupper(substr($selectedUser->first_name ?? 'C',0,1).substr($selectedUser->last_name ?? '',0,1)) }}</span>
+                    <x-image-placeholder type="user" :hidden="true" />
                 @else
-                    {{ strtoupper(substr($selectedUser->first_name ?? 'C',0,1).substr($selectedUser->last_name ?? '',0,1)) }}
+                        <x-image-placeholder type="user" />
                 @endif
             </span><div class="ai-chat-head-copy"><h2>{{ $selectedUserName }}</h2><p>{{ $selectedTickets->count() }} ticket{{ $selectedTickets->count() === 1 ? '' : 's' }} · Select a ticket to open its conversation</p></div></header>
         <div class="ai-ticket-list-view">
@@ -447,9 +447,9 @@
             <span class="ai-avatar ai-citizen-avatar" aria-hidden="true">
                 @if($selectedUser->profile_picture)
                     <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($selectedUser->profile_picture) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
-                    <span hidden>{{ strtoupper(substr($selectedUser->first_name ?? 'C',0,1).substr($selectedUser->last_name ?? '',0,1)) }}</span>
+                    <x-image-placeholder type="user" :hidden="true" />
                 @else
-                    {{ strtoupper(substr($selectedUser->first_name ?? 'C',0,1).substr($selectedUser->last_name ?? '',0,1)) }}
+                        <x-image-placeholder type="user" />
                 @endif
             </span>
             <div class="ai-chat-head-copy"><h2>{{ $selectedUserName }}</h2><p>Ticket #{{ $selectedTicket->id }} · {{ $selectedTicket->trashed() ? ($selectedTicket->user_deleted_at ? 'Trashed by citizen' : 'Trashed by administration') : str_replace('_',' ',ucfirst($selectedTicket->status)) }}</p></div>
@@ -521,9 +521,9 @@
                     <span class="ai-avatar ai-citizen-avatar" aria-hidden="true">
                         @if($selectedUser?->profile_picture)
                             <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($selectedUser->profile_picture) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
-                            <span hidden>{{ strtoupper(substr($selectedUser?->first_name ?? 'C',0,1).substr($selectedUser?->last_name ?? '',0,1)) }}</span>
+                            <x-image-placeholder type="user" :hidden="true" />
                         @else
-                            {{ strtoupper(substr($selectedUser?->first_name ?? 'C',0,1).substr($selectedUser?->last_name ?? '',0,1)) }}
+                        <x-image-placeholder type="user" />
                         @endif
                     </span>
                     <span class="ai-ticket-intro-person-copy"><strong>{{ trim(($selectedUser?->first_name ?? '').' '.($selectedUser?->last_name ?? '')) ?: 'Citizen' }}</strong><small>Citizen's original question · Ticket #{{ $selectedTicket->id }}</small></span>
@@ -547,7 +547,8 @@
                     @php($imageUrl = route('agency-admin.tickets.response-attachment',['ticketId'=>$selectedTicket->id,'responseId'=>$response->id,'componentId'=>$component->id]))
                     <div class="ai-component ai-component-image">
                         @if($component->label)<span class="ai-component-label">{{ $component->label }}</span>@endif
-                        <div class="ai-response-image-wrap"><button type="button" class="ai-response-image-trigger" data-image-url="{{ $imageUrl }}" aria-label="View {{ $component->label ?: 'attached image' }}"><img src="{{ $imageUrl }}" alt="{{ $component->label ?: 'Official response image' }}" loading="lazy"></button></div>
+                        <div class="ai-response-image-wrap"><button type="button" class="ai-response-image-trigger" data-image-url="{{ $imageUrl }}" aria-label="View {{ $component->label ?: 'attached image' }}"><img src="{{ $imageUrl }}" alt="{{ $component->label ?: 'Official response image' }}" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                        <x-image-placeholder type="image" :hidden="true" /></button></div>
                     </div>
                 @endforeach</div>@endif
                 @foreach($response->components->where('type', 'text') as $component)
@@ -636,7 +637,7 @@
 </div>
 @endif
 @endsection
-<div class="ai-image-lightbox" data-ai-image-lightbox role="dialog" aria-modal="true" aria-label="Image preview"><button type="button" class="ai-image-lightbox-close" data-ai-image-close aria-label="Close image preview">&times;</button><img data-ai-image-preview alt="Expanded attachment preview"></div>
+<div class="ai-image-lightbox" data-ai-image-lightbox role="dialog" aria-modal="true" aria-label="Image preview"><button type="button" class="ai-image-lightbox-close" data-ai-image-close aria-label="Close image preview">&times;</button><img data-ai-image-preview alt="Expanded attachment preview" onerror="this.hidden=true; this.nextElementSibling.hidden=false;"><x-image-placeholder type="image" class="ai-image-lightbox-placeholder" :hidden="true" /></div>
 <div class="ai-link-modal" data-link-modal hidden>
   <section class="ai-link-dialog" role="dialog" aria-modal="true" aria-labelledby="ai-link-title">
     <div class="ai-link-dialog-head"><div><h2 id="ai-link-title">Attach a link</h2><p data-link-modal-description>Add a website or online document to this response.</p></div><button type="button" class="ai-link-close" data-close-link-modal aria-label="Close link dialog">&times;</button></div>
@@ -704,7 +705,7 @@
 </script>
 <script src="{{ asset('jsfiles/public_user/qrcode-core.js') }}?v={{ file_exists(public_path('jsfiles/public_user/qrcode-core.js')) ? filemtime(public_path('jsfiles/public_user/qrcode-core.js')) : time() }}"></script>
 <script>
-(()=>{const modal=document.querySelector('[data-ai-image-lightbox]');if(!modal)return;const image=modal.querySelector('[data-ai-image-preview]'),close=modal.querySelector('[data-ai-image-close]');const hide=()=>{modal.classList.remove('is-open');image.removeAttribute('src');document.body.style.overflow='';};document.addEventListener('click',e=>{const trigger=e.target.closest('.ai-response-image-trigger[data-image-url]');if(trigger){image.src=trigger.dataset.imageUrl;image.alt=trigger.querySelector('img')?.alt||'Expanded attachment preview';modal.classList.add('is-open');document.body.style.overflow='hidden';close.focus();}});close.addEventListener('click',hide);modal.addEventListener('click',e=>{if(e.target===modal)hide();});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('is-open'))hide();});})();
+(()=>{const modal=document.querySelector('[data-ai-image-lightbox]');if(!modal)return;const image=modal.querySelector('[data-ai-image-preview]'),close=modal.querySelector('[data-ai-image-close]');const hide=()=>{modal.classList.remove('is-open');image.removeAttribute('src');document.body.style.overflow='';};document.addEventListener('click',e=>{const trigger=e.target.closest('.ai-response-image-trigger[data-image-url]');if(trigger){image.hidden=false;const fallback=modal.querySelector('.ai-image-lightbox-placeholder');if(fallback)fallback.hidden=true;image.src=trigger.dataset.imageUrl;image.alt=trigger.querySelector('img')?.alt||'Expanded attachment preview';modal.classList.add('is-open');document.body.style.overflow='hidden';close.focus();}});close.addEventListener('click',hide);modal.addEventListener('click',e=>{if(e.target===modal)hide();});document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal.classList.contains('is-open'))hide();});})();
 </script>
 <script>
 (()=>{

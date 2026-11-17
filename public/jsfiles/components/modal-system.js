@@ -163,6 +163,9 @@
         cancelBtn.className = 'btn cancel';
         confirmBtn.dataset.loading = 'false';
         confirmBtn.disabled = false;
+        confirmBtn.removeAttribute('aria-label');
+        confirmBtn.removeAttribute('aria-busy');
+        confirmBtn.classList.remove('has-loading-spinner');
 
         /*
          * These buttons are cloned from the previous dialog above. Cloning
@@ -189,6 +192,9 @@
             confirmBtn.disabled = false;
             cancelBtn.disabled = false;
             confirmBtn.textContent = confirmLabel;
+            confirmBtn.removeAttribute('aria-label');
+            confirmBtn.removeAttribute('aria-busy');
+            confirmBtn.classList.remove('has-loading-spinner');
             messageBox.classList.remove('success', 'warning', 'info');
             messageBox.classList.add('danger');
             titleEl.textContent = 'Action could not be completed';
@@ -227,7 +233,18 @@
             if (shouldShowLoading) {
                 confirmBtn.dataset.loading = 'true';
                 confirmBtn.disabled = true;
-                confirmBtn.textContent = config.loadingText || 'Working…';
+                if (config.loadingIndicator === 'spinner') {
+                    confirmBtn.replaceChildren();
+                    const spinner = document.createElement('span');
+                    spinner.className = 'modal-loading-spinner';
+                    spinner.setAttribute('aria-hidden', 'true');
+                    confirmBtn.appendChild(spinner);
+                    confirmBtn.classList.add('has-loading-spinner');
+                    confirmBtn.setAttribute('aria-label', config.loadingText || 'Working…');
+                    confirmBtn.setAttribute('aria-busy', 'true');
+                } else {
+                    confirmBtn.textContent = config.loadingText || 'Working…';
+                }
                 // Password verification may take time. Allow explicit cancellation
                 // when requested, and let the callback invalidate pending work.
                 cancelBtn.disabled = !config.allowCancelDuringLoading;

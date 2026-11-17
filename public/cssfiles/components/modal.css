@@ -78,7 +78,7 @@
 #alert-modal .actions { display: flex; justify-content: flex-end; align-items: center; gap: 9px; margin-top: 20px; }
 #alert-modal .actions[hidden] { display: none !important; }
 #alert-modal .btn[hidden] { display: none !important; }
-#alert-modal .btn { min-height: 40px; padding: 9px 16px; border: 1px solid transparent; border-radius: 10px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 650; transition: background-color .12s ease, border-color .12s ease; }
+#alert-modal .btn { min-height: 40px; padding: 9px 16px; border: 1px solid transparent; border-radius: 10px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 500; transition: background-color .12s ease, border-color .12s ease; }
 #alert-modal .btn:focus-visible { outline: 3px solid rgba(78, 111, 208, .28); outline-offset: 2px; }
 #alert-modal .btn:disabled { cursor: wait; opacity: .68; }
 #alert-modal .cancel { border-color: #dce4f1; background: #fff; color: #43516b; }
@@ -92,14 +92,31 @@
 #alert-modal .warning-btn { background: #315fbd; color: #fff; }
 #alert-modal .warning-btn:hover:not(:disabled) { background: #264f9f; }
 
+/* Opt-in compact spinner for async confirmation actions. */
+#alert-modal .btn.confirm.has-loading-spinner { display:inline-flex; align-items:center; justify-content:center; min-width:40px; }
+#alert-modal .modal-loading-spinner { display:block; flex:0 0 16px; width:16px; height:16px; min-width:16px; min-height:16px; box-sizing:border-box; margin:0; padding:0; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; line-height:0; transform-origin:50% 50%; animation:modal-loading-spinner-rotate 800ms linear infinite; pointer-events:none; }
+@keyframes modal-loading-spinner-rotate { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+
 @media (max-width: 520px) {
-  #alert-modal { align-items: flex-end; padding: 12px; }
-  #alert-modal .modal { width: 100%; max-height: 82vh; padding: 21px; border-radius: 17px; }
+  #alert-modal {
+    align-items: center;
+    justify-content: center;
+    padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
+  }
+  #alert-modal .modal {
+    width: 100%;
+    max-height: min(88dvh, 680px);
+    padding: 21px;
+    border-radius: 17px;
+    margin: auto;
+  }
   #alert-modal .title { font-size: 18px; }
   #alert-modal .actions { gap: 8px; }
   #alert-modal .btn { min-height: 42px; }
+  #alert-modal .btn.confirm.has-loading-spinner { min-width:42px; padding-inline:12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   #alert-modal, #alert-modal .modal, #alert-modal .btn { transition: none !important; }
+  #alert-modal .modal-loading-spinner { animation:none!important; }
 }

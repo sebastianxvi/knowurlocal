@@ -366,7 +366,7 @@
                 <div class="user-profile-identity">
                     <div class="user-profile-picture-wrap">
                         <div class="user-profile-picture" id="user_profile_picture" role="img" aria-label="User profile picture">
-                            <i class="ph-light ph-user" id="user_profile_picture_fallback" aria-hidden="true"></i>
+                            <x-image-placeholder type="user" id="user_profile_picture_fallback" />
                             <img id="user_profile_picture_image" alt="User profile picture" hidden>
                         </div>
                     </div>
@@ -568,10 +568,15 @@ document.addEventListener("DOMContentLoaded", function () {
     const profileFallback = document.getElementById("user_profile_picture_fallback");
 
     if (data.profilePicture) {
+        profileImage.onerror = () => {
+            profileImage.hidden = true;
+            profileFallback.hidden = false;
+        };
         profileImage.src = data.profilePicture;
         profileImage.hidden = false;
         profileFallback.hidden = true;
     } else {
+        profileImage.onerror = null;
         profileImage.removeAttribute("src");
         profileImage.hidden = true;
         profileFallback.hidden = false;

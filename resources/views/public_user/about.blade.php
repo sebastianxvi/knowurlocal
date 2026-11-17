@@ -42,7 +42,7 @@
         rel="stylesheet"
         href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navbar.css')) }}"
     >
-    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}?v={{ filemtime(public_path('cssfiles/components/modal.css')) }}">
 
 
     {{-- =========================================================

@@ -110,7 +110,7 @@
                 @if($agency->agency_image)
                     <img src="{{ $agencyImageUrl }}" alt="{{ $agency->agency_name }} logo" class="agency-profile-logo" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
                 @endif
-                <div class="agency-profile-logo-placeholder" aria-hidden="true" @if($agency->agency_image) hidden @endif><i class="ph-light ph-buildings"></i></div>
+                <x-image-placeholder type="agency" class="agency-profile-logo-placeholder" :hidden="(bool) $agency->agency_image" />
             </div>
             <div class="agency-profile-heading">
                 <div class="agency-profile-eyebrow"><span class="agency-profile-eyebrow-dot"></span> Agency profile</div>
@@ -205,7 +205,7 @@
 .agency-profile-page .agency-profile-identity{display:flex;align-items:flex-start;gap:20px;min-width:0;flex:1}
 .agency-profile-page .agency-profile-logo-frame{display:grid;place-items:center;flex:0 0 100px;width:100px;height:100px;padding:8px;border:1px solid color-mix(in srgb,var(--agency-category-color) 22%,#e2e8f0);border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 5px 15px rgba(15,23,42,.06)}
 .agency-profile-page .agency-profile-logo{display:block;width:100%;height:100%;object-fit:contain}
-.agency-profile-page .agency-profile-logo-placeholder{display:grid;place-items:center;width:100%;height:100%;border-radius:13px;background:color-mix(in srgb,var(--agency-category-color) 10%,#fff);color:var(--agency-category-color);font-size:38px}
+.agency-profile-page .agency-profile-logo-placeholder{display:grid;place-items:center;width:100%;height:100%;border-radius:13px;background:linear-gradient(145deg,#edf2ff 0%,#e3ebff 100%);color:#5576c7;font-size:38px}
 .agency-profile-page .agency-profile-heading{min-width:0;padding-top:2px}
 .agency-profile-page .agency-profile-eyebrow{display:flex;align-items:center;gap:8px;color:var(--agency-category-color);font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
 .agency-profile-page .agency-profile-eyebrow-dot{width:7px;height:7px;border-radius:50%;background:var(--agency-category-color);box-shadow:0 0 0 4px color-mix(in srgb,var(--agency-category-color) 13%,transparent)}
@@ -355,7 +355,7 @@
 }
 .agency-profile-page .agency-profile-logo-frame .agency-profile-logo,
 .agency-profile-page .agency-profile-logo-frame img { display:block; width:100%; height:100%; object-fit:cover; border-radius:50%; }
-.agency-profile-page .agency-profile-logo-placeholder { display:grid; place-items:center; width:100%; height:100%; border-radius:50%; background:linear-gradient(145deg,#e7efff,#d8e4ff); color:#4567b5; font-size:42px; }
+.agency-profile-page .agency-profile-logo-placeholder { display:grid; place-items:center; width:100%; height:100%; border-radius:50%; background:linear-gradient(145deg,#edf2ff 0%,#e3ebff 100%); color:#5576c7; font-size:42px; }
 .agency-profile-page .agency-profile-heading { min-width:0; flex:1; padding:14px 0 0; }
 .agency-profile-page .agency-profile-heading h2 { margin:0; color:#182438; font-size:clamp(24px,3vw,30px); font-weight:800; letter-spacing:-.035em; line-height:1.2; overflow-wrap:anywhere; }
 .agency-profile-page .agency-profile-description { margin:6px 0 7px; color:#66748a; font-size:14px; overflow-wrap:anywhere; }

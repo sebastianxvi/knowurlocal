@@ -3690,14 +3690,14 @@ body {
 .ticket-create-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: #94a3b8; font-size: 11px; }
 .ticket-create-error { margin: 4px 0 0; padding: 10px 12px; border-radius: 10px; background: #fff1f2; color: #be123c; font-size: 13px; line-height: 1.45; }
 .ticket-create-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
-.ticket-create-actions button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 17px; border-radius: 12px; font: inherit; font-size: 13px; font-weight: 750; cursor: pointer; transition: transform .16s ease, opacity .16s ease, background .16s ease; }
+.ticket-create-actions button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 17px; border-radius: 12px; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: transform .16s ease, opacity .16s ease, background .16s ease; }
 .ticket-create-actions button:active { transform: translateY(1px); }
 .ticket-create-cancel { border: 1px solid #dbe3ee; background: #fff; color: #475569; }
 .ticket-create-submit { border: 1px solid #245cc5; background: #245cc5; color: #fff; }
 .ticket-create-submit:hover { background: #194ba9; }
 .ticket-create-submit:disabled { opacity: .65; cursor: wait; }
 body.ticket-modal-open { overflow: hidden; }
-@media (max-width: 520px) { .ticket-create-modal { align-items: end; padding: 10px; } .ticket-create-dialog { width: 100%; max-height: 92dvh; border-radius: 22px; padding: 24px 19px calc(20px + env(safe-area-inset-bottom)); } .ticket-create-actions { display: grid; grid-template-columns: 1fr 1.4fr; } .ticket-create-actions button { padding-inline: 10px; } }
+@media (max-width: 520px) { .ticket-create-modal { align-items: center; justify-content: center; padding: max(14px, env(safe-area-inset-top)) 10px max(14px, env(safe-area-inset-bottom)); } .ticket-create-dialog { width: 100%; max-height: 88dvh; margin: auto; border-radius: 22px; padding: 24px 19px; } .ticket-create-actions { display: grid; grid-template-columns: 1fr 1.4fr; } .ticket-create-actions button { padding-inline: 10px; } }
 @media (prefers-reduced-motion: reduce) { .ticket-create-dialog select, .ticket-create-dialog textarea, .ticket-create-actions button { transition: none; } }
 
 
@@ -5146,18 +5146,29 @@ body {
 }
 
 
-/* Agency-level unread state: shown in the left conversation list when any ticket has a new official response. */
-.messenger-agency-row .messenger-row-heading { min-width: 0; }
-.messenger-agency-unread-dot {
-    display: inline-block;
-    flex: 0 0 8px;
-    width: 8px;
-    height: 8px;
-    margin-left: 6px;
-    border-radius: 50%;
-    background: #dc2626;
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, .10);
-    align-self: center;
+/* Agency-level unread count: one count per ticket with an unseen official response. */
+.messenger-agency-row .messenger-row-heading {
+    min-width: 0;
+    gap: 7px;
+}
+.messenger-agency-unread-count {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 19px;
+    height: 19px;
+    margin-left: auto;
+    padding: 0 5px;
+    border: 1px solid rgba(220, 38, 38, .12);
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 750;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 1px 2px rgba(127, 29, 29, .12);
 }
 
 
@@ -5703,4 +5714,892 @@ body {
     text-indent: 0 !important;
     letter-spacing: 0 !important;
     vertical-align: middle !important;
+}
+
+
+/* =========================================================
+   MY INQUIRIES — FINAL INDEPENDENT SCROLL / VIEWPORT FIX
+   Keep the inbox shell inside the visible viewport. The sidebar
+   owns its agency-list scrolling; the conversation owns its
+   message-history scrolling while the composer remains in flow.
+   ========================================================= */
+
+.inquiries-page {
+    box-sizing: border-box;
+    min-height: 0;
+    max-height: 100dvh;
+    overflow: hidden;
+}
+
+.messenger-inquiries {
+    min-height: 0;
+    max-height: none;
+    box-sizing: border-box;
+}
+
+.messenger-sidebar {
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.messenger-chat-list {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+}
+
+.messenger-conversation {
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.messenger-conversation-content,
+[data-messenger-conversation-content] {
+    flex: 1 1 0;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.messenger-conversation-header {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.messenger-conversation-body,
+.messenger-conversation-body.messenger-agency-thread {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+}
+
+.messenger-ticket-composer {
+    position: relative;
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.messenger-composer-main,
+.messenger-composer-field {
+    min-width: 0;
+    max-width: 100%;
+}
+
+@media (max-width: 760px) {
+    .inquiries-page {
+        height: var(--my-inquiries-viewport-height, 100dvh);
+        min-height: 0;
+        max-height: var(--my-inquiries-viewport-height, 100dvh);
+        padding: 7px;
+        overflow: hidden;
+    }
+
+    .messenger-inquiries {
+        flex: 1 1 0;
+        min-height: 0;
+        height: 100%;
+        max-height: 100%;
+        box-sizing: border-box;
+    }
+
+    .messenger-sidebar {
+        min-height: 0;
+        height: 100%;
+    }
+
+    .messenger-chat-list {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .messenger-conversation {
+        min-height: 0;
+        height: 100%;
+    }
+
+    .messenger-conversation-content,
+    [data-messenger-conversation-content] {
+        min-height: 0;
+        height: 100%;
+    }
+
+    .messenger-conversation-body,
+    .messenger-conversation-body.messenger-agency-thread {
+        min-height: 0;
+        flex: 1 1 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .messenger-ticket-composer {
+        flex: 0 0 auto;
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+}
+
+
+/* =========================================================
+   PUBLIC INQUIRIES — ADMIN-ALIGNED MESSAGE COMPOSER
+   Keep the citizen composer visually consistent with the
+   agency/admin response composer without changing behavior.
+   ========================================================= */
+
+.messenger-ticket-composer {
+    box-sizing: border-box;
+    padding: 10px 16px 12px;
+    background: #ffffff;
+}
+
+.messenger-composer-main {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+    gap: 0;
+}
+
+.messenger-composer-field {
+    display: flex;
+    align-items: flex-end;
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 52px;
+    box-sizing: border-box;
+    gap: 8px;
+    padding: 7px 7px 7px 15px;
+    border: 1px solid #dce4f0;
+    border-radius: 17px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(28, 55, 105, 0.06);
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.messenger-composer-field:focus-within {
+    border-color: #9db7ff;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px #eaf1ff;
+}
+
+.messenger-composer-field textarea {
+    display: block;
+    flex: 1 1 auto;
+    width: 0;
+    min-width: 0;
+    min-height: 38px;
+    max-height: 140px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 9px 0;
+    resize: none;
+    overflow-y: auto;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #172033;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.45;
+}
+
+.messenger-composer-field textarea::placeholder {
+    color: #94a3b8;
+    opacity: 1;
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.messenger-composer-field .messenger-composer-send,
+.messenger-composer-main .messenger-composer-send {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 38px;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: #2864f0;
+    color: #ffffff;
+    box-shadow: none;
+    cursor: pointer;
+    transition: background-color 150ms ease, opacity 150ms ease, transform 150ms ease;
+}
+
+.messenger-composer-field .messenger-composer-send:hover,
+.messenger-composer-main .messenger-composer-send:hover {
+    background: #1f55d4;
+    transform: translateY(-1px);
+}
+
+.messenger-composer-field .messenger-composer-send:focus-visible {
+    outline: 3px solid #eaf1ff;
+    outline-offset: 2px;
+}
+
+.messenger-composer-field .messenger-composer-send:disabled {
+    opacity: 0.6;
+    cursor: wait;
+    transform: none;
+}
+
+.messenger-composer-field .messenger-composer-send i,
+.messenger-composer-main .messenger-composer-send i {
+    font-size: 19px;
+    line-height: 1;
+}
+
+.messenger-composer-actions {
+    justify-content: flex-start;
+    padding: 7px 2px 0;
+}
+
+.messenger-composer-hint {
+    color: #64748b;
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+@media (max-width: 760px) {
+    .messenger-ticket-composer {
+        padding: 9px 12px max(10px, env(safe-area-inset-bottom));
+    }
+
+    .messenger-composer-field {
+        min-height: 50px;
+        padding: 6px 6px 6px 13px;
+        border-radius: 16px;
+    }
+
+    .messenger-composer-field textarea {
+        min-height: 36px;
+        max-height: 120px;
+        padding: 8px 0;
+        font-size: 13px;
+    }
+
+    .messenger-composer-field textarea::placeholder {
+        font-size: 13px;
+    }
+
+    .messenger-composer-field .messenger-composer-send,
+    .messenger-composer-main .messenger-composer-send {
+        flex-basis: 36px;
+        width: 36px;
+        min-width: 36px;
+        height: 36px;
+        min-height: 36px;
+        border-radius: 11px;
+    }
+
+    .messenger-composer-actions {
+        padding: 6px 2px 0;
+    }
+
+    .messenger-composer-hint {
+        font-size: 9px;
+        line-height: 1.35;
+    }
+}
+
+@media (max-width: 380px) {
+    .messenger-ticket-composer {
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+
+    .messenger-composer-field {
+        padding-left: 11px;
+    }
+}
+
+
+
+/* =========================================================
+   RESPONSE CONFIRMATION — COMPACT, CURRENT PUBLIC UI
+   Refines the resolution choices and follow-up form without
+   changing the ticket workflow or request behavior.
+   ========================================================= */
+
+.response-confirmation {
+    box-sizing: border-box;
+    max-width: 100%;
+    margin-top: 14px;
+    padding: clamp(14px, 2vw, 18px);
+    border: 1px solid #dfe7f4;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+    box-shadow: 0 3px 12px rgba(35, 53, 91, .035);
+}
+
+.response-confirmation-header {
+    align-items: center;
+    gap: 11px;
+}
+
+.response-confirmation-icon {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border-color: #d8e5ff;
+    background: #f0f5ff;
+    color: #3769d4;
+}
+
+.response-confirmation-header h3 {
+    margin: 0 0 3px;
+    color: #17233b;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+.response-confirmation-header p {
+    color: #71809a;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.confirmation-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.confirmation-btn {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: auto;
+    min-width: 0;
+    min-height: 36px;
+    padding: 0 13px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: normal;
+    text-align: center;
+    box-shadow: none;
+}
+
+.confirmation-btn-primary {
+    border-color: #3569d4;
+    background: #3569d4;
+    color: #fff;
+}
+
+.confirmation-btn-primary:hover {
+    border-color: #2858bd;
+    background: #2858bd;
+}
+
+.confirmation-btn-secondary {
+    border-color: #dce4f0;
+    background: #fff;
+    color: #52627d;
+}
+
+.confirmation-btn-secondary:hover {
+    border-color: #bdcce3;
+    background: #f7f9fd;
+    color: #263854;
+}
+
+.confirmation-btn i {
+    flex: 0 0 auto;
+    font-size: 14px;
+}
+
+.confirmation-btn.is-loading,
+.confirmation-btn:disabled {
+    min-width: 0;
+    width: auto;
+    opacity: .82;
+    pointer-events: none;
+}
+
+.confirmation-btn.is-loading {
+    gap: 7px;
+    padding-inline: 13px;
+    white-space: nowrap;
+}
+
+.confirmation-spinner {
+    flex: 0 0 auto;
+    font-size: 14px;
+}
+
+.follow-up-form {
+    gap: 9px;
+    margin-top: 14px;
+    padding-top: 13px;
+    border-top: 1px solid #e8edf5;
+}
+
+.follow-up-form label {
+    color: #52627d;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.follow-up-form textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 104px;
+    padding: 11px 12px;
+    border: 1px solid #dce4f0;
+    border-radius: 11px;
+    background: #fff;
+    color: #17233b;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.55;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.follow-up-form textarea::placeholder {
+    color: #9aa6b8;
+    opacity: 1;
+}
+
+.follow-up-form textarea:focus {
+    border-color: #8eabed;
+    box-shadow: 0 0 0 3px rgba(53, 105, 212, .10);
+    outline: 0;
+}
+
+.follow-up-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.confirmation-error,
+.confirmation-success {
+    box-sizing: border-box;
+    max-width: 100%;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+    .response-confirmation {
+        margin-top: 12px;
+        padding: 13px;
+        border-radius: 14px;
+    }
+
+    .response-confirmation-header {
+        align-items: flex-start;
+    }
+
+    .response-confirmation-header h3 {
+        font-size: 12px;
+    }
+
+    .confirmation-actions {
+        flex-direction: row;
+        align-items: stretch;
+        gap: 7px;
+    }
+
+    .confirmation-actions .confirmation-btn {
+        flex: 0 1 auto;
+        width: auto;
+        max-width: 100%;
+        min-width: 0;
+        min-height: 36px;
+        padding-inline: 10px;
+        font-size: 11px;
+    }
+
+    .follow-up-form textarea {
+        min-height: 96px;
+        font-size: 13px;
+    }
+
+    .follow-up-form-actions {
+        justify-content: flex-end;
+    }
+
+    .follow-up-form-actions .confirmation-btn {
+        flex: 0 0 auto;
+        width: auto;
+        min-width: 92px;
+        min-height: 36px;
+        padding-inline: 12px;
+        font-size: 11px;
+    }
+
+    .follow-up-form-actions [type="submit"].confirmation-btn {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 380px) {
+    .confirmation-actions .confirmation-btn {
+        flex: 0 1 auto;
+        max-width: 100%;
+    }
+
+    .follow-up-form-actions {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .follow-up-form-actions .confirmation-btn {
+        min-width: 0;
+        padding-inline: 9px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .confirmation-btn,
+    .follow-up-form textarea {
+        transition: none !important;
+    }
+
+    .confirmation-spinner {
+        animation: none !important;
+    }
+}
+
+
+/* =========================================================
+   PUBLIC TICKET COMPOSER + RESPONSE CONFIRMATION POLISH
+   Compact, balanced controls with the same spinner treatment
+   used by the admin response composer.
+   ========================================================= */
+
+.messenger-composer-field .messenger-composer-send.is-loading,
+.messenger-composer-main .messenger-composer-send.is-loading {
+    cursor: wait;
+    opacity: .78;
+    transform: none;
+}
+
+.messenger-composer-send .messenger-send-spinner,
+.confirmation-btn .confirmation-spinner {
+    display: block;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    line-height: 0;
+    transform-origin: 50% 50%;
+    animation: my-inquiries-spinner-rotate 800ms linear infinite;
+    pointer-events: none;
+}
+
+@keyframes my-inquiries-spinner-rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.response-confirmation {
+    margin-top: 12px;
+    padding: 13px 14px;
+    border-color: #e3eaf5;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 1px 5px rgba(35, 53, 91, .025);
+}
+
+.response-confirmation-header {
+    gap: 9px;
+}
+
+.response-confirmation-icon {
+    flex-basis: 32px;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+}
+
+.response-confirmation-header h3 {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+}
+
+.response-confirmation-header p {
+    font-size: 10.5px;
+    line-height: 1.45;
+}
+
+.confirmation-actions {
+    gap: 7px;
+    margin-top: 12px;
+}
+
+.confirmation-btn {
+    min-height: 34px;
+    padding: 7px 11px;
+    gap: 6px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.confirmation-btn i {
+    font-size: 13px;
+}
+
+.confirmation-btn.is-loading {
+    flex: 0 0 36px;
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    gap: 0;
+    border-radius: 10px;
+}
+
+.confirmation-spinner {
+    display: inline-block;
+    font-size: 16px;
+    animation: messenger-send-spin 850ms linear infinite;
+}
+
+.follow-up-form {
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 11px;
+}
+
+.follow-up-form label {
+    font-size: 10.5px;
+}
+
+.follow-up-form textarea {
+    min-height: 88px;
+    padding: 10px 11px;
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.follow-up-form-actions {
+    gap: 7px;
+}
+
+.follow-up-form-actions .confirmation-btn {
+    min-height: 34px;
+    padding: 7px 11px;
+    font-size: 11px;
+}
+
+@media (max-width: 760px) {
+    .response-confirmation {
+        margin-top: 10px;
+        padding: 11px;
+        border-radius: 12px;
+        box-shadow: none;
+    }
+
+    .response-confirmation-header {
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .response-confirmation-icon {
+        flex-basis: 29px;
+        width: 29px;
+        height: 29px;
+        border-radius: 8px;
+    }
+
+    .response-confirmation-header h3 {
+        font-size: 11.5px;
+        line-height: 1.35;
+    }
+
+    .response-confirmation-header p {
+        margin-top: 2px;
+        font-size: 10px;
+    }
+
+    .confirmation-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+        gap: 6px;
+        margin-top: 10px;
+    }
+
+    .confirmation-actions .confirmation-btn {
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        min-height: 36px;
+        padding: 7px 8px;
+        gap: 5px;
+        border-radius: 8px;
+        font-size: 10px;
+        line-height: 1.25;
+        white-space: normal;
+    }
+
+    .confirmation-actions .confirmation-btn i {
+        font-size: 12px;
+    }
+
+    .follow-up-form {
+        gap: 7px;
+        margin-top: 10px;
+        padding-top: 10px;
+    }
+
+    .follow-up-form label {
+        font-size: 10px;
+    }
+
+    .follow-up-form textarea {
+        min-height: 82px;
+        padding: 9px 10px;
+        font-size: 12px;
+        border-radius: 9px;
+    }
+
+    .follow-up-form textarea::placeholder {
+        font-size: 11px;
+        line-height: 1.4;
+    }
+
+    .follow-up-form-actions {
+        display: grid;
+        grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
+        justify-content: stretch;
+        gap: 6px;
+    }
+
+    .follow-up-form-actions .confirmation-btn {
+        width: 100%;
+        min-width: 0;
+        min-height: 34px;
+        padding: 7px 8px;
+        gap: 5px;
+        border-radius: 8px;
+        font-size: 10px;
+        line-height: 1.25;
+        white-space: normal;
+    }
+
+    .follow-up-form-actions .confirmation-btn.is-loading {
+        justify-self: end;
+        width: 36px;
+        min-width: 36px;
+    }
+
+    .messenger-composer-send .messenger-send-spinner {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+@media (max-width: 360px) {
+    .confirmation-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .confirmation-actions .confirmation-btn {
+        justify-content: center;
+        min-height: 34px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .messenger-send-spinner,
+    .confirmation-spinner {
+        animation: none !important;
+    }
+}
+
+
+/* Stable, centered loading rings for both public ticket send actions. */
+.messenger-composer-send,
+.confirmation-btn.is-loading {
+    align-items: center;
+    justify-content: center;
+}
+
+.messenger-composer-send .messenger-send-spinner,
+.confirmation-btn.is-loading .confirmation-spinner {
+    display: block;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+    box-sizing: border-box;
+    margin: 0;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    transform-origin: center center;
+    animation: my-inquiries-spinner-rotate 800ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .messenger-composer-send .messenger-send-spinner,
+    .confirmation-btn.is-loading .confirmation-spinner {
+        animation: none !important;
+    }
+}
+
+
+/* The unread response marker belongs to the ticket's trailing edge, not its
+   text stack. This keeps the subject/status alignment clean on narrow screens. */
+.messenger-ticket-copy {
+    position: static;
+}
+
+.messenger-ticket-bubble > .messenger-unread-dot {
+    display: block;
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    margin: 0 2px 0 0;
+    border-radius: 50%;
+    background: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, .10);
 }

@@ -899,7 +899,9 @@ const createSavedComponent = (
                                             src="${escapeHtml(attachmentUrl)}"
                                             alt="Previously forwarded response image"
                                             loading="lazy"
+                                            onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
                                         >
+                                        <span class="kyl-image-placeholder kyl-image-placeholder--image" hidden aria-hidden="true"><i class="ph-light ph-image"></i></span>
                                     </a>
 
                                     <div class="support-response-saved-attachment-footer">

@@ -40,10 +40,10 @@
                             <div class="evaluation-reviewer-identity">
                                 <span class="evaluation-reviewer-avatar" aria-hidden="true">
     @if($evaluation->reviewer_avatar_url)
-        <img src="{{ $evaluation->reviewer_avatar_url }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
-        <span class="evaluation-reviewer-avatar-fallback" hidden></span>
+        <img src="{{ $evaluation->reviewer_avatar_url }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+        <x-image-placeholder type="user" class="evaluation-reviewer-avatar-fallback" :hidden="true" />
     @else
-        <span class="evaluation-reviewer-avatar-fallback"></span>
+        <x-image-placeholder type="user" class="evaluation-reviewer-avatar-fallback" />
     @endif
 </span>
                                 <strong>{{ $evaluation->reviewer_name ?? 'Anonymous User' }}</strong>
@@ -131,10 +131,7 @@
 .evaluation-reviewer-identity{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .evaluation-reviewer-avatar{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;flex:0 0 28px;border-radius:50%;overflow:hidden;background:#e8edf3;color:#94a3b8;position:relative}
 .evaluation-reviewer-avatar img{width:100%;height:100%;object-fit:cover}
-.evaluation-reviewer-avatar-fallback{position:absolute;inset:0;display:block}
-.evaluation-reviewer-avatar-fallback[hidden]{display:none}
-.evaluation-reviewer-avatar-fallback::before{content:"";position:absolute;top:6px;left:10px;width:8px;height:8px;border-radius:50%;background:#94a3b8}
-.evaluation-reviewer-avatar-fallback::after{content:"";position:absolute;left:5px;bottom:4px;width:18px;height:10px;border-radius:10px 10px 6px 6px;background:#94a3b8}
+.evaluation-reviewer-avatar-fallback{position:absolute;inset:0;width:100%;height:100%}
 .evaluation-anonymous-label{display:inline-flex;align-items:center;padding:2px 7px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:10px;font-weight:600}
 .evaluation-admin-page{display:grid;gap:18px}
 .admin-stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}

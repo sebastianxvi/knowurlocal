@@ -53,6 +53,10 @@ main {
 
 .agency-cover {
     position: relative;
+    min-height: 180px;
+}
+.agency-cover-placeholder {
+    min-height: 180px;
 }
 
 .cover-text {

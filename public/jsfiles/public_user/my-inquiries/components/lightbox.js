@@ -123,6 +123,10 @@ function initializeLightbox() {
         | Set the image source only after validating that
         | a source was actually provided.
         */
+        imageLightboxImage.hidden = false;
+        const imageFallback = imageLightbox.querySelector(".inquiry-lightbox-placeholder");
+        if (imageFallback) imageFallback.hidden = true;
+
         imageLightboxImage.src =
             imageSource;
 

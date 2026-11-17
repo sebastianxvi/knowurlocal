@@ -18,7 +18,7 @@
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/knowurlocal-kyl-logo.svg') }}?v=3">
     <script src="https://unpkg.com/phosphor-icons@1.4.2"></script>
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navbar.css')) }}">
-    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}?v={{ filemtime(public_path('cssfiles/components/modal.css')) }}">
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/notifications.css') }}?v={{ filemtime(public_path('cssfiles/public_user/notifications.css')) }}">
     @vite('resources/js/echo.js')
     <script src="{{ asset('jsfiles/public_user/navbar.js') }}" defer></script>

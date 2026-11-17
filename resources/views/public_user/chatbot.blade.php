@@ -14,6 +14,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="chatbot-feedback-url" content="{{ route('chatbot.feedback.store') }}">
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v=20261104-field-focus-reset&build={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/image-placeholders.css') }}?v={{ file_exists(public_path('cssfiles/components/image-placeholders.css')) ? filemtime(public_path('cssfiles/components/image-placeholders.css')) : time() }}">
 </head>
 <body>
     
@@ -61,7 +62,8 @@
         <button type="button" id="image-close" aria-label="Close image preview">
             <i class="ph-light ph-x"></i>
         </button>
-        <img id="modal-img" src="" alt="FAQ image preview">
+        <img id="modal-img" src="" alt="FAQ image preview" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+        <x-image-placeholder type="image" class="chatbot-image-preview-placeholder" :hidden="true" />
     </div>
 
     <script src="{{ asset('jsfiles/public_user/qrcode-core.js') }}?v={{ filemtime(public_path('jsfiles/public_user/qrcode-core.js')) }}"></script>

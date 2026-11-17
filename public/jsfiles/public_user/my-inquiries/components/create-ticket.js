@@ -101,7 +101,11 @@ export function initializeCreateTicket() {
         agencySearch.focus();
     };
 
-    agencySearch.addEventListener("focus", openAgencyOptions);
+    agencySearch.addEventListener("focus", () => {
+        // Selecting an agency returns focus to this input. Do not reopen the
+        // suggestions just because focus was restored after a selection.
+        if (!agencySelect.value) openAgencyOptions();
+    });
     agencySearch.addEventListener("input", () => {
         // Typing means the user is choosing again; don't submit a stale hidden ID.
         agencySelect.value = "";
@@ -114,6 +118,7 @@ export function initializeCreateTicket() {
         const visible = visibleAgencyOptions();
         if (event.key === "ArrowDown") {
             event.preventDefault();
+            if (agencySelect.value) return;
             if (agencyOptions.hidden) openAgencyOptions();
             if (!visible.length) return;
             activeAgencyIndex = Math.min(activeAgencyIndex + 1, visible.length - 1);

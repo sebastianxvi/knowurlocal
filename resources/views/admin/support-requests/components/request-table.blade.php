@@ -119,9 +119,9 @@
                                 <span class="support-user-avatar" aria-hidden="true">
                                     @if($request->user?->profile_picture)
                                         <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($request->user->profile_picture) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
-                                        <span hidden>{{ strtoupper(substr($request->user->first_name ?? 'G', 0, 1).substr($request->user->last_name ?? '', 0, 1)) }}</span>
+                                        <x-image-placeholder type="user" :hidden="true" />
                                     @else
-                                        {{ strtoupper(substr($request->user->first_name ?? 'G', 0, 1).substr($request->user->last_name ?? '', 0, 1)) }}
+                                        <x-image-placeholder type="user" />
                                     @endif
                                 </span>
 

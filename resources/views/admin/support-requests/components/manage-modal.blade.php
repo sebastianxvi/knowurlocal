@@ -120,7 +120,7 @@
 
                             <div class="support-detail-value support-user-detail-value">
 
-                                <span id="support-modal-user-avatar" class="support-user-avatar" aria-hidden="true">G</span>
+                                <span id="support-modal-user-avatar" class="support-user-avatar" aria-hidden="true"><x-image-placeholder type="user" /></span>
 
                                 <input
                                     type="text"

@@ -67,12 +67,13 @@ function initializeConfirmation() {
                 element.classList.add("is-loading");
                 element.setAttribute("aria-label", loadingLabel);
                 element.innerHTML = "";
-                const spinner = document.createElement("i");
-                spinner.className = "ph-light ph-circle-notch confirmation-spinner";
+                const spinner = document.createElement("span");
+                // Use a CSS-drawn ring instead of the spinner-gap icon glyph.
+                // The glyph's uneven visual mass makes its rotation appear to
+                // travel around the button rather than spin in place.
+                spinner.className = "confirmation-spinner";
                 spinner.setAttribute("aria-hidden", "true");
-                const text = document.createElement("span");
-                text.textContent = loadingLabel;
-                element.append(spinner, text);
+                element.appendChild(spinner);
             } else if (!busy && element.dataset.originalMarkup) {
                 element.innerHTML = element.dataset.originalMarkup;
                 delete element.dataset.originalMarkup;
@@ -240,8 +241,8 @@ function initializeConfirmation() {
             true,
             button,
             button.hasAttribute("data-confirm-response")
-                ? "Submitting confirmation..."
-                : "Submitting follow-up..."
+                ? "Confirming…"
+                : "Sending…"
         );
 
         try {
@@ -494,7 +495,7 @@ function initializeConfirmation() {
             container,
             true,
             form.querySelector('button[type="submit"]'),
-            "Sending follow-up..."
+            "Sending…"
         );
 
         try {

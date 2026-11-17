@@ -881,12 +881,18 @@ function createRealtimeSupportRequestRow(
         avatarImage.alt = "";
         avatarImage.loading = "lazy";
         avatarImage.addEventListener("error", () => {
-            avatarImage.hidden = true;
-            userAvatar.textContent = userName.split(/\s+/).map(part => part.charAt(0)).slice(0, 2).join("").toUpperCase() || "G";
+            userAvatar.replaceChildren();
+            const fallbackIcon = document.createElement("i");
+            fallbackIcon.className = "ph-light ph-user";
+            fallbackIcon.setAttribute("aria-hidden", "true");
+            userAvatar.appendChild(fallbackIcon);
         }, { once: true });
         userAvatar.appendChild(avatarImage);
     } else {
-        userAvatar.textContent = userName.split(/\s+/).map(part => part.charAt(0)).slice(0, 2).join("").toUpperCase() || "G";
+        const fallbackIcon = document.createElement("i");
+        fallbackIcon.className = "ph-light ph-user";
+        fallbackIcon.setAttribute("aria-hidden", "true");
+        userAvatar.appendChild(fallbackIcon);
     }
 
     const userDetails =

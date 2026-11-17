@@ -14,7 +14,7 @@
     >
     <link
     rel="stylesheet"
-    href="{{ asset('cssfiles/components/modal.css') }}"
+    href="{{ asset('cssfiles/components/modal.css') }}?v={{ filemtime(public_path('cssfiles/components/modal.css')) }}"
 >
 
     <title>KNOWURLOCAL | OTP Verification</title>

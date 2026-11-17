@@ -17,7 +17,7 @@
 
 <link
     rel="stylesheet"
-    href="{{ asset('cssfiles/admin/support-requests/components/manage-modal.css') }}"
+    href="{{ asset('cssfiles/admin/support-requests/components/manage-modal.css') }}?v={{ filemtime(public_path('cssfiles/admin/support-requests/components/manage-modal.css')) }}"
 >
 
 <link

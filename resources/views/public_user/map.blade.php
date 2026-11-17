@@ -30,7 +30,7 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navbar.css')) }}">
-    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}?v={{ filemtime(public_path('cssfiles/components/modal.css')) }}">
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/map.css') }}?v={{ filemtime(public_path('cssfiles/public_user/map.css')) }}">
 
@@ -48,6 +48,7 @@
 
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v=20261104-field-focus-reset&build={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/components/image-placeholders.css') }}?v={{ file_exists(public_path('cssfiles/components/image-placeholders.css')) ? filemtime(public_path('cssfiles/components/image-placeholders.css')) : time() }}">
 </head>
 <body>
 
@@ -126,6 +127,7 @@
                 src="{{ asset('images/admin/placeholder.jpg') }}"
                 alt=""
             >
+            <x-image-placeholder type="agency" class="agency-details-image-placeholder" :hidden="true" />
 
         </div>
 
@@ -621,7 +623,9 @@
         id="modal-img"
         src=""
         alt="FAQ image preview"
+        onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
     >
+    <x-image-placeholder type="image" class="map-image-preview-placeholder" :hidden="true" />
 
 </div>
 

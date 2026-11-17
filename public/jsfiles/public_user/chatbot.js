@@ -299,8 +299,8 @@ function renderFaqImages(attachments) {
                             loading="lazy"
                             referrerpolicy="no-referrer"
                         >
-                        <span class="chat-faq-image-fallback" aria-live="polite">
-                            <i class="ph-light ph-image-broken"></i>
+                        <span class="chat-faq-image-fallback kyl-image-placeholder kyl-image-placeholder--image" aria-live="polite">
+                            <i class="ph-light ph-image"></i>
                             <span>Image unavailable</span>
                             <span class="chat-faq-image-fallback-label">${label}</span>
                         </span>
@@ -1751,6 +1751,9 @@ document.addEventListener(
             modalImg
         ){
 
+            modalImg.hidden = false;
+            const modalFallback = imageModal.querySelector(".chatbot-image-preview-placeholder");
+            if (modalFallback) modalFallback.hidden = true;
             modalImg.src = imageUrl;
             imageModal.classList.add("active");
             imageModal.setAttribute("aria-hidden", "false");

@@ -481,12 +481,71 @@ function createSelectedAgencyIcon() {
         document.getElementById('categoryFilters')
     ].filter(Boolean);
 
+    const mapFilterRevealAnimations = new WeakMap();
+
     function setMapFiltersHidden(hidden) {
         document.body.classList.toggle('agency-details-open', hidden);
 
         mapFilterRows.forEach((filterRow) => {
+            // Stop an in-progress entrance animation if the agency panel
+            // is reopened before the filters have finished reappearing.
+            const activeReveal = mapFilterRevealAnimations.get(filterRow);
+
+            if (hidden && activeReveal) {
+                activeReveal.cancel();
+                mapFilterRevealAnimations.delete(filterRow);
+            }
+
             filterRow.setAttribute('aria-hidden', String(hidden));
             filterRow.inert = hidden;
+
+            if (hidden) {
+                return;
+            }
+
+            // The rows remain mounted, so this only animates their visual
+            // return; selected filters and horizontal scroll positions stay intact.
+            const prefersReducedMotion =
+                window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+            if (
+                prefersReducedMotion ||
+                typeof filterRow.animate !== 'function'
+            ) {
+                return;
+            }
+
+            const revealAnimation = filterRow.animate(
+                [
+                    {
+                        opacity: 0,
+                        transform: 'translateY(-5px)'
+                    },
+                    {
+                        opacity: 1,
+                        transform: 'translateY(0)'
+                    }
+                ],
+                {
+                    duration: 240,
+                    easing: 'ease',
+                    fill: 'none'
+                }
+            );
+
+            mapFilterRevealAnimations.set(filterRow, revealAnimation);
+
+            revealAnimation.addEventListener('finish', () => {
+                if (mapFilterRevealAnimations.get(filterRow) === revealAnimation) {
+                    mapFilterRevealAnimations.delete(filterRow);
+                }
+            }, { once: true });
+
+            revealAnimation.addEventListener('cancel', () => {
+                if (mapFilterRevealAnimations.get(filterRow) === revealAnimation) {
+                    mapFilterRevealAnimations.delete(filterRow);
+                }
+            }, { once: true });
         });
     }
 
@@ -645,6 +704,17 @@ function createSelectedAgencyIcon() {
                 const author = document.createElement('span');
                 author.className = 'agency-evaluation-review-author';
                 author.textContent = review.reviewer || 'Anonymous User';
+                const makeReviewerPlaceholder = () => {
+                    const placeholder = document.createElement('span');
+                    placeholder.className = 'agency-evaluation-review-avatar is-anonymous kyl-image-placeholder kyl-image-placeholder--user';
+                    placeholder.setAttribute('aria-hidden', 'true');
+                    const icon = document.createElement('i');
+                    icon.className = 'ph-light ph-user';
+                    icon.setAttribute('aria-hidden', 'true');
+                    placeholder.append(icon);
+                    return placeholder;
+                };
+
                 if (review.reviewer_avatar && !review.is_anonymous) {
                     const avatar = document.createElement('img');
                     avatar.className = 'agency-evaluation-review-avatar';
@@ -652,13 +722,10 @@ function createSelectedAgencyIcon() {
                     avatar.alt = '';
                     avatar.loading = 'lazy';
                     avatar.referrerPolicy = 'no-referrer';
+                    avatar.addEventListener('error', () => avatar.replaceWith(makeReviewerPlaceholder()), { once: true });
                     authorGroup.append(avatar);
                 } else {
-                    const avatar = document.createElement('span');
-                    avatar.className = 'agency-evaluation-review-avatar is-anonymous';
-                    avatar.setAttribute('aria-hidden', 'true');
-                    avatar.textContent = '';
-                    authorGroup.append(avatar);
+                    authorGroup.append(makeReviewerPlaceholder());
                 }
                 authorGroup.append(author);
                 if (review.is_mine) {
@@ -1161,6 +1228,8 @@ function createSelectedAgencyIcon() {
      * if the bundled placeholder itself ever fails to load.
      */
     if (agencyDetailsImage) {
+        const agencyDetailsPlaceholder = document.querySelector('.agency-details-image-placeholder');
+
         agencyDetailsImage.addEventListener('error', () => {
             const placeholderUrl = '/images/admin/placeholder.jpg';
 
@@ -1168,11 +1237,13 @@ function createSelectedAgencyIcon() {
                 agencyDetailsImage.src = placeholderUrl;
             } else {
                 agencyDetailsImage.style.visibility = 'hidden';
+                if (agencyDetailsPlaceholder) agencyDetailsPlaceholder.hidden = false;
             }
         });
 
         agencyDetailsImage.addEventListener('load', () => {
             agencyDetailsImage.style.visibility = '';
+            if (agencyDetailsPlaceholder) agencyDetailsPlaceholder.hidden = true;
         });
     }
 
@@ -1276,6 +1347,10 @@ if (
              * Copy the currently displayed agency image
              * into the modal image.
              */
+            modalImage.hidden = false;
+            const modalImageFallback = imageModal.querySelector('.map-image-preview-placeholder');
+            if (modalImageFallback) modalImageFallback.hidden = true;
+
             modalImage.src =
                 agencyDetailsImage.src;
 

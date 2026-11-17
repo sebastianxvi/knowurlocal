@@ -74,6 +74,16 @@ public function index(Request $request)
         $selectedTicket = $ticketFromList && $selectedTickets->contains('id', $ticketFromList->id) ? $ticketFromList : null;
         $agency = $selectedAgencyGroup?->agency;
 
+        // Resolve the selected agency's profile image using the same storage
+        // precedence as the agency profile and public map: agency-local first,
+        // then the public disk for legacy uploads.
+        $agencyImageUrl = null;
+        if ($agency?->agency_image) {
+            $agencyImageUrl = Storage::disk('agency_local')->exists($agency->agency_image)
+                ? Storage::disk('agency_local')->url($agency->agency_image)
+                : Storage::disk('public')->url($agency->agency_image);
+        }
+
         if ($selectedTicket && $agency && !$selectedTicket->trashed()) {
             // Viewing a specific ticket acknowledges the unread citizen activity
             // for that ticket only; other tickets/agencies remain unread.
@@ -89,7 +99,7 @@ public function index(Request $request)
 
         $selectedTicket?->load(['responses.admin','responses.components']);
         $agencies = Agency::orderBy('agency_name')->get();
-        return view('admin.support-requests.inbox', compact('tickets','conversations','selectedUser','selectedUserId','selectedTickets','selectedTicket','selectedAgencies','selectedAgencyId','agency','search'));
+        return view('admin.support-requests.inbox', compact('tickets','conversations','selectedUser','selectedUserId','selectedTickets','selectedTicket','selectedAgencies','selectedAgencyId','agency','agencyImageUrl','search'));
     }
 
     /** Admin/superadmin official response using the same component-based response lifecycle as the agency inbox. */
@@ -1190,20 +1200,30 @@ public function userInquiry($id)
         $message = trim($validated['message']);
         abort_if(mb_strlen($message) < 3, 422, 'Please explain what you still need help with.');
 
-        $supportRequest = SupportRequest::query()
-            ->where('id', $id)
-            ->where('user_id', auth()->id())
-            ->lockForUpdate()
-            ->firstOrFail();
+        /*
+         * Lock and validate the ticket inside the same transaction as the
+         * status mutation. Previously the row lock was acquired before the
+         * transaction began, so concurrent reopen requests were not actually
+         * serialized by that lock.
+         */
+        [$fresh, $response] = DB::transaction(function () use ($id, $message) {
+            $supportRequest = SupportRequest::query()
+                ->where('id', $id)
+                ->where('user_id', auth()->id())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        abort_unless($supportRequest->status === 'answered', 409, 'Only resolved tickets can be reopened.');
+            abort_unless(
+                $supportRequest->status === 'answered',
+                409,
+                'Only resolved tickets can be reopened.'
+            );
 
-        // Legacy resolved tickets may store their answer directly on the
-        // support request instead of a response row, so response history is optional.
-        $response = $supportRequest->latestResponse()->first();
-        $oldData = $this->buildAuditSnapshot($supportRequest, $response);
+            // Legacy resolved tickets may store their answer directly on the
+            // request instead of a response row, so response history is optional.
+            $response = $supportRequest->latestResponse()->first();
+            $oldData = $this->buildAuditSnapshot($supportRequest, $response);
 
-        DB::transaction(function () use ($supportRequest, $message) {
             $supportRequest->status = 'needs_follow_up';
             $supportRequest->answered_at = null;
             $supportRequest->answer_seen_at = now();
@@ -1211,21 +1231,26 @@ public function userInquiry($id)
             $supportRequest->reopen_message_at = now();
             $supportRequest->citizen_activity_at = now();
             $supportRequest->save();
-        });
 
-        $fresh = $supportRequest->fresh();
-        $newData = $this->buildAuditSnapshot($fresh, $response?->fresh());
-        app(AuditLogService::class)->record(
-            action: 'citizen_reopen_support_request',
-            page: 'user_inquiries',
-            targetType: 'support_request',
-            targetId: (int) $supportRequest->id,
-            supportRequestId: (int) $supportRequest->id,
-            agencyId: $supportRequest->agency_id ? (int) $supportRequest->agency_id : null,
-            oldValues: $oldData,
-            newValues: $newData,
-            description: 'Citizen reopened resolved Support Request #' . $supportRequest->id,
-        );
+            $fresh = $supportRequest->fresh();
+            $newData = $this->buildAuditSnapshot($fresh, $response?->fresh());
+
+            // Keep the workflow mutation and its audit record atomic. A failed
+            // audit insert must not leave a reopened ticket behind a 500 response.
+            app(AuditLogService::class)->record(
+                action: 'citizen_reopen_support_request',
+                page: 'user_inquiries',
+                targetType: 'support_request',
+                targetId: (int) $fresh->id,
+                supportRequestId: (int) $fresh->id,
+                agencyId: $fresh->agency_id ? (int) $fresh->agency_id : null,
+                oldValues: $oldData,
+                newValues: $newData,
+                description: 'Citizen reopened resolved Support Request #' . $fresh->id,
+            );
+
+            return [$fresh, $response];
+        });
 
         $this->broadcastSupportRequestUpdated($fresh, 'reopened', $response ? (int) $response->id : null);
 
