@@ -4830,3 +4830,91 @@ body :is(small, .helper-text, .field-hint, .form-hint) { font-size: 12px; }
     }
 }
 
+
+
+/* =========================================================
+   MAP SEARCH SUGGESTION LAYERING + FILTER SCROLL RELIABILITY
+   ========================================================= */
+
+/*
+ * The search panel is nested inside .logo-search, which has its own
+ * backdrop-filter stacking context. Raise that entire context above the
+ * sibling filter rows so the suggestions cannot be painted underneath them.
+ */
+.site-header .logo-search:focus-within,
+.site-header .logo-search:has(.search-results:has(.search-item)),
+.site-header .logo-search:has(.search-results:has(.search-empty)) {
+    position: relative;
+    z-index: 10002;
+}
+
+.site-header .search-results {
+    z-index: 10003;
+}
+
+/* Keep filter strips below the active search suggestion layer. */
+.site-header .agency-type-filters,
+.site-header .category-filters {
+    position: relative;
+    z-index: 1;
+    scroll-behavior: auto !important;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Keep horizontal scrolling native and responsive on touch devices. */
+.site-header .agency-type-filters,
+.site-header .category-filters {
+    touch-action: pan-x;
+}
+
+/* =========================================================
+   MAP SEARCH RESULTS — TRUE ANCESTOR STACKING ORDER
+   ========================================================= */
+
+/*
+ * .logo-search creates a stacking context because it uses backdrop-filter.
+ * Raising only #searchResults cannot escape that context. Raise the entire
+ * search-area branch above both filter strips whenever search is active.
+ */
+.site-header .search-area:focus-within,
+.site-header .search-area:has(.search-results:has(.search-item)),
+.site-header .search-area:has(.search-results:has(.search-empty)) {
+    position: relative;
+    z-index: 10020;
+}
+
+.site-header .search-area:focus-within .logo-search {
+    position: relative;
+    z-index: 10021;
+}
+
+.site-header .search-area:focus-within .search-form,
+.site-header .search-area:focus-within .search-results {
+    position: relative;
+    z-index: 10022;
+}
+
+.site-header .search-area:focus-within .search-results {
+    position: absolute;
+    z-index: 10023;
+    background: #fff;
+    background-color: #fff;
+    opacity: 1;
+    isolation: isolate;
+}
+
+/* Keep filter strips below the search branch, without creating clipping. */
+.site-header .agency-type-filters,
+.site-header .category-filters {
+    position: relative;
+    z-index: 1;
+}
+
+/* The search surface must not become translucent over filter controls. */
+.site-header .search-results:has(.search-item),
+.site-header .search-results:has(.search-empty) {
+    background: #fff;
+    background-color: #fff;
+}
+

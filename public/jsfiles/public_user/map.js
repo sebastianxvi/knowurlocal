@@ -3573,22 +3573,32 @@ function closeAgencyDetails() {
     [agencyTypeFilters, categoryFilters].forEach(filterRow => {
         if (!filterRow) return;
 
-        filterRow.addEventListener(
-            'wheel',
-            event => {
-                const horizontalIntent =
-                    Math.abs(event.deltaX) > Math.abs(event.deltaY)
-                        ? event.deltaX
-                        : event.deltaY;
+        /*
+         * Convert a vertical mouse wheel into horizontal movement on the
+         * filter strip. Apply each wheel delta immediately instead of
+         * queueing it behind requestAnimationFrame: rapid wheel input is
+         * accumulated by the browser's scrolling pipeline and never waits
+         * for an extra scheduled frame.
+         *
+         * Native horizontal trackpad and touch gestures are left untouched
+         * so momentum scrolling remains browser-managed.
+         */
+        filterRow.addEventListener('wheel', event => {
+            const isHorizontalGesture =
+                Math.abs(event.deltaX) > Math.abs(event.deltaY);
 
-                if (!horizontalIntent) return;
+            if (isHorizontalGesture || event.deltaY === 0) return;
 
-                event.preventDefault();
-                event.stopPropagation();
-                filterRow.scrollLeft += horizontalIntent;
-            },
-            { passive: false }
-        );
+            const unit =
+                event.deltaMode === WheelEvent.DOM_DELTA_LINE
+                    ? 16
+                    : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+                        ? filterRow.clientWidth
+                        : 1;
+
+            event.preventDefault();
+            filterRow.scrollLeft += event.deltaY * unit;
+        }, { passive: false });
     });
 
 
@@ -3789,6 +3799,8 @@ function refreshAgencyLabels() {
             { id: 'NGO', label: 'NGO', count: counts.NGO }
         ];
 
+        const filterFragment = document.createDocumentFragment();
+
         options.forEach(option => {
             const button = document.createElement('button');
             button.type = 'button';
@@ -3859,8 +3871,10 @@ function refreshAgencyLabels() {
                 syncVisibleAgencyMarkers();
             });
 
-            agencyTypeFilters.appendChild(button);
+            filterFragment.appendChild(button);
         });
+
+        agencyTypeFilters.appendChild(filterFragment);
     }
 
 
@@ -3912,7 +3926,9 @@ function refreshAgencyLabels() {
 
         allButton.append(allLabel, allCount);
         allButton.addEventListener('click', () => applyCategoryFilter('all'));
-        categoryFilters.appendChild(allButton);
+
+        const filterFragment = document.createDocumentFragment();
+        filterFragment.appendChild(allButton);
 
         categories.forEach(({ category, count }) => {
             const button = document.createElement('button');
@@ -3938,9 +3954,10 @@ function refreshAgencyLabels() {
 
             button.append(colorDot, categoryName, categoryCount);
             button.addEventListener('click', () => applyCategoryFilter(category.id));
-            categoryFilters.appendChild(button);
+            filterFragment.appendChild(button);
         });
 
+        categoryFilters.appendChild(filterFragment);
         updateActiveCategoryButton();
     }
 
