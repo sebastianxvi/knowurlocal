@@ -266,18 +266,11 @@ Route::middleware(['auth', 'no.cache'])->group(function () {
     ->middleware('throttle:20,1')
     ->name('user.inquiries.reopen');
 
-    Route::post(
-        '/my-inquiries/bulk-delete',
-        [SupportRequestController::class, 'bulkDeleteOwnInquiries']
-    )
-    ->middleware('throttle:10,1')
-    ->name('user.inquiries.bulk-delete');
-
-    Route::delete(
+Route::delete(
         '/my-inquiries/{id}',
         [SupportRequestController::class, 'deleteOwnInquiry']
     )
-    ->middleware('throttle:30,1')
+    ->middleware('throttle:120,1')
     ->name('user.inquiries.delete');
 
     Route::get(

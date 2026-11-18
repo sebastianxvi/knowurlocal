@@ -43,7 +43,7 @@
         <div class="inquiry-summary">
             <div class="messenger-avatar" aria-hidden="true">
                 @if ($req->agency && $req->agency->agency_image)
-                    <img src="{{ asset('storage/' . ltrim($req->agency->agency_image, '/')) }}" alt="" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false">
+                    <img src="{{ asset('storage/' . ltrim($req->agency->agency_image, '/')) }}" alt="" loading="lazy">
                     <x-image-placeholder type="agency" class="messenger-avatar-fallback" :hidden="true" />
                 @else
                     <x-image-placeholder type="agency" class="messenger-avatar-fallback" />
@@ -255,7 +255,7 @@
                                     @if ($hasLegacyResponseImage)
                                         <div class="response-component response-component-image">
                                             <button type="button" class="response-image-trigger" data-image-url="{{ $req->answer_image_url }}" aria-label="View attached ticket response image">
-                                                <img src="{{ $req->answer_image_url }}" alt="Agency response attachment" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                                                <img src="{{ $req->answer_image_url }}" alt="Agency response attachment" loading="lazy">
                                                 <x-image-placeholder type="image" :hidden="true" />
                                             </button>
                                         </div>
@@ -263,7 +263,7 @@
                                     @foreach ($responseImages as $component)
                                         <div class="response-component response-component-image">
                                             <button type="button" class="response-image-trigger" data-image-url="{{ $component->attachment_url }}" aria-label="View response image">
-                                                <img src="{{ $component->attachment_url }}" alt="Agency response attachment" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                                                <img src="{{ $component->attachment_url }}" alt="Agency response attachment" loading="lazy">
                                                 <x-image-placeholder type="image" :hidden="true" />
                                             </button>
                                         </div>

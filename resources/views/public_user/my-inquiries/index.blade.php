@@ -105,7 +105,7 @@
 <!-- Page JavaScript -->
 <script
     type="module"
-    src="{{ asset('jsfiles/public_user/my-inquiries/index.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/index.js')) }}-inquiry-bulk-delete-lightbox-search-1"
+    src="{{ asset('jsfiles/public_user/my-inquiries/index.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/index.js')) }}-individual-delete-rate-placeholder-mobile-notifications-2"
 ></script>
 
 </body>

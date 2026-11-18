@@ -7596,102 +7596,36 @@ body {
 }
 
 
-/* Bulk inquiry cleanup — selection controls remain hidden until explicitly enabled. */
-.messenger-bulk-toolbar {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.75rem 0;
-    margin: 0 0 0.5rem;
-    border-bottom: 1px solid var(--border-color, #e5e7eb);
+/* Final image fallback sizing: use the shared image placeholder as a compact,
+   centered preview surface instead of stretching it to a portrait viewport. */
+.image-lightbox-content > .inquiry-lightbox-placeholder {
+    box-sizing: border-box;
+    display: grid;
+    width: min(88vw, 760px);
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+    max-height: min(68dvh, 560px);
+    aspect-ratio: 4 / 3;
+    flex: 0 1 auto;
+    border-radius: 14px;
 }
-.messenger-bulk-toolbar button {
-    min-height: 38px;
-    padding: 0.5rem 0.85rem;
-    border: 1px solid var(--border-color, #dbe1ea);
-    border-radius: 10px;
-    background: #fff;
-    color: #26354d;
-    font: inherit;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
+
+.image-lightbox-content > .inquiry-lightbox-placeholder > i {
+    font-size: clamp(30px, 6vw, 54px);
 }
-.messenger-bulk-toolbar .messenger-bulk-delete {
-    border-color: #c83d4b;
-    background: #c83d4b;
-    color: #fff;
-}
-.messenger-bulk-toolbar button:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-}
-.messenger-bulk-count {
-    color: #64748b;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-.messenger-ticket-select {
-    display: none;
-    align-items: center;
-    gap: 0.35rem;
-    flex: 0 0 auto;
-    color: #64748b;
-    font-size: 0.75rem;
-    cursor: pointer;
-    user-select: none;
-}
-.messenger-ticket-select[hidden] {
-    display: none !important;
-}
-.messenger-ticket-select input {
-    width: 18px;
-    height: 18px;
-    margin: 0;
-    accent-color: #245fc7;
-    cursor: pointer;
-}
-.messenger-agency-thread.is-bulk-selecting .messenger-ticket-select {
-    display: inline-flex;
-}
-.messenger-agency-thread.is-bulk-selecting .messenger-ticket-header {
-    gap: 0.65rem;
-}
+
 @media (max-width: 600px) {
-    .messenger-bulk-toolbar {
-        position: sticky;
-        top: 0;
-        z-index: 4;
-        background: var(--surface, #fff);
-        padding: 0.65rem 0.25rem;
+    .image-lightbox {
+        padding: max(12px, env(safe-area-inset-top, 0px))
+                 12px
+                 max(12px, env(safe-area-inset-bottom, 0px));
     }
-    .messenger-bulk-toolbar button {
-        min-height: 42px;
-    }
-    .messenger-ticket-select {
-        min-height: 42px;
-        padding: 0 0.2rem;
-    }
-}
 
-
-.image-lightbox-content > .inquiry-lightbox-unavailable {
-    position: absolute;
-    left: 50%;
-    bottom: max(18px, env(safe-area-inset-bottom));
-    transform: translateX(-50%);
-    width: min(90%, 520px);
-    margin: 0;
-    padding: 0.75rem 1rem;
-    border: 1px solid rgba(255,255,255,.2);
-    border-radius: 12px;
-    background: rgba(15, 23, 42, .82);
-    color: #fff;
-    text-align: center;
-    font-size: .9rem;
-    line-height: 1.45;
-}
-.image-lightbox-content > .inquiry-lightbox-unavailable[hidden] {
-    display: none !important;
+    .image-lightbox-content > .inquiry-lightbox-placeholder {
+        width: min(90vw, 520px);
+        max-height: 58dvh;
+        aspect-ratio: 4 / 3;
+    }
 }

@@ -124,13 +124,11 @@ function initializeLightbox() {
         | a source was actually provided.
         */
         const imageFallback = imageLightbox.querySelector(".inquiry-lightbox-placeholder");
-        const unavailableMessage = imageLightbox.querySelector(".inquiry-lightbox-unavailable");
 
         // Reset the preview, open the dialog first, then request the image.
         // A 404/403/expired attachment must leave the viewer open with a fallback.
         imageLightboxImage.hidden = true;
         if (imageFallback) imageFallback.hidden = true;
-        if (unavailableMessage) unavailableMessage.hidden = true;
         imageLightboxImage.removeAttribute("src");
         imageLightboxImage.alt = imageAlt;
 
@@ -253,6 +251,59 @@ function initializeLightbox() {
 
     /*
     |--------------------------------------------------------------------------
+    | THUMBNAIL FALLBACKS
+    |--------------------------------------------------------------------------
+    |
+    | Avoid inline onerror attributes: production Content Security Policies
+    | can block them. Capture image errors for dynamically-rendered inquiry
+    | attachments and reveal the adjacent shared x-image-placeholder.
+    */
+
+    const revealThumbnailPlaceholder = (image) => {
+        if (!(image instanceof HTMLImageElement)) return;
+        const placeholder = image.nextElementSibling;
+        if (!placeholder?.classList.contains("kyl-image-placeholder")) return;
+        image.hidden = true;
+        placeholder.hidden = false;
+    };
+
+    const bindThumbnailFallbacks = (scope = document) => {
+        scope.querySelectorAll?.(
+            ".response-image-trigger > img, .messenger-avatar > img"
+        ).forEach((image) => {
+            if (image.complete && image.naturalWidth === 0) {
+                revealThumbnailPlaceholder(image);
+            }
+        });
+    };
+
+    document.addEventListener("error", (event) => {
+        const image = event.target;
+        if (
+            image instanceof HTMLImageElement &&
+            image.matches(".response-image-trigger > img, .messenger-avatar > img")
+        ) {
+            revealThumbnailPlaceholder(image);
+        }
+    }, true);
+
+    bindThumbnailFallbacks();
+    const thumbnailObserver = new MutationObserver((records) => {
+        records.forEach((record) => {
+            record.addedNodes.forEach((node) => {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    if (node.matches?.(".response-image-trigger > img, .messenger-avatar > img")) {
+                        if (node.complete && node.naturalWidth === 0) revealThumbnailPlaceholder(node);
+                    }
+                    bindThumbnailFallbacks(node);
+                }
+            });
+        });
+    });
+    thumbnailObserver.observe(document.body, { childList: true, subtree: true });
+
+    /*
+    |--------------------------------------------------------------------------
     | CLOSE BUTTON
     |--------------------------------------------------------------------------
     */
@@ -328,10 +379,8 @@ function initializeLightbox() {
         () => {
             imageLightboxImage.hidden = false;
             const imageFallback = imageLightbox.querySelector(".inquiry-lightbox-placeholder");
-            const unavailableMessage = imageLightbox.querySelector(".inquiry-lightbox-unavailable");
-            if (imageFallback) imageFallback.hidden = true;
-            if (unavailableMessage) unavailableMessage.hidden = true;
-        }
+                if (imageFallback) imageFallback.hidden = true;
+            }
     );
 
     imageLightboxImage.addEventListener(
@@ -339,9 +388,7 @@ function initializeLightbox() {
         () => {
             imageLightboxImage.hidden = true;
             const imageFallback = imageLightbox.querySelector(".inquiry-lightbox-placeholder");
-            const unavailableMessage = imageLightbox.querySelector(".inquiry-lightbox-unavailable");
-            if (imageFallback) imageFallback.hidden = false;
-            if (unavailableMessage) unavailableMessage.hidden = false;
+                if (imageFallback) imageFallback.hidden = false;
             // Deliberately keep the dialog open: an unavailable attachment is
             // still a valid preview state, not a reason to dismiss the viewer.
 

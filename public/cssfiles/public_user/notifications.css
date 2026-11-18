@@ -868,3 +868,188 @@ body.user-notifications-page .notifications-shell {
         padding-bottom: 10px;
     }
 }
+
+
+/* Mobile notifications: the fixed public navbar must not cover the page title.
+   Use normal document scrolling on phones so the activity feed and pagination
+   remain reachable without a cramped nested scroll region. Desktop retains its
+   fixed-height activity panel. */
+@media (max-width: 640px) {
+    html:has(body.user-notifications-page),
+    body.user-notifications-page {
+        height: auto !important;
+        min-height: 100%;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+    }
+
+    body.user-notifications-page .site-header {
+        top: calc(env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px) + 10px);
+    }
+
+    body.user-notifications-page .notifications-shell {
+        display: block;
+        box-sizing: border-box;
+        width: calc(100% - 24px);
+        height: auto;
+        min-height: 0;
+        margin: calc(104px + env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px)) auto 28px;
+        overflow: visible;
+    }
+
+    body.user-notifications-page .notifications-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-direction: row;
+        gap: 10px;
+        margin: 0 0 16px;
+    }
+
+    body.user-notifications-page .notifications-heading-copy {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    body.user-notifications-page .notifications-heading h1 {
+        margin: 0;
+        font-size: clamp(23px, 6vw, 28px);
+        line-height: 1.15;
+    }
+
+    body.user-notifications-page .notifications-read-all {
+        flex: 0 0 auto;
+        min-height: 40px;
+        padding: 0 11px;
+        gap: 6px;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    body.user-notifications-page .notifications-card {
+        display: block;
+        min-height: 0;
+        overflow: hidden;
+        margin-bottom: 0;
+        border-radius: 16px;
+    }
+
+    body.user-notifications-page .notifications-card-header {
+        padding: 15px;
+        font-size: 14px;
+    }
+
+    body.user-notifications-page .notifications-list {
+        display: block;
+        max-height: none;
+        min-height: 0;
+        padding: 7px;
+        overflow: visible;
+        overscroll-behavior: auto;
+        -webkit-overflow-scrolling: auto;
+        scrollbar-gutter: auto;
+    }
+
+    body.user-notifications-page .user-notification-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 13px 10px;
+        border-radius: 12px;
+    }
+
+    body.user-notifications-page .user-notification-icon {
+        flex: 0 0 38px;
+        width: 38px;
+        height: 38px;
+    }
+
+    body.user-notifications-page .user-notification-copy {
+        flex: 1 1 0;
+        min-width: 0;
+        gap: 4px;
+    }
+
+    body.user-notifications-page .user-notification-copy strong {
+        font-size: 13px;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+
+    body.user-notifications-page .user-notification-copy > span {
+        font-size: 12px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+
+    body.user-notifications-page .user-notification-copy small {
+        font-size: 11px;
+    }
+
+    body.user-notifications-page .user-notification-unread-dot {
+        flex: 0 0 8px;
+    }
+
+    body.user-notifications-page .user-notification-arrow {
+        flex: 0 0 auto;
+        margin-left: 0;
+    }
+
+    body.user-notifications-page .notifications-pagination {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px 10px;
+    }
+
+    body.user-notifications-page .notifications-pagination-summary {
+        text-align: center;
+        font-size: 11px;
+    }
+
+    body.user-notifications-page .notifications-pagination-controls {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 5px;
+    }
+
+    body.user-notifications-page .notifications-page-numbers {
+        flex: 0 1 auto;
+        gap: 3px;
+    }
+
+    body.user-notifications-page .notifications-page-link {
+        min-width: 34px;
+        min-height: 36px;
+        padding: 0 8px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 360px) {
+    body.user-notifications-page .notifications-shell {
+        width: calc(100% - 18px);
+    }
+
+    body.user-notifications-page .notifications-heading {
+        gap: 7px;
+    }
+
+    body.user-notifications-page .notifications-read-all {
+        min-height: 36px;
+        padding: 0 8px;
+        font-size: 10px;
+    }
+
+    body.user-notifications-page .notifications-pagination-controls {
+        gap: 3px;
+    }
+
+    body.user-notifications-page .notifications-page-link-direction {
+        gap: 3px;
+        padding: 0 6px;
+    }
+}
