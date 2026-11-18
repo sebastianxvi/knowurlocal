@@ -1,10 +1,10 @@
 <section class="inquiries-section messenger-inquiries" aria-label="Your agency conversations">
     <aside class="messenger-sidebar" aria-label="Ticket conversations">
         <div class="messenger-sidebar-topbar">
-            <button type="button" onclick="history.back()" class="messenger-back-button" aria-label="Back to map">
+            <a href="{{ route('map') }}" class="messenger-back-button">
                 <i class="ph-light ph-arrow-left" aria-hidden="true"></i>
                 <span>Back to map</span>
-            </button>
+            </a>
         </div>
         <div class="messenger-sidebar-heading">
             <div>

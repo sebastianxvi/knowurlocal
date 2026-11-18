@@ -429,11 +429,23 @@
 }
 
 
-/* Stable, centered response-submit spinner. The ring rotates in place without glyph-font wobble. */
-.ai-chat-composer .ai-composer-send.is-loading{display:inline-flex;align-items:center;justify-content:center;transform:none!important;cursor:wait}
-.ai-chat-composer .ai-submit-spinner{display:block;flex:0 0 16px;width:16px;height:16px;min-width:16px;min-height:16px;box-sizing:border-box;margin:0;padding:0;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;line-height:0;transform-origin:50% 50%;animation:ai-submit-spinner-rotate 800ms linear infinite;pointer-events:none}
+/* High-contrast response-submit spinner; independent of inherited disabled opacity/color. */
+.ai-chat-composer .ai-composer-send.is-loading{
+ display:inline-flex!important;align-items:center;justify-content:center;
+ transform:none!important;cursor:wait;opacity:1!important;color:#fff!important;
+}
+.ai-chat-composer .ai-submit-spinner{
+ display:block!important;flex:0 0 19px;width:19px;height:19px;
+ min-width:19px;min-height:19px;box-sizing:border-box;margin:0;padding:0;
+ border:2.5px solid rgba(255,255,255,.38);border-top-color:#fff;
+ border-right-color:#fff;border-radius:50%;background:transparent;
+ line-height:0;transform-origin:50% 50%;
+ animation:ai-submit-spinner-rotate 720ms linear infinite;pointer-events:none;
+}
 @keyframes ai-submit-spinner-rotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){.ai-chat-composer .ai-submit-spinner{animation:none!important}}
+@media(prefers-reduced-motion:reduce){
+ .ai-chat-composer .ai-submit-spinner{animation:none!important;border-style:double}
+}
 </style>
 @endpush
 @section('content')

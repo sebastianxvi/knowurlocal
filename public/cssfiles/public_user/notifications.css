@@ -705,3 +705,166 @@ body.user-notifications-page .user-notification-item {
     letter-spacing: 0 !important;
     vertical-align: middle !important;
 }
+
+
+/* =========================================================
+   NOTIFICATIONS PAGE — SELF-CONTAINED PAGINATION
+   Do not use Laravel's default Tailwind paginator here: this
+   page does not load Tailwind utilities, so its SVG sizing and
+   layout classes would be missing and can collapse the feed.
+   ========================================================= */
+body.user-notifications-page .notifications-list {
+    flex: 1 1 0%;
+    min-height: 0;
+}
+
+body.user-notifications-page .notifications-pagination {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding: 12px 18px;
+    border-top: 1px solid #edf0f6;
+    background: #fff;
+}
+
+body.user-notifications-page .notifications-pagination-summary {
+    margin: 0;
+    color: #78859a;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+body.user-notifications-page .notifications-pagination-summary strong {
+    color: #34435d;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+}
+
+body.user-notifications-page .notifications-pagination-controls,
+body.user-notifications-page .notifications-page-numbers {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+body.user-notifications-page .notifications-page-link {
+    box-sizing: border-box;
+    display: inline-flex;
+    min-width: 34px;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 10px;
+    border: 1px solid #e2e8f2;
+    border-radius: 9px;
+    background: #fff;
+    color: #53627b;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+
+body.user-notifications-page a.notifications-page-link:hover,
+body.user-notifications-page a.notifications-page-link:focus-visible {
+    border-color: #cbd8f4;
+    background: #f5f8ff;
+    color: #315fc5;
+    outline: none;
+}
+
+body.user-notifications-page .notifications-page-link.is-current {
+    border-color: #315fc5;
+    background: #315fc5;
+    color: #fff;
+    cursor: default;
+}
+
+body.user-notifications-page .notifications-page-link.is-disabled {
+    background: #f8f9fb;
+    color: #a4adbb;
+    cursor: not-allowed;
+}
+
+body.user-notifications-page .notifications-page-link i {
+    display: block;
+    font-size: 14px;
+    line-height: 1;
+}
+
+body.user-notifications-page .notifications-page-ellipsis {
+    display: inline-flex;
+    min-width: 18px;
+    align-items: center;
+    justify-content: center;
+    color: #8995a8;
+    font-size: 12px;
+}
+
+@media (max-width: 640px) {
+    body.user-notifications-page .notifications-pagination {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+        padding: 11px 10px;
+    }
+
+    body.user-notifications-page .notifications-pagination-summary {
+        text-align: center;
+        font-size: 11px;
+    }
+
+    body.user-notifications-page .notifications-pagination-controls {
+        width: 100%;
+        justify-content: space-between;
+        gap: 4px;
+    }
+
+    body.user-notifications-page .notifications-page-numbers {
+        gap: 3px;
+    }
+
+    body.user-notifications-page .notifications-page-link {
+        min-width: 32px;
+        min-height: 32px;
+        padding: 0 8px;
+        font-size: 11px;
+    }
+
+    body.user-notifications-page .notifications-page-link-direction {
+        gap: 4px;
+    }
+}
+
+
+/* =========================================================
+   NOTIFICATIONS PAGE — VIEWPORT SPACING / PAGINATION VISIBILITY
+   Keep the feed close to the shared navbar while reserving a
+   visible bottom gutter so pagination is not pressed against
+   or clipped by the viewport edge.
+   ========================================================= */
+body.user-notifications-page .notifications-shell {
+    margin-top: calc(48px + var(--kyl-install-banner-height, 0px));
+    margin-bottom: 28px;
+}
+
+@media (max-width: 640px) {
+    body.user-notifications-page .notifications-shell {
+        margin-top: calc(44px + env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px));
+        height: calc(100dvh - 84px - var(--kyl-install-banner-height, 0px) - env(safe-area-inset-bottom, 0px));
+        margin-bottom: 20px;
+    }
+
+    body.user-notifications-page .notifications-pagination {
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+}

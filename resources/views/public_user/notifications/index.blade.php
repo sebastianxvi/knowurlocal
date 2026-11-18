@@ -96,7 +96,73 @@
                 @endforelse
             </div>
             @if($notifications->hasPages())
-                <div class="notifications-pagination">{{ $notifications->links() }}</div>
+                <nav class="notifications-pagination" aria-label="Notification pages">
+                    <p class="notifications-pagination-summary">
+                        Showing
+                        <strong>{{ $notifications->firstItem() }}</strong>
+                        to
+                        <strong>{{ $notifications->lastItem() }}</strong>
+                        of
+                        <strong>{{ $notifications->total() }}</strong>
+                        results
+                    </p>
+
+                    <div class="notifications-pagination-controls">
+                        @if(!$notifications->onFirstPage())
+                            <a class="notifications-page-link notifications-page-link-direction"
+                               href="{{ $notifications->previousPageUrl() }}"
+                               rel="prev"
+                               aria-label="Go to previous page">
+                                <i class="ph-light ph-caret-left" aria-hidden="true"></i>
+                                <span>Previous</span>
+                            </a>
+                        @else
+                            <span class="notifications-page-link notifications-page-link-direction is-disabled" aria-disabled="true">
+                                <i class="ph-light ph-caret-left" aria-hidden="true"></i>
+                                <span>Previous</span>
+                            </span>
+                        @endif
+
+                        <div class="notifications-page-numbers" aria-label="Page numbers">
+                            @if($notifications->currentPage() > 2)
+                                <a class="notifications-page-link" href="{{ $notifications->url(1) }}">1</a>
+                                @if($notifications->currentPage() > 3)
+                                    <span class="notifications-page-ellipsis" aria-hidden="true">…</span>
+                                @endif
+                            @endif
+
+                            @for($page = max(1, $notifications->currentPage() - 1); $page <= min($notifications->lastPage(), $notifications->currentPage() + 1); $page++)
+                                @if($page === $notifications->currentPage())
+                                    <span class="notifications-page-link is-current" aria-current="page">{{ $page }}</span>
+                                @else
+                                    <a class="notifications-page-link" href="{{ $notifications->url($page) }}">{{ $page }}</a>
+                                @endif
+                            @endfor
+
+                            @if($notifications->currentPage() < $notifications->lastPage() - 1)
+                                @if($notifications->currentPage() < $notifications->lastPage() - 2)
+                                    <span class="notifications-page-ellipsis" aria-hidden="true">…</span>
+                                @endif
+                                <a class="notifications-page-link" href="{{ $notifications->url($notifications->lastPage()) }}">{{ $notifications->lastPage() }}</a>
+                            @endif
+                        </div>
+
+                        @if($notifications->hasMorePages())
+                            <a class="notifications-page-link notifications-page-link-direction"
+                               href="{{ $notifications->nextPageUrl() }}"
+                               rel="next"
+                               aria-label="Go to next page">
+                                <span>Next</span>
+                                <i class="ph-light ph-caret-right" aria-hidden="true"></i>
+                            </a>
+                        @else
+                            <span class="notifications-page-link notifications-page-link-direction is-disabled" aria-disabled="true">
+                                <span>Next</span>
+                                <i class="ph-light ph-caret-right" aria-hidden="true"></i>
+                            </span>
+                        @endif
+                    </div>
+                </nav>
             @endif
         </section>
     </main>
