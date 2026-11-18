@@ -1053,3 +1053,67 @@ body.user-notifications-page .notifications-shell {
         padding: 0 6px;
     }
 }
+
+
+/* =========================================================
+   MOBILE NOTIFICATIONS — CLEAR THE FIXED PUBLIC NAVBAR
+   Reserve a real vertical band below the floating logo/menu.
+   Keep the feed scrollable within the remaining viewport.
+   ========================================================= */
+@media (max-width: 640px) {
+    body.user-notifications-page .notifications-shell {
+        box-sizing: border-box;
+        margin-top: calc(
+            112px +
+            env(safe-area-inset-top, 0px) +
+            var(--kyl-install-banner-height, 0px)
+        ) !important;
+        height: calc(
+            100dvh -
+            132px -
+            env(safe-area-inset-top, 0px) -
+            var(--kyl-install-banner-height, 0px) -
+            env(safe-area-inset-bottom, 0px)
+        ) !important;
+        min-height: 0;
+    }
+
+    body.user-notifications-page .notifications-heading {
+        position: relative;
+        z-index: 1;
+        flex: 0 0 auto;
+        min-height: 34px;
+        margin-bottom: 12px;
+    }
+
+    body.user-notifications-page .notifications-heading-copy,
+    body.user-notifications-page .notifications-heading h1 {
+        min-width: 0;
+    }
+
+    body.user-notifications-page .notifications-card {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    body.user-notifications-page .notifications-list {
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+@media (max-width: 380px) {
+    body.user-notifications-page .notifications-shell {
+        width: calc(100% - 20px);
+    }
+
+    body.user-notifications-page .notifications-heading h1 {
+        font-size: 21px;
+    }
+
+    body.user-notifications-page .notifications-read-all {
+        white-space: nowrap;
+    }
+}
