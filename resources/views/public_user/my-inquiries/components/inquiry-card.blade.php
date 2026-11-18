@@ -1,5 +1,10 @@
 @php
     $latestResponse = $req->latestResponse;
+    // Keep the historical response loop expression simple for Blade's compiler.
+    $historicalResponses = ($req->responses ?? collect([$latestResponse]))
+        ->sortBy(function ($response) {
+            return $response->forwarded_at ?? $response->created_at;
+        });
     $displayStatus = $req->trashed() ? 'trashed' : $req->status;
 
     $statusLabels = [
@@ -23,6 +28,7 @@
     class="inquiry-card {{ $req->trashed() ? 'is-trashed' : '' }}"
     data-id="{{ $req->id }}"
     data-agency-id="{{ $req->agency_id }}"
+    data-agency-search="{{ trim((string) (optional($req->agency)->agency_abbreviation ?? '') . ' ' . (optional($req->agency)->agency_name ?? '')) }}
     data-status="{{ $displayStatus }}"
     data-answer-seen="{{ $req->answer_seen_at ? '1' : '0' }}"
 >
@@ -140,7 +146,9 @@
 
             </section>
 
-            @php($reopenMessageRendered = false)
+            @php
+    $reopenMessageRendered = false;
+@endphp
             @if ($req->trashed())
 
                 @if ($req->trash_reason)
@@ -152,8 +160,22 @@
 
             @elseif ($latestResponse)
 
-                @foreach (($req->responses ?? collect([$latestResponse]))->sortBy(fn ($response) => $response->forwarded_at ?? $response->created_at) as $historicalResponse)
-                    @if (!$reopenMessageRendered && !$req->trashed() && filled(trim((string) $req->reopen_message)) && (($req->reopen_message_at && (($historicalResponse->forwarded_at ?? $historicalResponse->created_at) >= $req->reopen_message_at)) || (!$req->reopen_message_at && in_array($req->status, ['awaiting_confirmation', 'answered'], true) && (string) $historicalResponse->id === (string) optional($latestResponse)->id)))
+                @foreach ($historicalResponses as $historicalResponse)
+                    @php
+                        $responseTimestamp = $historicalResponse->forwarded_at ?? $historicalResponse->created_at;
+                        $shouldRenderReopenMessage = !$reopenMessageRendered
+                            && !$req->trashed()
+                            && filled(trim((string) $req->reopen_message))
+                            && (
+                                ($req->reopen_message_at && $responseTimestamp >= $req->reopen_message_at)
+                                || (
+                                    !$req->reopen_message_at
+                                    && in_array($req->status, ['awaiting_confirmation', 'answered'], true)
+                                    && (string) $historicalResponse->id === (string) optional($latestResponse)->id
+                                )
+                            );
+                    @endphp
+                    @if ($shouldRenderReopenMessage)
                         <section class="citizen-follow-up citizen-reopen-message" aria-label="Your ticket reopening message">
                             <div class="citizen-follow-up-header">
                                 <span><i class="ph-light ph-chat-circle-text" aria-hidden="true"></i> Your follow-up · Ticket reopened</span>
@@ -161,7 +183,9 @@
                             </div>
                             <p>{{ $req->reopen_message }}</p>
                         </section>
-                        @php($reopenMessageRendered = true)
+                        @php
+                            $reopenMessageRendered = true;
+                        @endphp
                     @endif
                 <section class="official-response" data-response-id="{{ $historicalResponse->id }}">
 
@@ -190,74 +214,127 @@
                     </div>
 
 
+                    @php
+                        $isLatestHistoricalResponse = (string) $historicalResponse->id === (string) optional($latestResponse)->id;
+                        $responseImages = $historicalResponse->components->where('type', 'image')->filter(fn ($component) => filled($component->attachment_url));
+                        $responseTexts = $historicalResponse->components->where('type', 'text')->filter(fn ($component) => filled(trim((string) $component->content)));
+                        $responseFiles = $historicalResponse->components->where('type', 'file')->filter(fn ($component) => filled($component->attachment_url));
+                        $responseLinks = $historicalResponse->components->where('type', 'link')->filter(function ($component) {
+                            $scheme = strtolower((string) parse_url((string) $component->content, PHP_URL_SCHEME));
+                            return in_array($scheme, ['http', 'https'], true);
+                        });
+                        $responseQrCodes = $historicalResponse->components->where('type', 'qr_code')->filter(function ($component) {
+                            $scheme = strtolower((string) parse_url((string) $component->content, PHP_URL_SCHEME));
+                            return in_array($scheme, ['http', 'https'], true);
+                        });
+                        $hasLegacyResponseImage = $isLatestHistoricalResponse && !empty($req->answer_image_url);
+                    @endphp
+
                     <div class="response-components">
-                        {{-- Match the chatbot attachment order: images, answer text, file/link lines, then QR. --}}
-                        @if ($historicalResponse->components->where('type', 'image')->isNotEmpty())
-                        <div class="response-image-grid" aria-label="Response images">
-                        @foreach ($historicalResponse->components->where('type', 'image') as $component)
-                            @if ($component->attachment_url)
-                                <div class="response-component response-component-image">
-                                    @if ($component->label)
-                                        <span class="response-component-label">{{ $component->label }}</span>
-                                    @endif
-                                    <button type="button" class="response-image-trigger" data-image-url="{{ $component->attachment_url }}" aria-label="View response image">
-                                        <img src="{{ $component->attachment_url }}" alt="{{ $component->label ?: 'Official response image' }}" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
-                                        <x-image-placeholder type="image" :hidden="true" />
-                                    </button>
+                        {{-- The written answer is intentionally the first and most prominent part of the response. --}}
+                        @if ($responseTexts->isNotEmpty())
+                            <section class="response-message" aria-label="Agency message">
+                                <div class="response-message-content">
+                                    @foreach ($responseTexts as $component)
+                                        <p>{{ $component->content }}</p>
+                                    @endforeach
                                 </div>
-                            @endif
-                        @endforeach
-                        </div>
+                            </section>
                         @endif
 
-                        @foreach ($historicalResponse->components->where('type', 'text') as $component)
-                            <div class="response-component response-component-text"><p>{{ $component->content }}</p></div>
-                        @endforeach
-
-                        <div class="response-attachment-links" aria-label="Response files and links">
-                            @foreach ($historicalResponse->components->where('type', 'file') as $component)
-                                @if ($component->attachment_url)
-                                    <a class="response-resource-card is-file" href="{{ $component->attachment_url }}" download aria-label="Download {{ $component->label ?: 'attachment' }}">
-                                        <span class="response-resource-icon"><i class="ph-light ph-file-arrow-down" aria-hidden="true"></i></span>
-                                        <span class="response-resource-copy">
-                                            <span class="response-resource-title">{{ $component->label ?: 'Download attachment' }}</span>
-                                            <span class="response-resource-detail">File attachment</span>
-                                        </span>
-                                        <i class="ph-light ph-download-simple response-resource-action" aria-hidden="true"></i>
-                                    </a>
-                                @endif
-                            @endforeach
-
-                            <?php foreach ($historicalResponse->components->where('type', 'link') as $component): ?>
-                                <?php $linkScheme = strtolower((string) parse_url((string) $component->content, PHP_URL_SCHEME)); ?>
-                                <?php if (in_array($linkScheme, ['http', 'https'], true)): ?>
-                                    <a class="response-resource-card is-link" href="{{ $component->content }}" target="_blank" rel="noopener noreferrer" aria-label="Open {{ $component->label ?: $component->content }}">
-                                        <span class="response-resource-icon"><i class="ph-light ph-globe" aria-hidden="true"></i></span>
-                                        <span class="response-resource-copy">
-                                            <span class="response-resource-title">{{ $component->label ?: $component->content }}</span>
-                                            <span class="response-resource-detail">{{ parse_url($component->content, PHP_URL_HOST) ?: $component->content }}</span>
-                                        </span>
-                                        <i class="ph-light ph-arrow-up-right response-resource-action" aria-hidden="true"></i>
-                                    </a>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                        </div>
-
-                        <?php foreach ($historicalResponse->components->where('type', 'qr_code') as $component) {
-                            $qrScheme = strtolower((string) parse_url((string) $component->content, PHP_URL_SCHEME));
-                            if (in_array($qrScheme, ['http', 'https'], true)) {
-                        ?>
-                                <div class="response-component response-component-qr">
-                                    <div class="response-qr-heading">
-                                        <i class="ph-light ph-qr-code" aria-hidden="true"></i>
-                                        <span><?= e($component->label ?: 'QR code') ?></span>
-                                    </div>
-                                    <div class="response-qr-code" data-qr-value="<?= e($component->content) ?>" role="img" aria-label="<?= e($component->label ?: 'Scannable QR code') ?>"></div>
-                                    <a class="response-qr-open" href="<?= e($component->content) ?>" target="_blank" rel="noopener noreferrer">Open destination <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></a>
+                        {{-- Legacy answer_image and structured image components share one horizontal gallery. --}}
+                        @if ($hasLegacyResponseImage || $responseImages->isNotEmpty())
+                            <section class="response-attachment-section response-images-section" aria-label="Attached images">
+                                <div class="response-section-heading">
+                                    <span>Images</span>
+                                    <span class="response-section-count">{{ $responseImages->count() + ($hasLegacyResponseImage ? 1 : 0) }}</span>
                                 </div>
-                        <?php
-                            }
-                        } ?>
+                                <div class="response-image-gallery" role="group" aria-label="Response images">
+                                    @if ($hasLegacyResponseImage)
+                                        <div class="response-component response-component-image">
+                                            <button type="button" class="response-image-trigger" data-image-url="{{ $req->answer_image_url }}" aria-label="View attached ticket response image">
+                                                <img src="{{ $req->answer_image_url }}" alt="Agency response attachment" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                                                <x-image-placeholder type="image" :hidden="true" />
+                                            </button>
+                                        </div>
+                                    @endif
+                                    @foreach ($responseImages as $component)
+                                        <div class="response-component response-component-image">
+                                            <button type="button" class="response-image-trigger" data-image-url="{{ $component->attachment_url }}" aria-label="View response image">
+                                                <img src="{{ $component->attachment_url }}" alt="Agency response attachment" loading="lazy" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                                                <x-image-placeholder type="image" :hidden="true" />
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endif
+
+                        @if ($responseFiles->isNotEmpty())
+                            <section class="response-attachment-section" aria-label="Attached documents">
+                                <div class="response-section-heading">
+                                    <span>Documents</span>
+                                    <span class="response-section-count">{{ $responseFiles->count() }}</span>
+                                </div>
+                                <div class="response-attachment-links">
+                                    @foreach ($responseFiles as $component)
+                                        <a class="response-resource-card is-file" href="{{ $component->attachment_url }}" download aria-label="Download {{ $component->label ?: 'attachment' }}">
+                                            <span class="response-resource-icon"><i class="ph-light ph-file-arrow-down" aria-hidden="true"></i></span>
+                                            <span class="response-resource-copy">
+                                                <span class="response-resource-title">{{ $component->label ?: 'Download attachment' }}</span>
+                                                <span class="response-resource-detail">File attachment</span>
+                                            </span>
+                                            <i class="ph-light ph-download-simple response-resource-action" aria-hidden="true"></i>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endif
+
+                        @if ($responseLinks->isNotEmpty())
+                            <section class="response-attachment-section" aria-label="Related links">
+                                <div class="response-section-heading">
+                                    <span>Related links</span>
+                                    <span class="response-section-count">{{ $responseLinks->count() }}</span>
+                                </div>
+                                <div class="response-attachment-links">
+                                    @foreach ($responseLinks as $component)
+                                        <a class="response-resource-card is-link" href="{{ $component->content }}" target="_blank" rel="noopener noreferrer" aria-label="Open {{ $component->label ?: $component->content }}">
+                                            <span class="response-resource-icon"><i class="ph-light ph-globe" aria-hidden="true"></i></span>
+                                            <span class="response-resource-copy">
+                                                <span class="response-resource-title">{{ $component->label ?: $component->content }}</span>
+                                                <span class="response-resource-detail">{{ parse_url($component->content, PHP_URL_HOST) ?: $component->content }}</span>
+                                            </span>
+                                            <i class="ph-light ph-arrow-up-right response-resource-action" aria-hidden="true"></i>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endif
+
+                        @if ($responseQrCodes->isNotEmpty())
+                            <section class="response-attachment-section response-qr-section" aria-label="QR codes">
+                                <div class="response-section-heading">
+                                    <span>QR codes</span>
+                                    <span class="response-section-count">{{ $responseQrCodes->count() }}</span>
+                                </div>
+                                <div class="response-qr-list">
+                                    @foreach ($responseQrCodes as $component)
+                                        <button type="button" class="response-resource-card is-qr response-qr-trigger"
+                                            data-qr-value="{{ $component->content }}"
+                                            data-qr-label="{{ $component->label ?: 'QR code' }}"
+                                            aria-label="Reveal QR code: {{ $component->label ?: 'QR code' }}">
+                                            <span class="response-resource-icon"><i class="ph-light ph-qr-code" aria-hidden="true"></i></span>
+                                            <span class="response-resource-copy">
+                                                <span class="response-resource-title">{{ $component->label ?: 'QR code' }}</span>
+                                                <span class="response-resource-detail">QR code attachment · View code</span>
+                                            </span>
+                                            <i class="ph-light ph-chevron-right response-resource-action" aria-hidden="true"></i>
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endif
                     </div>
 
                 </section>

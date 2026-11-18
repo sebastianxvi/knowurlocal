@@ -74,10 +74,6 @@ function initializeFilters() {
         "[data-inquiry-search]"
     );
 
-    const clearSearchButton = document.querySelector(
-        "[data-clear-inquiry-search]"
-    );
-
     const setTrashedUnreadCount = (count) => {
         const safeCount = Number.isFinite(Number(count))
             ? Math.max(0, Math.floor(Number(count)))
@@ -190,11 +186,16 @@ function initializeFilters() {
         const agency =
             card.querySelector(".inquiry-agency")?.textContent || "";
 
+        // Search both the full agency name and its official abbreviation.
+        // This server-rendered attribute avoids an extra request.
+        const agencySearch =
+            card.dataset.agencySearch || "";
+
         const id =
             card.dataset.id || "";
 
         return normalize(
-            `${question} ${agency} ${id}`
+            `${question} ${agency} ${agencySearch} ${id}`
         ).includes(query);
     };
 
@@ -383,11 +384,6 @@ function initializeFilters() {
             }
         });
 
-        if (clearSearchButton) {
-            clearSearchButton.hidden =
-                searchQuery.length === 0;
-        }
-
         updateResultMeta(
             visibleCards,
             cards.length
@@ -447,19 +443,6 @@ function initializeFilters() {
     searchInput?.addEventListener(
         "input",
         () => {
-            applyFilter(getCurrentFilter());
-        }
-    );
-
-    clearSearchButton?.addEventListener(
-        "click",
-        () => {
-            if (!searchInput) {
-                return;
-            }
-
-            searchInput.value = "";
-            searchInput.focus();
             applyFilter(getCurrentFilter());
         }
     );

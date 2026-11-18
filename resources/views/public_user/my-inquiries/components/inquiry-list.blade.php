@@ -24,10 +24,6 @@
             <label for="inquiry-search" class="sr-only">Search agencies and tickets</label>
             <input id="inquiry-search" type="search" data-inquiry-search
                 placeholder="Search agencies or tickets..." autocomplete="off" spellcheck="false">
-            <button type="button" class="inquiries-search-clear" data-clear-inquiry-search
-                aria-label="Clear search" hidden>
-                <i class="ph-light ph-x" aria-hidden="true"></i>
-            </button>
         </div>
         <div class="messenger-chat-list" data-messenger-chat-list>
 

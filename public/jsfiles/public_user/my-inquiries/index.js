@@ -22,7 +22,7 @@ if (window.visualViewport) {
 // Re-measure after browser layout settles on initial load and after returning to the page.
 requestAnimationFrame(() => requestAnimationFrame(syncMyInquiriesViewportHeight));
 
-import { renderInquiryQRCodes } from './components/inquiry-card.js';
+import { initializeInquiryQRViewer } from './components/inquiry-card.js';
 
 import {
     initializeFilters,
@@ -64,9 +64,6 @@ initializeLightbox();
 
 initializeRealtime();
 initializeCreateTicket();
-
-// Render QR codes already present in the server-rendered inquiry cards.
-renderInquiryQRCodes(document);
 
 
 function initializeMessengerInbox() {
@@ -122,17 +119,51 @@ function initializeMessengerInbox() {
     const pageParams = new URLSearchParams(window.location.search);
     const initialTicketId = pageParams.get('ticket') || pageParams.get('ticket_created');
     const expandedStateKey = 'knowurlocal:my-inquiries:expanded-tickets';
+    const navigationEntry = performance.getEntriesByType?.('navigation')?.[0];
+    const isReload = navigationEntry?.type === 'reload';
+
+    // Keep an intentional expansion across a refresh in this tab only. A fresh
+    // visit (including returning from another page) starts with every ticket
+    // collapsed; persistent localStorage must not reopen old conversations.
+    if (!isReload) {
+        try { sessionStorage.removeItem(expandedStateKey); } catch (_) {}
+    }
+
     const readExpandedState = () => {
-        try { return JSON.parse(localStorage.getItem(expandedStateKey) || '{}') || {}; }
+        try { return JSON.parse(sessionStorage.getItem(expandedStateKey) || '{}') || {}; }
         catch (_) { return {}; }
     };
     const saveExpandedState = (ticketId, expanded) => {
         try {
             const state = readExpandedState();
             state[String(ticketId)] = Boolean(expanded);
-            localStorage.setItem(expandedStateKey, JSON.stringify(state));
+            sessionStorage.setItem(expandedStateKey, JSON.stringify(state));
         } catch (_) { /* Storage may be disabled; accordion still works for this view. */ }
     };
+
+    const collapseAllTickets = () => {
+        pane.querySelectorAll('.messenger-ticket-thread').forEach(ticket => {
+            ticket.classList.remove('is-expanded');
+            const button = ticket.querySelector('.messenger-ticket-bubble');
+            const details = ticket.querySelector('.messenger-detail-clone');
+            button?.setAttribute('aria-expanded', 'false');
+            if (details) {
+                details.hidden = true;
+                details.setAttribute('aria-hidden', 'true');
+                details.style.setProperty('display', 'none', 'important');
+            }
+        });
+        try { sessionStorage.removeItem(expandedStateKey); } catch (_) {}
+    };
+
+    // Back/forward cache can restore the old DOM without rerunning this module.
+    // Explicitly collapse it when the user returns to My Inquiries.
+    window.addEventListener('pageshow', event => {
+        const currentNavigation = performance.getEntriesByType?.('navigation')?.[0];
+        if (event.persisted || currentNavigation?.type === 'back_forward') {
+            collapseAllTickets();
+        }
+    });
 
     const markTicketResponseSeen = async (card, ticket) => {
         if (!card?.querySelector('[data-unread-response], .inquiry-unread-badge')) return;
@@ -242,6 +273,8 @@ function initializeMessengerInbox() {
             ticket.classList.remove('is-expanded');
             const ticketCopy = document.createElement('span');
             ticketCopy.className = 'messenger-ticket-copy';
+            const ticketMeta = document.createElement('span');
+            ticketMeta.className = 'messenger-ticket-meta';
             const ticketTop = document.createElement('span');
             ticketTop.className = 'messenger-ticket-top';
             ticketTop.textContent = `Ticket #${card.dataset.id}`;
@@ -268,7 +301,8 @@ function initializeMessengerInbox() {
             const statusLabel = document.createElement('span');
             statusLabel.textContent = statusInfo.label;
             status.append(statusIcon, statusLabel);
-            ticketCopy.append(ticketTop, subject, status);
+            ticketMeta.append(ticketTop, status);
+            ticketCopy.append(ticketMeta, subject);
             const chevron = document.createElement('i');
             chevron.className = 'ph-light ph-caret-down';
             chevron.setAttribute('aria-hidden', 'true');
@@ -385,6 +419,7 @@ function initializeMessengerInbox() {
                         editButton.addEventListener('click', () => {
                             ticketButton.setAttribute('aria-expanded', 'true');
                             ticket.classList.add('is-expanded');
+                            saveExpandedState(card.dataset.id, true);
                             if (detailClone) { detailClone.hidden = false; detailClone.style.setProperty('display', 'block', 'important'); }
                             editForm.hidden = false;
                             editButton.hidden = true;
@@ -448,6 +483,7 @@ function initializeMessengerInbox() {
                     body.querySelectorAll('.messenger-ticket-thread.is-expanded').forEach(openTicket => {
                         if (openTicket === ticket) return;
                         openTicket.classList.remove('is-expanded');
+                        saveExpandedState(openTicket.dataset.ticketId, false);
                         const openButton = openTicket.querySelector('.messenger-ticket-bubble');
                         const openDetails = openTicket.querySelector('.messenger-detail-clone');
                         openButton?.setAttribute('aria-expanded', 'false');
@@ -585,15 +621,12 @@ function initializeMessengerInbox() {
         });
 
         pane.append(header, body, composer);
-        // Restore each ticket's last explicit state across refreshes. A ticket
-        // supplied in the URL is opened intentionally (e.g. after follow-up).
+        // Restore only a ticket the user explicitly expanded before a refresh.
+        // URL ticket parameters may select the agency, but never auto-expand a ticket.
         const expandedState = readExpandedState();
-        const initialId = initialTicketId && group.some(card => card.dataset.id === initialTicketId)
-            ? String(initialTicketId)
-            : null;
-        const restoreTicketId = initialId && expandedState[initialId] === undefined
-            ? initialId
-            : group.map(card => String(card.dataset.id)).find(id => expandedState[id] === true);
+        const restoreTicketId = group
+            .map(card => String(card.dataset.id))
+            .find(id => expandedState[id] === true);
         if (restoreTicketId) {
             const target = Array.from(body.querySelectorAll('.messenger-ticket-thread'))
                 .find(item => item.dataset.ticketId === restoreTicketId);
@@ -848,3 +881,6 @@ function initializeMessengerInbox() {
         }
     });
 }
+
+
+initializeInquiryQRViewer();

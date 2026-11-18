@@ -123,12 +123,15 @@ function initializeLightbox() {
         | Set the image source only after validating that
         | a source was actually provided.
         */
-        imageLightboxImage.hidden = false;
         const imageFallback = imageLightbox.querySelector(".inquiry-lightbox-placeholder");
-        if (imageFallback) imageFallback.hidden = true;
 
-        imageLightboxImage.src =
-            imageSource;
+        // Reset both surfaces before starting a new request. The image stays
+        // hidden until its load event confirms that it can actually be shown.
+        imageLightboxImage.hidden = true;
+        if (imageFallback) imageFallback.hidden = true;
+        imageLightboxImage.removeAttribute("src");
+
+        imageLightboxImage.src = imageSource;
 
         imageLightboxImage.alt =
             imageAlt;
@@ -328,9 +331,20 @@ function initializeLightbox() {
     */
 
     imageLightboxImage.addEventListener(
+        "load",
+        () => {
+            imageLightboxImage.hidden = false;
+            const imageFallback = imageLightbox.querySelector(".inquiry-lightbox-placeholder");
+            if (imageFallback) imageFallback.hidden = true;
+        }
+    );
+
+    imageLightboxImage.addEventListener(
         "error",
         () => {
-            closeImageLightbox();
+            imageLightboxImage.hidden = true;
+            const imageFallback = imageLightbox.querySelector(".inquiry-lightbox-placeholder");
+            if (imageFallback) imageFallback.hidden = false;
 
             console.warn(
                 "KNOWURLOCAL: The inquiry image could not be loaded."

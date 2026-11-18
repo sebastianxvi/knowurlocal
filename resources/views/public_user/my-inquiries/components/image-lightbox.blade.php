@@ -29,7 +29,7 @@
             alt=""
             class="image-lightbox-image"
             id="image-lightbox-image"
-            onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
+            hidden
         >
         <x-image-placeholder type="image" class="inquiry-lightbox-placeholder" :hidden="true" />
 

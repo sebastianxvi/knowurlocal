@@ -1085,9 +1085,10 @@
 .image-lightbox-image {
     display: block;
     max-width: 100%;
-    max-height: calc(100vh - 56px);
+    max-height: calc(100dvh - 56px);
     width: auto;
     height: auto;
+    object-fit: contain;
     border-radius: 9px;
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
     transform: scale(0.98);
@@ -6740,4 +6741,736 @@ body {
     border-radius: 50% !important;
     color: transparent !important;
     animation: my-inquiries-spinner-rotate 800ms linear infinite !important;
+}
+
+
+/* Inquiry image viewer: keep the image and its true failure fallback within the viewport. */
+.image-lightbox-content > .inquiry-lightbox-placeholder {
+    width: min(80vw, 760px);
+    min-width: 0;
+    min-height: min(55dvh, 420px);
+    max-width: 100%;
+    max-height: calc(100dvh - 56px);
+}
+
+@media (max-width: 600px) {
+    .image-lightbox {
+        padding: 12px;
+    }
+
+    .image-lightbox-content {
+        width: 100%;
+        height: 100%;
+    }
+
+    .image-lightbox-image {
+        max-width: 100%;
+        max-height: calc(100dvh - 24px);
+    }
+
+    .image-lightbox-close {
+        top: 4px;
+        right: 4px;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+   Agency response refresh: message-first hierarchy and horizontal image rail
+   Shared by server-rendered responses and responses rebuilt after Reverb/AJAX.
+   -------------------------------------------------------------------------- */
+.messenger-detail-clone .official-response {
+    width: min(78%, 820px);
+    max-width: min(78%, 820px);
+}
+
+.response-components {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    width: 100%;
+    min-width: 0;
+}
+
+.response-message {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 15px 16px;
+    border: 1px solid #dce6fb;
+    border-left: 3px solid #5277d5;
+    border-radius: 11px;
+    background: #ffffff;
+    color: #263653;
+}
+
+.response-section-eyebrow {
+    display: block;
+    margin-bottom: 7px;
+    color: #5572b8;
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.response-message-content {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    color: #263653;
+    font-size: 14px;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.response-message-content p {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.response-attachment-section {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    width: 100%;
+    min-width: 0;
+}
+
+.response-section-heading {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #455675;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.response-section-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #eaf0ff;
+    color: #526eb6;
+    font-size: 10px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.response-image-gallery {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    padding: 1px 2px 9px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #b8c6e3 transparent;
+}
+
+.response-image-gallery::-webkit-scrollbar {
+    height: 5px;
+}
+
+.response-image-gallery::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.response-image-gallery::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #b8c6e3;
+}
+
+.response-image-gallery .response-component-image {
+    flex: 0 0 clamp(150px, 42%, 230px);
+    width: clamp(150px, 42%, 230px);
+    min-width: 0;
+    scroll-snap-align: start;
+}
+
+.response-image-gallery .response-image-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 150px;
+    max-width: none;
+    padding: 0;
+    border: 1px solid #dce4f2;
+    border-radius: 10px;
+    background: #ffffff;
+    overflow: hidden;
+    cursor: zoom-in;
+}
+
+.response-image-gallery .response-image-trigger img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    object-fit: contain;
+    background: #f3f6fc;
+}
+
+.response-image-gallery .response-image-trigger img[hidden],
+.response-image-gallery .response-image-trigger .response-image-fallback[hidden] {
+    display: none !important;
+}
+
+.response-image-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: #8a99b4;
+    background: #f3f6fc;
+    font-size: 25px;
+}
+
+.response-attachment-links {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+}
+
+.response-qr-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+}
+
+.response-qr-list .response-component-qr {
+    box-sizing: border-box;
+    width: min(100%, 220px);
+    margin: 0;
+    padding: 12px;
+    border: 1px solid #e2e8f3;
+    border-radius: 11px;
+    background: #ffffff;
+}
+
+.response-qr-list .response-qr-code {
+    width: 150px;
+    height: 150px;
+}
+
+@media (max-width: 640px) {
+    .messenger-detail-clone .official-response,
+    .messenger-detail-clone .official-response:has(.response-components .response-component-image),
+    .messenger-detail-clone .official-response:has(.response-components .response-attachment-section) {
+        width: 92%;
+        max-width: 92%;
+        min-width: 0;
+    }
+
+    .response-components {
+        gap: 14px;
+    }
+
+    .response-message {
+        padding: 13px 14px;
+    }
+
+    .response-message-content {
+        font-size: 13px;
+        line-height: 1.7;
+    }
+
+    .response-image-gallery {
+        gap: 9px;
+        margin-right: -2px;
+    }
+
+    .response-image-gallery .response-component-image {
+        flex-basis: min(72%, 220px);
+        width: min(72%, 220px);
+    }
+
+    .response-image-gallery .response-image-trigger {
+        height: 132px;
+    }
+
+    .response-qr-list .response-component-qr {
+        width: min(100%, 210px);
+    }
+}
+
+
+/* Official response: typography, not another nested card. */
+.response-message {
+    width: 100%; min-width: 0; padding: 2px 0 4px;
+    border: 0; border-radius: 0; background: transparent; color: #263653;
+}
+.response-section-eyebrow { margin-bottom: 8px; color: #71809a; font-size: 10px; font-weight: 750; letter-spacing: .09em; }
+.response-message-content { color: #1f3152; font-size: 15px; line-height: 1.8; }
+.response-message-content p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* QR codes remain compact until the user asks to reveal one. */
+.response-qr-list { display: flex; flex-direction: column; gap: 7px; }
+.response-qr-trigger { width: 100%; text-align: left; font: inherit; cursor: pointer; }
+.response-qr-trigger:hover { border-color: #b9c9ed; background: #f8faff; }
+.response-resource-card.is-qr .response-resource-icon { color: #5277d5; }
+.response-qr-lightbox {
+    position: fixed; inset: 0; z-index: 12000; display: none; align-items: center;
+    justify-content: center; padding: 20px; background: rgba(15,23,42,.72); backdrop-filter: blur(5px);
+}
+.response-qr-lightbox.is-open { display: flex; }
+.response-qr-lightbox-panel {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 18px;
+    width: min(100%,440px); max-height: min(90dvh,680px); overflow: auto; padding: 30px 24px 26px;
+    border: 1px solid #dce5f5; border-radius: 18px; background: #fff; box-shadow: 0 24px 80px rgba(0,0,0,.24);
+}
+.response-qr-lightbox-close {
+    position: absolute; top: 12px; right: 12px; display: grid; place-items: center;
+    width: 36px; height: 36px; border: 0; border-radius: 10px; background: #f1f4fa; color: #40516e; cursor: pointer;
+}
+.response-qr-lightbox-heading { display: flex; align-items: center; gap: 9px; max-width: calc(100% - 44px); margin-top: 8px; color: #30466f; }
+.response-qr-lightbox-heading h2 { margin: 0; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+.response-qr-lightbox-code {
+    display: grid; place-items: center; width: min(100%,300px); aspect-ratio: 1;
+    padding: 12px; border: 1px solid #e1e7f1; border-radius: 12px; background: #fff;
+}
+.response-qr-lightbox-code .response-qr-svg { display: block; width: 100%; height: 100%; }
+.response-qr-lightbox-destination { display: inline-flex; align-items: center; gap: 7px; color: #426bd0; font-size: 13px; font-weight: 600; text-decoration: none; }
+.response-qr-lightbox-destination:hover { text-decoration: underline; }
+@media (max-width: 480px) {
+    .response-qr-lightbox { padding: 14px; }
+    .response-qr-lightbox-panel { padding: 28px 18px 22px; }
+    .response-qr-lightbox-code { width: min(100%,260px); }
+    .response-message-content { font-size: 14px; line-height: 1.75; }
+}
+
+/* Mobile agency header and compact collapsed ticket summaries.
+   Desktop ticket spacing remains unchanged. */
+.messenger-ticket-meta { display: contents; }
+
+@media (max-width: 760px) {
+    .messenger-conversation-header {
+        align-items: center; gap: 10px; padding: 12px 14px; min-height: 68px;
+    }
+    .messenger-conversation-header .messenger-mobile-back {
+        display: inline-flex; flex: 0 0 38px; align-items: center; justify-content: center;
+        width: 38px; height: 38px; margin: 0;
+        border: 1px solid var(--border-color, #e5e7eb); border-radius: 12px;
+        background: var(--surface-secondary, #f8fafc); color: var(--text-primary, #172033);
+        box-shadow: 0 1px 2px rgba(15, 23, 42, .05); font-size: 18px;
+        transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
+    }
+    .messenger-conversation-header .messenger-mobile-back:active {
+        transform: scale(.96); background: var(--surface-tertiary, #eef2ff);
+    }
+    .messenger-conversation-header .messenger-avatar {
+        flex: 0 0 40px; width: 40px; height: 40px; margin: 0;
+    }
+    .messenger-conversation-title { flex: 1 1 0; min-width: 0; }
+    .messenger-conversation-title h2 { font-size: 14px; line-height: 1.3; }
+    .messenger-conversation-title p { margin-top: 3px; font-size: 10px; line-height: 1.35; }
+
+    .messenger-ticket-bubble { align-items: center; gap: 10px; padding: 10px 12px; }
+    .messenger-ticket-copy { gap: 3px; }
+    .messenger-ticket-meta {
+        display: flex; align-items: center; flex-wrap: wrap; gap: 7px; min-width: 0;
+    }
+    .messenger-ticket-top {
+        font-size: 9px; line-height: 1.2; letter-spacing: .035em; white-space: nowrap;
+    }
+    .messenger-ticket-status {
+        display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
+        padding: 2px 7px; border: 1px solid var(--border-color, #e5e7eb);
+        border-radius: 999px; background: var(--surface-secondary, #f8fafc);
+        color: var(--text-secondary, #64748b); font-size: 9px; line-height: 1.35;
+        white-space: nowrap;
+    }
+    .messenger-ticket-status > i { font-size: 11px; }
+    .messenger-ticket-subject {
+        display: block; overflow: hidden; font-size: 12px; line-height: 1.35;
+        text-overflow: ellipsis; white-space: nowrap;
+    }
+    .messenger-ticket-bubble > .ph-caret-down { flex: 0 0 auto; font-size: 14px; }
+    .messenger-ticket-thread .messenger-detail-clone { padding: 12px; }
+}
+
+@media (max-width: 380px) {
+    .messenger-conversation-header { gap: 8px; padding-inline: 10px; }
+    .messenger-conversation-header .messenger-mobile-back {
+        flex-basis: 34px; width: 34px; height: 34px;
+    }
+    .messenger-conversation-header .messenger-avatar {
+        flex-basis: 36px; width: 36px; height: 36px;
+    }
+    .messenger-ticket-bubble { padding: 9px 10px; }
+    .messenger-ticket-meta { gap: 5px; }
+    .messenger-ticket-status { padding-inline: 6px; font-size: 8px; }
+}
+
+/* Unified ticket summary layout across desktop and mobile.
+   Keep the same hierarchy everywhere; only sizing adapts to the viewport. */
+.messenger-ticket-bubble {
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+}
+.messenger-ticket-copy {
+    gap: 4px;
+}
+.messenger-ticket-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    min-width: 0;
+}
+.messenger-ticket-top {
+    font-size: 9px;
+    line-height: 1.2;
+    letter-spacing: .035em;
+    white-space: nowrap;
+}
+.messenger-ticket-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    padding: 2px 7px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 999px;
+    background: var(--surface-secondary, #f8fafc);
+    color: var(--text-secondary, #64748b);
+    font-size: 9px;
+    line-height: 1.35;
+    white-space: nowrap;
+}
+.messenger-ticket-status > i {
+    font-size: 11px;
+}
+.messenger-ticket-subject {
+    display: block;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.messenger-ticket-bubble > .ph-caret-down {
+    flex: 0 0 auto;
+    font-size: 14px;
+}
+
+/* The conversation back control is only useful in the mobile single-pane view. */
+@media (min-width: 761px) {
+    .messenger-conversation-header .messenger-mobile-back {
+        display: none !important;
+    }
+}
+
+/* Preserve comfortable touch sizing on narrow screens. */
+@media (max-width: 380px) {
+    .messenger-ticket-bubble { padding: 9px 10px; }
+    .messenger-ticket-meta { gap: 5px; }
+    .messenger-ticket-status { padding-inline: 6px; font-size: 8px; }
+}
+
+/* =========================================================
+   MY INQUIRIES — SIDEBAR DENSITY & READABILITY REFINEMENT
+   Keep agency rows slimmer while improving the legibility of
+   supporting text across the inbox and conversation surface.
+   ========================================================= */
+
+.messenger-chat-list .inquiry-toggle {
+    min-height: 78px;
+    padding: 9px 10px;
+    gap: 10px;
+}
+
+.messenger-chat-list .inquiry-summary {
+    gap: 10px;
+}
+
+.messenger-chat-list .messenger-avatar {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+    font-size: 13px;
+}
+
+.messenger-chat-list .messenger-agency-name {
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+.messenger-chat-list .messenger-row-time {
+    font-size: 11px;
+}
+
+.messenger-chat-list .messenger-row-preview {
+    margin: 3px 0 4px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.messenger-chat-list .messenger-row-meta {
+    gap: 6px;
+}
+
+.messenger-chat-list .messenger-row-meta .inquiry-status-badge {
+    padding: 2px 7px;
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+.messenger-chat-list .messenger-row-meta .inquiry-id {
+    font-size: 10px;
+}
+
+/* Bring small labels and secondary information up one step
+   without competing with the primary message or ticket subject. */
+.messenger-ticket-top {
+    font-size: 10px;
+}
+
+.messenger-ticket-status {
+    font-size: 10px;
+}
+
+.messenger-ticket-subject {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.messenger-conversation-title p {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.official-response-header,
+.response-date {
+    font-size: 12px;
+}
+
+.response-section-heading {
+    font-size: 12px;
+}
+
+.response-section-count {
+    font-size: 11px;
+}
+
+.response-resource-card,
+.response-resource-card .response-resource-name {
+    font-size: 13px;
+}
+
+.response-resource-card .response-resource-meta {
+    font-size: 11px;
+}
+
+.messenger-composer-field textarea,
+.messenger-composer-field textarea::placeholder {
+    font-size: 14px;
+}
+
+.messenger-ticket-composer .messenger-composer-note {
+    font-size: 12px;
+}
+
+@media (max-width: 760px) {
+    .messenger-chat-list .inquiry-toggle {
+        min-height: 74px;
+        padding: 8px 9px;
+    }
+
+    .messenger-chat-list .messenger-avatar {
+        flex-basis: 40px;
+        width: 40px;
+        height: 40px;
+    }
+
+    .messenger-chat-list .messenger-agency-name {
+        font-size: 13px;
+    }
+
+    .messenger-chat-list .messenger-row-preview {
+        font-size: 11px;
+    }
+
+    .messenger-chat-list .messenger-row-meta .inquiry-status-badge,
+    .messenger-chat-list .messenger-row-meta .inquiry-id {
+        font-size: 9px;
+    }
+
+    .messenger-ticket-top,
+    .messenger-ticket-status {
+        font-size: 9px;
+    }
+
+    .messenger-ticket-subject {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 380px) {
+    .messenger-chat-list .inquiry-toggle {
+        min-height: 72px;
+        padding-inline: 8px;
+    }
+
+    .messenger-chat-list .messenger-avatar {
+        flex-basis: 38px;
+        width: 38px;
+        height: 38px;
+    }
+
+    .messenger-chat-list .messenger-agency-name {
+        font-size: 12px;
+    }
+
+    .messenger-chat-list .messenger-row-preview {
+        font-size: 10px;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+   My Inquiries — unified readable type scale and compact conversation bubbles
+   Primary content: 14px; supporting text: 12px; metadata: 11px.
+   -------------------------------------------------------------------------- */
+.messenger-chat-list .messenger-agency-name {
+    font-size: 13px;
+    line-height: 1.35;
+}
+.messenger-chat-list .messenger-row-preview {
+    font-size: 12px;
+    line-height: 1.4;
+}
+.messenger-chat-list .messenger-row-time,
+.messenger-chat-list .messenger-row-meta,
+.messenger-chat-list .messenger-row-meta .inquiry-id {
+    font-size: 11px;
+}
+.messenger-chat-list .messenger-row-meta .inquiry-status-badge {
+    font-size: 10px;
+}
+
+.messenger-ticket-top {
+    font-size: 11px;
+    line-height: 1.35;
+}
+.messenger-ticket-status {
+    font-size: 11px;
+    line-height: 1.35;
+}
+.messenger-ticket-subject {
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.messenger-detail-clone .official-response {
+    padding: 11px 14px;
+}
+.messenger-detail-clone .official-response-header {
+    gap: 8px 12px;
+    margin-bottom: 8px;
+}
+.messenger-detail-clone .official-response-title {
+    font-size: 12px;
+    line-height: 1.35;
+}
+.messenger-detail-clone .response-date {
+    font-size: 11px;
+    line-height: 1.35;
+}
+.messenger-detail-clone .response-message-content,
+.messenger-detail-clone .citizen-follow-up p {
+    font-size: 14px;
+    line-height: 1.55;
+}
+.messenger-detail-clone .response-components {
+    gap: 12px;
+}
+.messenger-detail-clone .response-attachment-section {
+    gap: 7px;
+}
+.messenger-detail-clone .response-section-heading {
+    font-size: 12px;
+    line-height: 1.35;
+}
+.messenger-detail-clone .response-resource-title,
+.messenger-detail-clone .response-resource-card {
+    font-size: 13px;
+}
+.messenger-detail-clone .response-resource-detail {
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.messenger-detail-clone .citizen-follow-up {
+    padding: 9px 12px;
+}
+.messenger-detail-clone .citizen-follow-up-header {
+    gap: 6px 12px;
+    margin-bottom: 4px;
+    font-size: 11px;
+    line-height: 1.35;
+}
+.messenger-detail-clone .citizen-follow-up-header i {
+    font-size: 12px;
+}
+.messenger-detail-clone .citizen-follow-up p {
+    margin: 0;
+}
+
+.inquiries-search input {
+    font-size: 14px;
+}
+.inquiries-search input::placeholder {
+    font-size: 13px;
+    opacity: 1;
+}
+
+@media (max-width: 760px) {
+    .messenger-chat-list .messenger-agency-name { font-size: 13px; }
+    .messenger-chat-list .messenger-row-preview { font-size: 12px; }
+    .messenger-chat-list .messenger-row-time,
+    .messenger-chat-list .messenger-row-meta,
+    .messenger-chat-list .messenger-row-meta .inquiry-id { font-size: 11px; }
+    .messenger-ticket-top,
+    .messenger-ticket-status { font-size: 11px; }
+    .messenger-ticket-subject { font-size: 14px; }
+
+    .messenger-detail-clone .official-response {
+        padding: 10px 12px;
+    }
+    .messenger-detail-clone .response-message-content,
+    .messenger-detail-clone .citizen-follow-up p {
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    .messenger-detail-clone .citizen-follow-up {
+        padding: 8px 11px;
+    }
+
+    /* Keep the actual input at 16px to prevent iOS focus zoom.
+       The placeholder remains visually smaller and less dominant. */
+    .inquiries-search input { font-size: 16px; }
+    .inquiries-search input::placeholder { font-size: 13px; }
 }

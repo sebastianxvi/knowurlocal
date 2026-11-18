@@ -77,6 +77,15 @@
     'public_user.my-inquiries.components.image-lightbox'
 )
 
+<div class="response-qr-lightbox" id="response-qr-lightbox" role="dialog" aria-modal="true" aria-labelledby="response-qr-lightbox-title" aria-hidden="true">
+    <div class="response-qr-lightbox-panel">
+        <button type="button" class="response-qr-lightbox-close" aria-label="Close QR code preview"><i class="ph-light ph-x" aria-hidden="true"></i></button>
+        <div class="response-qr-lightbox-heading"><i class="ph-light ph-qr-code" aria-hidden="true"></i><h2 id="response-qr-lightbox-title">QR code</h2></div>
+        <div class="response-qr-lightbox-code response-qr-code" data-qr-value="" role="img" aria-label="Scannable QR code"></div>
+        <a class="response-qr-lightbox-destination" href="#" target="_blank" rel="noopener noreferrer">Open destination <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></a>
+    </div>
+</div>
+
 @include('components.modal')
 <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}?v={{ filemtime(public_path('cssfiles/components/modal.css')) }}">
 <script src="{{ asset('jsfiles/components/modal-system.js') }}?v={{ filemtime(public_path('jsfiles/components/modal-system.js')) }}"></script>

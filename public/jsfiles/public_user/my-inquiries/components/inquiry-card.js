@@ -144,36 +144,33 @@ function createResponseComponent(component) {
             'response-component response-component-image'
         );
 
-        if (label) {
-            const labelElement = createElement(
-                'span',
-                'response-component-label'
-            );
-
-            labelElement.textContent = label;
-
-            wrapper.appendChild(labelElement);
-        }
-
         const button = document.createElement('button');
-
         button.type = 'button';
         button.className = 'response-image-trigger';
         button.dataset.imageUrl = component.attachment_url;
-        button.setAttribute(
-            'aria-label',
-            'View response image'
-        );
+        button.setAttribute('aria-label', 'View response image');
 
         const image = document.createElement('img');
-
         image.src = component.attachment_url;
-        image.alt = label || 'Official response image';
+        image.alt = 'Agency response attachment';
         image.loading = 'lazy';
 
-        button.appendChild(image);
-        wrapper.appendChild(button);
+        const placeholder = createElement('span', 'kyl-image-placeholder kyl-image-placeholder--image response-image-fallback');
+        placeholder.hidden = true;
+        placeholder.setAttribute('aria-hidden', 'true');
+        placeholder.appendChild(createIcon('ph-image'));
 
+        image.addEventListener('error', () => {
+            image.hidden = true;
+            placeholder.hidden = false;
+        });
+        image.addEventListener('load', () => {
+            image.hidden = false;
+            placeholder.hidden = true;
+        });
+
+        button.append(image, placeholder);
+        wrapper.appendChild(button);
         return wrapper;
     }
 
@@ -237,28 +234,25 @@ function createResponseComponent(component) {
     if (type === 'qr_code') {
         if (!isSafeHttpUrl(content)) return null;
 
-        const wrapper = createElement('div', 'response-component response-component-qr');
-        const heading = createElement('div', 'response-qr-heading');
-        heading.appendChild(createIcon('ph-qr-code'));
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'response-resource-card is-qr response-qr-trigger';
+        button.dataset.qrValue = content;
+        button.dataset.qrLabel = label || 'QR code';
+        button.setAttribute('aria-label', `Reveal QR code: ${label || 'QR code'}`);
 
-        const headingText = document.createElement('span');
-        headingText.textContent = label || 'QR code';
-        heading.appendChild(headingText);
-
-        const qr = createElement('div', 'response-qr-code');
-        qr.dataset.qrValue = content;
-        qr.setAttribute('role', 'img');
-        qr.setAttribute('aria-label', `${label || 'Scannable'} QR code`);
-
-        const link = document.createElement('a');
-        link.className = 'response-qr-open';
-        link.href = content;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.append(document.createTextNode('Open destination '), createIcon('ph-arrow-up-right'));
-
-        wrapper.append(heading, qr, link);
-        return wrapper;
+        const iconWrap = createElement('span', 'response-resource-icon');
+        iconWrap.appendChild(createIcon('ph-qr-code'));
+        const copy = createElement('span', 'response-resource-copy');
+        const title = createElement('span', 'response-resource-title');
+        title.textContent = label || 'QR code';
+        const detail = createElement('span', 'response-resource-detail');
+        detail.textContent = 'QR code attachment · View code';
+        copy.append(title, detail);
+        const action = createIcon('ph-chevron-right');
+        action.classList.add('response-resource-action');
+        button.append(iconWrap, copy, action);
+        return button;
     }
 
     /**
@@ -268,6 +262,55 @@ function createResponseComponent(component) {
      * markup into the page.
      */
     return null;
+}
+
+/** Opens QR previews on demand, so QR SVGs are generated only when requested. */
+export function initializeInquiryQRViewer() {
+    const modal = document.getElementById('response-qr-lightbox');
+    if (!modal || modal.dataset.initialized === '1') return;
+    modal.dataset.initialized = '1';
+
+    const code = modal.querySelector('.response-qr-lightbox-code');
+    const title = modal.querySelector('#response-qr-lightbox-title');
+    const destination = modal.querySelector('.response-qr-lightbox-destination');
+    const closeButton = modal.querySelector('.response-qr-lightbox-close');
+    let previousFocus = null;
+
+    const close = () => {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('response-qr-viewer-open');
+        code.replaceChildren();
+        code.removeAttribute('data-qr-rendered');
+        code.dataset.qrValue = '';
+        previousFocus?.focus?.();
+    };
+
+    document.addEventListener('click', (event) => {
+        const trigger = event.target.closest('.response-qr-trigger');
+        if (!trigger) return;
+        const value = trigger.dataset.qrValue || '';
+        if (!isSafeHttpUrl(value)) return;
+
+        previousFocus = trigger;
+        title.textContent = trigger.dataset.qrLabel || 'QR code';
+        destination.href = value;
+        code.dataset.qrValue = value;
+        code.setAttribute('aria-label', `${title.textContent} QR code`);
+        renderInquiryQRCodes(modal);
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('response-qr-viewer-open');
+        closeButton.focus();
+    });
+
+    closeButton?.addEventListener('click', close);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) close();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('is-open')) close();
+    });
 }
 
 /** Only HTTP(S) destinations are valid for external links and QR codes. */
@@ -481,39 +524,122 @@ function renderOfficialResponse(card, inquiry) {
 
     const components =
         Array.isArray(response.components)
-            ? response.components
+            ? [...response.components]
             : [];
 
-    const renderOrder = ['image', 'text', 'file', 'link', 'qr_code'];
-    components
-        .map((component, index) => ({ component, index }))
-        .sort((a, b) => {
-            const aOrder = renderOrder.indexOf(a.component?.type);
-            const bOrder = renderOrder.indexOf(b.component?.type);
-            return (aOrder < 0 ? renderOrder.length : aOrder) -
-                (bOrder < 0 ? renderOrder.length : bOrder) || a.index - b.index;
-        })
-        .forEach(({ component }) => {
-            const element = createResponseComponent(component);
-            if (!element) return;
+    // Older direct replies keep their image on support_requests.answer_image.
+    // Add it to the same image collection as structured response attachments.
+    if (typeof inquiry.answer_image_url === 'string' && inquiry.answer_image_url.trim()) {
+        components.unshift({
+            type: 'image',
+            attachment_url: inquiry.answer_image_url,
+        });
+    }
 
-            // Keep multiple images in a compact responsive gallery while leaving
-            // text, files, links, and QR codes in their established reading order.
-            if (component?.type === 'image') {
-                let imageGrid = componentsContainer.querySelector(':scope > .response-image-grid');
-                if (!imageGrid) {
-                    imageGrid = createElement('div', 'response-image-grid');
-                    imageGrid.setAttribute('aria-label', 'Response images');
-                    componentsContainer.appendChild(imageGrid);
-                }
-                imageGrid.appendChild(element);
-                return;
-            }
+    const grouped = {
+        text: components.filter(component => component?.type === 'text' && String(component.content ?? '').trim()),
+        image: components.filter(component => component?.type === 'image' && component.attachment_url),
+        file: components.filter(component => component?.type === 'file' && component.attachment_url),
+        link: components.filter(component => component?.type === 'link' && isSafeHttpUrl(component.content)),
+        qr_code: components.filter(component => component?.type === 'qr_code' && isSafeHttpUrl(component.content)),
+    };
 
-            componentsContainer.appendChild(element);
+    const createSection = (className, title, count, ariaLabel) => {
+        const sectionElement = createElement('section', `response-attachment-section ${className}`);
+        sectionElement.setAttribute('aria-label', ariaLabel);
+        const heading = createElement('div', 'response-section-heading');
+        const headingText = document.createElement('span');
+        headingText.textContent = title;
+        const countText = createElement('span', 'response-section-count');
+        countText.textContent = String(count);
+        heading.append(headingText, countText);
+        sectionElement.appendChild(heading);
+        return sectionElement;
+    };
+
+    // Message first: keep the written response visually prominent before attachments.
+    if (grouped.text.length) {
+        const messageSection = createElement('section', 'response-message');
+        messageSection.setAttribute('aria-label', 'Agency message');
+        const messageContent = createElement('div', 'response-message-content');
+
+        grouped.text.forEach(component => {
+            const paragraph = document.createElement('p');
+            paragraph.textContent = String(component.content ?? '');
+            messageContent.appendChild(paragraph);
         });
 
-    renderInquiryQRCodes(componentsContainer);
+        messageSection.appendChild(messageContent);
+        componentsContainer.appendChild(messageSection);
+    }
+
+    if (grouped.image.length) {
+        const imageSection = createSection(
+            'response-images-section',
+            'Images',
+            grouped.image.length,
+            'Attached images'
+        );
+        const gallery = createElement('div', 'response-image-gallery');
+        gallery.setAttribute('role', 'group');
+        gallery.setAttribute('aria-label', 'Response images');
+
+        grouped.image.forEach(component => {
+            const element = createResponseComponent(component);
+            if (element) gallery.appendChild(element);
+        });
+
+        imageSection.appendChild(gallery);
+        componentsContainer.appendChild(imageSection);
+    }
+
+    if (grouped.file.length) {
+        const fileSection = createSection(
+            'response-documents-section',
+            'Documents',
+            grouped.file.length,
+            'Attached documents'
+        );
+        const resources = createElement('div', 'response-attachment-links');
+        grouped.file.forEach(component => {
+            const element = createResponseComponent(component);
+            if (element) resources.appendChild(element);
+        });
+        fileSection.appendChild(resources);
+        componentsContainer.appendChild(fileSection);
+    }
+
+    if (grouped.link.length) {
+        const linkSection = createSection(
+            'response-links-section',
+            'Related links',
+            grouped.link.length,
+            'Related links'
+        );
+        const resources = createElement('div', 'response-attachment-links');
+        grouped.link.forEach(component => {
+            const element = createResponseComponent(component);
+            if (element) resources.appendChild(element);
+        });
+        linkSection.appendChild(resources);
+        componentsContainer.appendChild(linkSection);
+    }
+
+    if (grouped.qr_code.length) {
+        const qrSection = createSection(
+            'response-qr-section',
+            'QR codes',
+            grouped.qr_code.length,
+            'QR codes'
+        );
+        const qrList = createElement('div', 'response-qr-list');
+        grouped.qr_code.forEach(component => {
+            const element = createResponseComponent(component);
+            if (element) qrList.appendChild(element);
+        });
+        qrSection.appendChild(qrList);
+        componentsContainer.appendChild(qrSection);
+    }
 
     /**
      * Insert the response section into the card if it

@@ -948,10 +948,14 @@ public function userInquiry($id)
                     'supportRequestId' => $supportRequest->id,
                     'responseId' => $response->id,
                     'componentId' => $component->id,
-                ])
+                ], false)
                 : null;
         });
     };
+
+    $supportRequest->answer_image_url = $supportRequest->answer_image
+        ? Storage::disk('public')->url($supportRequest->answer_image)
+        : null;
 
     $supportRequest->responses->each($attachCitizenUrls);
     // The realtime renderer consumes latest_response directly, so it also
@@ -1109,6 +1113,12 @@ public function userInquiry($id)
         * We never expose the private storage path itself.
         */
         $requests->each(function ($supportRequest) {
+            // Legacy direct replies store their image on support_requests.answer_image.
+            // Expose only the public-disk URL; never expose a filesystem path.
+            $supportRequest->answer_image_url = $supportRequest->answer_image
+                ? Storage::disk('public')->url($supportRequest->answer_image)
+                : null;
+
             $supportRequest->responses->each(function ($response) use ($supportRequest) {
                 $response->components->each(function ($component) use ($supportRequest, $response) {
                     $component->attachment_url = in_array($component->type, ['image', 'file'], true)
@@ -1116,7 +1126,7 @@ public function userInquiry($id)
                             'supportRequestId' => $supportRequest->id,
                             'responseId' => $response->id,
                             'componentId' => $component->id,
-                        ])
+                        ], false)
                         : null;
                 });
             });
