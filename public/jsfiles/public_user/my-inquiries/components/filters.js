@@ -134,6 +134,8 @@ function initializeFilters() {
 
     const normalize = (value) => {
         return String(value ?? "")
+            .normalize("NFKC")
+            .replace(/\s+/g, " ")
             .trim()
             .toLocaleLowerCase();
     };
@@ -188,8 +190,11 @@ function initializeFilters() {
 
         // Search both the full agency name and its official abbreviation.
         // This server-rendered attribute avoids an extra request.
-        const agencySearch =
-            card.dataset.agencySearch || "";
+        const agencySearch = [
+            card.dataset.agencySearch,
+            card.dataset.agencyAbbreviation,
+            card.dataset.agencyName,
+        ].filter(Boolean).join(" ");
 
         const id =
             card.dataset.id || "";

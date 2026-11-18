@@ -63,10 +63,10 @@ async function loadInquiryFeature(path, initializerName) {
 }
 
 void Promise.allSettled([
-    loadInquiryFeature('./components/filters.js', 'initializeFilters'),
-    loadInquiryFeature('./components/confirmation.js', 'initializeConfirmation'),
-    loadInquiryFeature('./components/lightbox.js', 'initializeLightbox'),
-    loadInquiryFeature('./components/realtime.js', 'initializeRealtime'),
+    loadInquiryFeature('./components/filters.js?v=20261118-agency-abbreviation-search-1', 'initializeFilters'),
+    loadInquiryFeature('./components/confirmation.js?v=20261118-confirmation-1', 'initializeConfirmation'),
+    loadInquiryFeature('./components/lightbox.js?v=20261118-lightbox-fallback-1', 'initializeLightbox'),
+    loadInquiryFeature('./components/realtime.js?v=20261118-realtime-1', 'initializeRealtime'),
     loadInquiryFeature('./components/create-ticket.js?v=20261118-agency-picker-close-2', 'initializeCreateTicket'),
 ]);
 
@@ -261,6 +261,129 @@ function initializeMessengerInbox() {
         date.textContent = 'Your tickets with this agency';
         body.appendChild(date);
 
+        // Bulk cleanup is scoped to the currently selected agency conversation.
+        // Each ticket remains individually selectable without changing its expand action.
+        const bulkToolbar = document.createElement('div');
+        bulkToolbar.className = 'messenger-bulk-toolbar';
+        bulkToolbar.innerHTML = `
+            <button type="button" class="messenger-bulk-toggle" data-bulk-toggle>Select tickets</button>
+            <span class="messenger-bulk-count" data-bulk-count hidden>0 selected</span>
+            <button type="button" class="messenger-bulk-select-all" data-bulk-select-all hidden>Select all</button>
+            <button type="button" class="messenger-bulk-delete" data-bulk-delete hidden disabled>Delete selected</button>
+        `;
+        body.appendChild(bulkToolbar);
+        const bulkToggle = bulkToolbar.querySelector('[data-bulk-toggle]');
+        const bulkCount = bulkToolbar.querySelector('[data-bulk-count]');
+        const bulkSelectAll = bulkToolbar.querySelector('[data-bulk-select-all]');
+        const bulkDelete = bulkToolbar.querySelector('[data-bulk-delete]');
+        const bulkCheckboxes = [];
+        let bulkMode = false;
+
+        const updateBulkSelection = () => {
+            const selected = bulkCheckboxes.filter(item => item.checkbox.checked);
+            bulkCount.textContent = `${selected.length} selected`;
+            bulkCount.hidden = !bulkMode;
+            bulkSelectAll.hidden = !bulkMode;
+            bulkDelete.hidden = !bulkMode;
+            bulkDelete.disabled = selected.length === 0;
+            bulkSelectAll.textContent = bulkCheckboxes.length > 0 && selected.length === bulkCheckboxes.length ? 'Clear all' : 'Select all';
+            bulkSelectAll.disabled = bulkCheckboxes.length === 0;
+        };
+
+        bulkToggle.addEventListener('click', () => {
+            bulkMode = !bulkMode;
+            body.classList.toggle('is-bulk-selecting', bulkMode);
+            bulkToggle.textContent = bulkMode ? 'Done' : 'Select tickets';
+            if (!bulkMode) bulkCheckboxes.forEach(item => { item.checkbox.checked = false; });
+            updateBulkSelection();
+        });
+
+        bulkSelectAll.addEventListener('click', () => {
+            const shouldSelect = bulkCheckboxes.some(item => !item.checkbox.checked);
+            bulkCheckboxes.forEach(item => { item.checkbox.checked = shouldSelect; });
+            updateBulkSelection();
+        });
+
+        bulkDelete.addEventListener('click', () => {
+            const selectedIds = bulkCheckboxes
+                .filter(item => item.checkbox.checked)
+                .map(item => item.id);
+            if (!selectedIds.length) return;
+            if (selectedIds.length > 100) {
+                window.showAlertModal?.({
+                    title: 'Too many selected',
+                    text: 'Please select no more than 100 inquiries at a time.',
+                    variant: 'warning',
+                    confirmText: 'OK',
+                });
+                return;
+            }
+
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            if (!csrf) {
+                window.showAlertModal?.({
+                    title: 'Session expired',
+                    text: 'Refresh the page and try again.',
+                    variant: 'danger',
+                    confirmText: 'OK',
+                });
+                return;
+            }
+
+            window.showAlertModal?.({
+                title: `Delete ${selectedIds.length} ${selectedIds.length === 1 ? 'inquiry' : 'inquiries'}?`,
+                text: 'The selected tickets will disappear from your inquiry list. Their agency history will be retained.',
+                variant: 'danger',
+                icon: 'ph-light ph-trash',
+                confirmText: 'Delete selected',
+                showCancel: true,
+                cancelText: 'Keep tickets',
+                loadingIndicator: 'spinner',
+                loadingText: 'Deleting inquiries…',
+                onConfirm: async () => {
+                    bulkDelete.disabled = true;
+                    try {
+                        const response = await fetch('/my-inquiries/bulk-delete', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrf,
+                            },
+                            body: JSON.stringify({ ids: selectedIds }),
+                        });
+                        const result = await response.json().catch(() => ({}));
+                        if (!response.ok || result.success !== true) {
+                            const message = response.status === 429
+                                ? 'Too many requests. Please wait a moment before trying again.'
+                                : (result.message || 'The selected inquiries could not be deleted.');
+                            throw new Error(message);
+                        }
+                        window.closeAlertModal?.();
+                        window.showAlertModal?.({
+                            title: 'Inquiries deleted',
+                            text: result.message || `${result.deleted_count} inquiries deleted.`,
+                            variant: 'success',
+                            showConfirm: false,
+                            showCancel: false,
+                            autoCloseMs: 900,
+                        });
+                        window.setTimeout(() => window.location.reload(), 850);
+                    } catch (error) {
+                        bulkDelete.disabled = false;
+                        window.closeAlertModal?.();
+                        window.showAlertModal?.({
+                            title: 'Unable to delete inquiries',
+                            text: error.message || 'Please try again.',
+                            variant: 'danger',
+                            confirmText: 'OK',
+                        });
+                    }
+                },
+            });
+        });
+
         group.slice().sort((a, b) => (Number(b.dataset.id) || 0) - (Number(a.dataset.id) || 0)).forEach(card => {
             const ticket = document.createElement('section');
             ticket.className = 'messenger-ticket-thread';
@@ -270,6 +393,26 @@ function initializeMessengerInbox() {
 
             const ticketHeader = document.createElement('div');
             ticketHeader.className = 'messenger-ticket-header';
+
+            const selectLabel = document.createElement('label');
+            selectLabel.className = 'messenger-ticket-select';
+            selectLabel.setAttribute('aria-label', `Select ticket ${card.dataset.id} for deletion`);
+            const selectCheckbox = document.createElement('input');
+            selectCheckbox.type = 'checkbox';
+            selectCheckbox.value = card.dataset.id;
+            selectCheckbox.setAttribute('aria-label', `Select ticket ${card.dataset.id}`);
+            const selectText = document.createElement('span');
+            selectText.textContent = 'Select';
+            selectLabel.append(selectCheckbox, selectText);
+            const isCitizenDeleted = Boolean(card.dataset.userDeleted === '1');
+            const canBulkDelete = !isTrashed && !isCitizenDeleted;
+            selectLabel.hidden = !canBulkDelete;
+            selectCheckbox.disabled = !canBulkDelete;
+            if (canBulkDelete) {
+                bulkCheckboxes.push({ id: String(card.dataset.id), checkbox: selectCheckbox });
+                selectCheckbox.addEventListener('change', updateBulkSelection);
+            }
+            ticketHeader.appendChild(selectLabel);
 
             const ticketButton = document.createElement('button');
             ticketButton.type = 'button';

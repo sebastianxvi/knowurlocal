@@ -1152,40 +1152,46 @@ public function userInquiry($id)
      */
     public function deleteOwnInquiry($id)
     {
-        $supportRequest = SupportRequest::query()
-            ->where('id', $id)
-            ->where('user_id', auth()->id())
-            ->lockForUpdate()
-            ->firstOrFail();
+        $userId = (int) auth()->id();
 
-        $oldData = $this->buildAuditSnapshot($supportRequest);
-        $supportId = (int) $supportRequest->id;
-        $agencyId = $supportRequest->agency_id ? (int) $supportRequest->agency_id : null;
+        [$supportId, $agencyId] = DB::transaction(function () use ($id, $userId) {
+            $supportRequest = SupportRequest::query()
+                ->where('id', $id)
+                ->where('user_id', $userId)
+                ->whereNull('user_deleted_at')
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        DB::transaction(function () use ($supportRequest) {
-            $supportRequest->user_deleted_at = now();
+            $oldData = $this->buildAuditSnapshot($supportRequest);
+            $supportId = (int) $supportRequest->id;
+            $agencyId = $supportRequest->agency_id ? (int) $supportRequest->agency_id : null;
+            $deletedAt = now();
+
+            $supportRequest->user_deleted_at = $deletedAt;
             $supportRequest->save();
             $supportRequest->delete();
-        });
 
-        app(AuditLogService::class)->record(
-            action: 'citizen_delete_support_request',
-            page: 'user_inquiries',
-            targetType: 'support_request',
-            targetId: $supportId,
-            supportRequestId: $supportId,
-            agencyId: $agencyId,
-            oldValues: $oldData,
-            newValues: ['deleted_by' => 'citizen', 'user_deleted_at' => now()->toISOString()],
-            description: 'Citizen deleted Support Request #' . $supportId,
-        );
+            app(AuditLogService::class)->record(
+                action: 'citizen_delete_support_request',
+                page: 'user_inquiries',
+                targetType: 'support_request',
+                targetId: $supportId,
+                supportRequestId: $supportId,
+                agencyId: $agencyId,
+                oldValues: $oldData,
+                newValues: ['deleted_by' => 'citizen', 'user_deleted_at' => $deletedAt->toISOString()],
+                description: 'Citizen deleted Support Request #' . $supportId,
+            );
+
+            return [$supportId, $agencyId];
+        });
 
         try {
             broadcast(new SupportRequestUpdated(
                 id: $supportId,
                 action: 'citizen_deleted',
                 responseId: null,
-                userId: (int) auth()->id(),
+                userId: $userId,
             ));
         } catch (Throwable $exception) {
             report($exception);
@@ -1195,6 +1201,79 @@ public function userInquiry($id)
             'success' => true,
             'message' => 'Your ticket has been deleted.',
             'support_request_id' => $supportId,
+        ]);
+    }
+
+    /**
+     * Delete several of the authenticated citizen's own inquiries in one
+     * transaction/request. This avoids forcing citizens through the per-ticket
+     * rate limit when cleaning up their inbox.
+     */
+    public function bulkDeleteOwnInquiries(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:100'],
+            'ids.*' => ['required', 'integer', 'distinct', 'min:1'],
+        ]);
+
+        $userId = (int) auth()->id();
+        $requestedIds = array_values(array_unique(array_map('intval', $validated['ids'])));
+        $deleted = [];
+
+        DB::transaction(function () use ($requestedIds, $userId, &$deleted) {
+            $requests = SupportRequest::query()
+                ->whereIn('id', $requestedIds)
+                ->where('user_id', $userId)
+                ->whereNull('user_deleted_at')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($requests as $supportRequest) {
+                $oldData = $this->buildAuditSnapshot($supportRequest);
+                $supportId = (int) $supportRequest->id;
+                $agencyId = $supportRequest->agency_id ? (int) $supportRequest->agency_id : null;
+                $deletedAt = now();
+
+                $supportRequest->user_deleted_at = $deletedAt;
+                $supportRequest->save();
+                $supportRequest->delete();
+
+                app(AuditLogService::class)->record(
+                    action: 'citizen_delete_support_request',
+                    page: 'user_inquiries',
+                    targetType: 'support_request',
+                    targetId: $supportId,
+                    supportRequestId: $supportId,
+                    agencyId: $agencyId,
+                    oldValues: $oldData,
+                    newValues: ['deleted_by' => 'citizen', 'user_deleted_at' => $deletedAt->toISOString(), 'bulk' => true],
+                    description: 'Citizen deleted Support Request #' . $supportId . ' through bulk cleanup',
+                );
+
+                $deleted[] = $supportId;
+            }
+        });
+
+        foreach ($deleted as $supportId) {
+            try {
+                broadcast(new SupportRequestUpdated(
+                    id: $supportId,
+                    action: 'citizen_deleted',
+                    responseId: null,
+                    userId: $userId,
+                ));
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'deleted_count' => count($deleted),
+            'message' => count($deleted) === 1
+                ? '1 inquiry deleted.'
+                : count($deleted) . ' inquiries deleted.',
         ]);
     }
 

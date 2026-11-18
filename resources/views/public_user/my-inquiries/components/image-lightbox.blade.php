@@ -32,6 +32,9 @@
             hidden
         >
         <x-image-placeholder type="image" class="inquiry-lightbox-placeholder" :hidden="true" />
+        <p class="inquiry-lightbox-unavailable" role="status" hidden>
+            Image data cannot be retrieved. This attachment is no longer available.
+        </p>
 
     </div>
 

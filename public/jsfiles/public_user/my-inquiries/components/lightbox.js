@@ -124,31 +124,24 @@ function initializeLightbox() {
         | a source was actually provided.
         */
         const imageFallback = imageLightbox.querySelector(".inquiry-lightbox-placeholder");
+        const unavailableMessage = imageLightbox.querySelector(".inquiry-lightbox-unavailable");
 
-        // Reset both surfaces before starting a new request. The image stays
-        // hidden until its load event confirms that it can actually be shown.
+        // Reset the preview, open the dialog first, then request the image.
+        // A 404/403/expired attachment must leave the viewer open with a fallback.
         imageLightboxImage.hidden = true;
         if (imageFallback) imageFallback.hidden = true;
+        if (unavailableMessage) unavailableMessage.hidden = true;
         imageLightboxImage.removeAttribute("src");
+        imageLightboxImage.alt = imageAlt;
 
-        imageLightboxImage.src = imageSource;
-
-        imageLightboxImage.alt =
-            imageAlt;
-
-
-        /*
-        | Make the lightbox visible.
-        */
-        imageLightbox.classList.add(
-            "is-open"
-        );
+        imageLightbox.classList.add("is-open");
 
         imageLightbox.setAttribute(
             "aria-hidden",
             "false"
         );
 
+        imageLightboxImage.src = imageSource;
 
         /*
         | Prevent the underlying page from scrolling while
@@ -251,9 +244,9 @@ function initializeLightbox() {
                 return;
             }
 
-            openImageLightbox(
-                trigger
-            );
+            event.preventDefault();
+            event.stopPropagation();
+            openImageLightbox(trigger);
         }
     );
 
@@ -335,7 +328,9 @@ function initializeLightbox() {
         () => {
             imageLightboxImage.hidden = false;
             const imageFallback = imageLightbox.querySelector(".inquiry-lightbox-placeholder");
+            const unavailableMessage = imageLightbox.querySelector(".inquiry-lightbox-unavailable");
             if (imageFallback) imageFallback.hidden = true;
+            if (unavailableMessage) unavailableMessage.hidden = true;
         }
     );
 
@@ -344,7 +339,11 @@ function initializeLightbox() {
         () => {
             imageLightboxImage.hidden = true;
             const imageFallback = imageLightbox.querySelector(".inquiry-lightbox-placeholder");
+            const unavailableMessage = imageLightbox.querySelector(".inquiry-lightbox-unavailable");
             if (imageFallback) imageFallback.hidden = false;
+            if (unavailableMessage) unavailableMessage.hidden = false;
+            // Deliberately keep the dialog open: an unavailable attachment is
+            // still a valid preview state, not a reason to dismiss the viewer.
 
             console.warn(
                 "KNOWURLOCAL: The inquiry image could not be loaded."

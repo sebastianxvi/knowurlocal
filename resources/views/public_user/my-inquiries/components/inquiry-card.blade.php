@@ -29,6 +29,8 @@
     data-id="{{ $req->id }}"
     data-agency-id="{{ $req->agency_id }}"
     data-agency-search="{{ trim((string) (optional($req->agency)->agency_abbreviation ?? '') . ' ' . (optional($req->agency)->agency_name ?? '')) }}"
+    data-agency-abbreviation="{{ optional($req->agency)->agency_abbreviation ?? '' }}"
+    data-agency-name="{{ optional($req->agency)->agency_name ?? '' }}"
     data-status="{{ $displayStatus }}"
     data-answer-seen="{{ $req->answer_seen_at ? '1' : '0' }}"
 >
