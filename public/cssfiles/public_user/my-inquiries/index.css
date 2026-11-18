@@ -7523,3 +7523,74 @@ body {
         touch-action: manipulation;
     }
 }
+
+
+/* QR preview sizing: keep the generated SVG inside a true square on mobile.
+   Explicit dimensions avoid intrinsic SVG sizing overflow in mobile browsers. */
+.response-qr-lightbox-panel {
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.response-qr-lightbox-code {
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: min(100%, 300px);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.response-qr-lightbox-code .response-qr-svg {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100%;
+    max-height: 100%;
+    min-width: 0;
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+}
+
+.response-qr-lightbox-destination {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    max-width: 100%;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+    .response-qr-lightbox {
+        box-sizing: border-box;
+        padding: max(12px, env(safe-area-inset-top))
+                 12px
+                 max(12px, env(safe-area-inset-bottom));
+    }
+
+    .response-qr-lightbox-panel {
+        width: min(100%, 440px);
+        max-width: 100%;
+        max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+        gap: 14px;
+        padding: 26px 16px 20px;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .response-qr-lightbox-code {
+        width: min(100%, 280px);
+        max-width: 100%;
+    }
+
+    .response-qr-lightbox-code .response-qr-svg {
+        width: 100% !important;
+        height: 100% !important;
+    }
+}

@@ -55,7 +55,10 @@ export function initializeCreateTicket() {
     let activeAgencyIndex = -1;
     const visibleAgencyOptions = () => agencyOptionButtons.filter((option) => !option.hidden);
     const closeAgencyOptions = () => {
+        // Set both semantic and explicit display states so deployed CSS
+        // cannot accidentally leave the suggestion popup visible.
         agencyOptions.hidden = true;
+        agencyOptions.style.display = "none";
         agencySearch.setAttribute("aria-expanded", "false");
         agencySearch.removeAttribute("aria-activedescendant");
         activeAgencyIndex = -1;
@@ -63,6 +66,7 @@ export function initializeCreateTicket() {
     };
     const openAgencyOptions = () => {
         agencyOptions.hidden = false;
+        agencyOptions.style.display = "flex";
         agencySearch.setAttribute("aria-expanded", "true");
         filterAgencyOptions(agencySearch.value);
     };
@@ -70,6 +74,9 @@ export function initializeCreateTicket() {
         const selected = agencySelect.selectedOptions[0];
         const hasSelection = Boolean(agencySelect.value);
         agencySearch.value = hasSelection ? selected.textContent.trim() : "";
+        // A selected agency is a committed value, not an active search field.
+        // This prevents mobile focus/tap behavior from reopening suggestions.
+        agencySearch.readOnly = hasSelection;
         agencyClear.hidden = !hasSelection && !agencySearch.value;
         agencyOptionButtons.forEach((option) => {
             const isSelected = option.dataset.agencyId === agencySelect.value;
@@ -98,7 +105,9 @@ export function initializeCreateTicket() {
         syncAgencySelection();
         closeAgencyOptions();
         clearError();
-        agencySearch.focus();
+        // Avoid refocusing the search input: touch browsers can reopen the
+        // virtual keyboard and trigger another focus cycle.
+        agencySearch.blur();
     };
 
     agencySearch.addEventListener("focus", () => {
@@ -142,11 +151,20 @@ export function initializeCreateTicket() {
     });
     agencyOptionButtons.forEach((option, index) => {
         option.id = `ticket-agency-option-${index}`;
-        option.addEventListener("click", () => selectAgencyOption(option));
+        // Preserve the option click on touch devices while preventing an
+        // intermediate blur/focus cycle on the combobox input.
+        option.addEventListener("pointerdown", (event) => {
+            if (event.pointerType !== "mouse") event.preventDefault();
+        });
+        option.addEventListener("click", (event) => {
+            event.preventDefault();
+            selectAgencyOption(option);
+        });
     });
     agencyClear?.addEventListener("click", () => {
         agencySelect.value = "";
         agencySearch.value = "";
+        agencySearch.readOnly = false;
         agencyClear.hidden = true;
         filterAgencyOptions("");
         openAgencyOptions();

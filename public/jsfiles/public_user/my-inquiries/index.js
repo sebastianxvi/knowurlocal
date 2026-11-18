@@ -67,7 +67,7 @@ void Promise.allSettled([
     loadInquiryFeature('./components/confirmation.js', 'initializeConfirmation'),
     loadInquiryFeature('./components/lightbox.js', 'initializeLightbox'),
     loadInquiryFeature('./components/realtime.js', 'initializeRealtime'),
-    loadInquiryFeature('./components/create-ticket.js', 'initializeCreateTicket'),
+    loadInquiryFeature('./components/create-ticket.js?v=20261118-agency-picker-close-2', 'initializeCreateTicket'),
 ]);
 
 

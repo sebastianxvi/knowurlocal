@@ -128,6 +128,9 @@ function renderInquiryQRCodes(container) {
         const size = count + quietZone * 2;
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+        svg.setAttribute('width', String(size));
+        svg.setAttribute('height', String(size));
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         svg.setAttribute('role', 'img');
         svg.setAttribute('aria-label', container.getAttribute('aria-label') || 'Scannable QR code');
         svg.setAttribute('shape-rendering', 'crispEdges');

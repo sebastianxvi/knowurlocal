@@ -49,7 +49,7 @@
     <!-- My Inquiries styles -->
     <link
         rel="stylesheet"
-        href="{{ asset('cssfiles/public_user/my-inquiries/index.css') }}?v={{ filemtime(public_path('cssfiles/public_user/my-inquiries/index.css')) }}-mobile-header-chatbot-composer-5"
+        href="{{ asset('cssfiles/public_user/my-inquiries/index.css') }}?v={{ filemtime(public_path('cssfiles/public_user/my-inquiries/index.css')) }}-mobile-qr-square-3"
     >
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v=20261104-field-focus-reset&build={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
@@ -99,13 +99,13 @@
 <!-- Load the QR viewer independently so slow mobile module imports cannot leave QR buttons inert. -->
 <script
     type="module"
-    src="{{ asset('jsfiles/public_user/my-inquiries/components/qr-viewer.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/components/qr-viewer.js')) }}-mobile-qr-2"
+    src="{{ asset('jsfiles/public_user/my-inquiries/components/qr-viewer.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/components/qr-viewer.js')) }}-mobile-qr-square-3"
 ></script>
 
 <!-- Page JavaScript -->
 <script
     type="module"
-    src="{{ asset('jsfiles/public_user/my-inquiries/index.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/index.js')) }}-agency-inbox-init-1"
+    src="{{ asset('jsfiles/public_user/my-inquiries/index.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/index.js')) }}-agency-picker-close-2"
 ></script>
 
 </body>
