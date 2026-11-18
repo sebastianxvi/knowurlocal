@@ -49,7 +49,7 @@
     <!-- My Inquiries styles -->
     <link
         rel="stylesheet"
-        href="{{ asset('cssfiles/public_user/my-inquiries/index.css') }}?v={{ filemtime(public_path('cssfiles/public_user/my-inquiries/index.css')) }}-mobile-qr-square-3"
+        href="{{ asset('cssfiles/public_user/my-inquiries/index.css') }}?v={{ md5_file(public_path('cssfiles/public_user/my-inquiries/index.css')) }}&release=ticket-subject-expanded-20261119"
     >
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v=20261104-field-focus-reset&build={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
@@ -105,7 +105,7 @@
 <!-- Page JavaScript -->
 <script
     type="module"
-    src="{{ asset('jsfiles/public_user/my-inquiries/index.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/index.js')) }}-individual-delete-rate-placeholder-mobile-notifications-2"
+    src="{{ asset('jsfiles/public_user/my-inquiries/index.js') }}?v={{ md5_file(public_path('jsfiles/public_user/my-inquiries/index.js')) }}&release=ticket-subject-expanded-20261119"
 ></script>
 
 </body>
