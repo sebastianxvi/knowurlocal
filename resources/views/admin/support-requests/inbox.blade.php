@@ -744,33 +744,137 @@
 (()=>{
  const inbox=document.querySelector('[data-agency-inbox]');
  if(!inbox)return;
+
  const agencyId=Number(inbox.dataset.agencyId);
  const selectedTicketId=Number(inbox.dataset.selectedTicketId||0);
- let subscribed=false,attempts=0,timer=null;
- const connect=()=>{
-   if(subscribed||!window.Echo||!Number.isSafeInteger(agencyId)||agencyId<=0)return false;
-   window.Echo.private(`agency.${agencyId}.support-requests`)
-     .listen('.support.request.created',payload=>{
-       if(payload && Number(payload.agency_id)===agencyId) window.location.reload();
-     })
-     .listen('.support.request.updated',payload=>{
-       if(!payload)return;
-       const ticketId=Number(payload.id);
-       const isUserActivity=['created','ticket_created','follow_up_requested','reopened','question_updated','confirmed'].includes(payload.action);
-       if(ticketId===selectedTicketId){
-         // Keep the active conversation authoritative and acknowledge the item
-         // on its next render. User follow-ups must be visible immediately.
-         if(['follow_up_requested','reopened','question_updated','response_created','updated'].includes(payload.action))window.location.reload();
-         return;
+ const role=@json(auth()->user()->role);
+ const isAgencyAdmin=role==='agency_admin';
+ const channelName=isAgencyAdmin
+   ? `agency.${agencyId}.support-requests`
+   : 'admin.support-requests';
+
+ let subscribed=false,attempts=0,timer=null,refreshing=false,refreshQueued=false;
+
+ const renderQrCodes=(root)=>{
+   const Core=window.QRCodeCore;
+   if(typeof Core!=='function')return;
+   root.querySelectorAll('.response-qr-code[data-qr-value]:empty').forEach(container=>{
+     const value=container.dataset.qrValue;
+     try{
+       let qr;
+       for(const level of [Core.CorrectLevel?.M,Core.CorrectLevel?.L]){
+         if(level===undefined)continue;
+         try{const candidate=new Core(0,level);candidate.addData(value);candidate.make();qr=candidate;break;}catch(error){}
        }
-       // New activity on another ticket should update the unread indicator too.
-       // Reload is the reliable fallback because the Blade inbox is the canonical list.
-       if(isUserActivity)window.location.reload();
+       if(!qr)return;
+       const size=qr.getModuleCount(),svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+       svg.setAttribute('viewBox',`0 0 ${size} ${size}`);svg.setAttribute('width','160');svg.setAttribute('height','160');
+       svg.setAttribute('role','img');svg.setAttribute('aria-label','QR code');
+       const bg=document.createElementNS(svg.namespaceURI,'rect');bg.setAttribute('width',size);bg.setAttribute('height',size);bg.setAttribute('fill','#fff');svg.append(bg);
+       for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(qr.isDark(y,x)){
+         const rect=document.createElementNS(svg.namespaceURI,'rect');rect.setAttribute('x',x);rect.setAttribute('y',y);
+         rect.setAttribute('width','1');rect.setAttribute('height','1');rect.setAttribute('fill','#111');svg.append(rect);
+       }
+       container.append(svg);
+     }catch(error){console.warn('Unable to refresh response QR code.',error);}
+   });
+ };
+
+ const refreshSelectedConversation=async()=>{
+   if(!selectedTicketId||refreshing){refreshQueued=true;return;}
+   refreshing=true;
+   try{
+     const url=new URL(window.location.href);
+     url.searchParams.set('_conversation_refresh',String(Date.now()));
+     const response=await fetch(url.toString(),{
+       method:'GET',credentials:'same-origin',cache:'no-store',
+       headers:{'Accept':'text/html','X-Requested-With':'XMLHttpRequest'}
+     });
+     if(!response.ok)throw new Error(`Conversation refresh failed (${response.status}).`);
+     const html=await response.text();
+     const parsed=new DOMParser().parseFromString(html,'text/html');
+     const currentMessages=document.querySelector('.ai-messages');
+     const freshMessages=parsed.querySelector('.ai-messages');
+     if(!currentMessages||!freshMessages)throw new Error('Conversation markup was not present in the refreshed page.');
+
+     const wasNearBottom=currentMessages.scrollHeight-currentMessages.scrollTop-currentMessages.clientHeight<100;
+     const previousScrollTop=currentMessages.scrollTop;
+     currentMessages.innerHTML=freshMessages.innerHTML;
+     renderQrCodes(currentMessages);
+     currentMessages.scrollTop=wasNearBottom?currentMessages.scrollHeight:previousScrollTop;
+
+     const currentStatus=document.querySelector('.ai-chat-head-copy p');
+     const freshStatus=parsed.querySelector('.ai-chat-head-copy p');
+     if(currentStatus&&freshStatus)currentStatus.textContent=freshStatus.textContent;
+
+     // A citizen follow-up changes whether the response composer is available.
+     // Refresh the message stream immediately, then reload only when the
+     // server-rendered composer state itself has changed.
+     const currentComposer=document.querySelector('.ai-main > .ai-compose');
+     const freshComposer=parsed.querySelector('.ai-main > .ai-compose');
+     const currentCanReply=!!currentComposer?.querySelector('[data-response-form]');
+     const freshCanReply=!!freshComposer?.querySelector('[data-response-form]');
+     if(currentCanReply!==freshCanReply){
+       window.setTimeout(()=>window.location.reload(),350);
+     }
+   }catch(error){
+     console.warn('KNOWURLOCAL: live conversation refresh failed; using a page refresh fallback.',error);
+     window.location.reload();
+   }finally{
+     refreshing=false;
+     if(refreshQueued){
+       refreshQueued=false;
+       window.setTimeout(refreshSelectedConversation,100);
+     }
+   }
+ };
+
+ const handleTicketUpdate=(payload)=>{
+   if(!payload)return;
+   const ticketId=Number(payload.id);
+   const action=String(payload.action||'updated');
+   const userActivity=['created','ticket_created','follow_up_requested','reopened','question_updated','confirmed','citizen_deleted','response_created'];
+   if(ticketId===selectedTicketId){
+     if(['follow_up_requested','reopened','question_updated','response_created','updated','confirmed'].includes(action)){
+       refreshSelectedConversation();
+     }else if(action==='citizen_deleted'){
+       window.location.reload();
+     }
+     return;
+   }
+   // Keep other citizen conversations and their unread indicators authoritative.
+   if(userActivity.includes(action))window.location.reload();
+ };
+
+ const connect=()=>{
+   if(subscribed||!window.Echo)return false;
+   if(isAgencyAdmin&&(!Number.isSafeInteger(agencyId)||agencyId<=0))return false;
+
+   const channel=window.Echo.private(channelName);
+   channel
+     .listen('.support.request.created',payload=>{
+       if(!isAgencyAdmin||Number(payload?.agency_id)===agencyId)window.location.reload();
+     })
+     .listen('.support.request.updated',handleTicketUpdate)
+     .subscribed(()=>{
+       if(document.querySelector('meta[name="realtime-debug"]')?.content==='true'){
+         console.info(`[KnowUrLocal realtime] Subscribed to ${channelName} for the support conversation.`);
+       }
+     })
+     .error(error=>{
+       console.error(`[KnowUrLocal realtime] Failed to subscribe to ${channelName}.`,{
+         type:error?.type,status:error?.status,code:error?.code
+       });
      });
    subscribed=true;
    return true;
  };
- const retry=()=>{if(connect())return;if(++attempts<40)timer=window.setTimeout(retry,500);};
+
+ const retry=()=>{
+   if(connect())return;
+   if(++attempts<40)timer=window.setTimeout(retry,500);
+   else console.warn(`[KnowUrLocal realtime] Could not initialize ${channelName}.`);
+ };
  retry();
  window.addEventListener('knowurlocal:echo-ready',connect);
  window.addEventListener('pagehide',()=>{if(timer)window.clearTimeout(timer);});

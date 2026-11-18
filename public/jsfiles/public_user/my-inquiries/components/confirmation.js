@@ -66,6 +66,7 @@ function initializeConfirmation() {
                 }
                 element.classList.add("is-loading");
                 element.setAttribute("aria-label", loadingLabel);
+                element.setAttribute("aria-busy", "true");
                 element.innerHTML = "";
                 const spinner = document.createElement("span");
                 // Use a CSS-drawn ring instead of the spinner-gap icon glyph.
@@ -79,6 +80,7 @@ function initializeConfirmation() {
                 delete element.dataset.originalMarkup;
                 element.classList.remove("is-loading");
                 element.removeAttribute("aria-label");
+                element.removeAttribute("aria-busy");
             }
             element.disabled = busy;
         });
