@@ -7665,3 +7665,41 @@ body {
 .image-lightbox-content > .inquiry-lightbox-placeholder:not([hidden]) {
     display: grid;
 }
+
+
+/* =========================================================
+   MESSENGER TICKET SUBJECT — EXPANDED READABLE STATE
+   Collapsed tickets retain the existing one-line preview.
+   When a ticket opens, reveal the entire original question and
+   let it wrap naturally; collapsing restores the compact preview.
+   ========================================================= */
+.messenger-ticket-thread .messenger-ticket-copy {
+    min-width: 0;
+}
+
+.messenger-ticket-thread .messenger-ticket-subject {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.messenger-ticket-thread.is-expanded .messenger-ticket-subject {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+@media (max-width: 760px) {
+    .messenger-ticket-thread.is-expanded .messenger-ticket-bubble {
+        align-items: flex-start;
+    }
+
+    .messenger-ticket-thread.is-expanded .messenger-ticket-subject {
+        max-width: 100%;
+        line-height: 1.5;
+    }
+}
