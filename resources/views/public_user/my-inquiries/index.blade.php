@@ -96,6 +96,11 @@
 
 <!-- Local QR generator shared with the chatbot attachment renderer -->
 <script src="{{ asset('jsfiles/public_user/qrcode-core.js') }}?v={{ filemtime(public_path('jsfiles/public_user/qrcode-core.js')) }}"></script>
+<!-- Load the QR viewer independently so slow mobile module imports cannot leave QR buttons inert. -->
+<script
+    type="module"
+    src="{{ asset('jsfiles/public_user/my-inquiries/components/qr-viewer.js') }}?v={{ filemtime(public_path('jsfiles/public_user/my-inquiries/components/qr-viewer.js')) }}-mobile-qr-2"
+></script>
 
 <!-- Page JavaScript -->
 <script

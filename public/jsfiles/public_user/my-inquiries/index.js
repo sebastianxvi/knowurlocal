@@ -68,7 +68,6 @@ void Promise.allSettled([
     loadInquiryFeature('./components/lightbox.js', 'initializeLightbox'),
     loadInquiryFeature('./components/realtime.js', 'initializeRealtime'),
     loadInquiryFeature('./components/create-ticket.js', 'initializeCreateTicket'),
-    loadInquiryFeature('./components/inquiry-card.js', 'initializeInquiryQRViewer'),
 ]);
 
 
