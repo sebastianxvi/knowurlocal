@@ -1117,3 +1117,83 @@ body.user-notifications-page .notifications-shell {
         white-space: nowrap;
     }
 }
+
+
+/* =========================================================
+   MOBILE NOTIFICATIONS — NATURAL PAGE SCROLL + NAV SPACING
+   Keep the fixed public navbar above the content, but let the
+   document itself scroll on touch devices. Avoid a nested,
+   fixed-height feed that traps scrolling or clips pagination.
+   Desktop keeps its existing bounded feed behavior.
+   ========================================================= */
+@media (max-width: 640px) {
+    html:has(body.user-notifications-page),
+    body.user-notifications-page {
+        height: auto !important;
+        min-height: 100% !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        overscroll-behavior-y: auto !important;
+    }
+
+    body.user-notifications-page .notifications-shell {
+        display: block !important;
+        width: calc(100% - 24px) !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        margin: calc(88px + env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px)) auto 28px !important;
+        overflow: visible !important;
+    }
+
+    body.user-notifications-page .notifications-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-direction: row;
+        gap: 10px;
+        margin: 0 0 13px;
+    }
+
+    body.user-notifications-page .notifications-card {
+        display: block !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+    }
+
+    body.user-notifications-page .notifications-list {
+        display: block !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        overscroll-behavior: auto !important;
+        -webkit-overflow-scrolling: auto;
+        scrollbar-gutter: auto;
+    }
+
+    body.user-notifications-page .notifications-pagination {
+        position: static;
+    }
+}
+
+@media (max-width: 380px) {
+    body.user-notifications-page .notifications-shell {
+        width: calc(100% - 20px) !important;
+    }
+
+    body.user-notifications-page .notifications-heading {
+        gap: 7px;
+    }
+
+    body.user-notifications-page .notifications-heading h1 {
+        font-size: 21px;
+    }
+
+    body.user-notifications-page .notifications-read-all {
+        white-space: nowrap;
+        padding-inline: 8px;
+        font-size: 10px;
+    }
+}

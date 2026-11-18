@@ -171,3 +171,10 @@
     min-height: 88px;
     height: 100%;
 }
+
+
+/* A page may set response thumbnails to display:block; preserve the native
+   hidden state when the adjacent shared fallback is being shown. */
+.response-image-trigger > img[hidden] {
+    display: none !important;
+}
