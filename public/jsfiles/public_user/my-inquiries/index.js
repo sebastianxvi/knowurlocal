@@ -22,26 +22,6 @@ if (window.visualViewport) {
 // Re-measure after browser layout settles on initial load and after returning to the page.
 requestAnimationFrame(() => requestAnimationFrame(syncMyInquiriesViewportHeight));
 
-import { initializeInquiryQRViewer } from './components/inquiry-card.js';
-
-import {
-    initializeFilters,
-} from './components/filters.js';
-
-import {
-    initializeConfirmation,
-} from './components/confirmation.js';
-
-import {
-    initializeLightbox,
-} from './components/lightbox.js';
-
-import {
-    initializeRealtime,
-} from './components/realtime.js';
-import { initializeCreateTicket } from './components/create-ticket.js';
-
-
 /*
 |--------------------------------------------------------------------------
 | INITIALIZE MY INQUIRIES MODULES
@@ -54,16 +34,42 @@ import { initializeCreateTicket } from './components/create-ticket.js';
 |--------------------------------------------------------------------------
 */
 
+// Build the agency inbox synchronously before loading optional feature modules.
+// Previously, static imports meant that a failure in ANY imported feature
+// (filters, confirmation, lightbox, realtime, QR viewer, or ticket creation)
+// prevented this entire entry module from executing. On affected browsers that
+// left the raw Blade ticket cards visible instead of the agency-clustered inbox.
+//
+// The inbox is the page's core experience, so initialize it independently.
+// Load each supporting feature afterwards and isolate failures to that feature.
 initializeMessengerInbox();
 
-initializeFilters();
+async function loadInquiryFeature(path, initializerName) {
+    try {
+        const feature = await import(path);
+        const initializer = feature[initializerName];
 
-initializeConfirmation();
+        if (typeof initializer !== 'function') {
+            throw new TypeError(`Missing ${initializerName} export in ${path}`);
+        }
 
-initializeLightbox();
+        initializer();
+    } catch (error) {
+        console.error(
+            `KNOWURLOCAL My Inquiries: unable to initialize ${initializerName}.`,
+            error
+        );
+    }
+}
 
-initializeRealtime();
-initializeCreateTicket();
+void Promise.allSettled([
+    loadInquiryFeature('./components/filters.js', 'initializeFilters'),
+    loadInquiryFeature('./components/confirmation.js', 'initializeConfirmation'),
+    loadInquiryFeature('./components/lightbox.js', 'initializeLightbox'),
+    loadInquiryFeature('./components/realtime.js', 'initializeRealtime'),
+    loadInquiryFeature('./components/create-ticket.js', 'initializeCreateTicket'),
+    loadInquiryFeature('./components/inquiry-card.js', 'initializeInquiryQRViewer'),
+]);
 
 
 function initializeMessengerInbox() {
@@ -881,6 +887,3 @@ function initializeMessengerInbox() {
         }
     });
 }
-
-
-initializeInquiryQRViewer();
