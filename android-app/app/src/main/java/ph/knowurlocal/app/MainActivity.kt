@@ -184,6 +184,36 @@ class MainActivity : ComponentActivity() {
                 handler.cancel()
                 showConnectionError()
             }
+
+            override fun onPageFinished(view: WebView, url: String) {
+                super.onPageFinished(view, url)
+                // Hide the website's browser/PWA install banner in the native app.
+                // This is a native-side safeguard in addition to the User-Agent check
+                // in app-install-banner.js, so a stale or delayed page script cannot
+                // expose an install prompt inside the already-installed Android app.
+                view.evaluateJavascript(
+                    """
+                    (() => {
+                        if (!/KNOWURLOCAL-AndroidApp/i.test(navigator.userAgent || '')) return;
+                        document.documentElement.classList.add('kyl-native-android-app');
+                        let style = document.getElementById('kyl-native-app-install-guard');
+                        if (!style) {
+                            style = document.createElement('style');
+                            style.id = 'kyl-native-app-install-guard';
+                            style.textContent = '.kyl-app-install-banner, [data-app-install-banner] { display: none !important; }';
+                            (document.head || document.documentElement).appendChild(style);
+                        }
+                        const banner = document.querySelector('[data-app-install-banner]');
+                        if (banner) {
+                            banner.hidden = true;
+                            banner.setAttribute('aria-hidden', 'true');
+                        }
+                        document.documentElement.style.setProperty('--kyl-install-banner-height', '0px');
+                    })();
+                    """.trimIndent(),
+                    null
+                )
+            }
         }
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(

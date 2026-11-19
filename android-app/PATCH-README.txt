@@ -1,24 +1,18 @@
-KNOWURLOCAL Android WebView responsive-layout patch
+KNOWURLOCAL native Android install-banner fix
 
-Files are relative to the android-app folder.
+Files in this patch:
+- app/src/main/java/ph/knowurlocal/app/MainActivity.kt
+- ../public/jsfiles/public_user/app-install-banner.js (Laravel public asset)
 
-1. app/src/main/java/ph/knowurlocal/app/MainActivity.kt
-   - Keeps the existing WebView, authentication cookies, trusted-host navigation,
-     SSL rejection, file picker, downloads, and location permission behavior.
-   - Places the WebView inside a FrameLayout and applies system-bar/display-cutout
-     insets as layout margins.
-   - Includes IME (keyboard) bottom insets so the WebView viewport shrinks above
-     the keyboard instead of leaving the input area underneath it.
-   - Explicitly uses the device-width viewport and a 100% text zoom.
+Apply the Kotlin file inside android-app as usual. The JavaScript file belongs to
+the Laravel project at public/jsfiles/public_user/app-install-banner.js, not inside
+the android-app directory. Deploy that asset with the Laravel application if you
+want the browser-side guard as well.
 
-2. app/src/main/res/drawable-nodpi/ic_launcher_foreground.png
-   - Adds transparent breathing room to the adaptive launcher foreground so
-     Android launcher masking does not make the logo appear oversized/cropped.
-   - Keeps the existing logo artwork and white adaptive-icon background.
+The native Kotlin safeguard hides the install banner after each WebView page load
+when the native User-Agent marker is present. The JavaScript safeguard hides it
+immediately when that same marker is detected. The normal browser/PWA install
+flow remains unchanged because it does not contain the native marker.
 
-Apply by extracting this patch into android-app and replacing the matching files.
-Do not replace the rest of the Android project. Then run:
-  .\\gradlew.bat clean :app:assembleDebug
-
-This patch has not been built on a physical Infinix device. Verify keyboard,
-status-bar, map, and launcher-icon behavior on the phone after installation.
+Build from android-app:
+  .\gradlew.bat clean :app:assembleDebug

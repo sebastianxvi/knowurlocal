@@ -40,6 +40,14 @@
     const dismissedKey = 'knowurlocal-app-banner-dismissed';
     const isNativeAndroidApp = /KNOWURLOCAL-AndroidApp/i.test(navigator.userAgent || '');
     const isAndroidBrowser = /Android/i.test(navigator.userAgent || '') && !isNativeAndroidApp;
+
+    // The native Android shell is already installed. Hide this browser/PWA prompt
+    // immediately, before asynchronous install events or status checks can run.
+    if (isNativeAndroidApp) {
+        banner.hidden = true;
+        banner.setAttribute('aria-hidden', 'true');
+        document.documentElement.style.setProperty('--kyl-install-banner-height', '0px');
+    }
     const androidDownloadUrl = banner.dataset.androidApkUrl || '/app/android/download';
     const androidStatusUrl = banner.dataset.androidApkStatusUrl || '/app/android/download/status';
     let androidApkState = isAndroidBrowser ? 'checking' : 'unavailable';
