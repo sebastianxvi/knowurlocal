@@ -32,7 +32,7 @@
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navbar.css')) }}">
     <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}?v={{ filemtime(public_path('cssfiles/components/modal.css')) }}">
 
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/map.css') }}?v={{ filemtime(public_path('cssfiles/public_user/map.css')) }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/map.css') }}?v={{ substr(hash_file('sha256', public_path('cssfiles/public_user/map.css')), 0, 16) }}">
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}?v=575b6c92eb66f566">
 
@@ -51,6 +51,9 @@
     <link rel="stylesheet" href="{{ asset('cssfiles/components/image-placeholders.css') }}?v={{ file_exists(public_path('cssfiles/components/image-placeholders.css')) ? filemtime(public_path('cssfiles/components/image-placeholders.css')) : time() }}">
 </head>
 <body>
+
+@include('components.modal')
+<script src="{{ asset('jsfiles/components/modal-system.js') }}"></script>
 
     <x-public.navbar />
 
@@ -649,7 +652,7 @@
     @vite('resources/js/echo.js')
 <script src="{{ asset('jsfiles/public_user/navbar.js') }}" defer></script>
 <script type="module" src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}?v={{ md5_file(public_path('jsfiles/public_user/navbar-realtime.js')) }}"></script>
-<script src="{{ asset('jsfiles/public_user/map.js') }}?v={{ filemtime(public_path('jsfiles/public_user/map.js')) }}" defer></script>
+<script src="{{ asset('jsfiles/public_user/map.js') }}?v={{ substr(hash_file('sha256', public_path('jsfiles/public_user/map.js')), 0, 16) }}" defer></script>
 <script src="{{ asset('jsfiles/public_user/chatbot.js') }}?v=cdbe98906e2d4ecd" defer></script>
 
     

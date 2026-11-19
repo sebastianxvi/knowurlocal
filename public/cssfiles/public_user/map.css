@@ -3386,3 +3386,50 @@ body.agency-details-open .site-header .search-area {
         transition: none;
     }
 }
+
+
+/* Agency evaluation polish: keep anonymous placeholders circular and
+   keep author/date metadata aligned when the own-evaluation badge wraps. */
+.agency-evaluation-review-avatar.kyl-image-placeholder,
+.agency-evaluation-review-avatar.is-anonymous {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    flex: 0 0 28px;
+    aspect-ratio: 1 / 1;
+    border-radius: 50% !important;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.agency-evaluation-review-top {
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.agency-evaluation-review-author-group {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 7px;
+    min-width: 0;
+}
+
+.agency-evaluation-review-date {
+    flex: 0 0 auto;
+    margin-left: auto;
+    white-space: nowrap;
+    text-align: right;
+    line-height: 1.4;
+}
+
+@media (max-width: 480px) {
+    .agency-evaluation-review-date {
+        margin-left: auto;
+    }
+}

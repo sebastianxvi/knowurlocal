@@ -592,7 +592,49 @@ function createSelectedAgencyIcon() {
                 ? `${selectedEvaluationRating} out of 5 — ${evaluationRatingCopy[selectedEvaluationRating]}`
                 : 'Select a rating from 1 to 5';
         }
-        if (evaluationSubmit) evaluationSubmit.disabled = selectedEvaluationRating < 1;
+        refreshEvaluationSubmitState();
+    }
+
+    function getCurrentEvaluationValues() {
+        return {
+            rating: Number(selectedEvaluationRating) || 0,
+            comment: String(evaluationComment?.value || '').trim(),
+            keep_identity_hidden: Boolean(evaluationKeepIdentityHidden?.checked)
+        };
+    }
+
+    function refreshEvaluationSubmitState() {
+        if (!evaluationSubmit) return;
+        if (!isEditingEvaluation || !originalEvaluation) {
+            evaluationSubmit.disabled = selectedEvaluationRating < 1;
+            return;
+        }
+
+        const current = getCurrentEvaluationValues();
+        const original = {
+            rating: Number(originalEvaluation.rating) || 0,
+            comment: String(originalEvaluation.comment || '').trim(),
+            keep_identity_hidden: Boolean(originalEvaluation.keep_identity_hidden)
+        };
+        const changed = current.rating !== original.rating
+            || current.comment !== original.comment
+            || current.keep_identity_hidden !== original.keep_identity_hidden;
+
+        evaluationSubmit.disabled = !changed;
+    }
+
+    evaluationComment?.addEventListener('input', refreshEvaluationSubmitState);
+    evaluationKeepIdentityHidden?.addEventListener('change', refreshEvaluationSubmitState);
+
+    function showEvaluationAlert(config = {}) {
+        if (typeof window.showAlertModal === 'function') {
+            window.showAlertModal(config);
+            return;
+        }
+        window.notifyUser?.(config.text || 'Please try again.', {
+            title: config.title || 'Evaluation',
+            variant: config.variant || 'info'
+        });
     }
 
     evaluationStars.forEach((star) => {
@@ -878,6 +920,14 @@ function createSelectedAgencyIcon() {
                                 if (String(selectedAgencyId) === String(deletingAgencyId)) {
                                     await loadAgencyEvaluations(deletingAgencyId);
                                 }
+                                showEvaluationAlert({
+                                    title: 'Evaluation deleted',
+                                    text: result.message || 'Your evaluation has been successfully deleted.',
+                                    icon: 'ph-light ph-check-circle',
+                                    variant: 'success',
+                                    confirmText: 'Okay',
+                                    autoCloseMs: 2200
+                                });
                             }
                         });
                     });
@@ -1146,7 +1196,13 @@ function createSelectedAgencyIcon() {
             if (!selectedAgencyId || selectedEvaluationRating < 1 || !evaluationSubmit) return;
             const submittingAgencyId = selectedAgencyId;
             if (evaluationConfirmation && !evaluationConfirmation.checked) {
-                window.notifyUser?.('Please confirm that your evaluation is based on your actual experience.', { title: 'Confirmation required', variant: 'warning' });
+                showEvaluationAlert({
+                    title: 'Confirmation required',
+                    text: 'Please confirm that your evaluation is based on your actual experience.',
+                    icon: 'ph-light ph-info',
+                    variant: 'warning',
+                    confirmText: 'Okay'
+                });
                 return;
             }
             evaluationSubmit.disabled = true;
@@ -1176,14 +1232,30 @@ function createSelectedAgencyIcon() {
                     originalEvaluation = null;
                     await loadAgencyEvaluations(submittingAgencyId);
                 }
+                showEvaluationAlert({
+                    title: isUpdatingEvaluation ? 'Evaluation updated' : 'Evaluation submitted',
+                    text: result.message || (isUpdatingEvaluation
+                        ? 'Your evaluation has been successfully updated.'
+                        : 'Your evaluation has been successfully submitted.'),
+                    icon: 'ph-light ph-check-circle',
+                    variant: 'success',
+                    confirmText: 'Okay',
+                    autoCloseMs: 2200
+                });
             } catch (error) {
-                window.notifyUser?.(error.message, { title: 'Evaluation could not be saved', variant: 'danger' });
+                showEvaluationAlert({
+                    title: 'Evaluation could not be saved',
+                    text: error.message || 'Your evaluation could not be saved. Please try again.',
+                    icon: 'ph-light ph-warning-circle',
+                    variant: 'danger',
+                    confirmText: 'Okay'
+                });
             } finally {
                 if (evaluationCancel) evaluationCancel.disabled = false;
                 if (evaluationSubmit) {
                     evaluationSubmit.classList.remove('is-loading');
                     evaluationSubmit.textContent = evaluationFormTitle?.textContent === 'Update your evaluation' ? 'Update evaluation' : 'Submit evaluation';
-                    evaluationSubmit.disabled = selectedEvaluationRating < 1;
+                    refreshEvaluationSubmitState();
                 }
             }
         });
