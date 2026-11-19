@@ -1,0 +1,372 @@
+package ph.knowurlocal.app;
+
+import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.DownloadManager;
+import android.content.ActivityNotFoundException;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.Message;
+import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import android.webkit.CookieManager;
+import android.webkit.DownloadListener;
+import android.webkit.GeolocationPermissions;
+import android.webkit.PermissionRequest;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.webkit.URLUtil;
+import android.widget.FrameLayout;
+import android.widget.Toast;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+
+public class MainActivity extends Activity {
+    private static final String HOME_URL = "https://knowurlocal.site/";
+    private static final String INTERNAL_HOST = "knowurlocal.site";
+    private static final int LOCATION_PERMISSION_REQUEST = 4101;
+    private static final int FILE_CHOOSER_REQUEST = 4102;
+
+    private WebView webView;
+    private ValueCallback<Uri[]> filePathCallback;
+    private GeolocationPermissions.Callback pendingGeoCallback;
+    private String pendingGeoOrigin;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        configureSystemBars();
+
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xFFF6F7FA);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        ViewCompat.setOnApplyWindowInsetsListener(root, (view, windowInsets) -> {
+            androidx.core.graphics.Insets bars = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars());
+            androidx.core.graphics.Insets ime = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.ime());
+            view.setPadding(
+                    bars.left,
+                    bars.top,
+                    bars.right,
+                    Math.max(bars.bottom, ime.bottom)
+            );
+            return windowInsets;
+        });
+        webView = new WebView(this);
+        root.addView(webView, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+        setContentView(root);
+
+        configureWebView();
+        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
+
+        if (savedInstanceState != null) {
+            webView.restoreState(savedInstanceState);
+        } else {
+            webView.loadUrl(HOME_URL);
+        }
+    }
+
+    private void configureSystemBars() {
+        Window window = getWindow();
+        window.setStatusBarColor(0xFFF6F7FA);
+        window.setNavigationBarColor(0xFFF6F7FA);
+        androidx.core.view.WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(window, window.getDecorView());
+        controller.setAppearanceLightStatusBars(true);
+        controller.setAppearanceLightNavigationBars(true);
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+    }
+
+    private void configureWebView() {
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setSupportMultipleWindows(true);
+        settings.setMediaPlaybackRequiresUserGesture(true);
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(true);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+
+        CookieManager cookies = CookieManager.getInstance();
+        cookies.setAcceptCookie(true);
+        cookies.setAcceptThirdPartyCookies(webView, false);
+
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        webView.setWebViewClient(new AppWebViewClient());
+        webView.setWebChromeClient(new AppWebChromeClient());
+        webView.setDownloadListener(new AppDownloadListener());
+    }
+
+    private boolean isInternalUrl(String rawUrl) {
+        try {
+            URI uri = new URI(rawUrl);
+            String host = uri.getHost();
+            String scheme = uri.getScheme();
+            if (host == null || scheme == null) return false;
+            boolean trustedHost = INTERNAL_HOST.equalsIgnoreCase(host)
+                    || ("www." + INTERNAL_HOST).equalsIgnoreCase(host);
+            return trustedHost && "https".equalsIgnoreCase(scheme);
+        } catch (URISyntaxException exception) {
+            return false;
+        }
+    }
+
+    private void openExternal(String rawUrl) {
+        try {
+            Uri uri = Uri.parse(rawUrl);
+            String scheme = uri.getScheme();
+            if (scheme == null) return;
+
+            if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)
+                    || "mailto".equalsIgnoreCase(scheme) || "tel".equalsIgnoreCase(scheme)
+                    || "geo".equalsIgnoreCase(scheme)) {
+                Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                startActivity(intent);
+                return;
+            }
+
+            if ("intent".equalsIgnoreCase(scheme)) {
+                Intent intent = Intent.parseUri(rawUrl, Intent.URI_INTENT_SCHEME);
+                if (intent.resolveActivity(getPackageManager()) != null) {
+                    startActivity(intent);
+                }
+            }
+        } catch (ActivityNotFoundException | URISyntaxException | SecurityException exception) {
+            Toast.makeText(this, "No app is available to open this link.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private class AppWebViewClient extends WebViewClient {
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+            return handleNavigation(request.getUrl().toString());
+        }
+
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            return handleNavigation(url);
+        }
+
+        private boolean handleNavigation(String url) {
+            Uri uri = Uri.parse(url);
+            String host = uri.getHost();
+            if (isTrustedHost(host)) {
+                if ("https".equalsIgnoreCase(uri.getScheme())) return false;
+                if ("http".equalsIgnoreCase(uri.getScheme())) {
+                    webView.loadUrl("https://" + host + (uri.getEncodedPath() == null ? "/" : uri.getEncodedPath())
+                            + (uri.getEncodedQuery() == null ? "" : "?" + uri.getEncodedQuery()));
+                    return true;
+                }
+            }
+            openExternal(url);
+            return true;
+        }
+    }
+
+    private class AppWebChromeClient extends WebChromeClient {
+        @Override
+        public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
+                                         FileChooserParams params) {
+            if (filePathCallback != null) filePathCallback.onReceiveValue(null);
+            filePathCallback = callback;
+            try {
+                Intent chooser = params.createIntent();
+                startActivityForResult(chooser, FILE_CHOOSER_REQUEST);
+                return true;
+            } catch (ActivityNotFoundException exception) {
+                filePathCallback = null;
+                Toast.makeText(MainActivity.this, "No file picker is available on this device.", Toast.LENGTH_LONG).show();
+                return false;
+            }
+        }
+
+        @Override
+        public void onGeolocationPermissionsShowPrompt(String origin,
+                                                        GeolocationPermissions.Callback callback) {
+            Uri originUri = Uri.parse(origin);
+            if (!"https".equalsIgnoreCase(originUri.getScheme())
+                    || !isTrustedHost(originUri.getHost())) {
+                callback.invoke(origin, false, false);
+                return;
+            }
+
+            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                callback.invoke(origin, true, false);
+                return;
+            }
+
+            pendingGeoOrigin = origin;
+            pendingGeoCallback = callback;
+            requestPermissions(new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+            }, LOCATION_PERMISSION_REQUEST);
+        }
+
+        @Override
+        public void onPermissionRequest(PermissionRequest request) {
+            // Do not grant camera/microphone WebRTC access automatically.
+            // File uploads use Android's system picker through onShowFileChooser.
+            request.deny();
+        }
+
+        @Override
+        public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture,
+                                      Message resultMsg) {
+            WebView popup = new WebView(MainActivity.this);
+            popup.setWebViewClient(new WebViewClient() {
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView child, WebResourceRequest request) {
+                    String target = request.getUrl().toString();
+                    if (isInternalUrl(target)) {
+                        webView.loadUrl(target);
+                    } else {
+                        openExternal(target);
+                    }
+                    child.destroy();
+                    return true;
+                }
+
+                @Override
+                public void onPageStarted(WebView child, String url, android.graphics.Bitmap favicon) {
+                    if (isInternalUrl(url)) {
+                        webView.loadUrl(url);
+                    } else {
+                        openExternal(url);
+                    }
+                    child.stopLoading();
+                    child.destroy();
+                }
+            });
+            WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+            transport.setWebView(popup);
+            resultMsg.sendToTarget();
+            return true;
+        }
+    }
+
+    private class AppDownloadListener implements DownloadListener {
+        @Override
+        public void onDownloadStart(String url, String userAgent, String contentDisposition,
+                                    String mimeType, long contentLength) {
+            try {
+                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+                request.setMimeType(mimeType);
+                request.addRequestHeader("User-Agent", userAgent);
+                String cookie = CookieManager.getInstance().getCookie(url);
+                if (cookie != null) request.addRequestHeader("Cookie", cookie);
+                request.setTitle("KNOWURLOCAL download");
+                request.setDescription("Downloading file...");
+                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                String filename = URLUtil.guessFileName(url, contentDisposition, mimeType);
+                if (filename == null || filename.trim().isEmpty()) {
+                    filename = "knowurlocal-download-" + System.currentTimeMillis();
+                }
+                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename);
+                DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                manager.enqueue(request);
+                Toast.makeText(MainActivity.this, "Download started.", Toast.LENGTH_SHORT).show();
+            } catch (Exception exception) {
+                openExternal(url);
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_CHOOSER_REQUEST && filePathCallback != null) {
+            Uri[] results = null;
+            if (resultCode == RESULT_OK) {
+                if (data != null && data.getData() != null) {
+                    results = new Uri[]{data.getData()};
+                } else if (data != null && data.getClipData() != null) {
+                    int count = data.getClipData().getItemCount();
+                    results = new Uri[count];
+                    for (int i = 0; i < count; i++) {
+                        results[i] = data.getClipData().getItemAt(i).getUri();
+                    }
+                }
+            }
+            filePathCallback.onReceiveValue(results);
+            filePathCallback = null;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST && pendingGeoCallback != null) {
+            boolean granted = false;
+            for (int result : grantResults) {
+                if (result == PackageManager.PERMISSION_GRANTED) {
+                    granted = true;
+                    break;
+                }
+            }
+            pendingGeoCallback.invoke(pendingGeoOrigin, granted, false);
+            pendingGeoCallback = null;
+            pendingGeoOrigin = null;
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        if (webView != null) webView.saveState(outState);
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            new AlertDialog.Builder(this)
+                    .setTitle("Exit KNOWURLOCAL?")
+                    .setMessage("Do you want to close the app?")
+                    .setNegativeButton("Stay", (dialog, which) -> dialog.dismiss())
+                    .setPositiveButton("Exit", (dialog, which) -> finish())
+                    .show();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (filePathCallback != null) {
+            filePathCallback.onReceiveValue(null);
+            filePathCallback = null;
+        }
+        if (webView != null) {
+            webView.stopLoading();
+            webView.setWebChromeClient(null);
+            webView.setWebViewClient(null);
+            webView.destroy();
+            webView = null;
+        }
+        super.onDestroy();
+    }
+}

@@ -1,0 +1,59 @@
+plugins {
+    id 'com.android.application'
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.16.0'
+}
+
+android {
+    namespace 'ph.knowurlocal.app'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'ph.knowurlocal.app'
+        minSdk 23
+        targetSdk 36
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    signingConfigs {
+        release {
+            // Supply all four environment variables only on a trusted build machine.
+            def ksPath = System.getenv('KNOWURLOCAL_KEYSTORE_PATH')
+            def ksPassword = System.getenv('KNOWURLOCAL_KEYSTORE_PASSWORD')
+            def keyAliasValue = System.getenv('KNOWURLOCAL_KEY_ALIAS')
+            def keyPasswordValue = System.getenv('KNOWURLOCAL_KEY_PASSWORD')
+            if (ksPath && ksPassword && keyAliasValue && keyPasswordValue) {
+                storeFile file(ksPath)
+                storePassword ksPassword
+                keyAlias keyAliasValue
+                keyPassword keyPasswordValue
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            minifyEnabled false
+            shrinkResources false
+            if (System.getenv('KNOWURLOCAL_KEYSTORE_PATH')
+                    && System.getenv('KNOWURLOCAL_KEYSTORE_PASSWORD')
+                    && System.getenv('KNOWURLOCAL_KEY_ALIAS')
+                    && System.getenv('KNOWURLOCAL_KEY_PASSWORD')) {
+                signingConfig signingConfigs.release
+            }
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}

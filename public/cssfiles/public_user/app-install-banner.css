@@ -60,7 +60,8 @@
     font-weight: 600;
     cursor: pointer;
 }
-.kyl-app-install-banner-action:hover { background: #405fbd; }
+.kyl-app-install-banner-action:hover:not(:disabled) { background: #405fbd; }
+.kyl-app-install-banner-action:disabled { opacity: .68; cursor: wait; }
 .kyl-app-install-banner-action:focus-visible,
 .kyl-app-install-banner-dismiss:focus-visible { outline: 3px solid #8aa8ff; outline-offset: 2px; }
 .kyl-app-install-banner-dismiss {

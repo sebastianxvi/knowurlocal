@@ -1,6 +1,6 @@
 {{-- Site-wide, dismissible PWA install banner. Kept in normal document flow. --}}
 <link rel="stylesheet" href="{{ asset('cssfiles/public_user/app-install-banner.css') }}?v={{ substr(hash_file('sha256', public_path('cssfiles/public_user/app-install-banner.css')), 0, 16) }}">
-<aside class="kyl-app-install-banner" data-app-install-banner aria-label="Open KNOWURLOCAL app" hidden>
+<aside class="kyl-app-install-banner" data-app-install-banner data-android-apk-url="{{ route('android.app.download') }}" data-android-apk-status-url="{{ route('android.app.download-status') }}" aria-label="Open KNOWURLOCAL app" hidden>
     <div class="kyl-app-install-banner-inner">
         <div class="kyl-app-install-banner-icon" aria-hidden="true">
             <img src="{{ asset('images/knowurlocal-kyl-logo.svg') }}" alt="">

@@ -38,8 +38,14 @@
     if (help) help.setAttribute('aria-live', 'polite');
 
     const dismissedKey = 'knowurlocal-app-banner-dismissed';
+    const isNativeAndroidApp = /KNOWURLOCAL-AndroidApp/i.test(navigator.userAgent || '');
+    const isAndroidBrowser = /Android/i.test(navigator.userAgent || '') && !isNativeAndroidApp;
+    const androidDownloadUrl = banner.dataset.androidApkUrl || '/app/android/download';
+    const androidStatusUrl = banner.dataset.androidApkStatusUrl || '/app/android/download/status';
+    let androidApkState = isAndroidBrowser ? 'checking' : 'unavailable';
 
     const isInstalled = () =>
+        isNativeAndroidApp ||
         window.matchMedia('(display-mode: standalone)').matches ||
         window.matchMedia('(display-mode: fullscreen)').matches ||
         window.navigator.standalone === true;
@@ -116,6 +122,31 @@
         syncBannerLayout();
     };
 
+    if (isAndroidBrowser && action) {
+        action.disabled = true;
+        if (actionLabel) actionLabel.textContent = 'Checking...';
+        fetch(androidStatusUrl, { method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } })
+            .then(response => response.ok ? response.json() : null)
+            .then(payload => {
+                androidApkState = payload?.available === true ? 'available' : 'unavailable';
+                action.disabled = false;
+                if (androidApkState === 'available') {
+                    if (actionLabel) actionLabel.textContent = 'Download App';
+                    if (help) help.hidden = true;
+                } else if (installState.deferredPrompt) {
+                    if (actionLabel) actionLabel.textContent = 'Install App';
+                } else if (actionLabel) {
+                    actionLabel.textContent = 'How to install';
+                }
+                syncBannerLayout();
+            })
+            .catch(() => {
+                androidApkState = 'unavailable';
+                if (action) action.disabled = false;
+                if (actionLabel) actionLabel.textContent = installState.deferredPrompt ? 'Install App' : 'How to install';
+            });
+    }
+
     if (isInstalled()) hide();
     else show();
 
@@ -128,7 +159,9 @@
 
     // Re-render state if the install event arrives after this component initializes.
     window.addEventListener('kyl:pwa-install-available', () => {
-        if (actionLabel) actionLabel.textContent = 'Install App';
+        if (actionLabel && !(isAndroidBrowser && androidApkState === 'available')) {
+            actionLabel.textContent = 'Install App';
+        }
         if (help) help.hidden = true;
         show();
     });
@@ -139,6 +172,16 @@
 
     // Each entry point calls prompt() from its own trusted click handler.
     const requestInstall = async () => {
+        if (isAndroidBrowser && androidApkState === 'checking') {
+            showHelp('Checking whether the Android app download is available. Please try again in a moment.');
+            return;
+        }
+
+        if (isAndroidBrowser && androidApkState === 'available') {
+            window.location.assign(androidDownloadUrl);
+            return;
+        }
+
         const promptEvent = installState.deferredPrompt;
 
         if (!promptEvent) {

@@ -50,6 +50,27 @@ Route::get('/manifest.webmanifest', function () {
     ])->header('Content-Type', 'application/manifest+json');
 })->name('pwa.manifest');
 
+// Direct Android APK distribution is enabled only after a verified APK is deployed.
+// Keep the release artifact at public/downloads/knowurlocal.apk.
+Route::get('/app/android/download/status', function () {
+    $apkPath = public_path('downloads/knowurlocal.apk');
+
+    return response()->json([
+        'available' => is_file($apkPath) && is_readable($apkPath),
+    ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+})->name('android.app.download-status');
+
+Route::get('/app/android/download', function () {
+    $apkPath = public_path('downloads/knowurlocal.apk');
+    abort_unless(is_file($apkPath) && is_readable($apkPath), 404);
+
+    return response()->download($apkPath, 'KNOWURLOCAL.apk', [
+        'Content-Type' => 'application/vnd.android.package-archive',
+        'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+        'X-Content-Type-Options' => 'nosniff',
+    ]);
+})->name('android.app.download');
+
 // Public landing page
 Route::view('/', 'public_user.landing')
     ->name('landing');
