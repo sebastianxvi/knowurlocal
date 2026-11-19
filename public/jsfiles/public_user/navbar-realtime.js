@@ -76,6 +76,23 @@ function updateBadges(count, trashedUnreadCount = 0, needsAttentionUnreadCount =
             }
         });
 
+    // The burger badge summarizes both independent public-user counters.
+    // Keep the Notifications link itself limited to notification records.
+    const totalUnreadCount = safeCount + safeNotificationsCount;
+
+    document
+        .querySelectorAll('[data-menu-total-badge]')
+        .forEach((badge) => {
+            badge.dataset.count = String(totalUnreadCount);
+            badge.textContent = totalUnreadCount > 99 ? '99+' : String(totalUnreadCount);
+            badge.hidden = totalUnreadCount <= 0;
+            if (totalUnreadCount > 0) {
+                badge.setAttribute('aria-label', `${totalUnreadCount} unread items`);
+            } else {
+                badge.removeAttribute('aria-label');
+            }
+        });
+
     document
         .querySelectorAll('[data-inquiry-notification-badge]')
         .forEach((badge) => {

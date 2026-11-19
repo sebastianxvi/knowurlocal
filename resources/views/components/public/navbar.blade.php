@@ -126,12 +126,13 @@
 
             <span
                 class="menu-notification-badge"
-                data-user-notification-badge
-                data-count="{{ $unreadNotificationCount ?? 0 }}"
+                data-menu-total-badge
+                data-count="{{ ($unreadNotificationCount ?? 0) + ($unreadInquiryCount ?? 0) }}"
                 aria-live="polite"
                 aria-atomic="true"
-                @if(($unreadNotificationCount ?? 0) <= 0) hidden @endif
-            >{{ ($unreadNotificationCount ?? 0) > 99 ? '99+' : ($unreadNotificationCount ?? 0) }}</span>
+                aria-label="{{ ($unreadNotificationCount ?? 0) + ($unreadInquiryCount ?? 0) }} unread items"
+                @if((($unreadNotificationCount ?? 0) + ($unreadInquiryCount ?? 0)) <= 0) hidden @endif
+            >{{ (($unreadNotificationCount ?? 0) + ($unreadInquiryCount ?? 0)) > 99 ? '99+' : (($unreadNotificationCount ?? 0) + ($unreadInquiryCount ?? 0)) }}</span>
 
         </button>
 

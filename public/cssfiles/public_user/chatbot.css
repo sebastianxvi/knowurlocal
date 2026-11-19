@@ -1992,12 +1992,13 @@ body {
         left: 12px;
         right: 12px;
 
-        bottom: 12px;
+        top: calc(var(--chat-visual-viewport-top, 0px) + 12px);
+        bottom: auto;
 
         width: auto;
 
         height:
-            min(680px, calc(100dvh - 24px));
+            min(680px, calc(var(--chat-visual-viewport-height, 100dvh) - 24px));
 
         min-height: 0;
 
@@ -2104,10 +2105,11 @@ body {
 
         left: 8px;
         right: 8px;
-        bottom: 8px;
+        top: calc(var(--chat-visual-viewport-top, 0px) + 8px);
+        bottom: auto;
 
         height:
-            calc(100dvh - 16px);
+            calc(var(--chat-visual-viewport-height, 100dvh) - 16px);
 
     }
 

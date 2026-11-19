@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/notifications.css') }}?v={{ filemtime(public_path('cssfiles/public_user/notifications.css')) }}">
     @vite('resources/js/echo.js')
     <script src="{{ asset('jsfiles/public_user/navbar.js') }}" defer></script>
-    <script type="module" src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}?v={{ filemtime(public_path('jsfiles/public_user/navbar-realtime.js')) }}"></script>
+    <script type="module" src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}?v={{ md5_file(public_path('jsfiles/public_user/navbar-realtime.js')) }}"></script>
     <script type="module" src="{{ asset('jsfiles/public_user/notifications.js') }}?v={{ filemtime(public_path('jsfiles/public_user/notifications.js')) }}"></script>
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v=20261104-field-focus-reset&build={{ file_exists(public_path('cssfiles/public_user/typography.css')) ? filemtime(public_path('cssfiles/public_user/typography.css')) : time() }}">
 </head>

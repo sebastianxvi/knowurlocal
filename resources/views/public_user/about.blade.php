@@ -91,7 +91,7 @@
 
     <script
         type="module"
-        src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}?v={{ filemtime(public_path('jsfiles/public_user/navbar-realtime.js')) }}"
+        src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}?v={{ md5_file(public_path('jsfiles/public_user/navbar-realtime.js')) }}"
     ></script>
 
 

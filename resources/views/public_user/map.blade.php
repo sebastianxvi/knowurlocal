@@ -34,7 +34,7 @@
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/map.css') }}?v={{ filemtime(public_path('cssfiles/public_user/map.css')) }}">
 
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}?v={{ filemtime(public_path('cssfiles/public_user/chatbot.css')) }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}?v=575b6c92eb66f566">
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="user-id" content="{{ auth()->id() }}">
@@ -648,9 +648,9 @@
 
     @vite('resources/js/echo.js')
 <script src="{{ asset('jsfiles/public_user/navbar.js') }}" defer></script>
-<script type="module" src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}?v={{ filemtime(public_path('jsfiles/public_user/navbar-realtime.js')) }}"></script>
+<script type="module" src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}?v={{ md5_file(public_path('jsfiles/public_user/navbar-realtime.js')) }}"></script>
 <script src="{{ asset('jsfiles/public_user/map.js') }}?v={{ filemtime(public_path('jsfiles/public_user/map.js')) }}" defer></script>
-<script src="{{ asset('jsfiles/public_user/chatbot.js') }}?v={{ filemtime(public_path('jsfiles/public_user/chatbot.js')) }}" defer></script>
+<script src="{{ asset('jsfiles/public_user/chatbot.js') }}?v=cdbe98906e2d4ecd" defer></script>
 
     
 

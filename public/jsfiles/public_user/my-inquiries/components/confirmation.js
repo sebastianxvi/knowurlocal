@@ -61,23 +61,29 @@ function initializeConfirmation() {
 
         container.querySelectorAll("button, textarea").forEach((element) => {
             if (busy && element === activeButton) {
-                if (!element.dataset.originalMarkup) {
-                    element.dataset.originalMarkup = element.innerHTML;
+                if (!element.querySelector(":scope > .confirmation-spinner")) {
+                    element.classList.add("is-loading");
+                    element.setAttribute("aria-label", loadingLabel);
+                    element.setAttribute("aria-busy", "true");
+
+                    // Keep the original label/icon in the layout so the button
+                    // never collapses or changes width while the request runs.
+                    Array.from(element.children).forEach((child) => {
+                        child.dataset.loadingHidden = "true";
+                        child.style.visibility = "hidden";
+                    });
+
+                    const spinner = document.createElement("span");
+                    spinner.className = "confirmation-spinner";
+                    spinner.setAttribute("aria-hidden", "true");
+                    element.appendChild(spinner);
                 }
-                element.classList.add("is-loading");
-                element.setAttribute("aria-label", loadingLabel);
-                element.setAttribute("aria-busy", "true");
-                element.innerHTML = "";
-                const spinner = document.createElement("span");
-                // Use a CSS-drawn ring instead of the spinner-gap icon glyph.
-                // The glyph's uneven visual mass makes its rotation appear to
-                // travel around the button rather than spin in place.
-                spinner.className = "confirmation-spinner";
-                spinner.setAttribute("aria-hidden", "true");
-                element.appendChild(spinner);
-            } else if (!busy && element.dataset.originalMarkup) {
-                element.innerHTML = element.dataset.originalMarkup;
-                delete element.dataset.originalMarkup;
+            } else if (!busy && element.classList.contains("is-loading")) {
+                element.querySelector(":scope > .confirmation-spinner")?.remove();
+                element.querySelectorAll('[data-loading-hidden="true"]').forEach((child) => {
+                    child.style.visibility = "";
+                    delete child.dataset.loadingHidden;
+                });
                 element.classList.remove("is-loading");
                 element.removeAttribute("aria-label");
                 element.removeAttribute("aria-busy");

@@ -6700,26 +6700,18 @@ body {
 }
 
 
-/* Follow-up submission: prevent the loading label from wrapping beside the
-   spinner on narrow mobile buttons. The button content is replaced by JS. */
+/* Follow-up submission: preserve the button's original dimensions while
+   centering the spinner over its temporarily hidden label/icon. */
 .follow-up-form-actions .confirmation-btn.is-loading {
+    position: relative !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    flex: 0 0 42px !important;
-    width: 42px !important;
-    min-width: 42px !important;
-    max-width: 42px !important;
-    height: 42px !important;
-    min-height: 42px !important;
-    padding: 0 !important;
-    gap: 0 !important;
     overflow: hidden !important;
     white-space: nowrap !important;
-    font-size: 0 !important;
-    line-height: 0 !important;
-    letter-spacing: 0 !important;
+    opacity: 1 !important;
     color: transparent !important;
+    text-shadow: none !important;
 }
 
 .follow-up-form-actions .confirmation-btn.is-loading::before,
@@ -6729,18 +6721,22 @@ body {
 }
 
 .follow-up-form-actions .confirmation-btn.is-loading > .confirmation-spinner {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
     display: block !important;
     flex: 0 0 17px !important;
     width: 17px !important;
     height: 17px !important;
     min-width: 17px !important;
     min-height: 17px !important;
-    margin: 0 !important;
+    margin: -8.5px 0 0 -8.5px !important;
     border: 2px solid rgba(255,255,255,.96) !important;
     border-right-color: transparent !important;
     border-radius: 50% !important;
     color: transparent !important;
     animation: my-inquiries-spinner-rotate 800ms linear infinite !important;
+    pointer-events: none !important;
 }
 
 

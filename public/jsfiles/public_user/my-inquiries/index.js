@@ -64,7 +64,7 @@ async function loadInquiryFeature(path, initializerName) {
 
 void Promise.allSettled([
     loadInquiryFeature('./components/filters.js?v=20261118-agency-abbreviation-search-1', 'initializeFilters'),
-    loadInquiryFeature('./components/confirmation.js?v=20261118-confirmation-1', 'initializeConfirmation'),
+    loadInquiryFeature('./components/confirmation.js?v=63cb284e0a78e8cc', 'initializeConfirmation'),
     loadInquiryFeature('./components/lightbox.js?v=20261118-lightbox-fallback-1', 'initializeLightbox'),
     loadInquiryFeature('./components/realtime.js?v=20261118-realtime-1', 'initializeRealtime'),
     loadInquiryFeature('./components/create-ticket.js?v=20261118-agency-picker-close-2', 'initializeCreateTicket'),

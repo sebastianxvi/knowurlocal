@@ -1335,6 +1335,33 @@ const chatbot =
         "chatbot"
     );
 
+/*
+ * Keep the mobile assistant inside the *visible* viewport when the
+ * on-screen keyboard opens. Mobile browsers differ in whether fixed
+ * elements follow the layout or visual viewport, so expose the visual
+ * viewport geometry as CSS variables instead of relying on 100vh alone.
+ */
+(function synchronizeChatVisualViewport() {
+    const panel = document.getElementById("chatbot");
+    if (!panel || !window.visualViewport) return;
+
+    const viewport = window.visualViewport;
+    let frame = 0;
+
+    const update = () => {
+        if (frame) cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => {
+            panel.style.setProperty("--chat-visual-viewport-top", `${Math.max(0, viewport.offsetTop)}px`);
+            panel.style.setProperty("--chat-visual-viewport-height", `${Math.max(0, viewport.height)}px`);
+        });
+    };
+
+    viewport.addEventListener("resize", update, { passive: true });
+    viewport.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("orientationchange", update, { passive: true });
+    update();
+})();
+
 const overlay =
     document.getElementById(
         "chat-overlay"

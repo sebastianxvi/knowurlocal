@@ -1027,6 +1027,7 @@ public function userInquiry($id)
         // dot. Tickets moved to trash are still visible in the inquiry history,
         // but must not leave a persistent unread-response notification.
         $count = SupportRequest::where('user_id', auth()->id())
+            ->whereNull('deleted_at')
             ->whereIn('status', ['awaiting_confirmation', 'answered'])
             ->whereNull('answer_seen_at')
             ->count();
