@@ -24,6 +24,8 @@ import android.webkit.WebViewClient
 import android.net.http.SslError
 import android.webkit.ValueCallback
 import android.widget.Toast
+import android.widget.FrameLayout
+import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
@@ -58,23 +60,60 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Draw the native window edge-to-edge, but keep the WebView's actual
+        // layout viewport inside system bars and above the on-screen keyboard.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        webView = WebView(this)
-        webView.setBackgroundColor(android.graphics.Color.rgb(246, 247, 250))
-        ViewCompat.setOnApplyWindowInsetsListener(webView) { view, windowInsets ->
-            val bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
-            windowInsets
+        val root = FrameLayout(this).apply {
+            setBackgroundColor(android.graphics.Color.rgb(246, 247, 250))
         }
-        WindowCompat.getInsetsController(window, webView).apply {
+
+        webView = WebView(this).apply {
+            setBackgroundColor(android.graphics.Color.rgb(246, 247, 250))
+        }
+        root.addView(
+            webView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        WindowCompat.getInsetsController(window, root).apply {
             isAppearanceLightStatusBars = true
             isAppearanceLightNavigationBars = true
         }
-        setContentView(webView)
-        ViewCompat.requestApplyInsets(webView)
+
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, windowInsets ->
+            val safeInsets = windowInsets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            val imeInsets = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
+            val bottomInset = maxOf(safeInsets.bottom, imeInsets.bottom)
+
+            val params = webView.layoutParams as FrameLayout.LayoutParams
+            if (
+                params.leftMargin != safeInsets.left ||
+                params.topMargin != safeInsets.top ||
+                params.rightMargin != safeInsets.right ||
+                params.bottomMargin != bottomInset
+            ) {
+                params.setMargins(
+                    safeInsets.left,
+                    safeInsets.top,
+                    safeInsets.right,
+                    bottomInset
+                )
+                webView.layoutParams = params
+            }
+            windowInsets
+        }
+
+        setContentView(root)
+        ViewCompat.requestApplyInsets(root)
         configureWebView()
 
         if (savedInstanceState == null) {
@@ -108,6 +147,14 @@ class MainActivity : ComponentActivity() {
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             cacheMode = WebSettings.LOAD_DEFAULT
             mediaPlaybackRequiresUserGesture = true
+            // Respect each page's device-width viewport instead of letting
+            // WebView use a desktop-style layout viewport.
+            useWideViewPort = true
+            loadWithOverviewMode = false
+            textZoom = 100
+            setSupportZoom(false)
+            builtInZoomControls = false
+            displayZoomControls = false
             userAgentString = userAgentString + " KNOWURLOCAL-AndroidApp/1.0"
         }
         CookieManager.getInstance().apply {
