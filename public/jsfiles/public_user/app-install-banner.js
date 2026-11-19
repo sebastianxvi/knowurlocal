@@ -1,6 +1,6 @@
 (() => {
     // Capture the browser's install event as early as this shared component loads.
-    // The event is only available when the browser considers this site installable.
+    // beforeinstallprompt is Chromium-family only; other browsers use their own menus.
     const installState = window.__kylPwaInstallState ||
         (window.__kylPwaInstallState = { deferredPrompt: null });
 
@@ -19,9 +19,11 @@
     }
 
     // Online-only service worker: no pages or private data are cached.
-    if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+    if ('serviceWorker' in navigator && (window.isSecureContext || window.location.protocol === 'https:')) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(() => {});
+            navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(error => {
+                console.warn('[KNOWURLOCAL] Service worker registration failed:', error);
+            });
         }, { once: true });
     }
 
@@ -66,23 +68,51 @@
 
     const instructions = () => {
         const ua = navigator.userAgent || '';
-        const ios = /iPad|iPhone|iPod/.test(ua) ||
-            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const platform = navigator.platform || '';
+        const isIOS = /iPad|iPhone|iPod/i.test(ua) ||
+            (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const isAndroid = /Android/i.test(ua);
+        const isFirefox = /Firefox|FxiOS/i.test(ua);
+        const isSamsungInternet = /SamsungBrowser/i.test(ua);
+        const isSafari = /Safari/i.test(ua) && !/Chrome|CriOS|Edg|FxiOS/i.test(ua);
+        const isWindows = /Windows NT/i.test(ua);
 
-        if (ios) {
-            return 'To install: open this page in Safari, tap Share, then choose “Add to Home Screen”.';
+        if (isIOS) {
+            return 'To add KNOWURLOCAL to your Home Screen, tap Share, then choose “Add to Home Screen”. On iOS 16.4 or later, this is also available in Firefox and other supported browsers. On older iOS versions, open the page in Safari.';
         }
-        if (/Android/i.test(ua)) {
-            return 'Your browser did not offer the install prompt. In Chrome, open ⋮ and choose “Install app” or “Add to Home screen”.';
+
+        if (isAndroid && isFirefox) {
+            return 'In Firefox for Android, tap the three-dot menu (⋮), then choose “Install” (or “Add to Home screen”, depending on your version). Follow the prompt to add KNOWURLOCAL to your Home Screen.';
         }
-        return 'Your browser did not offer the install prompt. In Chrome or Edge, open the browser menu and choose “Install KNOWURLOCAL” or “Install page as app”.';
+
+        if (isAndroid && isSamsungInternet) {
+            return 'In Samsung Internet, open the browser menu, choose “Add page to”, then select “Home screen”. Follow the confirmation steps to add KNOWURLOCAL.';
+        }
+
+        if (isAndroid) {
+            return 'Open your browser menu (⋮) and look for “Install app” or “Add to Home screen”. The exact label depends on your browser. If neither option is available, try Chrome, Firefox for Android, or Samsung Internet.';
+        }
+
+        if (isFirefox && isWindows) {
+            return 'In Firefox for Windows, look for the web-app icon in the address bar and select it to add KNOWURLOCAL as a web app. This feature requires Firefox 143 or later (150 or later for Microsoft Store installations). If the icon is unavailable, use a supported browser such as Chrome or Edge.';
+        }
+
+        if (isFirefox) {
+            return 'This Firefox version does not provide a one-click web-app install option on this platform. Open KNOWURLOCAL in Chrome or Edge and use the browser menu’s “Install” option. On macOS Sonoma or later, Safari also offers File → Add to Dock.';
+        }
+
+        if (isSafari) {
+            return 'In Safari on macOS Sonoma or later, choose File → Add to Dock to use KNOWURLOCAL like an app.';
+        }
+
+        return 'Open your browser menu and look for “Install KNOWURLOCAL”, “Install page as app”, or “Add to Home screen”. If your browser does not offer an install option, try Chrome or Edge.';
     };
 
     const showHelp = message => {
         if (!help) return;
         help.textContent = message || instructions();
         help.hidden = false;
-        if (actionLabel) actionLabel.textContent = 'Install help';
+        if (actionLabel) actionLabel.textContent = 'How to install';
         syncBannerLayout();
     };
 

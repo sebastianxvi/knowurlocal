@@ -1419,6 +1419,10 @@ public function resetPassword(Request $request)
             return redirect('/admin/dashboard');
         }
 
+        // Play the map entrance animation once when the authenticated
+        // public user first reaches the map after this successful login.
+        session()->put('map_entrance_pending', true);
+
         return redirect()->intended('/map');
     }
 

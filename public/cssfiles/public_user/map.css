@@ -3433,3 +3433,108 @@ body.agency-details-open .site-header .search-area {
         margin-left: auto;
     }
 }
+
+
+/* Keep the reviewer's ownership badge beneath their name so the review
+   header retains enough horizontal room for the date and action controls. */
+.agency-evaluation-review-top {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+}
+
+.agency-evaluation-review-author-group {
+    display: flex;
+    flex: 1 1 180px;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-width: 0;
+}
+
+.agency-evaluation-review-identity {
+    display: flex;
+    flex: 0 1 auto;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+}
+
+.agency-evaluation-review-author {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.agency-evaluation-own-badge {
+    max-width: 100%;
+    white-space: nowrap;
+}
+
+.agency-evaluation-review-date {
+    flex: 0 0 auto;
+    margin-left: auto;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+.agency-evaluation-review-actions {
+    flex: 0 0 auto;
+    margin-left: 0;
+}
+
+/* Keep the date and its adjacent overflow/report control on one visual axis. */
+.agency-evaluation-review-date,
+.agency-evaluation-review-actions {
+    align-self: center;
+}
+
+/* Replay agency information entrance motion on every completed close/reopen cycle. */
+.agency-details.is-content-animating .agency-details-cover,
+.agency-details.is-content-animating .agency-details-main > *,
+.agency-details.is-content-animating .agency-detail-section,
+.agency-details.is-content-animating .agency-evaluation-section {
+    animation: agency-detail-content-enter 420ms cubic-bezier(.2,.75,.25,1) both;
+}
+
+.agency-details.is-content-animating .agency-details-cover { animation-delay: 35ms; }
+.agency-details.is-content-animating .agency-details-main > :nth-child(1) { animation-delay: 75ms; }
+.agency-details.is-content-animating .agency-details-main > :nth-child(2) { animation-delay: 115ms; }
+.agency-details.is-content-animating .agency-details-main > :nth-child(3) { animation-delay: 155ms; }
+.agency-details.is-content-animating .agency-details-main > :nth-child(4) { animation-delay: 195ms; }
+.agency-details.is-content-animating .agency-details-main > :nth-child(5) { animation-delay: 235ms; }
+.agency-details.is-content-animating .agency-details-main > :nth-child(6) { animation-delay: 275ms; }
+.agency-details.is-content-animating .agency-details-main > :nth-child(7) { animation-delay: 315ms; }
+.agency-details.is-content-animating .agency-details-main > :nth-child(8) { animation-delay: 355ms; }
+.agency-details.is-content-animating .agency-details-main > :nth-child(9) { animation-delay: 395ms; }
+
+@keyframes agency-detail-content-enter {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .agency-details.is-content-animating .agency-details-cover,
+    .agency-details.is-content-animating .agency-details-main > *,
+    .agency-details.is-content-animating .agency-detail-section,
+    .agency-details.is-content-animating .agency-evaluation-section {
+        animation: none !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .agency-evaluation-review-top {
+        column-gap: 8px;
+        row-gap: 8px;
+    }
+
+    .agency-evaluation-review-author-group {
+        flex-basis: 150px;
+        gap: 7px;
+    }
+
+    .agency-evaluation-review-date {
+        margin-left: auto;
+    }
+}

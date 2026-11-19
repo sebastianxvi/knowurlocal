@@ -1,3 +1,9 @@
+@php
+    // Consume the one-time entrance flag set by a successful public-user login.
+    $animateMapEntrance = auth()->check()
+        && (bool) session()->pull('map_entrance_pending', false);
+@endphp
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -58,7 +64,10 @@
     <x-public.navbar />
 
     <!-- Map Container (fills entire page) -->
-    <div id="map"></div>
+    <div
+        id="map"
+        data-animate-entrance="{{ $animateMapEntrance ? 'true' : 'false' }}"
+    ></div>
 
     <!-- Non-blocking feedback while agency data and markers are prepared. -->
     <div

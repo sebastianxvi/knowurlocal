@@ -41,28 +41,66 @@ document.addEventListener("DOMContentLoaded", () => {
      * The default Leaflet zoom control is disabled because
      * KNOWURLOCAL uses its own map/navigation interface.
      */
+    const mapContainer =
+        document.getElementById('map');
+
+    const shouldAnimateMapEntrance =
+        mapContainer?.dataset.animateEntrance === 'true';
+
+    const initialMapZoom =
+        shouldAnimateMapEntrance ? 13.2 : 14;
+
     const map =
         L.map('map', {
             zoomControl: false
         })
         .setView(
             sanJose,
-            14
+            initialMapZoom
         );
 
 
     /*
      * Load OpenStreetMap tiles.
+     *
+     * The login entrance animation waits for the initial tile batch,
+     * so the camera movement begins only after the map is visibly ready.
+     * This flag is supplied once by the successful public-user login flow.
      */
-    L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-            maxZoom: 18,
+    const mapTileLayer =
+        L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                maxZoom: 18,
 
-            attribution:
-                '&copy; OpenStreetMap contributors'
-        }
-    ).addTo(map);
+                attribution:
+                    '&copy; OpenStreetMap contributors'
+            }
+        );
+
+    if (shouldAnimateMapEntrance) {
+        mapTileLayer.once('load', () => {
+            const prefersReducedMotion =
+                window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+            if (prefersReducedMotion) {
+                map.setView(sanJose, 14, { animate: false });
+                return;
+            }
+
+            map.flyTo(
+                sanJose,
+                14,
+                {
+                    animate: true,
+                    duration: 0.7,
+                    easeLinearity: 0.25
+                }
+            );
+        });
+    }
+
+    mapTileLayer.addTo(map);
 
 
     // =========================================================
@@ -769,14 +807,17 @@ function createSelectedAgencyIcon() {
                 } else {
                     authorGroup.append(makeReviewerPlaceholder());
                 }
-                authorGroup.append(author);
+                const authorIdentity = document.createElement('div');
+                authorIdentity.className = 'agency-evaluation-review-identity';
+                authorIdentity.append(author);
                 if (review.is_mine) {
                     const ownBadge = document.createElement('span');
                     ownBadge.className = 'agency-evaluation-own-badge';
                     ownBadge.textContent = 'Your evaluation';
                     ownBadge.setAttribute('aria-label', 'This is your evaluation');
-                    authorGroup.append(ownBadge);
+                    authorIdentity.append(ownBadge);
                 }
+                authorGroup.append(authorIdentity);
                 const date = document.createElement('time');
                 date.className = 'agency-evaluation-review-date';
                 if (review.created_at) {
@@ -3326,6 +3367,13 @@ if (agencyOfficeHeadSection) {
         // DISPLAY PANEL
         // -----------------------------------------------------
 
+        // Replay the information entrance animation once per open cycle.
+        // Removing the class before forcing layout guarantees a fresh run even
+        // when the same agency is reopened without reloading the page.
+        agencyDetails.classList.remove('is-content-animating');
+        void agencyDetails.offsetWidth;
+        agencyDetails.classList.add('is-content-animating');
+
         agencyDetails.classList.add(
             'active'
         );
@@ -3398,6 +3446,8 @@ function closeAgencyDetails() {
     agencyDetails.classList.remove(
         'active'
     );
+    // Reset only after closing; the next open starts a new animation cycle.
+    agencyDetails.classList.remove('is-content-animating');
 
     // Restore the filter controls without resetting their selections.
     setMapFiltersHidden(false);
@@ -5306,54 +5356,73 @@ const verticalOffset =
 
 
 /*
- * Convert the agency's real coordinates into
- * the corresponding screen position.
- */
-const agencyPoint =
-    map.project(
-        focusedLatLng,
-        18
-    );
-
-
-/*
- * Move the map's target point upward on screen.
+ * Move the viewport so the agency appears above the visual center
+ * and remains visible above the details panel.
  *
- * The agency coordinate itself is NOT changed.
+ * Zoom only when the current zoom is below the target. Once the map
+ * is already at the target zoom, use a pan instead of replaying a
+ * zoom animation. If the marker is already in the intended position,
+ * do not animate at all.
  */
-const adjustedPoint =
-    agencyPoint.add(
-        L.point(
-            0,
-            verticalOffset
-        )
-    );
+const targetZoom = 18;
 
-
-/*
- * Convert the adjusted screen position back
- * into geographic coordinates for flyTo().
- */
-const adjustedCenter =
+const targetCenter =
     map.unproject(
-        adjustedPoint,
-        18
+        map.project(focusedLatLng, targetZoom).add(
+            L.point(0, verticalOffset)
+        ),
+        targetZoom
     );
 
+const currentZoom =
+    map.getZoom();
 
-/*
- * Smoothly move the viewport so the agency
- * appears above the center and remains visible
- * above the details panel.
- */
-map.flyTo(
-    adjustedCenter,
-    18,
-    {
-        animate: true,
-        duration: 0.8
+const zoomDifference =
+    Math.abs(currentZoom - targetZoom);
+
+const currentCenterPoint =
+    map.project(
+        map.getCenter(),
+        targetZoom
+    );
+
+const targetCenterPoint =
+    map.project(
+        targetCenter,
+        targetZoom
+    );
+
+const centerDistance =
+    currentCenterPoint.distanceTo(
+        targetCenterPoint
+    );
+
+const isAlreadyAtTarget =
+    zoomDifference < 0.01 &&
+    centerDistance < 3;
+
+if (!isAlreadyAtTarget) {
+    if (zoomDifference < 0.01) {
+        map.panTo(
+            targetCenter,
+            {
+                animate: true,
+                duration: 0.65,
+                easeLinearity: 0.25
+            }
+        );
+    } else {
+        map.flyTo(
+            targetCenter,
+            targetZoom,
+            {
+                animate: true,
+                duration: 0.8,
+                easeLinearity: 0.25
+            }
+        );
     }
-);
+}
 
 
     /*

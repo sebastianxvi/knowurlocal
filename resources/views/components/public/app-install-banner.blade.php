@@ -1,5 +1,5 @@
 {{-- Site-wide, dismissible PWA install banner. Kept in normal document flow. --}}
-<link rel="stylesheet" href="{{ asset('cssfiles/public_user/app-install-banner.css') }}?v={{ filemtime(public_path('cssfiles/public_user/app-install-banner.css')) }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/public_user/app-install-banner.css') }}?v={{ substr(hash_file('sha256', public_path('cssfiles/public_user/app-install-banner.css')), 0, 16) }}">
 <aside class="kyl-app-install-banner" data-app-install-banner aria-label="Open KNOWURLOCAL app" hidden>
     <div class="kyl-app-install-banner-inner">
         <div class="kyl-app-install-banner-icon" aria-hidden="true">
@@ -19,4 +19,4 @@
         </button>
     </div>
 </aside>
-<script src="{{ asset('jsfiles/public_user/app-install-banner.js') }}?v=7-{{ filemtime(public_path('jsfiles/public_user/app-install-banner.js')) }}"></script>
+<script src="{{ asset('jsfiles/public_user/app-install-banner.js') }}?v={{ substr(hash_file('sha256', public_path('jsfiles/public_user/app-install-banner.js')), 0, 16) }}"></script>
