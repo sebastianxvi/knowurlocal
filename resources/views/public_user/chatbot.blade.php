@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatbot</title>
 
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}?v={{ filemtime(public_path('cssfiles/public_user/chatbot.css')) }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}?v={{ md5_file(public_path('cssfiles/public_user/chatbot.css')) }}">
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 
     <meta name="csrf-token" content="{{ csrf_token() }}">

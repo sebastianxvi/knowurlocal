@@ -34,7 +34,7 @@
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/map.css') }}?v={{ substr(hash_file('sha256', public_path('cssfiles/public_user/map.css')), 0, 16) }}">
 
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}?v=575b6c92eb66f566">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/chatbot.css') }}?v={{ md5_file(public_path('cssfiles/public_user/chatbot.css')) }}">
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="user-id" content="{{ auth()->id() }}">
@@ -653,7 +653,7 @@
 <script src="{{ asset('jsfiles/public_user/navbar.js') }}" defer></script>
 <script type="module" src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}?v={{ md5_file(public_path('jsfiles/public_user/navbar-realtime.js')) }}"></script>
 <script src="{{ asset('jsfiles/public_user/map.js') }}?v={{ substr(hash_file('sha256', public_path('jsfiles/public_user/map.js')), 0, 16) }}" defer></script>
-<script src="{{ asset('jsfiles/public_user/chatbot.js') }}?v=cdbe98906e2d4ecd" defer></script>
+<script src="{{ asset('jsfiles/public_user/chatbot.js') }}?v={{ md5_file(public_path('jsfiles/public_user/chatbot.js')) }}" defer></script>
 
     
 

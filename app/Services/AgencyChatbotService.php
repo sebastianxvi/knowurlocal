@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Agency;
+use App\Models\Faq;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -45,6 +46,130 @@ class AgencyChatbotService
         'dfa' => ['foreign', 'affairs'],
         'sss' => ['social', 'security'],
     ];
+
+
+    /**
+     * Detect a very short agency reference that does not identify the actual
+     * information being requested, then offer grounded choices from the
+     * agency directory and that agency's published FAQ catalogue.
+     *
+     * This is deliberately narrow: complete questions continue through the
+     * normal FAQ-first pipeline.
+     */
+    public function clarificationOptions(string $question, bool $filipino = false): ?array
+    {
+        $question = $this->normalizeFilipinoQuestion($question);
+        $normalized = $this->normalize($question);
+        if ($normalized === '') {
+            return null;
+        }
+
+        // Only intercept short "where/what about [agency]?" style fragments.
+        $tokens = $this->tokens($question);
+        if (count($tokens) !== 1) {
+            return null;
+        }
+
+        $hasVagueRequest = preg_match(
+            '/\\b(where|what|which|saan|nasaan|ano|alin|about|ng|nang)\\b/u',
+            Str::lower(Str::ascii($question))
+        ) === 1;
+        $hasSpecificDirectoryTarget = preg_match(
+            '/\\b(office|address|rdo|branch|located|location|directions?|navigate|map|opisina|address|sangay)\\b/u',
+            $normalized
+        ) === 1;
+
+        if (!$hasVagueRequest || $hasSpecificDirectoryTarget) {
+            return null;
+        }
+
+        $candidates = $this->findCandidatesByInitialism($tokens)
+            ->concat($this->findCandidatesByAliases($tokens))
+            ->keyBy('id')
+            ->values()
+            ->filter(function (Agency $agency) use ($tokens) {
+                $abbr = $this->normalize((string) $agency->agency_abbreviation);
+                $initialism = $this->initialism((string) $agency->agency_name);
+
+                if (in_array($abbr, $tokens, true) || in_array($initialism, $tokens, true)) {
+                    return true;
+                }
+
+                $searchable = $this->normalize(implode(' ', [
+                    (string) $agency->agency_name,
+                    (string) $agency->agency_abbreviation,
+                    (string) $agency->agency_description,
+                    (string) $agency->services_offered,
+                ]));
+
+                foreach ($tokens as $token) {
+                    foreach (self::AGENCY_ALIASES[$token] ?? [] as $alias) {
+                        if (str_contains($searchable, $this->normalize($alias))) {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            })
+            ->unique('id')
+            ->values();
+
+        if ($candidates->count() !== 1) {
+            return null;
+        }
+
+        /** @var Agency $agency */
+        $agency = $candidates->first();
+        $options = [];
+
+        if (filled($agency->agency_location)) {
+            $officeLabel = $filipino
+                ? 'Saan matatagpuan ang opisina ng ' . trim((string) ($agency->agency_abbreviation ?: $agency->agency_name)) . '?'
+                : 'Where is ' . trim((string) ($agency->agency_abbreviation ?: $agency->agency_name)) . ' office located?';
+            $options[] = [
+                'label' => $officeLabel,
+                'question' => $officeLabel,
+            ];
+        }
+
+        $faqs = Faq::query()
+            ->where('agency_id', $agency->id)
+            ->where(function ($query) {
+                $query->whereNotNull('question')->orWhereNotNull('question_fil');
+            })
+            ->orderBy('id')
+            ->limit(12)
+            ->get(['question', 'question_fil']);
+
+        foreach ($faqs as $faq) {
+            $label = trim((string) ($filipino ? ($faq->question_fil ?? '') : ($faq->question ?? '')));
+            if ($label === '') {
+                $label = trim((string) ($filipino ? ($faq->question ?? '') : ($faq->question_fil ?? '')));
+            }
+            if ($label === '') {
+                continue;
+            }
+
+            $options[] = [
+                'label' => $label,
+                'question' => $label,
+            ];
+
+            if (count($options) >= 4) {
+                break;
+            }
+        }
+
+        if ($options === []) {
+            return null;
+        }
+
+        return [
+            'agency_name' => (string) $agency->agency_name,
+            'options' => array_slice($options, 0, 4),
+        ];
+    }
 
     /**
      * Return a response when the question is clearly about agency records.
@@ -133,12 +258,45 @@ class AgencyChatbotService
         /** @var Agency $agency */
         $agency = $first['agency'];
 
+        /*
+         * Do not infer an agency from a broad topic alone. For example,
+         * "where should I ask for help if there is a fire?" can overlap with
+         * BFP records, but it is not an agency-specific directory request.
+         * The user must identify the agency by name or abbreviation.
+         */
+        if (!$this->explicitlyNamesAgency($question, $agency)) {
+            return null;
+        }
+
         return $this->agencyResponse($agency, $intent);
+    }
+
+    private function explicitlyNamesAgency(string $question, Agency $agency): bool
+    {
+        $normalizedQuestion = ' ' . $this->normalize($question) . ' ';
+        $candidates = [
+            (string) $agency->agency_name,
+            (string) $agency->agency_abbreviation,
+            $this->initialism((string) $agency->agency_name),
+        ];
+
+        foreach ($candidates as $candidate) {
+            $candidate = $this->normalize($candidate);
+            if ($candidate === '' || strlen($candidate) < 2) {
+                continue;
+            }
+
+            if (str_contains($normalizedQuestion, ' ' . $candidate . ' ')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function detectIntent(string $question): ?string
     {
-        $q = Str::lower(trim($question));
+        $q = Str::lower(trim($this->normalizeFilipinoQuestion($question)));
 
         $patterns = [
             'services' => '/\b(service|services|offer|offers|provide|provides|serbisyo|nagbibigay|nag-aalok)\b/u',
@@ -159,6 +317,7 @@ class AgencyChatbotService
 
     private function tokens(string $question): array
     {
+        $question = $this->normalizeFilipinoQuestion($question);
         $normalized = Str::lower(Str::ascii($question));
         $words = preg_split('/[^a-z0-9]+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
@@ -524,6 +683,16 @@ class AgencyChatbotService
         }
 
         return $initials;
+    }
+
+    private function normalizeFilipinoQuestion(string $question): string
+    {
+        $question = trim(preg_replace('/\\s+/u', ' ', $question) ?? $question);
+
+        // "san" is a frequent informal/typo spelling of "saan" in location
+        // questions. Limit correction to the first word to avoid changing
+        // proper names or unrelated text elsewhere in the message.
+        return preg_replace('/^san(?=\\s)/iu', 'saan', $question, 1) ?? $question;
     }
 
     private function normalize(string $value): string

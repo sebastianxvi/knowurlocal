@@ -58,6 +58,7 @@ let chatbox =
     document.getElementById("chatbox");
 
 let lastUserMessage = "";
+let lastOutOfScopeQuestion = "";
 
 
 /*
@@ -877,6 +878,15 @@ async function submitTicket(question = "", sourceButton = null) {
         question || input?.value?.trim() || lastUserMessage || ""
     ).trim();
 
+    if (
+        resolvedQuestion
+        && lastOutOfScopeQuestion
+        && resolvedQuestion === lastOutOfScopeQuestion
+    ) {
+        addMessage("That question is outside the chatbot’s scope and cannot be submitted as a support ticket. Please ask about a local agency or public service.", "bot");
+        return;
+    }
+
     if (!resolvedQuestion) {
         addMessage("Please type your question first.", "bot");
         input?.focus();
@@ -920,6 +930,7 @@ function sendMessage(){
 
     lastUserMessage =
         message;
+    lastOutOfScopeQuestion = "";
 
     /*
      * Do not send empty messages.
@@ -1066,6 +1077,17 @@ function sendMessage(){
         const messageData =
             data.choices[0].message;
 
+        /*
+         * An out-of-scope question is deliberately not eligible for a ticket.
+         * Clear the in-memory draft as well as the already-cleared composer so
+         * persistent "Send a ticket" controls cannot reuse that question.
+         */
+        if (messageData.out_of_scope === true || messageData.ticket_eligible === false) {
+            lastOutOfScopeQuestion = String(lastUserMessage || "").trim();
+            lastUserMessage = "";
+        } else {
+            lastOutOfScopeQuestion = "";
+        }
 
         /*
          * Sanitize the chatbot's normal text response.
@@ -1084,6 +1106,28 @@ function sendMessage(){
             /\n/g,
             "<br>"
         );
+
+        if (Array.isArray(messageData.clarification_options) && messageData.clarification_options.length) {
+            const options = messageData.clarification_options
+                .filter(option => option && typeof option.question === 'string' && option.question.trim())
+                .slice(0, 4);
+
+            if (options.length) {
+                html += `
+                    <div class="chat-clarification-options" role="group" aria-label="Suggested questions">
+                        <div class="chat-clarification-heading">${escapeHTML(messageData.clarification_heading || 'Did you mean:')}</div>
+                        ${options.map(option => `
+                            <button
+                                type="button"
+                                class="chat-clarification-option"
+                                data-clarification-question="${escapeHTML(option.question)}"
+                            >${escapeHTML(option.label || option.question)}</button>
+                        `).join('')}
+                        <div class="chat-clarification-hint">${escapeHTML(messageData.clarification_hint || 'Or type a more specific question in the message field.')}</div>
+                    </div>
+                `;
+            }
+        }
 
         html += `<div class="chat-faq-file-link-list">${renderFaqFilesAndLinks(attachments)}</div>`;
         html += renderFaqQRAttachments(attachments);
@@ -1178,6 +1222,21 @@ function sendMessage(){
  *
  * This works for dynamically-created fallback buttons.
  */
+document.addEventListener("click", function (e) {
+    const suggestion = e.target.closest(".chat-clarification-option");
+    if (!suggestion) return;
+
+    e.preventDefault();
+
+    const input = document.getElementById("message");
+    const question = suggestion.getAttribute("data-clarification-question") || "";
+    if (!input || !question.trim() || input.disabled) return;
+
+    input.value = question;
+    resizeMessageInput();
+    sendMessage();
+});
+
 document.addEventListener("click", function (e) {
     const button = e.target.closest(".fallback-human-btn");
     if (!button) return;

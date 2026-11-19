@@ -2782,3 +2782,50 @@ body {
         transition: none;
     }
 }
+
+
+/* Grounded clarification choices for short or ambiguous agency questions. */
+.chat-clarification-options {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+    min-width: 0;
+}
+.chat-clarification-heading {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+}
+.chat-clarification-option {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #dce5f3;
+    border-radius: 11px;
+    background: #fff;
+    color: #34445f;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    transition: border-color 140ms ease, background-color 140ms ease;
+}
+.chat-clarification-option:hover,
+.chat-clarification-option:focus-visible {
+    border-color: #9bb4ed;
+    background: #f4f7ff;
+    outline: none;
+}
+.chat-clarification-hint {
+    color: #8793a6;
+    font-size: 11px;
+    line-height: 1.4;
+}
+@media (prefers-reduced-motion: reduce) {
+    .chat-clarification-option {
+        transition: none;
+    }
+}

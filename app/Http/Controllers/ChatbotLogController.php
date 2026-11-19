@@ -73,6 +73,8 @@ class ChatbotLogController extends Controller
             'irrelevant',
             'clarification',
             'wrong_agency',
+            'out_of_scope',
+            'too_general',
             'error',
         ];
 
@@ -95,6 +97,7 @@ class ChatbotLogController extends Controller
             'ai',
             'semantic',
             'none',
+            'final_scope_check',
         ];
 
         if (
@@ -281,7 +284,7 @@ class ChatbotLogController extends Controller
             ->selectRaw("SUM(CASE WHEN outcome = 'fallback' THEN 1 ELSE 0 END) AS total_fallback")
             ->selectRaw("SUM(CASE WHEN match_method IN ('ai', 'semantic') THEN 1 ELSE 0 END) AS total_ai")
             ->selectRaw("SUM(CASE WHEN match_method = 'rule' THEN 1 ELSE 0 END) AS total_rule")
-            ->selectRaw("SUM(CASE WHEN outcome = 'irrelevant' THEN 1 ELSE 0 END) AS total_irrelevant")
+            ->selectRaw("SUM(CASE WHEN outcome IN ('irrelevant', 'out_of_scope', 'too_general') THEN 1 ELSE 0 END) AS total_irrelevant")
             ->first();
 
         $totalChats = (int) ($stats->total_chats ?? 0);

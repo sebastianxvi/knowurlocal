@@ -480,7 +480,7 @@ class ChatbotController extends Controller
     {
         $response = response()
             ->json($payload, $status)
-            ->header('X-KNOWURLOCAL-Chatbot', 'v15-ai');
+            ->header('X-KNOWURLOCAL-Chatbot', 'v19-directory-routing-confidence');
 
         if ($matchMethod !== null) {
             $response->header('X-KNOWURLOCAL-Chatbot-Match', $matchMethod);
@@ -500,6 +500,110 @@ class ChatbotController extends Controller
         $agencyId = isset($validated['agency_id'])
             ? (int) $validated['agency_id']
             : null;
+
+        /*
+         * A bare agency mention is not enough to safely choose an answer.
+         * Offer grounded FAQ/directory choices before either FAQ retrieval
+         * or the direct agency-directory responder can guess the user's intent.
+         */
+        $isFilipinoQuestion = preg_match(
+            '/\\b(saan|san|nasaan|ano|alin|paano|magkano|kailangan|ng|ang|mga)\\b/u',
+            strtolower($question)
+        ) === 1;
+        try {
+            $agencyClarification = $this->agencyChatbot->clarificationOptions(
+                $question,
+                $isFilipinoQuestion
+            );
+        } catch (\Throwable $e) {
+            Log::warning('KNOWURLOCAL agency clarification lookup failed; continuing normal FAQ retrieval.', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+            ]);
+            $agencyClarification = null;
+        }
+
+        if ($agencyClarification !== null) {
+            $reply = $isFilipinoQuestion
+                ? 'Pasensya na, medyo malabo ang tanong mo. Ano mismo ang gusto mong malaman tungkol sa '
+                    . $agencyClarification['agency_name']
+                    . '? Piliin ang pinakamalapit na tanong sa ibaba.'
+                : 'Sorry, your question is a little unclear. What would you like to know about '
+                    . $agencyClarification['agency_name']
+                    . '? Choose the question that best matches what you need.';
+
+            $this->logChat(
+                $question,
+                $reply,
+                'clarification',
+                'agency_clarification',
+                $agencyId
+            );
+
+            return $this->chatbotJson([
+                'choices' => [[
+                    'message' => [
+                        'content' => $reply,
+                        'attachments' => [],
+                        'image' => null,
+                        'clarification' => true,
+                        'clarification_options' => $agencyClarification['options'],
+                        'clarification_heading' => $isFilipinoQuestion ? 'Ito ba ang ibig mong sabihin?' : 'Did you mean:',
+                        'clarification_hint' => $isFilipinoQuestion
+                            ? 'Pumili ng pinakamalapit na tanong o mag-type ng mas tiyak na tanong.'
+                            : 'Choose the closest question or type a more specific question.',
+                        'ticket_eligible' => false,
+                    ],
+                ]],
+            ], 200, 'agency_clarification');
+        }
+
+        /*
+         * A clearly phrased agency-directory request must be resolved from
+         * the agency database before FAQ semantic retrieval. Otherwise a
+         * short location query such as "saan ang PNP office?" can be
+         * incorrectly answered by an unrelated FAQ that merely mentions PNP.
+         *
+         * This preflight is intentionally limited to explicit agency names
+         * and directory intents; transaction/process questions still use the
+         * normal FAQ-first retrieval path.
+         */
+        try {
+            $directoryAnswer = $this->agencyChatbot->answer($question);
+        } catch (\Throwable $e) {
+            Log::warning('KNOWURLOCAL agency directory preflight failed; continuing FAQ retrieval.', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'question' => $question,
+            ]);
+            $directoryAnswer = null;
+        }
+
+        if ($directoryAnswer !== null) {
+            session()->forget('chatbot.last_faq_context');
+
+            $this->logChat(
+                $question,
+                (string) $directoryAnswer['content'],
+                'answered',
+                (string) ($directoryAnswer['match_method'] ?? 'agency_database'),
+                isset($directoryAnswer['agency_id']) ? (int) $directoryAnswer['agency_id'] : null,
+                null,
+                null,
+                100,
+                $isFilipinoQuestion ? 'fil' : 'en'
+            );
+
+            return $this->chatbotJson([
+                'choices' => [[
+                    'message' => [
+                        'content' => $directoryAnswer['content'],
+                        'attachments' => $directoryAnswer['attachments'] ?? [],
+                        'image' => $directoryAnswer['image'] ?? null,
+                    ],
+                ]],
+            ], 200, (string) ($directoryAnswer['match_method'] ?? 'agency_database'));
+        }
 
         /*
          * Avoid an AI request for clearly incomplete, subject-less questions.
@@ -540,91 +644,6 @@ class ChatbotController extends Controller
                     ],
                 ]],
             ], 200, 'clarification');
-        }
-
-        /*
-         * Prefer exact, database-backed agency retrieval for clear agency
-         * information questions. This path never invokes an AI provider.
-         * If it cannot confidently identify an agency, continue through the
-         * existing FAQ matcher without changing its behavior.
-         */
-        try {
-            $agencyAnswer = $this->agencyChatbot->answer($question);
-        } catch (\Throwable $e) {
-            Log::warning('KNOWURLOCAL agency information retrieval failed; continuing to FAQ matching.', [
-                'exception' => get_class($e),
-                'message' => $e->getMessage(),
-                'question' => $question,
-            ]);
-            $agencyAnswer = null;
-        }
-
-        if ($agencyAnswer !== null) {
-            session()->forget('chatbot.last_faq_context');
-
-            $chatLogId = $this->logChat(
-                $question,
-                (string) $agencyAnswer['content'],
-                'answered',
-                (string) ($agencyAnswer['match_method'] ?? 'agency_database'),
-                isset($agencyAnswer['agency_id']) ? (int) $agencyAnswer['agency_id'] : null,
-                null,
-                null,
-                100,
-                'en'
-            );
-
-            return $this->chatbotJson([
-                'choices' => [[
-                    'message' => [
-                        'content' => $agencyAnswer['content'],
-                        'attachments' => $agencyAnswer['attachments'] ?? [],
-                        'image' => $agencyAnswer['image'] ?? null,
-                    ],
-                ]],
-            ], 200, (string) ($agencyAnswer['match_method'] ?? 'agency_database'));
-        }
-
-        /*
-         * Prefer database-backed agency retrieval for clear agency questions.
-         * This path never calls an AI provider. If it cannot confidently
-         * identify a relevant agency, preserve the existing FAQ pipeline.
-         */
-        try {
-            $agencyAnswer = $this->agencyChatbot->answer($question);
-        } catch (\Throwable $e) {
-            Log::warning('KNOWURLOCAL agency information retrieval failed; continuing to FAQ matching.', [
-                'exception' => get_class($e),
-                'message' => $e->getMessage(),
-                'question' => $question,
-            ]);
-            $agencyAnswer = null;
-        }
-
-        if ($agencyAnswer !== null) {
-            session()->forget('chatbot.last_faq_context');
-
-            $chatLogId = $this->logChat(
-                $question,
-                (string) $agencyAnswer['content'],
-                'answered',
-                (string) ($agencyAnswer['match_method'] ?? 'agency_database'),
-                isset($agencyAnswer['agency_id']) ? (int) $agencyAnswer['agency_id'] : null,
-                null,
-                null,
-                100,
-                'en'
-            );
-
-            return $this->chatbotJson([
-                'choices' => [[
-                    'message' => [
-                        'content' => $agencyAnswer['content'],
-                        'attachments' => $agencyAnswer['attachments'] ?? [],
-                        'image' => $agencyAnswer['image'] ?? null,
-                    ],
-                ]],
-            ], 200, (string) ($agencyAnswer['match_method'] ?? 'agency_database'));
         }
 
         // A generic follow-up can inherit the immediately preceding FAQ topic.
@@ -674,7 +693,109 @@ class ChatbotController extends Controller
         }
 
         if ($match === null) {
+            /*
+             * FAQ retrieval has priority. Only after it finds no answer do we
+             * try the database-backed agency directory, which requires the
+             * user to explicitly identify the agency.
+             */
+            try {
+                $agencyAnswer = $this->agencyChatbot->answer($question);
+            } catch (\Throwable $e) {
+                Log::warning('KNOWURLOCAL agency information retrieval failed; continuing to scope classification.', [
+                    'exception' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'question' => $question,
+                ]);
+                $agencyAnswer = null;
+            }
+
+            if ($agencyAnswer !== null) {
+                session()->forget('chatbot.last_faq_context');
+
+                $this->logChat(
+                    $question,
+                    (string) $agencyAnswer['content'],
+                    'answered',
+                    (string) ($agencyAnswer['match_method'] ?? 'agency_database'),
+                    isset($agencyAnswer['agency_id']) ? (int) $agencyAnswer['agency_id'] : null,
+                    null,
+                    null,
+                    100,
+                    'en'
+                );
+
+                return $this->chatbotJson([
+                    'choices' => [[
+                        'message' => [
+                            'content' => $agencyAnswer['content'],
+                            'attachments' => $agencyAnswer['attachments'] ?? [],
+                            'image' => $agencyAnswer['image'] ?? null,
+                        ],
+                    ]],
+                ], 200, (string) ($agencyAnswer['match_method'] ?? 'agency_database'));
+            }
+
             session()->forget('chatbot.last_faq_context');
+
+            /*
+             * Scope is intentionally the FINAL decision, after the complete
+             * FAQ retrieval path (AI selection and its conservative local
+             * recovery) has found no answer. A database-backed FAQ match is
+             * therefore never rejected merely because the wording appears
+             * unusual or broadly phrased.
+             */
+            $scope = $this->chatbot->classifyQuestionScope($question);
+
+            if ($scope !== null && in_array(
+                $scope['classification'] ?? null,
+                ['too_general', 'out_of_scope'],
+                true
+            )) {
+                $classification = $scope['classification'];
+                $language = $scope['language'] ?? 'en';
+
+                if ($classification === 'too_general') {
+                    $reply = $language === 'fil'
+                        ? 'Ang KNOWURLOCAL ay digital help desk ng mga partikular na ahensya. Para matulungan ka, tukuyin kung aling ahensya o partikular na serbisyo, aplikasyon, requirements, o proseso ang gusto mong itanong. Halimbawa, maaari kang magtanong tungkol sa BFP Fire Safety Inspection Certificate o sa proseso ng pagkuha ng police clearance. Hindi maaaring gawing support ticket ang masyadong pangkalahatang tanong.'
+                        : 'KNOWURLOCAL is a digital help desk for specific government agencies. To help you, please identify the agency or the particular service, application, requirements, or process you want to ask about. For example, you can ask about the BFP Fire Safety Inspection Certificate or the process for getting a police clearance. A question that is too general cannot be submitted as a support ticket.';
+                    $outcome = 'too_general';
+                    $matchMethod = 'final_scope_check';
+                } else {
+                    $reply = $language === 'fil'
+                        ? 'Pasensya na, ang KNOWURLOCAL ay para sa mga tanong tungkol sa partikular na ahensya ng pamahalaan at sa mga serbisyo, aplikasyon, requirements, at proseso nito. Hindi saklaw ng system ang tanong na ito at hindi ito maaaring isumite bilang support ticket. Magtanong tungkol sa isang ahensya o serbisyong pampubliko.'
+                        : 'Sorry, KNOWURLOCAL is designed for questions about specific government agencies and their services, applications, requirements, and procedures. This question is outside the system’s scope and cannot be submitted as a support ticket. Please ask about a particular agency or public service.';
+                    $outcome = 'out_of_scope';
+                    $matchMethod = 'final_scope_check';
+                }
+
+                $this->logChat(
+                    $question,
+                    $reply,
+                    $outcome,
+                    $matchMethod,
+                    $agencyId,
+                    null,
+                    null,
+                    (int) round($scope['confidence']),
+                    $language
+                );
+
+                return $this->chatbotJson([
+                    'choices' => [[
+                        'message' => [
+                            'content' => $reply,
+                            'too_general' => $classification === 'too_general',
+                            'out_of_scope' => $classification === 'out_of_scope',
+                            'fallback' => false,
+                            'ticket_eligible' => false,
+                        ],
+                    ]],
+                ], 200, $matchMethod);
+            }
+
+            // In-scope or uncertain questions retain the existing human
+            // support route. A classifier/provider failure must not block a
+            // legitimate citizen inquiry.
             $reply = "I couldn’t find a matching FAQ for your question.";
 
             $this->logChat(
@@ -682,7 +803,11 @@ class ChatbotController extends Controller
                 $reply,
                 'fallback',
                 null,
-                $agencyId
+                $agencyId,
+                null,
+                null,
+                null,
+                $scope['language'] ?? null
             );
 
             return $this->chatbotJson([
@@ -690,6 +815,7 @@ class ChatbotController extends Controller
                     'message' => [
                         'content' => $reply,
                         'fallback' => true,
+                        'ticket_eligible' => true,
                     ],
                 ]],
             ], 200, 'fallback');
