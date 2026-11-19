@@ -1,5 +1,38 @@
 @php
     $latestResponse = $req->latestResponse;
+
+    // Build the agency-list preview from the latest response's actual content.
+    // Modern responses store text in structured components, while older records
+    // may still use the legacy response_text/response/answer columns.
+    $latestResponsePreview = '';
+    if ($latestResponse) {
+        $latestResponsePreview = collect([
+            $latestResponse->response_text ?? null,
+            $latestResponse->response ?? null,
+            $req->answer ?? null,
+        ])->map(fn ($content) => trim(strip_tags((string) $content)))
+            ->first(fn ($content) => $content !== '') ?? '';
+
+        if ($latestResponsePreview === '') {
+            $latestResponsePreview = ($latestResponse->components ?? collect())
+                ->where('type', 'text')
+                ->pluck('content')
+                ->map(fn ($content) => trim(strip_tags((string) $content)))
+                ->filter(fn ($content) => $content !== '')
+                ->implode(' ');
+        }
+
+        if ($latestResponsePreview === '') {
+            $hasAttachment = ($latestResponse->components ?? collect())
+                ->contains(fn ($component) => in_array($component->type, ['image', 'file', 'qr_code'], true));
+            $latestResponsePreview = $hasAttachment ? 'Agency sent an attachment' : '';
+        }
+    }
+
+    $agencyPreview = $req->trashed()
+        ? 'Ticket moved to trash by administration'
+        : ($latestResponsePreview !== '' ? $latestResponsePreview : (string) $req->question);
+
     // Keep the historical response loop expression simple for Blade's compiler.
     $historicalResponses = ($req->responses ?? collect([$latestResponse]))
         ->sortBy(function ($response) {
@@ -54,7 +87,7 @@
                     <span class="messenger-agency-name">{{ optional($req->agency)->agency_abbreviation ?: (optional($req->agency)->agency_name ?? 'Agency') }}</span>
                     <time class="messenger-row-time" datetime="{{ optional($req->trashed() ? $req->created_at : ($req->answered_at ?: $req->updated_at ?: $req->created_at))->toISOString() }}">{{ optional($req->trashed() ? $req->created_at : ($req->answered_at ?: $req->updated_at ?: $req->created_at))->format('M j') }}</time>
                 </div>
-                <p class="messenger-row-preview">{{ $req->trashed() ? 'Ticket moved to trash by administration' : ($latestResponse ? \Illuminate\Support\Str::limit(strip_tags((string) ($latestResponse->response_text ?? $latestResponse->response ?? $req->answer ?? 'Official response')), 54) : \Illuminate\Support\Str::limit($req->question, 54)) }}</p>
+                <p class="messenger-row-preview">{{ \Illuminate\Support\Str::limit($agencyPreview, 54) }}</p>
                 <div class="messenger-row-meta">
                     <span class="inquiry-status-badge {{ $displayStatus }}">{{ $statusLabels[$displayStatus] ?? ucfirst(str_replace('_', ' ', $displayStatus)) }}</span>
                     <span class="inquiry-id">#{{ $req->id }}</span>

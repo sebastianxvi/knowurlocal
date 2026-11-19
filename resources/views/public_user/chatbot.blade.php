@@ -67,6 +67,6 @@
     </div>
 
     <script src="{{ asset('jsfiles/public_user/qrcode-core.js') }}?v={{ filemtime(public_path('jsfiles/public_user/qrcode-core.js')) }}"></script>
-    <script src="{{ asset('jsfiles/public_user/chatbot.js') }}?v={{ filemtime(public_path('jsfiles/public_user/chatbot.js')) }}"></script>
+    <script src="{{ asset('jsfiles/public_user/chatbot.js') }}?v={{ md5_file(public_path('jsfiles/public_user/chatbot.js')) }}"></script>
 </body>
 </html>

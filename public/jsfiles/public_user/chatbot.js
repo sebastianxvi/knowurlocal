@@ -945,6 +945,10 @@ function sendMessage(){
     input.value = "";
     resizeMessageInput();
 
+    // Dismiss the mobile keyboard after submission. Do not refocus this field
+    // when the response arrives; the citizen can tap the composer to continue.
+    input.blur();
+
     /*
      * Prevent duplicate submissions while the
      * current request is being processed.
@@ -1136,13 +1140,8 @@ function sendMessage(){
         });
 
 
-        /*
-         * Restore the input after a successful response.
-         */
-        input.disabled =
-            false;
-
-        input.focus();
+        // Restore typing availability without reopening the mobile keyboard.
+        input.disabled = false;
 
     })
 
@@ -1166,13 +1165,8 @@ function sendMessage(){
                 </div>`
         );
 
-        /*
-         * Always restore the input after failure.
-         */
-        input.disabled =
-            false;
-
-        input.focus();
+        // Keep the composer available without stealing focus after an error.
+        input.disabled = false;
 
     });
 
