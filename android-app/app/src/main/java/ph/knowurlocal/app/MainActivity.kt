@@ -88,23 +88,30 @@ class MainActivity : ComponentActivity() {
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, windowInsets ->
-            val safeInsets = windowInsets.getInsets(
-                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
-            )
+            // The WebView must occupy the full edge-to-edge viewport. The website
+            // already applies CSS env(safe-area-inset-*) to its own fixed controls
+            // and map canvas. Applying the status/navigation bar insets here as
+            // WebView margins as well would apply the same safe area twice,
+            // leaving a blank strip and shifting the public-user interface.
+            //
+            // Keep horizontal display-cutout protection, but let CSS handle the
+            // top and bottom system-bar safe areas. Only the IME (keyboard) changes
+            // the WebView's bottom edge so focused fields remain visible.
+            val cutoutInsets = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout())
             val imeInsets = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
-            val bottomInset = maxOf(safeInsets.bottom, imeInsets.bottom)
+            val bottomInset = imeInsets.bottom
 
             val params = webView.layoutParams as FrameLayout.LayoutParams
             if (
-                params.leftMargin != safeInsets.left ||
-                params.topMargin != safeInsets.top ||
-                params.rightMargin != safeInsets.right ||
+                params.leftMargin != cutoutInsets.left ||
+                params.topMargin != 0 ||
+                params.rightMargin != cutoutInsets.right ||
                 params.bottomMargin != bottomInset
             ) {
                 params.setMargins(
-                    safeInsets.left,
-                    safeInsets.top,
-                    safeInsets.right,
+                    cutoutInsets.left,
+                    0,
+                    cutoutInsets.right,
                     bottomInset
                 )
                 webView.layoutParams = params
