@@ -127,8 +127,8 @@
     });
 
     const showAndroidFallbackInstructions = () => setDialogContent({
-        title: 'Install the web app instead',
-        description: 'The Android app download is currently unavailable. You can still add KNOWURLOCAL to your Home Screen using your browser.',
+        title: 'Add KNOWURLOCAL to your Home Screen',
+        description: 'The native Android APK is not currently published for download. You can still add a KNOWURLOCAL shortcut using your browser’s built-in Home Screen or install option.',
         steps: isSamsungInternet ? [
             'Open the Samsung Internet menu.',
             'Choose “Add page to”, then select “Home screen”.',
@@ -142,7 +142,7 @@
             'Choose “Install app” or “Add to Home screen”.',
             'Confirm the installation.'
         ],
-        note: 'This is the PWA / website shortcut fallback. The native Android APK remains the preferred option when its download is available.'
+        note: 'This adds the web app or a website shortcut; it does not install the separate Android APK. If your browser offers an Install option, use it to get the app-like PWA experience.'
     });
 
     const showDesktopInstructions = () => {
@@ -253,14 +253,29 @@
             }
 
             if (androidApkState === 'available') {
-                // Download the native APK first. If the request itself fails before
-                // the download starts, the browser displays the server error page;
-                // the status preflight below handles missing/unavailable artifacts.
-                window.location.assign(androidDownloadUrl);
-                return;
+                // Verify the download route itself before navigating to the APK.
+                // This catches a stale status result, missing file, permission error,
+                // or server-side download failure before the browser starts a transfer.
+                try {
+                    const downloadCheck = await fetch(androidDownloadUrl, {
+                        method: 'HEAD',
+                        credentials: 'same-origin',
+                        cache: 'no-store',
+                        headers: { Accept: 'application/vnd.android.package-archive' }
+                    });
+                    if (!downloadCheck.ok) {
+                        throw new Error(`APK download preflight returned ${downloadCheck.status}`);
+                    }
+                    window.location.assign(androidDownloadUrl);
+                    return;
+                } catch (error) {
+                    console.warn('[KNOWURLOCAL] Android APK download preflight failed; using web-app fallback:', error);
+                    androidApkState = 'unavailable';
+                }
             }
 
-            // Android APK missing or status request failed: use PWA as the only fallback.
+            // Missing APK or failed preflight: use the browser's PWA prompt when
+            // available; otherwise show browser-specific manual Home Screen steps.
             await showPwaFallback();
             return;
         }
