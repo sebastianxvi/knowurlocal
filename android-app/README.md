@@ -101,7 +101,7 @@ The shared website install banner uses platform-specific distribution priorities
 - **iPhone and iPad:** does not offer the Android APK or attempt a one-tap PWA prompt. It displays instructions for adding the website to the Home Screen through Safari's Share menu. This is a website shortcut / supported web-app experience, not a native iOS application.
 - **Desktop and laptop:** uses the browser's PWA install prompt when available, with browser-specific manual installation guidance as a fallback. Safari on macOS receives Add to Dock instructions when the prompt is unavailable.
 
-The repository intentionally does not contain a release APK. Before Android users can receive the native application, build and sign the release APK, then deploy it to `public/downloads/knowurlocal.apk` on the production server. Until that artifact is present, Android users receive the PWA fallback. Do not commit signing keys or credentials.
+The signed release APK is retained at `android-app/app/release/app-release.apk` and copied to `public/downloads/knowurlocal.apk` for website distribution. The Laravel download-status route checks the latter path. When updating the app, build a new signed release with the same signing identity, increment `versionCode`, and replace both release artifacts. Do not commit signing keys or credentials. If the APK is deployed outside GitHub, upload the file to the production server at `public/downloads/knowurlocal.apk`.
 
 ## Implemented Android behavior
 

@@ -1,0 +1,11 @@
+KNOWURLOCAL Android release distribution
+========================================
+Website download route: /app/android/download
+Availability route: /app/android/download/status
+Laravel public artifact path: public/downloads/knowurlocal.apk
+APK size: 2358257 bytes
+SHA-256: 3f6fdcf894d36d40390594bd91a8cdf52c08aad456de5407b47ce286b3f10725
+
+Deploy the APK at this exact public path. Do not upload the signing keystore
+or credentials. Keep the Android release and website distribution copies
+identical when publishing future releases.

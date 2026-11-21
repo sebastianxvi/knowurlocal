@@ -60,7 +60,7 @@ Route::get('/app/android/download/status', function () {
     ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
 })->name('android.app.download-status');
 
-Route::get('/app/android/download', function () {
+Route::match(['GET', 'HEAD'], '/app/android/download', function () {
     $apkPath = public_path('downloads/knowurlocal.apk');
     abort_unless(is_file($apkPath) && is_readable($apkPath), 404);
 
