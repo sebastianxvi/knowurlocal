@@ -1,6 +1,6 @@
 (() => {
-    // Capture the browser's install event as early as this shared component loads.
-    // beforeinstallprompt is Chromium-family only; other browsers use their own menus.
+    'use strict';
+
     const installState = window.__kylPwaInstallState ||
         (window.__kylPwaInstallState = { deferredPrompt: null });
 
@@ -18,7 +18,6 @@
         });
     }
 
-    // Online-only service worker: no pages or private data are cached.
     if ('serviceWorker' in navigator && (window.isSecureContext || window.location.protocol === 'https:')) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(error => {
@@ -35,26 +34,31 @@
     const dismiss = banner.querySelector('[data-app-install-dismiss]');
     const help = banner.querySelector('[data-app-install-help]');
     const actionLabel = action?.querySelector('span');
+    const dialog = document.querySelector('[data-kyl-install-dialog]');
+    const dialogTitle = dialog?.querySelector('[data-kyl-install-title]');
+    const dialogDescription = dialog?.querySelector('[data-kyl-install-description]');
+    const dialogSteps = dialog?.querySelector('[data-kyl-install-steps]');
+    const dialogNote = dialog?.querySelector('[data-kyl-install-note]');
+    const closeDialog = dialog?.querySelector('[data-kyl-install-close]');
+    const doneDialog = dialog?.querySelector('[data-kyl-install-done]');
+
     if (help) help.setAttribute('aria-live', 'polite');
 
+    const ua = navigator.userAgent || '';
+    const platform = navigator.platform || '';
+    const isNativeAndroidApp = /KNOWURLOCAL-AndroidApp/i.test(ua);
+    const isIOS = /iPad|iPhone|iPod/i.test(ua) ||
+        (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(ua);
+    const isDesktop = !isIOS && !isAndroid;
+    const isMacOS = /Macintosh|MacIntel|MacPPC|Mac68K/i.test(platform + ' ' + ua);
+    const isFirefox = /Firefox|FxiOS/i.test(ua);
+    const isSamsungInternet = /SamsungBrowser/i.test(ua);
+    const isSafari = /Safari/i.test(ua) && !/Chrome|CriOS|Edg|FxiOS/i.test(ua);
     const dismissedKey = 'knowurlocal-app-banner-dismissed';
-    const isNativeAndroidApp = /KNOWURLOCAL-AndroidApp/i.test(navigator.userAgent || '');
-    const isAndroidBrowser = /Android/i.test(navigator.userAgent || '') && !isNativeAndroidApp;
-
-    // The native Android shell is already installed. Hide this browser/PWA prompt
-    // immediately, before asynchronous install events or status checks can run.
-    if (isNativeAndroidApp) {
-        banner.hidden = true;
-        banner.setAttribute('aria-hidden', 'true');
-        document.documentElement.style.setProperty('--kyl-install-banner-height', '0px');
-        // MainActivity already applies Android system-bar/cutout insets to the WebView.
-        // Prevent page CSS from applying those same safe-area insets a second time.
-        document.documentElement.style.setProperty('--kyl-safe-area-inset-top', '0px');
-        document.documentElement.style.setProperty('--kyl-safe-area-inset-bottom', '0px');
-    }
     const androidDownloadUrl = banner.dataset.androidApkUrl || '/app/android/download';
     const androidStatusUrl = banner.dataset.androidApkStatusUrl || '/app/android/download/status';
-    let androidApkState = isAndroidBrowser ? 'checking' : 'unavailable';
+    let androidApkState = isAndroid && !isNativeAndroidApp ? 'checking' : 'not-applicable';
 
     const isInstalled = () =>
         isNativeAndroidApp ||
@@ -72,134 +76,120 @@
         document.documentElement.style.setProperty('--kyl-install-banner-height', `${height}px`);
     };
 
-    const show = () => {
+    const showBanner = () => {
         if (!isInstalled() && !wasDismissed()) {
             banner.hidden = false;
             syncBannerLayout();
         }
     };
 
-    const hide = () => {
+    const hideBanner = () => {
         banner.hidden = true;
         syncBannerLayout();
     };
 
-    const instructions = () => {
-        const ua = navigator.userAgent || '';
-        const platform = navigator.platform || '';
-        const isIOS = /iPad|iPhone|iPod/i.test(ua) ||
-            (platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        const isAndroid = /Android/i.test(ua);
-        const isFirefox = /Firefox|FxiOS/i.test(ua);
-        const isSamsungInternet = /SamsungBrowser/i.test(ua);
-        const isSafari = /Safari/i.test(ua) && !/Chrome|CriOS|Edg|FxiOS/i.test(ua);
-        const isWindows = /Windows NT/i.test(ua);
-
-        if (isIOS) {
-            return 'To add KNOWURLOCAL to your Home Screen, tap Share, then choose “Add to Home Screen”. On iOS 16.4 or later, this is also available in Firefox and other supported browsers. On older iOS versions, open the page in Safari.';
+    const setDialogContent = ({ title, description, steps, note }) => {
+        if (!dialog || !dialogTitle || !dialogDescription || !dialogSteps || !dialogNote) return;
+        dialogTitle.textContent = title;
+        dialogDescription.textContent = description;
+        dialogSteps.replaceChildren();
+        steps.forEach(step => {
+            const item = document.createElement('li');
+            item.textContent = step;
+            dialogSteps.appendChild(item);
+        });
+        dialogNote.textContent = note || '';
+        if (typeof dialog.showModal === 'function') {
+            if (!dialog.open) dialog.showModal();
+        } else {
+            // Older embedded browsers: retain a readable, non-script-dependent fallback.
+            dialog.setAttribute('open', '');
         }
-
-        if (isAndroid && isFirefox) {
-            return 'In Firefox for Android, tap the three-dot menu (⋮), then choose “Install” (or “Add to Home screen”, depending on your version). Follow the prompt to add KNOWURLOCAL to your Home Screen.';
-        }
-
-        if (isAndroid && isSamsungInternet) {
-            return 'In Samsung Internet, open the browser menu, choose “Add page to”, then select “Home screen”. Follow the confirmation steps to add KNOWURLOCAL.';
-        }
-
-        if (isAndroid) {
-            return 'Open your browser menu (⋮) and look for “Install app” or “Add to Home screen”. The exact label depends on your browser. If neither option is available, try Chrome, Firefox for Android, or Samsung Internet.';
-        }
-
-        if (isFirefox && isWindows) {
-            return 'In Firefox for Windows, look for the web-app icon in the address bar and select it to add KNOWURLOCAL as a web app. This feature requires Firefox 143 or later (150 or later for Microsoft Store installations). If the icon is unavailable, use a supported browser such as Chrome or Edge.';
-        }
-
-        if (isFirefox) {
-            return 'This Firefox version does not provide a one-click web-app install option on this platform. Open KNOWURLOCAL in Chrome or Edge and use the browser menu’s “Install” option. On macOS Sonoma or later, Safari also offers File → Add to Dock.';
-        }
-
-        if (isSafari) {
-            return 'In Safari on macOS Sonoma or later, choose File → Add to Dock to use KNOWURLOCAL like an app.';
-        }
-
-        return 'Open your browser menu and look for “Install KNOWURLOCAL”, “Install page as app”, or “Add to Home screen”. If your browser does not offer an install option, try Chrome or Edge.';
+        closeDialog?.focus();
     };
 
-    const showHelp = message => {
-        if (!help) return;
-        help.textContent = message || instructions();
-        help.hidden = false;
-        if (actionLabel) actionLabel.textContent = 'How to install';
-        syncBannerLayout();
+    const closeInstallDialog = () => {
+        if (!dialog) return;
+        if (typeof dialog.close === 'function' && dialog.open) dialog.close();
+        else dialog.removeAttribute('open');
     };
 
-    if (isAndroidBrowser && action) {
-        action.disabled = true;
-        if (actionLabel) actionLabel.textContent = 'Checking...';
-        fetch(androidStatusUrl, { method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } })
-            .then(response => response.ok ? response.json() : null)
-            .then(payload => {
-                androidApkState = payload?.available === true ? 'available' : 'unavailable';
-                action.disabled = false;
-                if (androidApkState === 'available') {
-                    if (actionLabel) actionLabel.textContent = 'Download App';
-                    if (help) help.hidden = true;
-                } else if (installState.deferredPrompt) {
-                    if (actionLabel) actionLabel.textContent = 'Install App';
-                } else if (actionLabel) {
-                    actionLabel.textContent = 'How to install';
-                }
-                syncBannerLayout();
-            })
-            .catch(() => {
-                androidApkState = 'unavailable';
-                if (action) action.disabled = false;
-                if (actionLabel) actionLabel.textContent = installState.deferredPrompt ? 'Install App' : 'How to install';
+    const showIOSInstructions = () => setDialogContent({
+        title: 'Add KNOWURLOCAL to your Home Screen',
+        description: 'There is no separate KNOWURLOCAL iOS app available yet. You can add this website to your iPhone or iPad Home Screen for an app-like shortcut.',
+        steps: [
+            'Open this page in Safari.',
+            'Tap the Share button (the square with the upward arrow).',
+            'Scroll the share menu and choose “Add to Home Screen”.',
+            'Keep the suggested name KNOWURLOCAL, then tap Add.'
+        ],
+        note: 'The shortcut opens the KNOWURLOCAL website. On supported iOS versions, it can open in a standalone, app-like view.'
+    });
+
+    const showAndroidFallbackInstructions = () => setDialogContent({
+        title: 'Install the web app instead',
+        description: 'The Android app download is currently unavailable. You can still add KNOWURLOCAL to your Home Screen using your browser.',
+        steps: isSamsungInternet ? [
+            'Open the Samsung Internet menu.',
+            'Choose “Add page to”, then select “Home screen”.',
+            'Confirm the shortcut.'
+        ] : isFirefox ? [
+            'Open the Firefox menu (⋮).',
+            'Choose “Install” or “Add to Home screen”.',
+            'Follow the confirmation steps.'
+        ] : [
+            'Open the browser menu (⋮).',
+            'Choose “Install app” or “Add to Home screen”.',
+            'Confirm the installation.'
+        ],
+        note: 'This is the PWA / website shortcut fallback. The native Android APK remains the preferred option when its download is available.'
+    });
+
+    const showDesktopInstructions = () => {
+        if (isMacOS && isSafari) {
+            setDialogContent({
+                title: 'Add KNOWURLOCAL to your Mac',
+                description: 'Safari on macOS Sonoma or later can add a website to your Dock as a web app.',
+                steps: [
+                    'Open KNOWURLOCAL in Safari.',
+                    'Choose File from the macOS menu bar.',
+                    'Select “Add to Dock”.',
+                    'Confirm the name and click Add.'
+                ],
+                note: 'On other desktop browsers, use the browser install option when available, or bookmark KNOWURLOCAL.'
             });
-    }
-
-    if (isInstalled()) hide();
-    else show();
-
-    if ('ResizeObserver' in window) {
-        const bannerObserver = new ResizeObserver(syncBannerLayout);
-        bannerObserver.observe(banner);
-    } else {
-        window.addEventListener('resize', syncBannerLayout, { passive: true });
-    }
-
-    // Re-render state if the install event arrives after this component initializes.
-    window.addEventListener('kyl:pwa-install-available', () => {
-        if (actionLabel && !(isAndroidBrowser && androidApkState === 'available')) {
-            actionLabel.textContent = 'Install App';
-        }
-        if (help) help.hidden = true;
-        show();
-    });
-
-    action?.addEventListener('click', () => {
-        requestInstall();
-    });
-
-    // Each entry point calls prompt() from its own trusted click handler.
-    const requestInstall = async () => {
-        if (isAndroidBrowser && androidApkState === 'checking') {
-            showHelp('Checking whether the Android app download is available. Please try again in a moment.');
             return;
         }
+        setDialogContent({
+            title: 'Install KNOWURLOCAL on your computer',
+            description: 'Add KNOWURLOCAL as a desktop app for quick access from your computer.',
+            steps: [
+                'Open KNOWURLOCAL in Chrome or Microsoft Edge.',
+                'Look for the install icon in the address bar, or open the browser menu.',
+                'Choose “Install KNOWURLOCAL” or “Install this site as an app”.',
+                'Confirm the installation.'
+            ],
+            note: 'If your browser does not offer an install option, you can still bookmark KNOWURLOCAL for quick access.'
+        });
+    };
 
-        if (isAndroidBrowser && androidApkState === 'available') {
-            window.location.assign(androidDownloadUrl);
-            return;
-        }
+    const showGenericWebInstructions = () => setDialogContent({
+        title: 'Add KNOWURLOCAL to your device',
+        description: 'Your browser does not provide a one-tap installation prompt right now. You can use its menu to add a shortcut.',
+        steps: [
+            'Open your browser menu.',
+            'Look for “Install app”, “Add to Home Screen”, or “Create shortcut”.',
+            'Follow the browser instructions to finish.'
+        ],
+        note: 'The exact wording depends on your browser and device.'
+    });
 
+    const showPwaFallback = async () => {
         const promptEvent = installState.deferredPrompt;
-
         if (!promptEvent) {
-            banner.hidden = false;
-            syncBannerLayout();
-            showHelp();
+            if (isAndroid) showAndroidFallbackInstructions();
+            else if (isDesktop) showDesktopInstructions();
+            else showGenericWebInstructions();
             return;
         }
 
@@ -207,57 +197,144 @@
             await promptEvent.prompt();
             const choice = await promptEvent.userChoice;
             installState.deferredPrompt = null;
-
             if (choice?.outcome === 'accepted') {
-                hide();
+                hideBanner();
                 if (help) help.hidden = true;
             } else {
-                banner.hidden = false;
-                syncBannerLayout();
-                showHelp('Installation was not completed. You can try again from your browser menu.');
-                if (actionLabel) actionLabel.textContent = 'Install App';
+                if (isAndroid) showAndroidFallbackInstructions();
+                else showDesktopInstructions();
             }
         } catch (_) {
             installState.deferredPrompt = null;
-            banner.hidden = false;
-            syncBannerLayout();
-            showHelp();
+            if (isAndroid) showAndroidFallbackInstructions();
+            else showDesktopInstructions();
         }
     };
 
-    // Delegated handling is required because this shared script is loaded
-    // near the top of the page, before landing navigation/footer links exist.
-    // Keep prompt() directly within the trusted click event.
-    document.addEventListener('click', event => {
-        const trigger = event.target.closest('[data-app-install-trigger]');
-        if (!trigger) return;
+    const checkAndroidApk = async () => {
+        if (!isAndroid || isNativeAndroidApp) return;
+        if (action) action.disabled = true;
+        if (actionLabel) actionLabel.textContent = 'Checking app...';
+        try {
+            const response = await fetch(androidStatusUrl, {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: { Accept: 'application/json' }
+            });
+            if (!response.ok) throw new Error(`APK status returned ${response.status}`);
+            const payload = await response.json();
+            androidApkState = payload?.available === true ? 'available' : 'unavailable';
+        } catch (error) {
+            console.warn('[KNOWURLOCAL] Android APK availability check failed:', error);
+            androidApkState = 'unavailable';
+        } finally {
+            if (action) action.disabled = false;
+            if (actionLabel) actionLabel.textContent =
+                androidApkState === 'available' ? 'Download Android App' : 'Install App';
+            syncBannerLayout();
+        }
+    };
 
-        event.preventDefault();
-
-        if (isInstalled()) {
-            // On an already-installed PWA, the page is already running as the app.
-            // From a normal browser tab, avoid a misleading install-help message.
-            window.location.assign('/');
+    const requestInstall = async () => {
+        if (isIOS) {
+            showIOSInstructions();
             return;
         }
 
-        banner.hidden = false;
+        if (isAndroid) {
+            if (androidApkState === 'checking') {
+                if (help) {
+                    help.textContent = 'Checking Android app availability. Please try again in a moment.';
+                    help.hidden = false;
+                }
+                syncBannerLayout();
+                return;
+            }
+
+            if (androidApkState === 'available') {
+                // Download the native APK first. If the request itself fails before
+                // the download starts, the browser displays the server error page;
+                // the status preflight below handles missing/unavailable artifacts.
+                window.location.assign(androidDownloadUrl);
+                return;
+            }
+
+            // Android APK missing or status request failed: use PWA as the only fallback.
+            await showPwaFallback();
+            return;
+        }
+
+        // Desktop/laptop: use the browser's PWA install prompt, never the Android APK.
+        await showPwaFallback();
+    };
+
+    if (actionLabel) {
+        if (isIOS) actionLabel.textContent = 'How to add';
+        else if (isAndroid) actionLabel.textContent = 'Download App';
+        else actionLabel.textContent = 'Install App';
+    }
+
+    if (isNativeAndroidApp) {
+        hideBanner();
+        document.documentElement.style.setProperty('--kyl-safe-area-inset-top', '0px');
+        document.documentElement.style.setProperty('--kyl-safe-area-inset-bottom', '0px');
+    } else {
+        showBanner();
+    }
+
+    if (isAndroid && !isNativeAndroidApp) checkAndroidApk();
+
+    if ('ResizeObserver' in window) {
+        const observer = new ResizeObserver(syncBannerLayout);
+        observer.observe(banner);
+    } else {
+        window.addEventListener('resize', syncBannerLayout, { passive: true });
+    }
+
+    window.addEventListener('kyl:pwa-install-available', () => {
+        if (actionLabel && !(isAndroid && androidApkState === 'available')) {
+            actionLabel.textContent = isAndroid ? 'Install App' : 'Install App';
+        }
         syncBannerLayout();
+    });
+
+    action?.addEventListener('click', requestInstall);
+
+    document.addEventListener('click', event => {
+        const trigger = event.target.closest('[data-app-install-trigger]');
+        if (!trigger) return;
+        event.preventDefault();
+        if (isInstalled()) {
+            window.location.assign('/');
+            return;
+        }
+        showBanner();
         requestInstall();
     });
 
     dismiss?.addEventListener('click', () => {
-        hide();
+        hideBanner();
         try { sessionStorage.setItem(dismissedKey, '1'); } catch (_) {}
     });
 
+    closeDialog?.addEventListener('click', closeInstallDialog);
+    doneDialog?.addEventListener('click', closeInstallDialog);
+    dialog?.addEventListener('click', event => {
+        if (event.target === dialog) closeInstallDialog();
+    });
+    dialog?.addEventListener('cancel', event => {
+        event.preventDefault();
+        closeInstallDialog();
+    });
+
     window.addEventListener('kyl:pwa-installed', () => {
-        hide();
+        hideBanner();
         installState.deferredPrompt = null;
         try { localStorage.removeItem(dismissedKey); } catch (_) {}
     });
 
     window.matchMedia('(display-mode: standalone)').addEventListener?.('change', event => {
-        if (event.matches) hide();
+        if (event.matches) hideBanner();
     });
 })();

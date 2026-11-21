@@ -93,6 +93,16 @@ The existing site-wide Install App banner checks this endpoint on Android. When 
 
 After copying a verified APK into that location, deploy the file and the accompanying Laravel/Blade/JavaScript changes together. Verify the status endpoint returns `available: true`, the download response has `Content-Type: application/vnd.android.package-archive`, and the downloaded APK installs on supported physical devices.
 
+## Platform-aware website installation flow
+
+The shared website install banner uses platform-specific distribution priorities:
+
+- **Android browser:** checks `GET /app/android/download/status` without caching. If the signed APK exists, the primary action downloads `public/downloads/knowurlocal.apk`. If the artifact is missing or the status check fails, the website falls back to the browser's PWA install prompt; if no prompt is available, it displays Android-specific Home Screen / install instructions.
+- **iPhone and iPad:** does not offer the Android APK or attempt a one-tap PWA prompt. It displays instructions for adding the website to the Home Screen through Safari's Share menu. This is a website shortcut / supported web-app experience, not a native iOS application.
+- **Desktop and laptop:** uses the browser's PWA install prompt when available, with browser-specific manual installation guidance as a fallback. Safari on macOS receives Add to Dock instructions when the prompt is unavailable.
+
+The repository intentionally does not contain a release APK. Before Android users can receive the native application, build and sign the release APK, then deploy it to `public/downloads/knowurlocal.apk` on the production server. Until that artifact is present, Android users receive the PWA fallback. Do not commit signing keys or credentials.
+
 ## Implemented Android behavior
 
 - Loads only the trusted KNOWURLOCAL HTTPS origin inside the WebView.
