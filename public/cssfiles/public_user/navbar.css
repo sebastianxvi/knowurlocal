@@ -117,7 +117,7 @@ body {
 
     top:
         calc(
-            env(safe-area-inset-top, 0px)
+            var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px))
             + var(--kyl-install-banner-height, 0px)
             + 14px
         );
@@ -1632,7 +1632,7 @@ mark {
         /* Keep the mobile header below the global sticky install banner. */
         top:
             calc(
-                env(safe-area-inset-top, 0px)
+                var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px))
                 + var(--kyl-install-banner-height, 0px)
                 + 10px
             );
@@ -1755,7 +1755,7 @@ mark {
 
         top:
             calc(
-                env(safe-area-inset-top, 0px) + 66px
+                var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) + 66px
             );
 
         right: 12px;
@@ -2890,7 +2890,7 @@ a,
      */
     .search-results {
         position: fixed;
-        top: calc(68px + env(safe-area-inset-top, 0px));
+        top: calc(68px + var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)));
         left: 10px;
         right: 10px;
         width: auto;
@@ -2973,8 +2973,8 @@ a,
 
 @media (max-width: 600px) and (max-height: 540px) {
     .search-results {
-        top: calc(62px + env(safe-area-inset-top, 0px));
-        max-height: calc(100dvh - 74px - env(safe-area-inset-top, 0px));
+        top: calc(62px + var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)));
+        max-height: calc(100dvh - 74px - var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)));
     }
 }
 
@@ -3032,7 +3032,7 @@ a,
    ========================================================= */
 @media (max-width: 600px) {
     .search-results {
-        top: calc(58px + env(safe-area-inset-top, 0px));
+        top: calc(58px + var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)));
         left: 4px;
         right: 4px;
         width: auto;
@@ -4557,7 +4557,7 @@ body :is(small, .helper-text, .field-hint, .form-hint) { font-size: 12px; }
     .nav-drawer {
         width: min(286px, calc(100vw - 24px));
         max-width: calc(100vw - 24px);
-        max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 82px);
+        max-height: calc(100dvh - var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) - 82px);
         overflow-x: hidden;
         overflow-y: auto;
         overscroll-behavior: contain;
@@ -4804,7 +4804,7 @@ body :is(small, .helper-text, .field-hint, .form-hint) { font-size: 12px; }
 
 @media (max-height: 560px) and (max-width: 767px) {
     .nav-drawer {
-        max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 70px);
+        max-height: calc(100dvh - var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) - 70px);
     }
 
     .nav-drawer #greet {

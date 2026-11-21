@@ -45,7 +45,7 @@ body.user-notifications-page {
 
 body.user-notifications-page .site-header {
     position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px) + 20px);
+    top: calc(var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--kyl-install-banner-height, 0px) + 20px);
     left: 0;
     right: 0;
     z-index: 9999;
@@ -55,7 +55,7 @@ body.user-notifications-page .notifications-shell {
     display: flex;
     flex-direction: column;
     width: min(100% - 40px, 980px);
-    height: calc(100dvh - 124px - var(--kyl-install-banner-height, 0px) - env(safe-area-inset-bottom, 0px));
+    height: calc(100dvh - 124px - var(--kyl-install-banner-height, 0px) - var(--kyl-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
     min-height: 0;
     margin: calc(104px + var(--kyl-install-banner-height, 0px)) auto 20px;
     overflow: hidden;
@@ -104,13 +104,13 @@ body.user-notifications-page .notifications-list::-webkit-scrollbar-thumb {
 
 @media (max-width: 640px) {
     body.user-notifications-page .site-header {
-        top: calc(env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px) + 12px);
+        top: calc(var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--kyl-install-banner-height, 0px) + 12px);
     }
 
     body.user-notifications-page .notifications-shell {
         width: calc(100% - 24px);
-        height: calc(100dvh - 112px - var(--kyl-install-banner-height, 0px) - env(safe-area-inset-bottom, 0px));
-        margin: calc(92px + env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px)) auto 12px;
+        height: calc(100dvh - 112px - var(--kyl-install-banner-height, 0px) - var(--kyl-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+        margin: calc(92px + var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--kyl-install-banner-height, 0px)) auto 12px;
     }
 
     body.user-notifications-page .notifications-heading {
@@ -285,7 +285,7 @@ body.user-notifications-page .user-notification-item:focus-visible {
 /* Final spacing refinement: bring the feed closer to navigation and quieten the action. */
 body.user-notifications-page .notifications-shell {
     margin-top: calc(72px + var(--kyl-install-banner-height, 0px));
-    height: calc(100dvh - 92px - var(--kyl-install-banner-height, 0px) - env(safe-area-inset-bottom, 0px));
+    height: calc(100dvh - 92px - var(--kyl-install-banner-height, 0px) - var(--kyl-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 body.user-notifications-page .notifications-heading {
@@ -313,8 +313,8 @@ body.user-notifications-page .notifications-read-all i {
 
 @media (max-width: 640px) {
     body.user-notifications-page .notifications-shell {
-        height: calc(100dvh - 76px - var(--kyl-install-banner-height, 0px) - env(safe-area-inset-bottom, 0px));
-        margin-top: calc(60px + env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px));
+        height: calc(100dvh - 76px - var(--kyl-install-banner-height, 0px) - var(--kyl-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+        margin-top: calc(60px + var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--kyl-install-banner-height, 0px));
     }
 
     body.user-notifications-page .notifications-heading {
@@ -858,8 +858,8 @@ body.user-notifications-page .notifications-shell {
 
 @media (max-width: 640px) {
     body.user-notifications-page .notifications-shell {
-        margin-top: calc(44px + env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px));
-        height: calc(100dvh - 84px - var(--kyl-install-banner-height, 0px) - env(safe-area-inset-bottom, 0px));
+        margin-top: calc(44px + var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--kyl-install-banner-height, 0px));
+        height: calc(100dvh - 84px - var(--kyl-install-banner-height, 0px) - var(--kyl-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
         margin-bottom: 20px;
     }
 
@@ -884,7 +884,7 @@ body.user-notifications-page .notifications-shell {
     }
 
     body.user-notifications-page .site-header {
-        top: calc(env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px) + 10px);
+        top: calc(var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--kyl-install-banner-height, 0px) + 10px);
     }
 
     body.user-notifications-page .notifications-shell {
@@ -893,7 +893,7 @@ body.user-notifications-page .notifications-shell {
         width: calc(100% - 24px);
         height: auto;
         min-height: 0;
-        margin: calc(104px + env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px)) auto 28px;
+        margin: calc(104px + var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--kyl-install-banner-height, 0px)) auto 28px;
         overflow: visible;
     }
 
@@ -1065,15 +1065,15 @@ body.user-notifications-page .notifications-shell {
         box-sizing: border-box;
         margin-top: calc(
             112px +
-            env(safe-area-inset-top, 0px) +
+            var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) +
             var(--kyl-install-banner-height, 0px)
         ) !important;
         height: calc(
             100dvh -
             132px -
-            env(safe-area-inset-top, 0px) -
+            var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) -
             var(--kyl-install-banner-height, 0px) -
-            env(safe-area-inset-bottom, 0px)
+            var(--kyl-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))
         ) !important;
         min-height: 0;
     }
@@ -1142,7 +1142,7 @@ body.user-notifications-page .notifications-shell {
         height: auto !important;
         min-height: 0 !important;
         max-height: none !important;
-        margin: calc(88px + env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px)) auto 28px !important;
+        margin: calc(88px + var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--kyl-install-banner-height, 0px)) auto 28px !important;
         overflow: visible !important;
     }
 

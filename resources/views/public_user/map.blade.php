@@ -35,7 +35,7 @@
 >   
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navbar.css')) }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ substr(hash_file('sha256', public_path('cssfiles/public_user/navbar.css')), 0, 16) }}">
     <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}?v={{ filemtime(public_path('cssfiles/components/modal.css')) }}">
 
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/map.css') }}?v={{ substr(hash_file('sha256', public_path('cssfiles/public_user/map.css')), 0, 16) }}">

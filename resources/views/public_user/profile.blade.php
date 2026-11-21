@@ -6,8 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>My Profile | KNOWURLOCAL</title>
     <link rel="stylesheet" href="{{ asset('cssfiles/public_user/typography.css') }}?v={{ filemtime(public_path('cssfiles/public_user/typography.css')) }}">
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navbar.css')) }}">
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/profile.css') }}?v={{ filemtime(public_path('cssfiles/public_user/profile.css')) }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ substr(hash_file('sha256', public_path('cssfiles/public_user/navbar.css')), 0, 16) }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/profile.css') }}?v={{ substr(hash_file('sha256', public_path('cssfiles/public_user/profile.css')), 0, 16) }}">
     <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}?v={{ filemtime(public_path('cssfiles/components/modal.css')) }}">
     <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/light/style.css">
     <link rel="stylesheet" href="{{ asset('cssfiles/components/image-placeholders.css') }}?v={{ file_exists(public_path('cssfiles/components/image-placeholders.css')) ? filemtime(public_path('cssfiles/components/image-placeholders.css')) : time() }}">

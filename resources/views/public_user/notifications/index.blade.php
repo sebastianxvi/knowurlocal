@@ -17,9 +17,9 @@
     <title>KNOWURLOCAL | Notifications</title>
     <link rel="icon" type="image/svg+xml" href="{{ asset('images/knowurlocal-kyl-logo.svg') }}?v=3">
     <script src="https://unpkg.com/phosphor-icons@1.4.2"></script>
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ filemtime(public_path('cssfiles/public_user/navbar.css')) }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/navbar.css') }}?v={{ substr(hash_file('sha256', public_path('cssfiles/public_user/navbar.css')), 0, 16) }}">
     <link rel="stylesheet" href="{{ asset('cssfiles/components/modal.css') }}?v={{ filemtime(public_path('cssfiles/components/modal.css')) }}">
-    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/notifications.css') }}?v={{ filemtime(public_path('cssfiles/public_user/notifications.css')) }}">
+    <link rel="stylesheet" href="{{ asset('cssfiles/public_user/notifications.css') }}?v={{ substr(hash_file('sha256', public_path('cssfiles/public_user/notifications.css')), 0, 16) }}">
     @vite('resources/js/echo.js')
     <script src="{{ asset('jsfiles/public_user/navbar.js') }}" defer></script>
     <script type="module" src="{{ asset('jsfiles/public_user/navbar-realtime.js') }}?v={{ md5_file(public_path('jsfiles/public_user/navbar-realtime.js')) }}"></script>

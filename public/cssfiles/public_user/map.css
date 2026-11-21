@@ -19,8 +19,8 @@ html, body {
 /* MAP FULLSCREEN */
 #map {
     position: absolute;
-    top: calc(env(safe-area-inset-top, 0px) + var(--kyl-install-banner-height, 0px));
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 0px);
+    top: calc(var(--kyl-safe-area-inset-top, env(safe-area-inset-top, 0px)) + var(--kyl-install-banner-height, 0px));
+    bottom: calc(var(--kyl-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) + 0px);
     left: 0;
     right: 0;
     width: 100%;
@@ -2473,7 +2473,7 @@ a.agency-contact-value:focus-visible {
 @media (max-width: 600px) {
     .map-legend {
         left: 12px;
-        bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(14px + var(--kyl-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
         width: min(224px, calc(100vw - 24px));
         border-radius: 14px;
     }
@@ -2729,7 +2729,7 @@ a.agency-contact-value:focus-visible {
 @media (max-width: 600px) {
     .map-legend {
         left: 10px;
-        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(12px + var(--kyl-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
         width: min(196px, calc(100vw - 20px));
         border-radius: 12px;
     }
@@ -2895,7 +2895,7 @@ a.agency-contact-value:focus-visible {
     /* Leave a dedicated lane above the Helpdesk launcher. */
     .map-legend {
         left: 10px;
-        bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(76px + var(--kyl-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
         width: min(208px, calc(100vw - 20px));
     }
 
@@ -2936,7 +2936,7 @@ a.agency-contact-value:focus-visible {
     .map-legend {
         left: 10px;
         right: auto;
-        bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(18px + var(--kyl-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
     }
 
     .map-legend.is-collapsed {

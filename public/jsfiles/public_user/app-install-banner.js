@@ -47,6 +47,10 @@
         banner.hidden = true;
         banner.setAttribute('aria-hidden', 'true');
         document.documentElement.style.setProperty('--kyl-install-banner-height', '0px');
+        // MainActivity already applies Android system-bar/cutout insets to the WebView.
+        // Prevent page CSS from applying those same safe-area insets a second time.
+        document.documentElement.style.setProperty('--kyl-safe-area-inset-top', '0px');
+        document.documentElement.style.setProperty('--kyl-safe-area-inset-bottom', '0px');
     }
     const androidDownloadUrl = banner.dataset.androidApkUrl || '/app/android/download';
     const androidStatusUrl = banner.dataset.androidApkStatusUrl || '/app/android/download/status';

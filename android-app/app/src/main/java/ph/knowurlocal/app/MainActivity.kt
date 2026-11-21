@@ -213,6 +213,10 @@ class MainActivity : ComponentActivity() {
                             banner.setAttribute('aria-hidden', 'true');
                         }
                         document.documentElement.style.setProperty('--kyl-install-banner-height', '0px');
+                        // The native container already applies status/navigation/cutout insets.
+                        // Tell shared page CSS not to apply the same safe-area values again.
+                        document.documentElement.style.setProperty('--kyl-safe-area-inset-top', '0px');
+                        document.documentElement.style.setProperty('--kyl-safe-area-inset-bottom', '0px');
                     })();
                     """.trimIndent(),
                     null
