@@ -6,6 +6,35 @@
 <link rel="stylesheet" href="{{ asset('cssfiles/components/form-system.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/admin-modules.css') }}">
 <link rel="stylesheet" href="{{ asset('cssfiles/admin/users.css') }}">
+
+<style>
+.account-deactivation-details{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:9px;max-width:280px;white-space:normal}
+.account-deactivation-reason{color:var(--text-secondary,#64748b);font-size:12px;line-height:1.45;overflow-wrap:anywhere;white-space:normal}
+.account-deactivation-date{color:var(--text-muted,#8490a3);font-size:11px;line-height:1.4;white-space:normal}
+
+.deactivation-reason-cell{min-width:230px;max-width:360px;white-space:normal;vertical-align:middle}
+.deactivation-reason-cell .account-deactivation-details{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin:0;max-width:none;white-space:normal}
+.deactivation-reason-cell .account-deactivation-reason{display:block;max-width:100%;color:var(--text-secondary,#64748b);font-size:12px;line-height:1.5;overflow-wrap:anywhere;white-space:normal}
+.deactivation-reason-cell .account-deactivation-date{display:block;color:var(--text-muted,#8490a3);font-size:11px;line-height:1.4;white-space:normal}
+.deactivation-reason-empty{color:var(--text-muted,#94a3b8)}
+@media(max-width:768px){.deactivation-reason-cell{min-width:190px;max-width:260px}}
+</style>
+
+{{-- Keep deactivation details consistently centered across all account-management tables. --}}
+<style>
+.deactivation-reason-cell { text-align: center !important; vertical-align: middle !important; }
+.deactivation-reason-cell .account-deactivation-details {
+    align-items: center !important;
+    justify-content: center !important;
+    margin-inline: auto !important;
+    text-align: center !important;
+}
+.deactivation-reason-cell .account-deactivation-reason,
+.deactivation-reason-cell .account-deactivation-date {
+    text-align: center !important;
+}
+</style>
+
 @endpush
 
 @section('title', 'KNOWURLOCAL | ' . ucfirst(auth()->user()->role) . ' Module')
@@ -79,9 +108,10 @@
                 <tr>
                     <th>User</th>
                     <th>Email</th>
-                    <th>Role</th>
                     <th>Status</th>
-                    <th>Last Login</th>
+                    @if(request()->query('status', 'active') === 'deactivated')
+                        <th>Deactivation Reason</th>
+                    @endif
                     <th>Date Registered</th>
 
                     @if(auth()->user()->role === 'superadmin')
@@ -125,13 +155,6 @@
                     <!-- EMAIL -->
                     <td>{{ $user->email }}</td>
 
-                    <!-- ROLE -->
-                    <td>
-                        <span class="role-badge {{ $user->role }}">
-                            {{ ucfirst($user->role) }}
-                        </span>
-                    </td>
-
                     <!-- STATUS -->
                     <td>
                         <span class="badge {{ $user->status ?? 'active' }}">
@@ -139,17 +162,21 @@
                         </span>
                     </td>
 
-                    <!-- LAST LOGIN -->
-                    <td>
-                        @if($user->last_login_at)
-                            {{ $user->last_login_at->format('M d, Y, g:i A') }}
+                    @if(request()->query('status', 'active') === 'deactivated')
+                    <!-- DEACTIVATION REASON: only relevant in the deactivated tab -->
+                    <td class="deactivation-reason-cell">
+                        @if($user->status === 'deactivated')
+                            <div class="account-deactivation-details">
+                                <span class="account-deactivation-reason">{{ $user->deactivation_reason ?: 'No reason recorded.' }}</span>
+                                @if($user->deactivated_at)
+                                    <span class="account-deactivation-date">Deactivated {{ $user->deactivated_at->format('M d, Y · g:i A') }}</span>
+                                @endif
+                            </div>
                         @else
-                            <span style="color:var(--text-muted);">
-                                Never
-                            </span>
+                            <span class="deactivation-reason-empty">—</span>
                         @endif
                     </td>
-
+                    @endif
 
                     <!-- DATE REGISTERED -->
                     <td>
@@ -179,6 +206,8 @@
                 <form
                     method="POST"
                     action="{{ route('admin.users.deactivate', $user->id) }}"
+                    class="js-account-deactivation-form"
+                    data-verification-url="{{ route('admin.users.verify-lifecycle-password') }}"
                 >
                     @csrf
 
@@ -249,7 +278,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="5" class="empty">
+                    <td colspan="{{ (auth()->user()->role === 'superadmin' ? 5 : 4) + (request()->query('status', 'active') === 'deactivated' ? 1 : 0) }}" class="empty">
                         No users found.
                     </td>
                 </tr>
@@ -1240,4 +1269,5 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
+<script src="{{ asset('jsfiles/admin/account-deactivation.js') }}?v={{ hash_file('sha256', public_path('jsfiles/admin/account-deactivation.js')) }}"></script>
 @endpush

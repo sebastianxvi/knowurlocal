@@ -5138,3 +5138,82 @@ body, .layout { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Bli
     border-radius: 999px !important;
     line-height: 1 !important;
 }
+
+
+/* Final notification counter sizing: stable circle for one digit, readable pill for multiple digits. */
+.header-quick-badge,
+.admin-notification-badge,
+.sidebar-notification,
+.js-support-pending-badge,
+.ai-unread-count {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 18px !important;
+    max-width: none !important;
+    height: 18px !important;
+    min-height: 18px !important;
+    padding: 0 5px !important;
+    border-radius: 999px !important;
+    font-size: 9px !important;
+    line-height: 1 !important;
+    font-variant-numeric: tabular-nums !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+}
+
+
+/* ADMIN NOTIFICATION CENTER — independently scrollable categories */
+.admin-notification-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    overscroll-behavior: contain;
+}
+
+.admin-notification-group {
+    flex: 0 0 auto;
+    min-height: 0;
+    max-height: min(220px, 34vh);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+    border-bottom: 1px solid #f0f2f5;
+    border-radius: 8px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.admin-notification-group:last-child {
+    border-bottom: 0;
+}
+
+.admin-notification-group .admin-notification-section-label {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #fff;
+}
+
+.admin-notification-group::-webkit-scrollbar {
+    width: 6px;
+}
+
+.admin-notification-group::-webkit-scrollbar-thumb {
+    background: #d7dde6;
+    border-radius: 999px;
+}
+
+.admin-notification-group::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+@media (max-width: 680px) {
+    .admin-notification-group {
+        max-height: min(200px, 30vh);
+    }
+}

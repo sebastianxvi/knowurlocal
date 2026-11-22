@@ -86,7 +86,7 @@
          styles can refine it without creating unrelated visual systems. --}}
     <link
         rel="stylesheet"
-        href="{{ asset('cssfiles/admin/admin-design-system.css') }}?v={{ filemtime(public_path('cssfiles/admin/admin-design-system.css')) }}"
+        href="{{ asset('cssfiles/admin/admin-design-system.4ccb73746ad9.css') }}"
     >
 
     {{-- Mobile-only admin layout and modal refinements. --}}
@@ -171,7 +171,7 @@
 
 <script src="{{ asset('jsfiles/admin/admin-shell.js') }}?v={{ file_exists(public_path('jsfiles/admin/admin-shell.js')) ? filemtime(public_path('jsfiles/admin/admin-shell.js')) : time() }}"></script>
 <script src="{{ asset('jsfiles/admin/admin-filter-bar.js') }}?v={{ file_exists(public_path('jsfiles/admin/admin-filter-bar.js')) ? filemtime(public_path('jsfiles/admin/admin-filter-bar.js')) : time() }}"></script>
-<script src="{{ asset('jsfiles/admin/admin-notifications.js') }}?v={{ file_exists(public_path('jsfiles/admin/admin-notifications.js')) ? filemtime(public_path('jsfiles/admin/admin-notifications.js')) : time() }}"></script>
+<script src="{{ asset('jsfiles/admin/admin-notifications.50392471456f.js') }}"></script>
 
 
 

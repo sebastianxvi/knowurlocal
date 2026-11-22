@@ -1335,7 +1335,7 @@ public function resetPassword(Request $request)
             return back()
                 ->withInput($request->only('email'))
                 ->withErrors([
-                    'email' => 'This account has been deactivated. Please contact the KNOWURLOCAL system administrator if you believe this is a mistake.',
+                    'email' => "This account has been deactivated.\n\nReason for deactivation:\n" . (trim((string) $user->deactivation_reason) !== '' ? trim((string) $user->deactivation_reason) : 'No reason was provided. Please contact the KNOWURLOCAL system administrator for assistance.') . "\n\nDeactivated on: " . ($user->deactivated_at ? $user->deactivated_at->timezone(config('app.timezone'))->format('F j, Y \\a\\t g:i A') : 'Date unavailable'),
                 ]);
         }
 

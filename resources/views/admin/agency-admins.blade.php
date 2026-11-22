@@ -56,6 +56,35 @@
 }
 .agency-admin-actions .admin-table-icon-action i { margin:0; font-size:15px; }
 @media (max-width: 700px) { .agency-admin-actions { justify-content:flex-start; } }
+
+.deactivation-reason-cell{min-width:230px;max-width:360px;white-space:normal;vertical-align:middle}
+.deactivation-reason-cell .account-deactivation-details{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin:0;max-width:none;white-space:normal}
+.deactivation-reason-cell .account-deactivation-reason{display:block;max-width:100%;color:var(--text-secondary,#64748b);font-size:12px;line-height:1.5;overflow-wrap:anywhere;white-space:normal}
+.deactivation-reason-cell .account-deactivation-date{display:block;color:var(--text-muted,#8490a3);font-size:11px;line-height:1.4;white-space:normal}
+.deactivation-reason-empty{color:var(--text-muted,#94a3b8)}
+@media(max-width:768px){.deactivation-reason-cell{min-width:190px;max-width:260px}}
+</style>
+
+
+<style>
+.account-deactivation-details{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-top:9px;max-width:280px;white-space:normal}
+.account-deactivation-reason{color:var(--text-secondary,#64748b);font-size:12px;line-height:1.45;overflow-wrap:anywhere;white-space:normal}
+.account-deactivation-date{color:var(--text-muted,#8490a3);font-size:11px;line-height:1.4;white-space:normal}
+</style>
+
+{{-- Keep deactivation details consistently centered across all account-management tables. --}}
+<style>
+.deactivation-reason-cell { text-align: center !important; vertical-align: middle !important; }
+.deactivation-reason-cell .account-deactivation-details {
+    align-items: center !important;
+    justify-content: center !important;
+    margin-inline: auto !important;
+    text-align: center !important;
+}
+.deactivation-reason-cell .account-deactivation-reason,
+.deactivation-reason-cell .account-deactivation-date {
+    text-align: center !important;
+}
 </style>
 
 @endpush
@@ -121,17 +150,33 @@
         <div class="admin-section-heading"><span class="support-dataset-count">{{ $agencyAdmins->count() }} shown</span></div>
         <div class="table-wrapper aa-table-wrap">
             <table class="table">
-                <thead><tr><th>Administrator</th><th>Agency</th><th>Email</th><th>Account status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Administrator</th><th>Agency</th><th>Email</th><th>Account Status</th>@if($status === 'deactivated')<th>Deactivation Reason</th>@endif<th>Actions</th></tr></thead>
                 <tbody>
                 @forelse($agencyAdmins as $admin)
                     <tr class="agency-admin-row" data-name="{{ trim(($admin->first_name ?? '').' '.($admin->last_name ?? '')) ?: $admin->name }}">
                         <td><div class="actor-cell"><span class="actor-name">{{ trim(($admin->first_name ?? '').' '.($admin->last_name ?? '')) ?: $admin->name }}</span></div></td>
                         <td>{{ $admin->agency?->agency_name ?? 'Agency unavailable' }}</td>
                         <td>{{ $admin->email }}</td>
-                        <td><span class="badge {{ $admin->status ?? 'active' }}">{{ ucfirst($admin->status ?? 'active') }}</span></td>
+                        <td>
+                            <span class="badge {{ $admin->status ?? 'active' }}">{{ ucfirst($admin->status ?? 'active') }}</span>
+                        </td>
+                        @if($status === 'deactivated')
+                        <td class="deactivation-reason-cell">
+                            @if(($admin->status ?? 'active') === 'deactivated')
+                                <div class="account-deactivation-details">
+                                    <span class="account-deactivation-reason">{{ $admin->deactivation_reason ?: 'No reason recorded.' }}</span>
+                                    @if($admin->deactivated_at)
+                                        <span class="account-deactivation-date">Deactivated {{ $admin->deactivated_at->format('M d, Y · g:i A') }}</span>
+                                    @endif
+                                </div>
+                            @else
+                                <span class="deactivation-reason-empty">—</span>
+                            @endif
+                        </td>
+                        @endif
                         <td class="tablebtn agency-admin-actions">
                             @if(($admin->status ?? 'active') === 'active')
-                                <form method="POST" action="{{ route('admin.agency-admins.deactivate', $admin->id) }}" class="agency-admin-lifecycle-form">
+                                <form method="POST" action="{{ route('admin.agency-admins.deactivate', $admin->id) }}" class="agency-admin-lifecycle-form js-account-deactivation-form" data-verification-url="{{ route('admin.agency-admins.verify-lifecycle-password') }}">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="btn btn-danger deactivate-agency-admin-btn admin-table-icon-action" title="Deactivate" aria-label="Deactivate {{ $admin->email }}"><i class="ph-light ph-user-minus" aria-hidden="true"></i><span class="sr-only">Deactivate</span></button>
@@ -154,7 +199,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="empty">No {{ $status }} Agency Admin accounts match your search.</td></tr>
+                    <tr><td colspan="{{ $status === 'deactivated' ? 6 : 5 }}" class="empty">No {{ $status }} Agency Admin accounts match your search.</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -293,6 +338,7 @@
 })();
 </script>
 <script src="{{ asset('jsfiles/admin/admin-password-confirmation.js') }}?v={{ filemtime(public_path('jsfiles/admin/admin-password-confirmation.js')) }}"></script>
+<script src="{{ asset('jsfiles/admin/account-deactivation.js') }}?v={{ hash_file('sha256', public_path('jsfiles/admin/account-deactivation.js')) }}"></script>
 <script>
 document.addEventListener('submit', function(e) {
     const form = e.target.closest('form.agency-admin-lifecycle-form');
@@ -358,3 +404,4 @@ document.addEventListener('submit', function(e) {
 });
 </script>
 @endpush
+

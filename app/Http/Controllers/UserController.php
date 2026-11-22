@@ -84,27 +84,19 @@ public function index(Request $request)
      */
     if ($request->filled('search')) {
 
-        $search = $request->search;
+        $search = mb_strtolower(trim((string) $request->query('search')));
+        $searchLike = '%' . $search . '%';
 
-        $query->where(function ($q) use ($search) {
-
-            $q->where(
-                'first_name',
-                'LIKE',
-                "%{$search}%"
-            )
-
-            ->orWhere(
-                'last_name',
-                'LIKE',
-                "%{$search}%"
-            )
-
-            ->orWhere(
-                'email',
-                'LIKE',
-                "%{$search}%"
-            );
+        $query->where(function ($q) use ($searchLike) {
+            // Match first name, last name, a complete "First Last" name,
+            // and email without depending on capitalization (PostgreSQL-safe).
+            $q->whereRaw('LOWER(COALESCE(first_name, \'\')) LIKE ?', [$searchLike])
+                ->orWhereRaw('LOWER(COALESCE(last_name, \'\')) LIKE ?', [$searchLike])
+                ->orWhereRaw(
+                    "LOWER(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, ''))) LIKE ?",
+                    [$searchLike]
+                )
+                ->orWhereRaw('LOWER(email) LIKE ?', [$searchLike]);
         });
     }
 
@@ -249,6 +241,14 @@ private function lifecyclePasswordIsValid(Request $request): bool
  */
 public function deactivate(Request $request, $id)
 {
+    $request->merge([
+        'deactivation_reason' => trim((string) $request->input('deactivation_reason', '')),
+    ]);
+    $validated = $request->validate([
+        'deactivation_reason' => ['required', 'string', 'min:5', 'max:2000'],
+    ]);
+    $reason = $validated['deactivation_reason'];
+
     abort_unless(in_array((string) $request->user()?->role, ['admin', 'superadmin'], true), 403);
 
     if (!$this->lifecyclePasswordIsValid($request)) {
@@ -285,6 +285,7 @@ public function deactivate(Request $request, $id)
  */
 $oldValues = [
     'status' => $user->status,
+    'deactivation_reason' => $user->deactivation_reason,
 ];
 
 
@@ -293,6 +294,8 @@ $oldValues = [
  */
 $user->update([
     'status' => 'deactivated',
+    'deactivation_reason' => $reason,
+    'deactivated_at' => now(),
 ]);
 
 
@@ -324,10 +327,11 @@ UserLog::create([
 
     'new_values' => [
         'status' => $user->status,
+        'deactivation_reason' => $user->deactivation_reason,
     ],
 
     'description' =>
-        'Deactivated public user account.',
+        'Deactivated public user account. Reason: ' . $reason,
 ]);
 
 
@@ -374,6 +378,7 @@ public function reactivate(Request $request, $id)
  */
 $oldValues = [
     'status' => $user->status,
+    'deactivation_reason' => $user->deactivation_reason,
 ];
 
 
@@ -382,6 +387,8 @@ $oldValues = [
  */
 $user->update([
     'status' => 'active',
+    'deactivation_reason' => null,
+    'deactivated_at' => null,
 ]);
 
 
@@ -409,6 +416,7 @@ UserLog::create([
 
     'new_values' => [
         'status' => $user->status,
+        'deactivation_reason' => $user->deactivation_reason,
     ],
 
     'description' =>

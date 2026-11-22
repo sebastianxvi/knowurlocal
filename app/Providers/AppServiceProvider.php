@@ -232,11 +232,11 @@ class AppServiceProvider extends ServiceProvider
 
                     $view->with([
                         'adminNotificationInterventionCount' => (clone $interventionQuery)->count(),
-                        'adminNotificationInterventions' => $interventionQuery->limit(5)->get(),
+                        'adminNotificationInterventions' => $interventionQuery->limit(100)->get(),
                         'adminNotificationSupportCount' => (clone $agencySupportQuery)->count(),
-                        'adminNotificationSupportRequests' => $agencySupportQuery->limit(5)->get(),
+                        'adminNotificationSupportRequests' => $agencySupportQuery->limit(100)->get(),
                         'adminNotificationCollaborationCount' => (clone $agencyCollaborationQuery)->count(),
-                        'adminNotificationCollaborationTasks' => $agencyCollaborationQuery->limit(5)->get(),
+                        'adminNotificationCollaborationTasks' => $agencyCollaborationQuery->limit(100)->get(),
                     ]);
                     return;
                 }
@@ -262,7 +262,7 @@ class AppServiceProvider extends ServiceProvider
                     ->latest('created_at');
 
                 $supportCount = (clone $supportQuery)->count();
-                $supportRequests = $supportQuery->limit(5)->get();
+                $supportRequests = $supportQuery->limit(100)->get();
 
                 $collaborationQuery = CollaborationTask::query()
                     ->whereIn('status', ['open', 'in_progress'])
@@ -277,7 +277,7 @@ class AppServiceProvider extends ServiceProvider
                     ->latest('created_at');
 
                 $collaborationCount = (clone $collaborationQuery)->count();
-                $collaborationTasks = $collaborationQuery->limit(5)->get();
+                $collaborationTasks = $collaborationQuery->limit(100)->get();
 
                 $view->with([
                     'adminNotificationInterventionCount' => 0,

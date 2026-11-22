@@ -26,7 +26,9 @@ class User extends Authenticatable
     'role',
     'agency_id',
     'can_moderate_evaluations',
-    'status',    // 🔥 ADD THIS (you are using it)
+    'status',
+    'deactivation_reason',
+    'deactivated_at',
     'last_login_at',
     'legal_accepted_at',
     'terms_version',
@@ -53,6 +55,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'deactivated_at' => 'datetime',
             'legal_accepted_at' => 'datetime',
             'can_moderate_evaluations' => 'boolean',
             'password' => 'hashed',

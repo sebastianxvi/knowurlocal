@@ -220,11 +220,20 @@ class AdminInviteController extends Controller
         $agencyAdmins = (clone $baseAdmins)
             ->when($status !== 'pending', fn ($query) => $query->where('status', $status))
             ->when($request->filled('search'), function ($query) use ($request) {
-                $search = trim((string) $request->query('search'));
-                $query->where(function ($nested) use ($search) {
-                    $nested->where('first_name', 'like', "%{$search}%")
-                        ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
+                $search = mb_strtolower(trim((string) $request->query('search')));
+                $searchLike = '%' . $search . '%';
+
+                $query->where(function ($nested) use ($searchLike) {
+                    $nested->whereRaw('LOWER(COALESCE(first_name, \'\')) LIKE ?', [$searchLike])
+                        ->orWhereRaw('LOWER(COALESCE(last_name, \'\')) LIKE ?', [$searchLike])
+                        ->orWhereRaw(
+                            "LOWER(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, ''))) LIKE ?",
+                            [$searchLike]
+                        )
+                        ->orWhereRaw('LOWER(email) LIKE ?', [$searchLike])
+                        ->orWhereHas('agency', function ($agencyQuery) use ($searchLike) {
+                            $agencyQuery->whereRaw('LOWER(agency_name) LIKE ?', [$searchLike]);
+                        });
                 });
             })
             ->orderBy('agency_id')
@@ -234,7 +243,7 @@ class AdminInviteController extends Controller
         $pendingInvites = $status === 'pending'
             ? $pendingInvitesQuery->when($request->filled('search'), function ($query) use ($request) {
                 $search = trim((string) $request->query('search'));
-                $query->where('email', 'like', "%{$search}%");
+                $query->whereRaw('LOWER(email) LIKE ?', ['%' . mb_strtolower(trim($search)) . '%']);
             })->latest()->get()
             : collect();
 
@@ -412,6 +421,14 @@ class AdminInviteController extends Controller
 
     public function deactivateAgencyAdmin(Request $request, int $id)
     {
+        $request->merge([
+            'deactivation_reason' => trim((string) $request->input('deactivation_reason', '')),
+        ]);
+        $validated = $request->validate([
+            'deactivation_reason' => ['required', 'string', 'min:5', 'max:2000'],
+        ]);
+        $reason = $validated['deactivation_reason'];
+
         abort_unless(auth()->check() && in_array(auth()->user()->role, ['admin', 'superadmin'], true), 403);
         if (!$this->validAgencyAdminLifecyclePassword($request)) {
             return back()->with('error', 'Administrator password is incorrect. No changes were made.');
@@ -419,8 +436,8 @@ class AdminInviteController extends Controller
 
         $target = User::where('role', 'agency_admin')->findOrFail($id);
         abort_if($target->status === 'deactivated', 409, 'This Agency Admin is already deactivated.');
-        $old = ['status' => $target->status];
-        $target->update(['status' => 'deactivated']);
+        $old = ['status' => $target->status, 'deactivation_reason' => $target->deactivation_reason];
+        $target->update(['status' => 'deactivated', 'deactivation_reason' => $reason, 'deactivated_at' => now()]);
 
         app(\App\Services\AuditLogService::class)->record(
             action: 'deactivate_agency_admin',
@@ -429,8 +446,8 @@ class AdminInviteController extends Controller
             targetId: (int) $target->id,
             targetUserId: (int) $target->id,
             oldValues: $old,
-            newValues: ['status' => $target->status],
-            description: 'Deactivated Agency Admin account.'
+            newValues: ['status' => $target->status, 'deactivation_reason' => $target->deactivation_reason],
+            description: 'Deactivated Agency Admin account. Reason: ' . $reason
         );
 
         return back()->with('success', 'Agency Admin account deactivated.');
@@ -445,8 +462,8 @@ class AdminInviteController extends Controller
 
         $target = User::where('role', 'agency_admin')->findOrFail($id);
         abort_if($target->status === 'active', 409, 'This Agency Admin is already active.');
-        $old = ['status' => $target->status];
-        $target->update(['status' => 'active']);
+        $old = ['status' => $target->status, 'deactivation_reason' => $target->deactivation_reason];
+        $target->update(['status' => 'active', 'deactivation_reason' => null, 'deactivated_at' => null]);
 
         app(\App\Services\AuditLogService::class)->record(
             action: 'reactivate_agency_admin',
@@ -455,7 +472,7 @@ class AdminInviteController extends Controller
             targetId: (int) $target->id,
             targetUserId: (int) $target->id,
             oldValues: $old,
-            newValues: ['status' => $target->status],
+            newValues: ['status' => $target->status, 'deactivation_reason' => null],
             description: 'Reactivated Agency Admin account.'
         );
 

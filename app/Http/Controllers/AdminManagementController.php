@@ -96,27 +96,19 @@ public function admins(Request $request)
      */
     if ($request->filled('search')) {
 
-        $search = $request->search;
+        $search = mb_strtolower(trim((string) $request->query('search')));
+        $searchLike = '%' . $search . '%';
 
-        $query->where(function ($q) use ($search) {
-
-            $q->where(
-                'first_name',
-                'LIKE',
-                "%{$search}%"
-            )
-
-            ->orWhere(
-                'last_name',
-                'LIKE',
-                "%{$search}%"
-            )
-
-            ->orWhere(
-                'email',
-                'LIKE',
-                "%{$search}%"
-            );
+        $query->where(function ($q) use ($searchLike) {
+            // Match first name, last name, a complete "First Last" name,
+            // and email without depending on capitalization (PostgreSQL-safe).
+            $q->whereRaw('LOWER(COALESCE(first_name, \'\')) LIKE ?', [$searchLike])
+                ->orWhereRaw('LOWER(COALESCE(last_name, \'\')) LIKE ?', [$searchLike])
+                ->orWhereRaw(
+                    "LOWER(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, ''))) LIKE ?",
+                    [$searchLike]
+                )
+                ->orWhereRaw('LOWER(email) LIKE ?', [$searchLike]);
         });
     }
 
@@ -365,6 +357,8 @@ public function approve(Request $request, $id)
      */
     $user->update([
         'status' => 'active',
+        'deactivation_reason' => null,
+        'deactivated_at' => null,
     ]);
 
     /*
@@ -465,6 +459,14 @@ public function approve(Request $request, $id)
  */
 public function deactivate(Request $request, $id)
 {
+    $request->merge([
+        'deactivation_reason' => trim((string) $request->input('deactivation_reason', '')),
+    ]);
+    $validated = $request->validate([
+        'deactivation_reason' => ['required', 'string', 'min:5', 'max:2000'],
+    ]);
+    $reason = $validated['deactivation_reason'];
+
     if (!$this->adminActionPasswordIsValid($request)) {
         return back()->with('error', 'Administrator password is incorrect. No changes were made.');
     }
@@ -491,15 +493,15 @@ public function deactivate(Request $request, $id)
      */
     $oldValues = [
         'status' => $user->status,
+        'deactivation_reason' => $user->deactivation_reason,
     ];
 
-    /*
-     * Change only the account's access state.
-     *
-     * The role remains unchanged.
-     */
+    // Persist the reason with the status so login feedback always reflects
+    // the current deactivation, not a previous lifecycle event.
     $user->update([
         'status' => 'deactivated',
+        'deactivation_reason' => $reason,
+        'deactivated_at' => now(),
     ]);
 
     /*
@@ -510,6 +512,7 @@ public function deactivate(Request $request, $id)
 
     $newValues = [
         'status' => $user->status,
+        'deactivation_reason' => $user->deactivation_reason,
     ];
 
     /*
@@ -520,7 +523,7 @@ public function deactivate(Request $request, $id)
         'deactivate_admin',
         $oldValues,
         $newValues,
-        'Deactivated admin: ' . $user->email
+        'Deactivated admin: ' . $user->email . '. Reason: ' . $reason
     );
 
     return back()->with(
@@ -564,6 +567,7 @@ public function reactivate(Request $request, $id)
      */
     $oldValues = [
         'status' => $user->status,
+        'deactivation_reason' => $user->deactivation_reason,
     ];
 
     /*
@@ -571,6 +575,8 @@ public function reactivate(Request $request, $id)
      */
     $user->update([
         'status' => 'active',
+        'deactivation_reason' => null,
+        'deactivated_at' => null,
     ]);
 
     /*
@@ -580,6 +586,7 @@ public function reactivate(Request $request, $id)
 
     $newValues = [
         'status' => $user->status,
+        'deactivation_reason' => $user->deactivation_reason,
     ];
 
     /*

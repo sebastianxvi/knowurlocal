@@ -181,7 +181,6 @@ document.addEventListener("DOMContentLoaded", function () {
         ".approve-btn",
         ".promote-btn",
         ".demote-btn",
-        ".deactivate-admin-btn",
         ".reactivate-admin-btn",
         ".delete-admin-btn"
     ].join(",");

@@ -56,36 +56,31 @@
                     </div>
                 </div>
 
-                <div class="admin-notification-summary">
-                    <span><strong data-support-count>{{ $adminNotificationSupportCount }}</strong> support</span>
-                    <span><strong data-collaboration-count>{{ $adminNotificationCollaborationCount }}</strong> collaboration</span>
+                                <div class="admin-notification-tabs" role="tablist" aria-label="Notification categories">
+                    <button type="button" class="admin-notification-tab is-active" role="tab"
+                        id="admin-notification-tab-support" aria-controls="admin-notification-pane-support"
+                        aria-selected="true" data-notification-tab="support">
+                        <span>Support</span><span class="admin-notification-tab-count" data-support-count>{{ $adminNotificationSupportCount }}</span>
+                    </button>
+                    <button type="button" class="admin-notification-tab" role="tab"
+                        id="admin-notification-tab-collaboration" aria-controls="admin-notification-pane-collaboration"
+                        aria-selected="false" tabindex="-1" data-notification-tab="collaboration">
+                        <span>Collaboration</span><span class="admin-notification-tab-count" data-collaboration-count>{{ $adminNotificationCollaborationCount }}</span>
+                    </button>
                     @if(auth()->user()->role === 'agency_admin')
-                        <span><strong data-intervention-count>{{ $adminNotificationInterventionCount }}</strong> admin updates</span>
+                        <button type="button" class="admin-notification-tab" role="tab"
+                            id="admin-notification-tab-intervention" aria-controls="admin-notification-pane-intervention"
+                            aria-selected="false" tabindex="-1" data-notification-tab="intervention">
+                            <span>Updates</span><span class="admin-notification-tab-count" data-intervention-count>{{ $adminNotificationInterventionCount }}</span>
+                        </button>
                     @endif
                 </div>
 
                 <div class="admin-notification-list" data-notification-list>
-                    @if(auth()->user()->role === 'agency_admin' && $adminNotificationInterventions->isNotEmpty())
-                        <div class="admin-notification-section-label" data-section="intervention">Agency and FAQ updates</div>
-                        @foreach($adminNotificationInterventions as $intervention)
-                            <a
-                                class="admin-notification-item"
-                                href="{{ route('agency-admin.notifications.open', $intervention->id) }}"
-                                data-notification-kind="intervention"
-                                data-notification-id="{{ $intervention->id }}"
-                            >
-                                <span class="admin-notification-item-icon is-collaboration"><i class="ph-light ph-shield-check" aria-hidden="true"></i></span>
-                                <span class="admin-notification-item-copy">
-                                    <strong>{{ $intervention->title }}</strong>
-                                    <small>{{ \Illuminate\Support\Str::limit((string) ($intervention->data['reason'] ?? $intervention->message), 100) }}</small>
-                                </span>
-                                <i class="ph-light ph-arrow-up-right admin-notification-item-arrow" aria-hidden="true"></i>
-                            </a>
-                        @endforeach
-                    @endif
-
-                    @if($adminNotificationSupportRequests->isNotEmpty())
-                        <div class="admin-notification-section-label" data-section="support">Support requests</div>
+                    <section class="admin-notification-pane is-active" id="admin-notification-pane-support"
+                        role="tabpanel" aria-labelledby="admin-notification-tab-support" data-notification-pane="support">
+                        <div class="admin-notification-section-label">Support requests</div>
+                        
                         @foreach($adminNotificationSupportRequests as $request)
                             <a
                                 class="admin-notification-item"
@@ -107,10 +102,20 @@
                                 <i class="ph-light ph-arrow-up-right admin-notification-item-arrow" aria-hidden="true"></i>
                             </a>
                         @endforeach
-                    @endif
 
-                    @if($adminNotificationCollaborationTasks->isNotEmpty())
-                        <div class="admin-notification-section-label" data-section="collaboration">Collaboration</div>
+                        @if($adminNotificationSupportRequests->isEmpty())
+                            <div class="admin-notification-empty" data-empty-kind="support">
+                                <i class="ph-light ph-check-circle" aria-hidden="true"></i>
+                                <strong>No support notifications</strong>
+                                <span>You're all caught up with support requests.</span>
+                            </div>
+                        @endif
+                    </section>
+
+                    <section class="admin-notification-pane" id="admin-notification-pane-collaboration"
+                        role="tabpanel" aria-labelledby="admin-notification-tab-collaboration" data-notification-pane="collaboration" hidden>
+                        <div class="admin-notification-section-label">Collaboration</div>
+                        
                         @foreach($adminNotificationCollaborationTasks as $task)
                             @php
                                 $taskForMe = $task->assigned_to_id === auth()->id();
@@ -134,24 +139,55 @@
                                 <i class="ph-light ph-arrow-up-right admin-notification-item-arrow" aria-hidden="true"></i>
                             </a>
                         @endforeach
-                    @endif
 
-                    @if($adminNotificationSupportRequests->isEmpty() && $adminNotificationCollaborationTasks->isEmpty() && (!isset($adminNotificationInterventions) || $adminNotificationInterventions->isEmpty()))
-                        <div class="admin-notification-empty">
-                            <i class="ph-light ph-check-circle" aria-hidden="true"></i>
-                            <strong>You're all caught up.</strong>
-                            <span>No pending support requests, collaboration work, or agency profile updates need your attention.</span>
-                        </div>
+                        @if($adminNotificationCollaborationTasks->isEmpty())
+                            <div class="admin-notification-empty" data-empty-kind="collaboration">
+                                <i class="ph-light ph-check-circle" aria-hidden="true"></i>
+                                <strong>No collaboration notifications</strong>
+                                <span>You have no open collaboration tasks.</span>
+                            </div>
+                        @endif
+                    </section>
+                    @if(auth()->user()->role === 'agency_admin')
+                    <section class="admin-notification-pane" id="admin-notification-pane-intervention"
+                        role="tabpanel" aria-labelledby="admin-notification-tab-intervention" data-notification-pane="intervention" hidden>
+                        <div class="admin-notification-section-label">Agency and FAQ updates</div>
+                        
+                        @foreach($adminNotificationInterventions as $intervention)
+                            <a
+                                class="admin-notification-item"
+                                href="{{ route('agency-admin.notifications.open', $intervention->id) }}"
+                                data-notification-kind="intervention"
+                                data-notification-id="{{ $intervention->id }}"
+                            >
+                                <span class="admin-notification-item-icon is-collaboration"><i class="ph-light ph-shield-check" aria-hidden="true"></i></span>
+                                <span class="admin-notification-item-copy">
+                                    <strong>{{ $intervention->title }}</strong>
+                                    <small>{{ \Illuminate\Support\Str::limit((string) ($intervention->data['reason'] ?? $intervention->message), 100) }}</small>
+                                </span>
+                                <i class="ph-light ph-arrow-up-right admin-notification-item-arrow" aria-hidden="true"></i>
+                            </a>
+                        @endforeach
+
+                        @if(!isset($adminNotificationInterventions) || $adminNotificationInterventions->isEmpty())
+                            <div class="admin-notification-empty" data-empty-kind="intervention">
+                                <i class="ph-light ph-check-circle" aria-hidden="true"></i>
+                                <strong>No agency updates</strong>
+                                <span>There are no pending agency or FAQ interventions.</span>
+                            </div>
+                        @endif
+                    </section>
                     @endif
                 </div>
 
                 <div class="admin-notification-panel-footer">
                     @if(auth()->user()->role === 'agency_admin')
-                        <a href="{{ route('agency-admin.tickets') }}">Support tickets <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
-                        <a href="{{ route('agency-admin.dashboard') }}#agency-collaboration">Collaboration <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
+                        <a data-notification-footer-link data-footer-kind="support" href="{{ route('agency-admin.tickets') }}">View support tickets <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
+                        <a data-notification-footer-link data-footer-kind="collaboration" href="{{ route('agency-admin.dashboard') }}#agency-collaboration" hidden>View collaboration <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
+                        <a data-notification-footer-link data-footer-kind="intervention" href="/agency-admin/agency" hidden>View agency updates <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
                     @else
-                        <a href="{{ route('admin.support.requests') }}">Support requests <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
-                        <a href="{{ route('admin.dashboard') }}#team-collaboration">Collaboration <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
+                        <a data-notification-footer-link data-footer-kind="support" href="{{ route('admin.support.requests') }}">View support requests <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
+                        <a data-notification-footer-link data-footer-kind="collaboration" href="{{ route('admin.dashboard') }}#team-collaboration" hidden>View collaboration <i class="ph-light ph-arrow-right" aria-hidden="true"></i></a>
                     @endif
                 </div>
             </section>

@@ -13,6 +13,65 @@
     const interventionCountEl = root.querySelector('[data-intervention-count]');
     const echoReadyEvent = 'knowurlocal:echo-ready';
 
+    const tabs = Array.from(root.querySelectorAll('[data-notification-tab]'));
+    const panes = Array.from(root.querySelectorAll('[data-notification-pane]'));
+    const footerLinks = Array.from(root.querySelectorAll('[data-notification-footer-link]'));
+
+    const selectTab = (kind, focus = false) => {
+        const selectedTab = tabs.find((tab) => tab.dataset.notificationTab === kind);
+        if (!selectedTab) return;
+
+        tabs.forEach((tab) => {
+            const active = tab === selectedTab;
+            tab.classList.toggle('is-active', active);
+            tab.setAttribute('aria-selected', active ? 'true' : 'false');
+            tab.tabIndex = active ? 0 : -1;
+            if (active && focus) tab.focus();
+        });
+
+        panes.forEach((pane) => {
+            const active = pane.dataset.notificationPane === kind;
+            pane.classList.toggle('is-active', active);
+            pane.hidden = !active;
+            if (active) pane.scrollTop = 0;
+        });
+        footerLinks.forEach((link) => {
+            link.hidden = link.dataset.footerKind !== kind;
+        });
+    };
+
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => selectTab(tab.dataset.notificationTab));
+        tab.addEventListener('keydown', (event) => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            let nextIndex = index;
+            if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+            if (event.key === 'Home') nextIndex = 0;
+            if (event.key === 'End') nextIndex = tabs.length - 1;
+            selectTab(tabs[nextIndex].dataset.notificationTab, true);
+        });
+    });
+
+    const getPane = (kind) => list?.querySelector(`[data-notification-pane="${kind}"]`) || null;
+    const ensurePaneEmptyState = (kind, title, description) => {
+        const pane = getPane(kind);
+        if (!pane || getNotificationItems(kind).length || pane.querySelector('.admin-notification-empty')) return;
+        const empty = document.createElement('div');
+        empty.className = 'admin-notification-empty';
+        empty.dataset.emptyKind = kind;
+        const icon = document.createElement('i');
+        icon.className = 'ph-light ph-check-circle';
+        icon.setAttribute('aria-hidden', 'true');
+        const heading = document.createElement('strong');
+        heading.textContent = title;
+        const text = document.createElement('span');
+        text.textContent = description;
+        empty.append(icon, heading, text);
+        pane.appendChild(empty);
+    };
+
     if (!trigger || !panel) return;
 
     let subscriptionsStarted = false;
@@ -20,6 +79,12 @@
     let supportCount = Number.parseInt(supportCountEl?.textContent || '0', 10) || 0;
     let collaborationCount = Number.parseInt(collaborationCountEl?.textContent || '0', 10) || 0;
     let interventionCount = Number.parseInt(interventionCountEl?.textContent || '0', 10) || 0;
+
+    const initialKind = supportCount > 0 ? 'support'
+        : collaborationCount > 0 ? 'collaboration'
+        : interventionCount > 0 ? 'intervention'
+        : 'support';
+    selectTab(initialKind);
     const seenSupportIds = new Set();
     const seenCollaborationIds = new Set();
 
@@ -77,38 +142,17 @@
         );
     };
 
-    const removeEmptyState = () => {
-        list?.querySelector('.admin-notification-empty')?.remove();
+    const removeEmptyState = (kind) => {
+        if (kind) getPane(kind)?.querySelector('.admin-notification-empty')?.remove();
+        else list?.querySelectorAll('.admin-notification-empty').forEach((item) => item.remove());
     };
 
     const restoreEmptyStateIfNeeded = () => {
-        if (!list) return;
-
-        if (
-            getNotificationItems('support').length ||
-            getNotificationItems('collaboration').length ||
-            getNotificationItems('intervention').length ||
-            list.querySelector('.admin-notification-empty')
-        ) {
-            return;
+        ensurePaneEmptyState('support', 'No support notifications', "You're all caught up with support requests.");
+        ensurePaneEmptyState('collaboration', 'No collaboration notifications', 'You have no open collaboration tasks.');
+        if (getPane('intervention')) {
+            ensurePaneEmptyState('intervention', 'No agency updates', 'There are no pending agency or FAQ interventions.');
         }
-
-        const empty = document.createElement('div');
-        empty.className = 'admin-notification-empty';
-
-        const icon = document.createElement('i');
-        icon.className = 'ph-light ph-check-circle';
-        icon.setAttribute('aria-hidden', 'true');
-
-        const title = document.createElement('strong');
-        title.textContent = "You're all caught up.";
-
-        const text = document.createElement('span');
-        text.textContent =
-            'No pending support requests or collaboration work needs your attention.';
-
-        empty.append(icon, title, text);
-        list.appendChild(empty);
     };
 
     const removeSupportNotification = (requestId) => {
@@ -124,17 +168,6 @@
 
         items.forEach((item) => item.remove());
         seenSupportIds.delete(id);
-
-        const section = list?.querySelector(
-            '.admin-notification-section-label[data-section="support"]'
-        );
-
-        if (
-            section &&
-            !getNotificationItems('support').length
-        ) {
-            section.remove();
-        }
 
         restoreEmptyStateIfNeeded();
         return true;
@@ -165,28 +198,10 @@
             return false;
         }
 
-        removeEmptyState();
+        removeEmptyState('support');
 
-        let section = list.querySelector(
-            '.admin-notification-section-label[data-section="support"]'
-        );
-
-        if (!section) {
-            section = document.createElement('div');
-            section.className = 'admin-notification-section-label';
-            section.dataset.section = 'support';
-            section.textContent = 'Support requests';
-
-            const collaborationSection = list.querySelector(
-                '.admin-notification-section-label[data-section="collaboration"]'
-            );
-
-            if (collaborationSection) {
-                list.insertBefore(section, collaborationSection);
-            } else {
-                list.prepend(section);
-            }
-        }
+        const pane = getPane('support');
+        if (!pane) return false;
 
         if (existing) {
             existing.dataset.notificationStatus = String(status);
@@ -237,7 +252,7 @@
         arrow.setAttribute('aria-hidden', 'true');
 
         item.append(iconWrap, copy, arrow);
-        section.after(item);
+        pane.appendChild(item);
 
         seenSupportIds.add(idString);
 
@@ -276,19 +291,10 @@
         if (seenCollaborationIds.has(idString)) return false;
 
         seenCollaborationIds.add(idString);
-        removeEmptyState();
+        removeEmptyState('collaboration');
 
-        let section = list.querySelector(
-            '.admin-notification-section-label[data-section="collaboration"]'
-        );
-
-        if (!section) {
-            section = document.createElement('div');
-            section.className = 'admin-notification-section-label';
-            section.dataset.section = 'collaboration';
-            section.textContent = 'Collaboration';
-            list.appendChild(section);
-        }
+        const pane = getPane('collaboration');
+        if (!pane) return false;
 
         const item = document.createElement('a');
         item.className = 'admin-notification-item is-new';
@@ -308,7 +314,7 @@
         item.querySelector('small').textContent =
             meta || 'Just now';
 
-        section.after(item);
+        pane.appendChild(item);
 
         window.setTimeout(
             () => item.classList.remove('is-new'),
@@ -325,15 +331,9 @@
             return false;
         }
 
-        removeEmptyState();
-        let section = list.querySelector('.admin-notification-section-label[data-section="intervention"]');
-        if (!section) {
-            section = document.createElement('div');
-            section.className = 'admin-notification-section-label';
-            section.dataset.section = 'intervention';
-            section.textContent = 'Agency profile updates';
-            list.prepend(section);
-        }
+        removeEmptyState('intervention');
+        const pane = getPane('intervention');
+        if (!pane) return false;
 
         const item = document.createElement('a');
         item.className = 'admin-notification-item is-new';
@@ -361,7 +361,7 @@
         arrow.setAttribute('aria-hidden', 'true');
 
         item.append(iconWrap, copy, arrow);
-        section.after(item);
+        pane.appendChild(item);
         window.setTimeout(() => item.classList.remove('is-new'), 1600);
         return true;
     };
