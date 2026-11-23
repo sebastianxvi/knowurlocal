@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Agency;
+use App\Models\AgencyEvaluation;
 use App\Models\AgencyContact;
 use App\Models\AgencyType;
 use App\Models\Category;
@@ -54,6 +55,18 @@ class AgencyAdminController extends Controller
             'awaiting_confirmation' => SupportRequest::query()->where('agency_id', $agency->id)->whereNull('deleted_at')->where('status', 'awaiting_confirmation')->count(),
             'answered' => SupportRequest::query()->where('agency_id', $agency->id)->whereNull('deleted_at')->where('status', 'answered')->count(),
             'faqs' => Faq::query()->where('agency_id', $agency->id)->count(),
+        ];
+
+        // Keep the dashboard's evaluation snapshot consistent with the
+        // published-only scope used by the Agency Evaluations workspace.
+        $publishedEvaluationQuery = $agency->evaluations()->where('status', 'published');
+        $evaluationStats = (clone $publishedEvaluationQuery)
+            ->selectRaw('COUNT(*) AS total, COALESCE(AVG(rating), 0) AS average')
+            ->first();
+        $evaluationCounts = [
+            'total' => (int) ($evaluationStats->total ?? 0),
+            'average' => (float) ($evaluationStats->average ?? 0),
+            'unanswered' => (clone $publishedEvaluationQuery)->whereDoesntHave('response')->count(),
         ];
 
         // Build FAQ opportunities only from this agency's non-deleted tickets.
@@ -121,7 +134,7 @@ class AgencyAdminController extends Controller
             ->get();
 
         return view('agency-admin.dashboard', compact(
-            'agency', 'counts', 'popularQuestions', 'collaborationTasks',
+            'agency', 'counts', 'evaluationCounts', 'popularQuestions', 'collaborationTasks',
             'collaborationOpenCount', 'collaborationYourActionCount',
             'collaborationOverdueCount', 'collaborationAdmins'
         ));
@@ -139,17 +152,16 @@ class AgencyAdminController extends Controller
     {
         $agency = $this->agency();
         $period = $request->query('period', '7d');
-        if (!in_array($period, ['7d', '30d', 'month'], true)) {
+        if (!in_array($period, ['7d', '30d', '90d', '365d', 'all', 'month'], true)) {
             $period = '7d';
         }
 
         $selectedMonth = $request->query('month');
+        $end = now()->endOfDay();
         if ($period === 'month') {
             try {
-                $monthDate = $selectedMonth
-                    ? Carbon::createFromFormat('!Y-m', $selectedMonth)
-                    : now()->startOfMonth();
-                if (!$monthDate || $monthDate->format('Y-m') !== $selectedMonth) {
+                $monthDate = $selectedMonth ? Carbon::createFromFormat('!Y-m', $selectedMonth) : now()->startOfMonth();
+                if (!$monthDate || ($selectedMonth && $monthDate->format('Y-m') !== $selectedMonth)) {
                     $monthDate = now()->startOfMonth();
                 }
             } catch (\Throwable $e) {
@@ -161,13 +173,25 @@ class AgencyAdminController extends Controller
             $periodLabel = $start->format('F Y');
         } elseif ($period === '30d') {
             $start = now()->startOfDay()->subDays(29);
-            $end = now()->endOfDay();
             $periodLabel = '30 days';
-            $selectedMonth = now()->format('Y-m');
+        } elseif ($period === '90d') {
+            $start = now()->startOfDay()->subDays(89);
+            $periodLabel = '90 days';
+        } elseif ($period === '365d') {
+            $start = now()->startOfDay()->subDays(364);
+            $periodLabel = '12 months';
+        } elseif ($period === 'all') {
+            $firstRequest = SupportRequest::where('agency_id', $agency->id)->min('created_at');
+            $firstEvaluation = AgencyEvaluation::where('agency_id', $agency->id)->where('status', 'published')->min('created_at');
+            $earliest = collect([$firstRequest, $firstEvaluation])->filter()->sort()->first();
+            $start = $earliest ? Carbon::parse($earliest)->startOfMonth() : now()->startOfMonth();
+            $evaluationTrendStart = $firstEvaluation ? Carbon::parse($firstEvaluation)->startOfMonth() : now()->startOfMonth();
+            $periodLabel = 'All time';
         } else {
             $start = now()->startOfDay()->subDays(6);
-            $end = now()->endOfDay();
             $periodLabel = '7 days';
+        }
+        if ($period !== 'month') {
             $selectedMonth = now()->format('Y-m');
         }
 
@@ -175,29 +199,98 @@ class AgencyAdminController extends Controller
             ->where('agency_id', $agency->id)
             ->whereNull('deleted_at');
 
+        // Agency-scoped citizen satisfaction for the selected reporting period.
+        $evaluationPeriodQuery = AgencyEvaluation::query()
+            ->where('agency_id', $agency->id)
+            ->where('status', 'published');
+        if ($period !== 'all') {
+            $evaluationPeriodQuery->whereBetween('created_at', [$start, $end]);
+        }
+        $evaluationPeriodTotal = (clone $evaluationPeriodQuery)->count();
+        $evaluationPeriodAverage = (clone $evaluationPeriodQuery)->avg('rating');
+        $evaluationPeriodResponded = (clone $evaluationPeriodQuery)->whereHas('response')->count();
+        $evaluationPeriodAwaitingResponse = max(0, $evaluationPeriodTotal - $evaluationPeriodResponded);
+        $evaluationPeriodResponseRate = $evaluationPeriodTotal > 0
+            ? (int) round(($evaluationPeriodResponded / $evaluationPeriodTotal) * 100)
+            : 0;
+        $evaluationRatingDistribution = (clone $evaluationPeriodQuery)
+            ->select('rating')
+            ->selectRaw('COUNT(*) AS total')
+            ->groupBy('rating')
+            ->pluck('total', 'rating')
+            ->map(fn ($value) => (int) $value)
+            ->all();
+        $evaluationRatingDistribution = collect(range(1, 5))
+            ->mapWithKeys(fn ($rating) => [$rating => (int) ($evaluationRatingDistribution[$rating] ?? 0)])
+            ->all();
+
+        $evaluationTrendBuckets = (clone $evaluationPeriodQuery)
+            ->selectRaw($period === 'all'
+                ? "TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') AS bucket"
+                : "TO_CHAR(created_at, 'YYYY-MM-DD') AS bucket")
+            ->selectRaw('COUNT(*) AS total')
+            ->selectRaw('AVG(rating) AS average_rating')
+            ->groupBy('bucket')
+            ->get()
+            ->keyBy('bucket');
+        if ($period === 'all') {
+            $evaluationTrendCount = max(1, (int) $evaluationTrendStart->copy()->startOfMonth()->diffInMonths($end->copy()->startOfMonth()) + 1);
+            $evaluationTrend = collect(range(0, $evaluationTrendCount - 1))->map(function (int $offset) use ($evaluationTrendStart, $evaluationTrendBuckets) {
+                $date = $evaluationTrendStart->copy()->startOfMonth()->addMonths($offset);
+                $bucket = $date->format('Y-m');
+                $item = $evaluationTrendBuckets->get($bucket);
+                return ['date' => $bucket, 'label' => $date->format('M Y'),
+                    'average' => $item ? round((float) $item->average_rating, 2) : null,
+                    'count' => (int) ($item->total ?? 0)];
+            })->all();
+        } else {
+            $evaluationTrendDays = $start->diffInDays($end) + 1;
+            $evaluationTrend = collect(range(0, $evaluationTrendDays - 1))->map(function (int $offset) use ($start, $evaluationTrendBuckets) {
+                $date = $start->copy()->addDays($offset);
+                $bucket = $date->format('Y-m-d');
+                $item = $evaluationTrendBuckets->get($bucket);
+                return ['date' => $bucket, 'label' => $date->format('M j'),
+                    'average' => $item ? round((float) $item->average_rating, 2) : null,
+                    'count' => (int) ($item->total ?? 0)];
+            })->all();
+        }
+
         $total = (clone $base)->count();
         $statusCounts = (clone $base)->selectRaw('status, COUNT(*) as aggregate')
             ->groupBy('status')->pluck('aggregate', 'status')->map(fn ($value) => (int) $value);
 
-        $submittedByDay = (clone $base)->whereBetween('created_at', [$start, $end])
-            ->selectRaw('DATE(created_at) as day, COUNT(*) as aggregate')
-            ->groupBy('day')->pluck('aggregate', 'day');
-        $answeredByDay = (clone $base)->where('status', 'answered')
-            ->whereNotNull('answered_at')->whereBetween('answered_at', [$start, $end])
-            ->selectRaw('DATE(answered_at) as day, COUNT(*) as aggregate')
-            ->groupBy('day')->pluck('aggregate', 'day');
-
-        $trend = collect(range(0, $start->diffInDays($end)))
-            ->map(function (int $offset) use ($start, $submittedByDay, $answeredByDay) {
+        if ($period === 'all') {
+            $submittedByDay = (clone $base)->where('created_at', '<=', $end)
+                ->selectRaw("TO_CHAR(DATE_TRUNC('month', created_at), 'YYYY-MM') as day")
+                ->selectRaw('COUNT(*) as aggregate')->groupBy('day')->pluck('aggregate', 'day');
+            $answeredByDay = (clone $base)->where('status', 'answered')
+                ->whereNotNull('answered_at')->where('answered_at', '<=', $end)
+                ->selectRaw("TO_CHAR(DATE_TRUNC('month', answered_at), 'YYYY-MM') as day")
+                ->selectRaw('COUNT(*) as aggregate')->groupBy('day')->pluck('aggregate', 'day');
+            $months = max(1, (int) $start->copy()->startOfMonth()->diffInMonths($end->copy()->startOfMonth()) + 1);
+            $trend = collect(range(0, $months - 1))->map(function (int $offset) use ($start, $submittedByDay, $answeredByDay) {
+                $date = $start->copy()->startOfMonth()->addMonths($offset);
+                $key = $date->format('Y-m');
+                return ['date' => $key, 'label' => $date->format('M Y'),
+                    'submitted' => (int) ($submittedByDay[$key] ?? 0),
+                    'answered' => (int) ($answeredByDay[$key] ?? 0)];
+            })->values()->all();
+        } else {
+            $submittedByDay = (clone $base)->whereBetween('created_at', [$start, $end])
+                ->selectRaw('DATE(created_at) as day')->selectRaw('COUNT(*) as aggregate')
+                ->groupBy('day')->pluck('aggregate', 'day');
+            $answeredByDay = (clone $base)->where('status', 'answered')
+                ->whereNotNull('answered_at')->whereBetween('answered_at', [$start, $end])
+                ->selectRaw('DATE(answered_at) as day')->selectRaw('COUNT(*) as aggregate')
+                ->groupBy('day')->pluck('aggregate', 'day');
+            $trend = collect(range(0, $start->diffInDays($end)))->map(function (int $offset) use ($start, $submittedByDay, $answeredByDay) {
                 $date = $start->copy()->addDays($offset);
                 $key = $date->format('Y-m-d');
-                return [
-                    'date' => $key,
-                    'label' => $date->format('M j'),
+                return ['date' => $key, 'label' => $date->format('M j'),
                     'submitted' => (int) ($submittedByDay[$key] ?? 0),
-                    'answered' => (int) ($answeredByDay[$key] ?? 0),
-                ];
+                    'answered' => (int) ($answeredByDay[$key] ?? 0)];
             })->values()->all();
+        }
 
         $faqCount = Faq::query()->where('agency_id', $agency->id)->count();
         $answered = (int) ($statusCounts['answered'] ?? 0);
@@ -228,7 +321,14 @@ class AgencyAdminController extends Controller
                 'metrics' => [
                     'period_submitted' => collect($trend)->sum('submitted'),
                     'period_answered' => collect($trend)->sum('answered'),
+                    'evaluation_period_total' => $evaluationPeriodTotal,
+                    'evaluation_period_average' => $evaluationPeriodAverage === null ? null : round((float) $evaluationPeriodAverage, 2),
+                    'evaluation_period_responded' => $evaluationPeriodResponded,
+                    'evaluation_period_awaiting_response' => $evaluationPeriodAwaitingResponse,
+                    'evaluation_period_response_rate' => $evaluationPeriodResponseRate,
                 ],
+                'evaluation_rating_distribution' => $evaluationRatingDistribution,
+                'evaluation_trend' => $evaluationTrend,
                 'updated_at' => now()->toIso8601String(),
             ]);
         }
@@ -236,7 +336,10 @@ class AgencyAdminController extends Controller
         return view('agency-admin.analytics', compact(
             'agency', 'total', 'statusCounts', 'trend', 'faqCount',
             'responseRate', 'openCount', 'popularQuestions', 'period',
-            'selectedMonth', 'periodLabel'
+            'selectedMonth', 'periodLabel', 'evaluationPeriodTotal',
+            'evaluationPeriodAverage', 'evaluationPeriodResponded',
+            'evaluationPeriodAwaitingResponse', 'evaluationPeriodResponseRate',
+            'evaluationRatingDistribution', 'evaluationTrend'
         ));
     }
 

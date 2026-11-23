@@ -92,3 +92,101 @@
     cursor: not-allowed;
     opacity: .65;
 }
+
+/* Shared Dashboard language: Agency Admin uses the same hero, KPI cards,
+   section headings, and action controls as the System Admin workspace. */
+.agency-workspace {
+    max-width: 1280px;
+    margin: 0 auto;
+    gap: 20px;
+}
+.agency-workspace .dashboard-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+}
+.agency-workspace .dashboard-kpi {
+    min-height: 108px;
+    padding: 16px;
+    gap: 12px;
+    border: 1px solid #e3e8f0;
+    border-radius: 14px;
+    box-shadow: 0 2px 7px rgba(20,36,65,.025);
+}
+.agency-workspace .dashboard-kpi:hover {
+    transform: translateY(-2px);
+    border-color: #cfd9e8;
+    box-shadow: 0 9px 22px rgba(20,36,65,.07);
+}
+.agency-workspace .dashboard-kpi-icon {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 11px;
+}
+.agency-workspace .dashboard-kpi-icon i { font-size: 18px; }
+.agency-workspace .dashboard-kpi-label { font-size: 10px; }
+.agency-workspace .dashboard-kpi-copy strong {
+    margin-top: 3px;
+    font-size: 25px;
+    line-height: 1.1;
+}
+.agency-workspace .dashboard-kpi-copy small {
+    margin-top: 6px;
+    font-size: 9px;
+    line-height: 1.4;
+}
+.agency-workspace .dashboard-kpi-action {
+    top: 15px;
+    right: 15px;
+}
+.agency-workspace .dashboard-section { margin: 0; }
+.agency-workspace .agency-evaluation-kpis { margin-top: 12px; }
+.agency-workspace .dashboard-section-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 1px solid #dce3ee;
+    border-radius: 9px;
+    background: #fff;
+    color: #4266a8;
+    font-size: 10px;
+    font-weight: 650;
+    text-decoration: none;
+    box-shadow: 0 2px 7px rgba(20,36,65,.035);
+    transition: .18s ease;
+}
+.agency-workspace .dashboard-section-action:hover {
+    border-color: #cbd8ed;
+    background: #f8faff;
+    box-shadow: 0 5px 14px rgba(35,64,112,.07);
+}
+.agency-workspace .dashboard-section-action:focus-visible {
+    outline: 3px solid rgba(66,102,168,.22);
+    outline-offset: 2px;
+}
+.agency-workspace .dashboard-section-action i { font-size: 13px; }
+.agency-workspace .aw-card { box-shadow: 0 2px 8px rgba(20,36,65,.025); }
+@media (max-width: 900px) {
+    .agency-workspace .dashboard-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+    .agency-workspace { gap: 16px; }
+    .agency-workspace .dashboard-hero { align-items: flex-start; flex-direction: column; gap: 12px; }
+    .agency-workspace .admin-export-menu { align-self: flex-end; }
+    .agency-workspace .dashboard-section-heading { align-items: flex-start; flex-direction: column; }
+    .agency-workspace .dashboard-kpi-grid { grid-template-columns: 1fr; gap: 10px; }
+    .agency-workspace .dashboard-kpi { min-height: 88px; padding: 13px; }
+    .agency-workspace .dashboard-kpi-icon { width: 34px; height: 34px; flex-basis: 34px; }
+    .agency-workspace .dashboard-kpi-copy strong { font-size: 22px; }
+    .agency-workspace .dashboard-section-action { align-self: flex-start; }
+}
+@media print {
+    .agency-workspace .dashboard-hero,
+    .agency-workspace .dashboard-kpi,
+    .agency-workspace .aw-card { break-inside: avoid; }
+    .agency-workspace .dashboard-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}

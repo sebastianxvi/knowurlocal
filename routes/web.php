@@ -614,7 +614,7 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
     Route::post('/evaluations/{agency}/{evaluation}/response', [AgencyEvaluationManagementController::class, 'respond'])
         ->whereNumber(['agency', 'evaluation'])->middleware('throttle:20,1')->name('admin.evaluations.respond');
     Route::delete('/evaluations/{agency}/responses/{response}', [AgencyEvaluationManagementController::class, 'deleteResponse'])
-        ->whereNumber(['agency', 'response'])->name('admin.evaluations.responses.delete');
+        ->whereNumber(['agency', 'response'])->middleware('throttle:20,1')->name('admin.evaluations.responses.delete');
 
     Route::get('/evaluation-moderation', [AgencyEvaluationManagementController::class, 'reports'])
         ->name('admin.evaluations.moderation');
@@ -622,7 +622,7 @@ Route::middleware(['auth', 'admin.only', 'no.cache'])->group(function () {
         ->whereNumber('evaluation')->middleware('throttle:60,1')
         ->name('admin.evaluations.moderation.reports');
     Route::post('/evaluation-moderation/evaluations/{evaluation}', [AgencyEvaluationManagementController::class, 'moderate'])
-        ->whereNumber('evaluation')->middleware('throttle:20,1')->name('admin.evaluations.moderate');
+        ->whereNumber('evaluation')->middleware('throttle:8,1')->name('admin.evaluations.moderate');
 
 });
 

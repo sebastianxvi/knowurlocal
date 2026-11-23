@@ -3,7 +3,7 @@
 @section('page-title', 'Agency Dashboard')
 @section('page-subtitle', 'Support performance, common citizen questions, and shared work')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('cssfiles/admin/dashboard.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/dashboard.12ce9ef2e91a.css') }}">
 <style>
 
 .aw-stat,.aw-card{position:relative;overflow:visible;transition:border-color .16s,box-shadow .16s}
@@ -78,15 +78,15 @@
 }
 
 </style>
-<link rel="stylesheet" href="{{ asset('cssfiles/agency-admin/dashboard.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/agency-admin/dashboard.a623edd25e25.css') }}">
 @endpush
 @section('content')
-<div class="agency-workspace" data-collaboration-realtime="true" data-admin-id="{{ auth()->id() }}">
-    <section class="aw-welcome">
-        <div>
-            <span class="aw-eyebrow">Agency performance</span>
-            <h2>Support at a glance</h2>
-            <p>Track citizen requests, spot repeat questions, and coordinate the next actions for your agency.</p>
+<div class="dashboard-content agency-workspace" data-collaboration-realtime="true" data-admin-id="{{ auth()->id() }}">
+    <section class="dashboard-hero" aria-labelledby="agency-dashboard-heading">
+        <div class="dashboard-hero-copy">
+            <span class="eyebrow">AGENCY WORKSPACE</span>
+            <h2 id="agency-dashboard-heading">Know what needs attention.</h2>
+            <p>A clear snapshot of your agency's citizen requests, public feedback, frequently asked questions, and shared work.</p>
         </div>
         <details class="admin-export-menu">
             <summary class="dashboard-export-button" aria-label="Export agency dashboard report">
@@ -102,14 +102,70 @@
             </div>
         </details>
     </section>
-    <section class="aw-grid dashboard-kpi-grid" aria-label="Agency support overview">
-        <a class="aw-stat aw-stat-link dashboard-kpi" href="{{ route('agency-admin.tickets') }}"><span class="dashboard-kpi-icon"><i class="ph-light ph-chat-circle-text" aria-hidden="true"></i></span><span class="dashboard-kpi-copy"><span class="dashboard-kpi-label" tabindex="0" data-tip="All active, non-deleted citizen support requests assigned to this agency.">Total requests</span><strong>{{ number_format($counts['total']) }}</strong><small>All recorded requests</small></span></a>
-        <a class="aw-stat aw-stat-link dashboard-kpi dashboard-kpi-support {{ $counts['pending'] > 0 ? 'is-attention' : '' }}" href="{{ route('agency-admin.tickets') }}"><span class="dashboard-kpi-icon"><i class="ph-light ph-hourglass-medium" aria-hidden="true"></i></span><span class="dashboard-kpi-copy"><span class="dashboard-kpi-label" tabindex="0" data-tip="Citizen tickets waiting for your agency's initial response.">Pending inquiries</span><strong>{{ number_format($counts['pending']) }}</strong><small>Needs a response</small></span></a>
-        <a class="aw-stat aw-stat-link dashboard-kpi" href="{{ route('agency-admin.tickets') }}"><span class="dashboard-kpi-icon is-violet"><i class="ph-light ph-arrow-counter-clockwise" aria-hidden="true"></i></span><span class="dashboard-kpi-copy"><span class="dashboard-kpi-label" tabindex="0" data-tip="Tickets requiring another action from your agency.">Needs follow-up</span><strong>{{ number_format($counts['follow_up']) }}</strong><small>Requires agency action</small></span></a>
-        <a class="aw-stat aw-stat-link dashboard-kpi" href="{{ route('agency-admin.tickets') }}"><span class="dashboard-kpi-icon is-teal"><i class="ph-light ph-user-circle" aria-hidden="true"></i></span><span class="dashboard-kpi-copy"><span class="dashboard-kpi-label" tabindex="0" data-tip="Your agency has replied and is waiting for citizen confirmation.">Awaiting citizen</span><strong>{{ number_format($counts['awaiting_confirmation']) }}</strong><small>Response sent</small></span></a>
-        <a class="aw-stat aw-stat-link dashboard-kpi" href="{{ route('agency-admin.tickets') }}"><span class="dashboard-kpi-icon is-teal"><i class="ph-light ph-check-circle" aria-hidden="true"></i></span><span class="dashboard-kpi-copy"><span class="dashboard-kpi-label" tabindex="0" data-tip="Requests the citizen has confirmed as resolved.">Confirmed resolved</span><strong>{{ number_format($counts['answered']) }}</strong><small>Citizen-confirmed outcomes</small></span></a>
-        <a class="aw-stat aw-stat-link dashboard-kpi" href="{{ route('agency-admin.faqs') }}"><span class="dashboard-kpi-icon is-violet"><i class="ph-light ph-book-open-text" aria-hidden="true"></i></span><span class="dashboard-kpi-copy"><span class="dashboard-kpi-label" tabindex="0" data-tip="Public FAQ answers currently published for your agency.">Published FAQs</span><strong>{{ number_format($counts['faqs']) }}</strong><small>Public answers available</small></span></a>
+
+    <section class="dashboard-kpi-grid agency-dashboard-kpis" aria-label="Agency support overview">
+        <a class="dashboard-kpi" href="{{ route('agency-admin.tickets') }}" title="All active, non-deleted citizen support requests assigned to your agency.">
+            <span class="dashboard-kpi-icon"><i class="ph-light ph-chat-circle-text" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy"><span class="dashboard-kpi-label">Total requests</span><strong>{{ number_format($counts['total']) }}</strong><small>All recorded requests</small></span>
+            <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
+        <a class="dashboard-kpi dashboard-kpi-support {{ $counts['pending'] > 0 ? 'is-attention' : '' }}" href="{{ route('agency-admin.tickets') }}" title="Citizen requests waiting for your agency's initial response.">
+            <span class="dashboard-kpi-icon"><i class="ph-light ph-hourglass-medium" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy"><span class="dashboard-kpi-label">Pending inquiries</span><strong>{{ number_format($counts['pending']) }}</strong><small>Needs a response</small></span>
+            <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
+        <a class="dashboard-kpi" href="{{ route('agency-admin.tickets') }}" title="Requests that require another action or update from your agency.">
+            <span class="dashboard-kpi-icon is-violet"><i class="ph-light ph-arrow-counter-clockwise" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy"><span class="dashboard-kpi-label">Needs follow-up</span><strong>{{ number_format($counts['follow_up']) }}</strong><small>Requires agency action</small></span>
+            <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
+        <a class="dashboard-kpi" href="{{ route('agency-admin.tickets') }}" title="Your agency has replied and is waiting for the citizen to confirm the outcome.">
+            <span class="dashboard-kpi-icon is-teal"><i class="ph-light ph-user-circle" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy"><span class="dashboard-kpi-label">Awaiting citizen</span><strong>{{ number_format($counts['awaiting_confirmation']) }}</strong><small>Response sent</small></span>
+            <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
+        <a class="dashboard-kpi" href="{{ route('agency-admin.tickets') }}" title="Requests the citizen has confirmed as resolved.">
+            <span class="dashboard-kpi-icon is-teal"><i class="ph-light ph-check-circle" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy"><span class="dashboard-kpi-label">Confirmed resolved</span><strong>{{ number_format($counts['answered']) }}</strong><small>Citizen-confirmed outcomes</small></span>
+            <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
+        <a class="dashboard-kpi" href="{{ route('agency-admin.faqs') }}" title="Active FAQ answers currently available for the public and the chatbot.">
+            <span class="dashboard-kpi-icon is-violet"><i class="ph-light ph-book-open-text" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-copy"><span class="dashboard-kpi-label">Published FAQs</span><strong>{{ number_format($counts['faqs']) }}</strong><small>Public answers available</small></span>
+            <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+        </a>
     </section>
+
+    <section class="dashboard-section agency-evaluation-overview" aria-labelledby="agency-evaluation-overview-title">
+        <div class="dashboard-section-heading">
+            <div>
+                <span class="eyebrow">PUBLIC FEEDBACK</span>
+                <h2 id="agency-evaluation-overview-title">Service evaluations</h2>
+                <p title="A summary of published ratings and the responses your agency has or has not provided.">Understand how citizens rate your agency and which evaluations still need an official response.</p>
+            </div>
+            <a class="dashboard-section-action" href="{{ route('agency-admin.evaluations') }}" title="Open service evaluations to read feedback and publish or manage official responses.">
+                View evaluations <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i>
+            </a>
+        </div>
+        <div class="dashboard-kpi-grid agency-evaluation-kpis">
+            <a class="dashboard-kpi" href="{{ route('agency-admin.evaluations', ['filter' => 'all']) }}" title="The number of published public evaluations for your agency.">
+                <span class="dashboard-kpi-icon is-blue"><i class="ph-light ph-chat-circle-text" aria-hidden="true"></i></span>
+                <span class="dashboard-kpi-copy"><span class="dashboard-kpi-label">Published evaluations</span><strong>{{ number_format($evaluationCounts['total']) }}</strong><small>Public feedback received</small></span>
+                <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+            </a>
+            <a class="dashboard-kpi" href="{{ route('agency-admin.evaluations', ['filter' => 'all']) }}" title="The average star rating across published evaluations. This is not a percentage.">
+                <span class="dashboard-kpi-icon is-violet"><i class="ph-light ph-star" aria-hidden="true"></i></span>
+                <span class="dashboard-kpi-copy"><span class="dashboard-kpi-label">Average satisfaction</span><strong>{{ $evaluationCounts['total'] > 0 ? number_format($evaluationCounts['average'], 1) . ' / 5' : '—' }}</strong><small>{{ $evaluationCounts['total'] > 0 ? 'Average public rating' : 'No published ratings yet' }}</small></span>
+                <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+            </a>
+            <a class="dashboard-kpi {{ $evaluationCounts['unanswered'] > 0 ? 'is-attention' : '' }}" href="{{ route('agency-admin.evaluations', ['filter' => 'unanswered']) }}" title="Published evaluations that do not yet have an official agency response.">
+                <span class="dashboard-kpi-icon"><i class="ph-light ph-chat-centered-dots" aria-hidden="true"></i></span>
+                <span class="dashboard-kpi-copy"><span class="dashboard-kpi-label">Awaiting response</span><strong>{{ number_format($evaluationCounts['unanswered']) }}</strong><small>Evaluations without a reply</small></span>
+                <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+            </a>
+        </div>
+    </section>
+
     <section class="aw-card" id="popular-questions">
         <div class="aw-card-head"><div><h3>Most-asked citizen questions <span tabindex="0" data-tip="Repeated ticket wording can reveal answers citizens need often. Review suggestions before changing or publishing an FAQ.">ⓘ</span></h3><p class="aw-muted" style="margin:6px 0 0">Repeated questions are good candidates for clearer FAQs. Review the wording before publishing.</p></div><a class="aw-link" href="{{ route('agency-admin.faqs') }}">Manage FAQs ↗</a></div>
         @if($popularQuestions->isEmpty())
@@ -125,16 +181,16 @@
     <section class="aw-card aw-collab" id="agency-collaboration">
         <div class="aw-card-head">
             <div>
-                <span class="aw-eyebrow">Shared work</span>
+                <span class="aw-eyebrow" title="Work shared between your agency and the System Admin team.">Shared work</span>
                 <h3 class="aw-collab-heading">Collaboration with the system team</h3>
                 <p class="aw-muted aw-collab-subtitle">Receive reminders, request help, and track follow-ups with System Admins and Superadmins.</p>
             </div>
             <button type="button" class="aw-btn aw-collab-add" id="open-collaboration-modal"><i class="ph-light ph-plus" aria-hidden="true"></i><span>New task</span></button>
         </div>
         <div class="aw-collab-summary">
-            <div class="aw-collab-stat"><strong>{{ number_format($collaborationOpenCount) }}</strong><span>Open shared tasks</span></div>
-            <div class="aw-collab-stat"><strong>{{ number_format($collaborationYourActionCount) }}</strong><span>Assigned to you</span></div>
-            <div class="aw-collab-stat"><strong>{{ number_format($collaborationOverdueCount) }}</strong><span>Overdue for you</span></div>
+            <div class="aw-collab-stat" title="Shared tasks involving you that are still open or in progress."><strong>{{ number_format($collaborationOpenCount) }}</strong><span>Open shared tasks</span></div>
+            <div class="aw-collab-stat" title="Open or in-progress tasks where you are the assigned person responsible for the next action."><strong>{{ number_format($collaborationYourActionCount) }}</strong><span>Assigned to you</span></div>
+            <div class="aw-collab-stat" title="Tasks assigned to you whose due date has already passed and that are not yet completed."><strong>{{ number_format($collaborationOverdueCount) }}</strong><span>Overdue for you</span></div>
         </div>
         @forelse($collaborationTasks as $task)
             @php

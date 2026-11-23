@@ -7,7 +7,7 @@
 @section('content')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('cssfiles/admin/dashboard.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/dashboard.12ce9ef2e91a.css') }}">
 @endpush
 
 @php
@@ -112,6 +112,66 @@
 
     </section>
 
+    @if($canModerateEvaluations)
+        <section class="dashboard-section dashboard-evaluation-moderation" aria-labelledby="dashboard-evaluation-moderation-title">
+            <div class="dashboard-section-heading">
+                <div>
+                    <span class="eyebrow">PUBLIC FEEDBACK</span>
+                    <h2 id="dashboard-evaluation-moderation-title">Evaluation moderation</h2>
+                    <p title="A summary of reports submitted by the public and the evaluations currently under moderation.">System-wide report activity and the current moderation workload.</p>
+                </div>
+                <a class="dashboard-section-action"
+                   href="{{ route('admin.evaluations.moderation') }}"
+                   title="Open the moderation workspace to review reports, hide evaluations, restore them, or dismiss reports."
+                   aria-label="Open evaluation moderation">
+                    Open moderation <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i>
+                </a>
+            </div>
+            <div class="dashboard-kpi-grid">
+                <a href="{{ route('admin.evaluations.moderation', ['status' => 'pending']) }}" class="dashboard-kpi {{ $evaluationPendingReports > 0 ? 'is-attention' : '' }}"
+                    title="Reports that have not yet received a moderation decision.">
+                    <span class="dashboard-kpi-icon"><i class="ph-light ph-flag" aria-hidden="true"></i></span>
+                    <span class="dashboard-kpi-copy">
+                        <span class="dashboard-kpi-label">Pending reports</span>
+                        <strong>{{ number_format($evaluationPendingReports) }}</strong>
+                        <small>Awaiting moderation review</small>
+                    </span>
+                    <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+                </a>
+                <a href="{{ route('admin.evaluations.moderation', ['status' => 'all']) }}" class="dashboard-kpi"
+                    title="The number of distinct public evaluations that have at least one report.">
+                    <span class="dashboard-kpi-icon is-blue"><i class="ph-light ph-chat-circle-text" aria-hidden="true"></i></span>
+                    <span class="dashboard-kpi-copy">
+                        <span class="dashboard-kpi-label">Reported evaluations</span>
+                        <strong>{{ number_format($reportedEvaluationCount) }}</strong>
+                        <small>Unique evaluations reported</small>
+                    </span>
+                    <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+                </a>
+                <a href="{{ route('admin.evaluations.moderation', ['status' => 'resolved']) }}" class="dashboard-kpi"
+                    title="Reports that moderators have already resolved by dismissing or taking action.">
+                    <span class="dashboard-kpi-icon is-teal"><i class="ph-light ph-check-circle" aria-hidden="true"></i></span>
+                    <span class="dashboard-kpi-copy">
+                        <span class="dashboard-kpi-label">Resolved reports</span>
+                        <strong>{{ number_format($evaluationResolvedReports) }}</strong>
+                        <small>Dismissed or actioned</small>
+                    </span>
+                    <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+                </a>
+                <a href="{{ route('admin.evaluations.moderation', ['status' => 'pending']) }}" class="dashboard-kpi"
+                    title="Reported evaluations temporarily hidden from public view while they are reviewed.">
+                    <span class="dashboard-kpi-icon is-violet"><i class="ph-light ph-eye-slash" aria-hidden="true"></i></span>
+                    <span class="dashboard-kpi-copy">
+                        <span class="dashboard-kpi-label">Hidden evaluations</span>
+                        <strong>{{ number_format($hiddenReportedEvaluations) }}</strong>
+                        <small>Temporarily unavailable publicly</small>
+                    </span>
+                    <span class="dashboard-kpi-action"><i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></span>
+                </a>
+            </div>
+        </section>
+    @endif
+
     {{-- =====================================================
          ATTENTION + HEALTH
          ===================================================== --}}
@@ -121,10 +181,12 @@
             <div>
                 <span class="eyebrow">WHAT NEEDS YOUR ATTENTION?</span>
                 <h2>Priority items</h2>
-                <p>Start here when you want to know what may need action.</p>
+                <p>Start here to review outstanding work across the system.</p>
+                <p class="dashboard-priority-note">Counts are attention flags, not unique records; one record may appear in more than one category.</p>
             </div>
-            <span class="dashboard-count-badge">
-                {{ number_format($totalNeedsAttention) }} {{ $totalNeedsAttention === 1 ? 'item' : 'items' }}
+            <span class="dashboard-count-badge"
+                  title="Counts outstanding work categories. A single record may count more than once if it needs attention in multiple ways.">
+                {{ number_format($totalNeedsAttention) }} {{ $totalNeedsAttention === 1 ? 'attention flag' : 'attention flags' }}
             </span>
         </div>
 
@@ -143,7 +205,7 @@
 
                 <div class="dashboard-attention-list">
                     @if($pendingInquiries > 0)
-                        <a href="{{ route('admin.support.requests', ['status' => 'pending']) }}" class="dashboard-attention-item is-warning">
+                        <a href="{{ route('admin.support.requests', ['status' => 'pending']) }}" class="dashboard-attention-item is-warning" title="Citizen requests that are still waiting for an administrator to respond.">
                             <span class="dashboard-attention-icon"><i class="ph-light ph-clock" aria-hidden="true"></i></span>
                             <span class="dashboard-attention-copy">
                                 <strong>{{ number_format($pendingInquiries) }} {{ $pendingInquiries === 1 ? 'citizen request is' : 'citizen requests are' }} waiting</strong>
@@ -153,8 +215,19 @@
                         </a>
                     @endif
 
+                    @if($canModerateEvaluations && $evaluationPendingReports > 0)
+                        <a href="{{ route('admin.evaluations.moderation', ['status' => 'pending']) }}" class="dashboard-attention-item is-warning" title="Public evaluations reported by users and waiting for a moderation decision.">
+                            <span class="dashboard-attention-icon"><i class="ph-light ph-flag" aria-hidden="true"></i></span>
+                            <span class="dashboard-attention-copy">
+                                <strong>{{ number_format($evaluationPendingReports) }} {{ $evaluationPendingReports === 1 ? 'evaluation report is' : 'evaluation reports are' }} awaiting review</strong>
+                                <small>Reported public evaluations may need a moderation decision.</small>
+                            </span>
+                            <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    @endif
+
                     @if($incompleteAgencies > 0)
-                        <a href="{{ route('admin.nga', ['filter' => 'incomplete']) }}" class="dashboard-attention-item is-info">
+                        <a href="{{ route('admin.nga', ['filter' => 'incomplete']) }}" class="dashboard-attention-item is-info" title="Agency directory profiles missing one or more required information fields.">
                             <span class="dashboard-attention-icon"><i class="ph-light ph-buildings" aria-hidden="true"></i></span>
                             <span class="dashboard-attention-copy">
                                 <strong>{{ number_format($incompleteAgencies) }} {{ $incompleteAgencies === 1 ? 'agency profile is' : 'agency profiles are' }} incomplete</strong>
@@ -165,7 +238,7 @@
                     @endif
 
                     @if($faqFeedbackOutstanding > 0)
-                        <a href="{{ route('faqs.index', ['feedback' => 'needs_review']) }}" class="dashboard-attention-item is-warning">
+                        <a href="{{ route('faqs.index', ['feedback' => 'needs_review']) }}" class="dashboard-attention-item is-warning" title="FAQs whose citizen feedback indicates that an answer may need review.">
                             <span class="dashboard-attention-icon"><i class="ph-light ph-thumbs-down" aria-hidden="true"></i></span>
                             <span class="dashboard-attention-copy">
                                 <strong>{{ number_format($faqFeedbackOutstanding) }} {{ $faqFeedbackOutstanding === 1 ? 'FAQ needs' : 'FAQs need' }} review</strong>
@@ -176,11 +249,33 @@
                     @endif
 
                     @if($incompleteFaqs > 0)
-                        <a href="{{ route('faqs.index', ['filter' => 'missing_translation']) }}" class="dashboard-attention-item is-info">
+                        <a href="{{ route('faqs.index', ['filter' => 'missing_translation']) }}" class="dashboard-attention-item is-info" title="FAQs missing required answer or Filipino/Taglish content.">
                             <span class="dashboard-attention-icon"><i class="ph-light ph-translate" aria-hidden="true"></i></span>
                             <span class="dashboard-attention-copy">
                                 <strong>{{ number_format($incompleteFaqs) }} {{ $incompleteFaqs === 1 ? 'FAQ needs' : 'FAQs need' }} completion</strong>
                                 <small>Some required answer or Filipino/Taglish content is missing.</small>
+                            </span>
+                            <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    @endif
+
+                    @if($canManageAdministratorAccounts && $pendingAdminApprovals > 0)
+                        <a href="{{ route('admin.admins', ['status' => 'pending']) }}" class="dashboard-attention-item is-warning" title="Central administrator accounts that have requested access and still need approval.">
+                            <span class="dashboard-attention-icon"><i class="ph-light ph-user-check" aria-hidden="true"></i></span>
+                            <span class="dashboard-attention-copy">
+                                <strong>{{ number_format($pendingAdminApprovals) }} {{ $pendingAdminApprovals === 1 ? 'administrator account is' : 'administrator accounts are' }} awaiting approval</strong>
+                                <small>Review pending central administrator access requests.</small>
+                            </span>
+                            <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    @endif
+
+                    @if($canManageAdministratorAccounts && $pendingAgencyAdminInvitations > 0)
+                        <a href="{{ route('admin.agency-admins', ['status' => 'pending']) }}" class="dashboard-attention-item is-info" title="Invitations sent to Agency Admins that have not yet been accepted.">
+                            <span class="dashboard-attention-icon"><i class="ph-light ph-envelope-simple" aria-hidden="true"></i></span>
+                            <span class="dashboard-attention-copy">
+                                <strong>{{ number_format($pendingAgencyAdminInvitations) }} {{ $pendingAgencyAdminInvitations === 1 ? 'Agency Admin invitation is' : 'Agency Admin invitations are' }} pending</strong>
+                                <small>Check invitations that have not yet been accepted.</small>
                             </span>
                             <i class="ph-light ph-arrow-right" aria-hidden="true"></i>
                         </a>
@@ -191,7 +286,7 @@
                             <span class="dashboard-attention-icon is-success"><i class="ph-light ph-check-circle" aria-hidden="true"></i></span>
                             <div>
                                 <strong>Nothing urgent right now</strong>
-                                <small>No immediate support or data-quality issues were detected.</small>
+                                <small>No outstanding support, moderation, account, or information-quality issues were detected.</small>
                             </div>
                         </div>
                     @endif
@@ -205,7 +300,7 @@
                     </div>
                     <div>
                         <h3>Information health</h3>
-                        <p>How complete the information is behind the public service.</p>
+                        <p title="These measures indicate whether important agency and FAQ information is complete and useful to citizens.">How complete the information is behind the public service.</p>
                     </div>
                 </div>
 
@@ -261,19 +356,19 @@
         </div>
 
         <div class="dashboard-collaboration-summary">
-            <div class="dashboard-collaboration-stat">
+            <div class="dashboard-collaboration-stat" title="All shared tasks that are still open or in progress.">
                 <strong>{{ number_format($collaborationOpenCount) }}</strong>
                 <span>open tasks</span>
             </div>
-            <div class="dashboard-collaboration-stat is-primary">
+            <div class="dashboard-collaboration-stat is-primary" title="Tasks assigned to your account that need your work or follow-up.">
                 <strong>{{ number_format($collaborationYourActionCount) }}</strong>
                 <span>assigned to you</span>
             </div>
-            <div class="dashboard-collaboration-stat">
+            <div class="dashboard-collaboration-stat" title="Tasks where another administrator is asking you to review or check their work.">
                 <strong>{{ number_format($collaborationReviewCount) }}</strong>
                 <span>reviews for you</span>
             </div>
-            <div class="dashboard-collaboration-stat">
+            <div class="dashboard-collaboration-stat" title="Tasks handed to you by another administrator for continued work.">
                 <strong>{{ number_format($collaborationHandoffCount) }}</strong>
                 <span>handoffs</span>
             </div>

@@ -30,6 +30,7 @@
     };
 
     let refreshInFlight = false;
+    let refreshQueued = false;
     let currentPeriod = root.dataset.analyticsCurrentPeriod || '7d';
     let currentMonth = root.dataset.analyticsCurrentMonth || new Date().toISOString().slice(0, 7);
 
@@ -42,6 +43,7 @@
         status: parseJson(root.dataset.analyticsInitialStatus, {}),
         methods: parseJson(root.dataset.analyticsInitialChatbotMethods, {}),
         feedback: parseJson(root.dataset.analyticsInitialFeedback, {}),
+        evaluationRatings: parseJson(root.dataset.analyticsInitialEvaluationRatings, {}),
     };
 
     const animateMetric = (node, value) => {
@@ -142,7 +144,6 @@ const smoothPath = points => {
         const pointsFor = key => trend.map((d, i) => [x(i), y(d[key])]);
         const submittedPoints = pointsFor('submitted');
         const answeredPoints = pointsFor('answered');
-        const area = `${pad.left},${pad.top + innerH} ${submittedPoints.map(point => point.join(',')).join(' ')} ${pad.left + innerW},${pad.top + innerH}`;
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -152,7 +153,10 @@ const smoothPath = points => {
 
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
         defs.innerHTML = `
-            <linearGradient id="trendSubmittedFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-opacity=".18"/><stop offset="100%" stop-opacity="0"/></linearGradient>
+            <linearGradient id="trendSubmittedFill" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#5b7dde" stop-opacity=".18"/>
+                <stop offset="100%" stop-color="#5b7dde" stop-opacity="0"/>
+            </linearGradient>
         `;
         svg.append(defs);
 
@@ -172,15 +176,20 @@ const smoothPath = points => {
         }
         svg.append(grid);
 
-        const areaPath = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        areaPath.setAttribute('points', area);
+        // Draw the complete series as paths. Explicitly close the submitted
+        // area to the baseline and use the same smooth interpolation as the
+        // Agency Admin chart so long reporting periods remain visually clear.
+        const areaPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const baselineY = pad.top + innerH;
+        const areaPathData = `${smoothPath(submittedPoints)} L ${submittedPoints[submittedPoints.length - 1][0]} ${baselineY} L ${submittedPoints[0][0]} ${baselineY} Z`;
+        areaPath.setAttribute('d', areaPathData);
         areaPath.classList.add('trend-area');
         svg.append(areaPath);
 
-        const submittedLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-        submittedLine.setAttribute('points', submittedPoints); submittedLine.classList.add('trend-line', 'submitted');
-        const answeredLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-        answeredLine.setAttribute('points', answeredPoints); answeredLine.classList.add('trend-line', 'answered');
+        const submittedLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        submittedLine.setAttribute('d', smoothPath(submittedPoints)); submittedLine.classList.add('trend-line', 'submitted');
+        const answeredLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        answeredLine.setAttribute('d', smoothPath(answeredPoints)); answeredLine.classList.add('trend-line', 'answered');
         svg.append(submittedLine, answeredLine);
 
         const labelEvery = trend.length > 14 ? Math.ceil(trend.length / 7) : 1;
@@ -193,7 +202,10 @@ const smoothPath = points => {
 
             [['submitted', submitted, 'submitted'], ['answered', answered, 'answered']].forEach(([key, value, cls]) => {
                 const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                circle.setAttribute('cx', cx); circle.setAttribute('cy', y(value)); circle.setAttribute('r', '4.5');
+                circle.setAttribute('cx', cx); circle.setAttribute('cy', y(value));
+                // Smaller zero-value markers reduce visual noise on 90-day and
+                // annual timelines while keeping every day keyboard/hover accessible.
+                circle.setAttribute('r', value > 0 ? '4.5' : '2.2');
                 circle.classList.add('trend-point', cls);
                 circle.setAttribute('tabindex', '0');
                 circle.setAttribute('aria-label', `${day.label}: ${value} ${key}`);
@@ -328,6 +340,35 @@ const smoothPath = points => {
         });
     };
 
+    const renderEvaluationRatings = distribution => {
+        const host = root.querySelector('[data-evaluation-rating-chart]');
+        if (!host) return;
+        host.replaceChildren();
+        const values = distribution || {};
+        const total = Object.values(values).reduce((sum, value) => sum + Number(value || 0), 0);
+        if (total === 0) {
+            host.textContent = 'No published evaluations were received during this period.';
+            return;
+        }
+        [5, 4, 3, 2, 1].forEach(rating => {
+            const count = Number(values[rating] || 0);
+            const row = document.createElement('div');
+            row.className = 'analytics-rating-row';
+            const label = document.createElement('span');
+            label.textContent = `${rating} ★`;
+            const track = document.createElement('i');
+            track.className = 'analytics-rating-track';
+            const fill = document.createElement('em');
+            fill.style.width = `${total ? (count / total) * 100 : 0}%`;
+            track.append(fill);
+            const amount = document.createElement('b');
+            amount.textContent = numberFormat.format(count);
+            row.append(label, track, amount);
+            row.title = `${count} published evaluations rated ${rating} out of 5`;
+            host.append(row);
+        });
+    };
+
     const renderSupportAgencies = (items) => {
         const list = root.querySelector('[data-support-agencies]'); if (!list) return;
         list.replaceChildren();
@@ -361,18 +402,24 @@ const smoothPath = points => {
         state.status = payload.status_counts || {};
         state.methods = payload.chatbot_match_methods || {};
         state.feedback = payload.feedback_breakdown || {};
+        state.evaluationRatings = payload.evaluation_rating_distribution || {};
         setPeriodControls(payload.period || currentPeriod, payload.selected_month || currentMonth);
         setTrendLabels(payload);
+        const satisfactionDescription = root.querySelector('.analytics-satisfaction-panel .analytics-panel-head p');
+        if (satisfactionDescription) satisfactionDescription.textContent = `Published evaluations received during ${payload.period_label || currentPeriod} across all registered agencies.`;
         Object.entries(m).forEach(([key, value]) => setMetric(key, value));
         setMetric('response_rate', `${m.response_rate ?? 0}%`);
         setMetric('faq_answer_rate', `${m.faq_answer_rate ?? 0}%`);
         setMetric('fallback_rate', `${m.fallback_rate ?? 0}%`);
+        setMetric('evaluation_period_average', m.evaluation_period_average === null || m.evaluation_period_average === undefined ? '—' : `${Number(m.evaluation_period_average).toFixed(1)} / 5`);
+        setMetric('evaluation_period_response_rate', `${m.evaluation_period_response_rate ?? 0}%`);
         setNote('response_rate', `${numberFormat.format(m.answered_inquiries || 0)} of ${numberFormat.format(m.total_inquiries || 0)} requests are answered`);
         setNote('faq_answer_rate', `${numberFormat.format(m.faq_answered || 0)} questions answered from saved FAQs`);
         setNote('fallback_rate', `${numberFormat.format(m.fallback_questions || 0)} questions without a matching FAQ`);
         setNote('complete_agencies', `of ${numberFormat.format(m.total_agencies || 0)} active agencies`);
         setNote('incomplete_faqs', `${numberFormat.format(m.complete_faqs || 0)} complete of ${numberFormat.format(m.total_faqs || 0)}`);
         buildTrendChart(state.trend);
+        renderEvaluationRatings(state.evaluationRatings);
         renderStatus(state.status);
         renderVisibility(m);
         renderMethods(state.methods);
@@ -387,18 +434,29 @@ const smoothPath = points => {
     };
 
     const loadPeriod = async () => {
-        if (!endpoint || refreshInFlight) return;
+        if (!endpoint) return;
+        if (refreshInFlight) { refreshQueued = true; return; }
         refreshInFlight = true;
+        const requestedPeriod = currentPeriod;
+        const requestedMonth = currentMonth;
         root.classList.add('is-loading');
         try {
-            const url = new URL(endpoint, window.location.origin); url.searchParams.set('period', currentPeriod);
-            if (currentPeriod === 'month') url.searchParams.set('month', currentMonth); else url.searchParams.delete('month');
+            const url = new URL(endpoint, window.location.origin); url.searchParams.set('period', requestedPeriod);
+            if (requestedPeriod === 'month') url.searchParams.set('month', requestedMonth); else url.searchParams.delete('month');
             const response = await fetch(url.toString(), { headers: { Accept:'application/json', 'X-Requested-With':'XMLHttpRequest' }, credentials:'same-origin', cache:'no-store' });
             if (!response.ok) throw new Error(`Analytics period load failed: ${response.status}`);
-            applyPayload(await response.json());
+            const payload = await response.json();
+            // Ignore stale responses if the administrator changed the period
+            // while this request was still in flight.
+            if (requestedPeriod !== currentPeriod || (requestedPeriod === 'month' && requestedMonth !== currentMonth)) return;
+            applyPayload(payload);
         } catch (error) {
             console.warn('Analytics period refresh is unavailable.', error);
-        } finally { refreshInFlight = false; root.classList.remove('is-loading'); }
+        } finally {
+            refreshInFlight = false;
+            root.classList.remove('is-loading');
+            if (refreshQueued) { refreshQueued = false; loadPeriod(); }
+        }
     };
 
     root.querySelectorAll('[data-analytics-period]').forEach(button => button.addEventListener('click', () => {
@@ -416,6 +474,7 @@ const smoothPath = points => {
     animateInitialMetrics();
     setPeriodControls(currentPeriod, currentMonth);
     buildTrendChart(state.trend);
+    renderEvaluationRatings(state.evaluationRatings);
     renderStatus(state.status);
     renderMethods(state.methods);
     renderFeedback(state.feedback);

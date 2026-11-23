@@ -256,6 +256,16 @@ class AgencyEvaluationManagementController extends Controller
         $evaluation = $response->evaluation;
         abort_unless((int) $evaluation->agency_id === (int) $agency->id, 404);
         abort_unless($this->mayRespond($request->user(), $agency), 403);
+
+        // System administrators must independently prove their identity on the
+        // mutation request; the browser-side modal is not an authorization boundary.
+        if (in_array((string) $request->user()->role, ['admin', 'superadmin'], true)) {
+            $currentPassword = (string) $request->input('current_password', '');
+            if ($currentPassword === '' || !Hash::check($currentPassword, (string) $request->user()->password)) {
+                return back()->with('error', 'Administrator password is incorrect. The official response was not deleted.');
+            }
+        }
+
         // Current authorized response owners may remove the single official
         // response; this also supports an assignment change without orphaning it.
         $response->delete();
@@ -321,15 +331,10 @@ class AgencyEvaluationManagementController extends Controller
         $resolvedCount = AgencyEvaluationReport::whereIn('status', ['dismissed', 'actioned'])
             ->whereHas('evaluation', fn ($query) => $query->withTrashed()->where('status', '!=', 'hidden'))
             ->count();
-        $reportedEvaluationCount = AgencyEvaluation::withTrashed()->whereHas('reports')->count();
-        $hiddenCount = AgencyEvaluation::where('status', 'hidden')->whereHas('reports')->count();
-
         return view('admin.evaluations.moderation', compact(
             'reportedEvaluations',
             'pendingCount',
             'resolvedCount',
-            'reportedEvaluationCount',
-            'hiddenCount',
             'statusFilter',
             'search'
         ));
@@ -374,6 +379,15 @@ class AgencyEvaluationManagementController extends Controller
         ]);
 
         $action = $validated['action'];
+
+        // Every System Admin moderation mutation requires a fresh password
+        // check on the server. The browser confirmation/password dialogs are
+        // an additional UX layer, never the security boundary.
+        $currentPassword = (string) $request->input('current_password', '');
+        if ($currentPassword === '' || !Hash::check($currentPassword, (string) $request->user()->password)) {
+            return back()->with('error', 'Administrator password is incorrect. No moderation action was performed.');
+        }
+
         [$evaluationRecord, $moderationLog] = DB::transaction(function () use ($request, $evaluation, $validated, $action) {
             $lockedEvaluation = AgencyEvaluation::withTrashed()
                 ->whereKey($evaluation)

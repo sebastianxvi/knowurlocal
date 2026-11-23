@@ -6,7 +6,7 @@
 @section('admin-page', 'analytics')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('cssfiles/admin/analytics.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/analytics.18b7d18f4406.css') }}">
 @endpush
 
 @section('content')
@@ -16,10 +16,14 @@
     data-analytics-url="{{ route('admin.analytics.data') }}"
     data-analytics-current-period="{{ $period }}"
     data-analytics-current-month="{{ $selectedMonth }}"
+    data-analytics-current-agency-type="{{ $selectedAgencyType ?? "" }}"
     data-analytics-initial-trend='@json($inquiryTrend)'
     data-analytics-initial-status='@json($queueStatusCounts)'
     data-analytics-initial-chatbot-methods='@json($chatbotMatchMethods)'
     data-analytics-initial-feedback='@json($feedbackBreakdown)'
+    data-analytics-initial-evaluation-ratings='@json($evaluationRatingDistribution)'
+    data-analytics-initial-evaluation-trend='@json($evaluationTrend)'
+    data-analytics-initial-agency-comparison='@json($agencyComparison)'
 >
     <header class="analytics-header">
         <div class="analytics-header-copy">
@@ -37,10 +41,10 @@
                     <i class="ph-light ph-export" aria-hidden="true"></i><span>Export</span><i class="ph-light ph-caret-down export-caret" aria-hidden="true"></i>
                 </summary>
                 <div class="analytics-export-dropdown">
-                    <a href="{{ route('admin.analytics.export', ['period' => $period, 'month' => $selectedMonth]) }}" target="_blank" rel="noopener">
+                    <a href="{{ route('admin.analytics.export', ['period' => $period, 'month' => $selectedMonth, 'agency_type' => $selectedAgencyType]) }}" target="_blank" rel="noopener">
                         <i class="ph-light ph-file-pdf"></i><span><strong>Analytics PDF</strong><small>{{ $periodLabel }} selected period</small></span>
                     </a>
-                    <a href="{{ route('admin.report.full', ['period' => $period, 'month' => $selectedMonth]) }}" target="_blank" rel="noopener">
+                    <a href="{{ route('admin.report.full', ['period' => $period, 'month' => $selectedMonth, 'agency_type' => $selectedAgencyType]) }}" target="_blank" rel="noopener">
                         <i class="ph-light ph-files"></i><span><strong>Full PDF report</strong><small>Dashboard + {{ $periodLabel }} analytics</small></span>
                     </a>
                 </div>
@@ -59,7 +63,7 @@
             <div class="analytics-kpi-icon"><i class="ph-light ph-hourglass-medium"></i></div>
             <div><span>Needs attention</span><strong data-metric="open_inquiries">{{ number_format($openInquiries) }}</strong><small>Not finished yet</small></div>
         </article>
-        <article class="analytics-kpi is-good" data-tooltip="The share of support requests that have reached the completed "Answered" status.">
+        <article class="analytics-kpi is-good" data-tooltip="The share of support requests that have reached the completed &quot;Answered&quot; status.">
             <div class="analytics-kpi-icon"><i class="ph-light ph-check-circle"></i></div>
             <div><span>Answered</span><strong data-metric="response_rate">{{ $responseRate }}%</strong><small data-metric-note="response_rate">{{ number_format($answeredInquiries) }} of {{ number_format($totalInquiries) }}</small></div>
         </article>
@@ -80,6 +84,9 @@
                 <div class="analytics-range-tabs" role="tablist" aria-label="Trend period">
                     <button type="button" class="analytics-range-tab {{ $period === '7d' ? 'is-active' : '' }}" data-analytics-period="7d" role="tab" aria-selected="{{ $period === '7d' ? 'true' : 'false' }}">7 days</button>
                     <button type="button" class="analytics-range-tab {{ $period === '30d' ? 'is-active' : '' }}" data-analytics-period="30d" role="tab" aria-selected="{{ $period === '30d' ? 'true' : 'false' }}">30 days</button>
+                    <button type="button" class="analytics-range-tab {{ $period === '90d' ? 'is-active' : '' }}" data-analytics-period="90d" role="tab" aria-selected="{{ $period === '90d' ? 'true' : 'false' }}">90 days</button>
+                    <button type="button" class="analytics-range-tab {{ $period === '365d' ? 'is-active' : '' }}" data-analytics-period="365d" role="tab" aria-selected="{{ $period === '365d' ? 'true' : 'false' }}">12 months</button>
+                    <button type="button" class="analytics-range-tab {{ $period === 'all' ? 'is-active' : '' }}" data-analytics-period="all" role="tab" aria-selected="{{ $period === 'all' ? 'true' : 'false' }}">All time</button>
                     <button type="button" class="analytics-range-tab {{ $period === 'month' ? 'is-active' : '' }}" data-analytics-period="month" role="tab" aria-selected="{{ $period === 'month' ? 'true' : 'false' }}">Month</button>
                 </div>
                 <label class="analytics-month-picker {{ $period === 'month' ? 'is-visible' : '' }}">
@@ -99,8 +106,102 @@
         <div class="analytics-line-chart" data-trend-chart aria-label="Support request trend chart"></div>
         <div class="analytics-chart-footer">
             <div class="analytics-legend"><span><i class="legend-dot submitted"></i> Submitted</span><span><i class="legend-dot answered"></i> Answered</span></div>
-            <span class="analytics-chart-hint"><i class="ph-light ph-cursor-click" aria-hidden="true"></i> Hover a point to see what happened that day</span>
+            <span class="analytics-chart-hint" data-trend-hint><i class="ph-light ph-cursor-click" aria-hidden="true"></i> {{ $period === "all" ? "Hover a point to see monthly activity" : "Hover a point to see daily activity" }}</span>
         </div>
+        <p class="analytics-scope-note">The selected period updates request activity and citizen satisfaction. Queue, chatbot, and information-health figures are current or all-time snapshots.</p>
+    </section>
+
+    <section class="analytics-panel analytics-satisfaction-panel">
+        <div class="analytics-panel-head">
+            <div>
+                <span class="analytics-eyebrow">Citizen satisfaction</span>
+                <h3>How are citizens rating public services?</h3>
+                <p>Published evaluations received during {{ $periodLabel }} across all active agencies.</p>
+            </div>
+            <span class="analytics-info" data-tooltip="Only published, non-deleted evaluations are included. The reporting period follows the date selector above."><i class="ph-light ph-info"></i></span>
+        </div>
+        <div class="analytics-satisfaction-grid">
+            <article class="analytics-satisfaction-metric" data-tooltip="The number of published evaluations submitted during the selected period.">
+                <span>Published evaluations</span>
+                <strong data-metric="evaluation_period_total">{{ number_format($evaluationPeriodTotal) }}</strong>
+                <small>Selected period</small>
+            </article>
+            <article class="analytics-satisfaction-metric" data-tooltip="The average star rating from published evaluations submitted during the selected period.">
+                <span>Average rating</span>
+                <strong data-metric="evaluation_period_average">{{ $evaluationPeriodAverage !== null ? number_format((float) $evaluationPeriodAverage, 1) . ' / 5' : '—' }}</strong>
+                <small>Out of 5 stars</small>
+            </article>
+            <article class="analytics-satisfaction-metric" data-tooltip="The share of published evaluations in this period that have an official agency response.">
+                <span>Response coverage</span>
+                <strong data-metric="evaluation_period_response_rate">{{ $evaluationPeriodResponseRate }}%</strong>
+                <small><span data-metric="evaluation_period_responded">{{ number_format($evaluationPeriodResponded) }}</span> responded</small>
+            </article>
+            <article class="analytics-satisfaction-metric is-warm" data-tooltip="Published evaluations from this period that do not yet have an official agency response.">
+                <span>Awaiting response</span>
+                <strong data-metric="evaluation_period_awaiting_response">{{ number_format($evaluationPeriodAwaitingResponse) }}</strong>
+                <small>Needs agency attention</small>
+            </article>
+        </div>
+        <div class="analytics-rating-distribution">
+            <div class="analytics-rating-distribution-head">
+                <strong>Rating distribution</strong>
+                <span>Published evaluations in selected period</span>
+            </div>
+            <div data-evaluation-rating-chart>
+                @if($evaluationPeriodTotal > 0)
+                @foreach(range(5, 1) as $rating)
+                    @php($ratingCount = (int) ($evaluationRatingDistribution[$rating] ?? 0))
+                    <div class="analytics-rating-row" data-rating-row="{{ $rating }}">
+                        <span>{{ $rating }} <i class="ph-fill ph-star"></i></span>
+                        <i class="analytics-rating-track"><em style="width:{{ $evaluationPeriodTotal ? ($ratingCount / $evaluationPeriodTotal) * 100 : 0 }}%"></em></i>
+                        <b>{{ number_format($ratingCount) }}</b>
+                    </div>
+                @endforeach
+                @else
+                    <div class="analytics-empty">No published evaluations were received during this period.</div>
+                @endif
+            </div>
+        </div>
+        <div class="analytics-rating-trend">
+            <div class="analytics-rating-distribution-head"><strong>Average rating trend</strong><span data-evaluation-trend-period-label>{{ $period === 'all' ? 'Monthly average' : 'Daily average' }} · published evaluations only</span></div>
+            <div data-evaluation-trend-chart aria-label="Average citizen rating over the selected period"></div>
+        </div>
+    </section>
+
+    <section class="analytics-panel analytics-agency-comparison">
+        <div class="analytics-panel-head">
+            <div>
+                <span class="analytics-eyebrow">Agency performance</span>
+                <h3>How do agencies compare?</h3>
+                <p>The 15 lowest-rated agencies with response coverage for the selected period. Small evaluation samples are flagged for context.</p>
+            </div>
+            <label class="analytics-comparison-filter">
+                <span class="sr-only">Filter agencies by type</span>
+                <select data-agency-type-filter aria-label="Filter agency comparison by agency type">
+                    <option value="">All agency types</option>
+                    @foreach($agencyTypes as $agencyType)
+                        <option value="{{ $agencyType->id }}" @selected((string) $selectedAgencyType === (string) $agencyType->id)>{{ $agencyType->name }}</option>
+                    @endforeach
+                </select>
+            </label>
+        </div>
+        <div class="analytics-comparison-table-wrap">
+            <table class="analytics-comparison-table">
+                <thead><tr><th>Agency</th><th>Agency type</th><th>Average rating</th><th>Evaluations</th><th>Response coverage</th></tr></thead>
+                <tbody data-agency-comparison>
+                    @forelse($agencyComparison as $item)
+                        <tr>
+                            <td>{{ $item['name'] }}</td><td>{{ $item['type'] }}</td>
+                            <td><strong>{{ number_format($item['average_rating'], 1) }} / 5</strong></td>
+                            <td>{{ number_format($item['evaluation_count']) }} @if($item['evaluation_count'] < 10)<small class="analytics-small-sample">Small sample</small>@endif</td><td>{{ $item['response_rate'] }}%</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="analytics-empty">No published evaluations were recorded for this period and agency type.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        <p class="analytics-scope-note">Only active agencies with published evaluations are included. Agencies with fewer than 10 evaluations are flagged because small samples can change sharply. The overall rating uses individual evaluations, not agency-average averages.</p>
     </section>
 
     <section class="analytics-grid analytics-grid-2">
@@ -145,7 +246,7 @@
 
     <section class="analytics-panel">
         <div class="analytics-panel-head">
-            <div><span class="analytics-eyebrow">Where is demand coming from?</span><h3>Which agencies receive the most requests?</h3><p>This shows where citizens are asking for the most help. A higher number means more demand, not better or worse agency performance.</p></div>
+            <div><span class="analytics-eyebrow">Where is demand coming from?</span><h3>Which agencies receive the most requests?</h3><p>All-time request totals by agency. A higher number means more demand, not better or worse agency performance.</p></div>
             <span class="analytics-info" data-tooltip="This is a demand list, not a performance ranking. It helps admins see which agencies may be handling more citizen questions."><i class="ph-light ph-info"></i></span>
         </div>
         <div class="analytics-ranking-bars" data-support-agencies>
@@ -161,7 +262,7 @@
     </section>
 
     <section class="analytics-section-heading standalone-heading">
-        <div><span class="analytics-eyebrow">Chatbot & FAQ health</span><h2>Is the chatbot finding the right answers?</h2><p>These numbers show how often the chatbot finds an existing FAQ and where the FAQ information may need improvement.</p></div>
+        <div><span class="analytics-eyebrow">Chatbot & FAQ health</span><h2>Is the chatbot finding the right answers?</h2><p>These all-time totals show how often the chatbot finds an existing FAQ and where the FAQ information may need improvement.</p></div>
     </section>
 
     <section class="analytics-kpi-grid analytics-kpi-grid-3">
@@ -195,7 +296,7 @@
 
     <section class="analytics-grid analytics-grid-2">
         <article class="analytics-panel">
-            <div class="analytics-panel-head compact"><div><span class="analytics-eyebrow">Frequently used answers</span><h3>Which FAQs are used most often?</h3><p>These are answers the chatbot uses often. They are good places to review wording and keywords.</p></div></div>
+            <div class="analytics-panel-head compact"><div><span class="analytics-eyebrow">Frequently used answers</span><h3>Which FAQs are used most often?</h3><p>All-time usage totals. Frequently used answers are good places to review wording and keywords.</p></div></div>
             <div class="analytics-ranking-list" data-popular-faqs>
                 @forelse($popularFaqs as $item)
                     <div class="analytics-list-item" data-tooltip="Selected {{ number_format($item->usage_count) }} times as the source of an answered chatbot response."><span class="list-rank">{{ $loop->iteration }}</span><div><strong>{{ $item->faq?->question ?? 'FAQ no longer available' }}</strong><small>{{ $item->faq?->agency?->agency_name ?? 'No agency' }}</small></div><b>{{ number_format($item->usage_count) }}</b></div>
@@ -203,7 +304,7 @@
             </div>
         </article>
         <article class="analytics-panel">
-            <div class="analytics-panel-head compact"><div><span class="analytics-eyebrow">What are citizens asking about?</span><h3>Which agency topics come up most?</h3><p>Shows which agencies are mentioned most often in chatbot questions.</p></div></div>
+            <div class="analytics-panel-head compact"><div><span class="analytics-eyebrow">What are citizens asking about?</span><h3>Which agency topics come up most?</h3><p>All-time count of chatbot questions associated with each agency.</p></div></div>
             <div class="analytics-ranking-list" data-popular-agencies>
                 @forelse($popularAgencies as $item)
                     <div class="analytics-list-item" data-tooltip="{{ number_format($item->interaction_count) }} chatbot questions were associated with this agency."><span class="list-rank">{{ $loop->iteration }}</span><div><strong>{{ $item->agency?->agency_name ?? 'Agency no longer available' }}</strong><small>Chatbot questions</small></div><b>{{ number_format($item->interaction_count) }}</b></div>
@@ -227,5 +328,5 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('jsfiles/admin/analytics.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/analytics.b1767aeb0df4.js') }}"></script>
 @endpush

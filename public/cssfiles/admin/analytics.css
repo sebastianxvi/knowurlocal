@@ -92,3 +92,29 @@
     white-space:normal;
     overflow-wrap:anywhere;
 }
+
+
+/* Citizen satisfaction analytics: period-scoped, compact and consistent across admin workspaces. */
+.analytics-satisfaction-panel{margin-top:12px}
+.analytics-satisfaction-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:2px 0 18px}
+.analytics-satisfaction-metric{display:flex;flex-direction:column;gap:5px;min-width:0;padding:12px;border:1px solid #edf0f4;border-radius:11px;background:#fbfcfd}
+.analytics-satisfaction-metric>span{color:#8792a4;font-size:9px;font-weight:600}
+.analytics-satisfaction-metric>strong{color:#26354c;font-size:21px;line-height:1.2;font-weight:700;font-variant-numeric:tabular-nums}
+.analytics-satisfaction-metric>small{color:#98a3b4;font-size:8px}
+.analytics-satisfaction-metric.is-warm{background:#fffaf2;border-color:#f3e6d2}
+.analytics-rating-distribution{padding-top:13px;border-top:1px solid #edf0f4}
+.analytics-rating-distribution-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
+.analytics-rating-distribution-head strong{color:#344158;font-size:10px;font-weight:650}
+.analytics-rating-distribution-head span{color:#98a3b4;font-size:8px}
+.analytics-rating-row{display:grid;grid-template-columns:48px minmax(0,1fr) 38px;align-items:center;gap:10px;padding:5px 0}
+.analytics-rating-row>span{color:#78859a;font-size:9px;font-weight:600}
+.analytics-rating-row>span i{color:#e6a33d;font-size:9px}
+.analytics-rating-track{display:block;height:7px;border-radius:99px;background:#f0f3f7;overflow:hidden}
+.analytics-rating-track em{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#e6a33d,#f2c46d);transition:width .35s ease}
+.analytics-rating-row>b{color:#526078;text-align:right;font-size:9px;font-weight:650;font-variant-numeric:tabular-nums}
+@media(max-width:900px){.analytics-satisfaction-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.analytics-satisfaction-grid{gap:7px}.analytics-satisfaction-metric{padding:10px}.analytics-satisfaction-metric>strong{font-size:19px}.analytics-rating-distribution-head{align-items:flex-start;flex-direction:column;gap:3px}}
+@media(prefers-reduced-motion:reduce){.analytics-rating-track em{transition:none}}
+
+.analytics-scope-note{margin:8px 0 0;color:#98a3b4;font-size:8px;line-height:1.5}
+@media print{.analytics-scope-note{color:#687589}}

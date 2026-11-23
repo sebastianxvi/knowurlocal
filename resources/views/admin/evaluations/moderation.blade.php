@@ -13,29 +13,6 @@
 
 @section('content')
 <div class="logs-page moderation-page">
-    <section class="moderation-overview-grid" aria-label="Moderation summary">
-        <a class="moderation-stat-card is-primary" href="{{ route('admin.evaluations.moderation', ['status' => 'pending']) }}">
-            <span>Pending reports</span>
-            <strong>{{ number_format($pendingCount) }}</strong>
-            <small>Awaiting review</small>
-        </a>
-        <a class="moderation-stat-card" href="{{ route('admin.evaluations.moderation', ['status' => 'all']) }}">
-            <span>Reported evaluations</span>
-            <strong>{{ number_format($reportedEvaluationCount) }}</strong>
-            <small>Unique evaluations reported</small>
-        </a>
-        <a class="moderation-stat-card" href="{{ route('admin.evaluations.moderation', ['status' => 'resolved']) }}">
-            <span>Resolved reports</span>
-            <strong>{{ number_format($resolvedCount) }}</strong>
-            <small>Dismissed or actioned</small>
-        </a>
-        <div class="moderation-stat-card">
-            <span>Hidden evaluations</span>
-            <strong>{{ number_format($hiddenCount) }}</strong>
-            <small>Currently unavailable publicly</small>
-        </div>
-    </section>
-
     <section class="admin-card moderation-queue-card">
         <div class="admin-card-heading moderation-heading">
             <div>
@@ -70,9 +47,10 @@
                         <input type="text" id="moderation-search" name="search" value="{{ $search }}"
                                placeholder="Search agency, evaluation, or report reason..." autocomplete="off">
                     </div>
-                    <button type="submit" class="support-filter-submit">
-                        <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
-                        <span>Search</span>
+                    <button type="submit" class="support-filter-submit admin-icon-button"
+                            aria-label="Apply report search" title="Apply report search">
+                        <i class="ph-light ph-sliders-horizontal" aria-hidden="true"></i>
+                        <span class="sr-only">Filter</span>
                     </button>
                     @if($search !== '')
                         <a class="support-filter-clear" href="{{ route('admin.evaluations.moderation', ['status' => $statusFilter]) }}">
@@ -162,7 +140,7 @@
                                 @if(!$isDeleted && ($hasPending || $isHidden))
                                     <div class="admin-row-actions moderation-row-actions">
                                         @if($isHidden)
-                                            <form method="POST" action="{{ route('admin.evaluations.moderate', $evaluation) }}" class="moderation-action-form">
+                                            <form method="POST" action="{{ route('admin.evaluations.moderate', $evaluation) }}" class="moderation-action-form" data-password-verification-url="{{ route('admin.categories.verify-lifecycle-password') }}">
                                                 @csrf
                                                 <input type="hidden" name="action" value="restore">
                                                 <button type="submit" class="admin-action-primary"
@@ -175,7 +153,7 @@
                                                 </button>
                                             </form>
                                         @else
-                                            <form method="POST" action="{{ route('admin.evaluations.moderate', $evaluation) }}" class="moderation-action-form">
+                                            <form method="POST" action="{{ route('admin.evaluations.moderate', $evaluation) }}" class="moderation-action-form" data-password-verification-url="{{ route('admin.categories.verify-lifecycle-password') }}">
                                                 @csrf
                                                 <input type="hidden" name="action" value="dismiss">
                                                 <button type="submit" class="admin-action-primary"
@@ -197,7 +175,7 @@
                                             </button>
                                             <div class="admin-action-menu-content" role="menu">
                                                 @if($isHidden)
-                                                    <form method="POST" action="{{ route('admin.evaluations.moderate', $evaluation) }}" class="moderation-delete-form">
+                                                    <form method="POST" action="{{ route('admin.evaluations.moderate', $evaluation) }}" class="moderation-delete-form" data-password-verification-url="{{ route('admin.categories.verify-lifecycle-password') }}">
                                                         @csrf
                                                         <input type="hidden" name="action" value="delete">
                                                         <input type="hidden" name="reason" value="">
@@ -206,7 +184,7 @@
                                                         </button>
                                                     </form>
                                                 @else
-                                                    <form method="POST" action="{{ route('admin.evaluations.moderate', $evaluation) }}" class="moderation-action-form">
+                                                    <form method="POST" action="{{ route('admin.evaluations.moderate', $evaluation) }}" class="moderation-action-form" data-password-verification-url="{{ route('admin.categories.verify-lifecycle-password') }}">
                                                         @csrf
                                                         <input type="hidden" name="action" value="hide">
                                                         <button type="submit" class="admin-menu-action admin-menu-danger" role="menuitem"
@@ -287,13 +265,6 @@
 @push('styles')
 <style>
 .moderation-page{display:grid;gap:18px;min-width:0}
-.moderation-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
-.moderation-stat-card{display:flex;flex-direction:column;min-width:0;min-height:116px;padding:17px 18px;border:1px solid var(--border-color,#e5eaf1);border-radius:13px;background:var(--surface,#fff);color:var(--text-primary,#172033);text-decoration:none;transition:border-color .16s ease,box-shadow .16s ease}
-.moderation-stat-card:hover{border-color:#b9c9e0;box-shadow:0 5px 18px rgba(15,23,42,.06)}
-.moderation-stat-card.is-primary{border-color:#c8d9ff;background:linear-gradient(145deg,#fff,#f6f9ff)}
-.moderation-stat-card>span{color:var(--text-muted,#64748b);font-size:13px}
-.moderation-stat-card strong{margin-top:8px;font-size:27px;line-height:1.1;font-weight:650}
-.moderation-stat-card small{margin-top:auto;padding-top:9px;color:var(--text-muted,#64748b);font-size:11px}
 .admin-card{min-width:0;padding:18px;border:1px solid var(--border-color,#e5eaf1);border-radius:14px;background:var(--surface,#fff)}
 .moderation-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
 .admin-card-heading h2{margin:0;font-size:17px;font-weight:650}
@@ -306,7 +277,7 @@
 .moderation-filter-controls{margin:0 0 12px}
 .moderation-filter-controls .support-filter-form{display:flex;align-items:center;gap:10px;width:100%;min-width:0}
 .moderation-filter-controls .support-search-field{flex:1 1 420px}
-.moderation-filter-controls .support-filter-submit,.moderation-filter-controls .support-filter-clear{flex:0 0 auto;min-width:94px}
+.moderation-filter-controls .support-filter-submit,.moderation-filter-controls .support-filter-clear{flex:0 0 auto}
 .moderation-page .admin-list-result-meta{margin:10px 0 12px}
 .moderation-list{display:grid;gap:13px}
 .moderation-evaluation-card{min-width:0;padding:17px 0 18px;border-bottom:1px solid #e9eef5}
@@ -376,10 +347,10 @@
 .moderation-row-actions .admin-action-primary{min-height:34px;padding:0 10px;font-size:12px}
 .moderation-row-actions .admin-action-menu{flex:0 0 34px}
 .moderation-action-form{margin:0}
-@media(max-width:900px){.moderation-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 @media(max-width:700px){.moderation-heading{align-items:flex-start;flex-direction:column}.moderation-filter-controls .support-filter-form{display:grid;grid-template-columns:minmax(0,1fr)}.moderation-filter-controls .support-filter-form>*{width:100%;min-width:0}.moderation-evaluation-body{grid-template-columns:1fr}.moderation-report-summary{min-height:90px}.moderation-decision-actions{justify-content:stretch}.moderation-decision-actions .btn{flex:1 1 100%}.moderation-summary{display:block}}
-@media(max-width:480px){.moderation-overview-grid{gap:9px}.moderation-stat-card{min-height:100px;padding:13px}.moderation-stat-card strong{font-size:23px}.admin-card{padding:14px}.moderation-evaluation-header{align-items:flex-start}.moderation-pill{font-size:10px}.moderation-row-actions{justify-content:flex-end}.moderation-row-actions .admin-action-primary{min-height:32px;padding:0 8px;font-size:11px}}
-@media(prefers-reduced-motion:reduce){.moderation-stat-card{transition:none}}
+@media(max-width:480px){.admin-card{padding:14px}.moderation-evaluation-header{align-items:flex-start}.moderation-pill{font-size:10px}.moderation-row-actions{justify-content:flex-end}.moderation-row-actions .admin-action-primary{min-height:32px;padding:0 8px;font-size:11px}}
+
 
 /* Compact moderation cards: reports and decisions are available on demand. */
 .moderation-evaluation-body{grid-template-columns:minmax(0,1fr);margin:13px 0 12px}
@@ -463,6 +434,7 @@ body.moderation-reports-open{overflow:hidden}
 .moderation-reports-modal-pagination .btn:disabled{opacity:.45;cursor:not-allowed}
 .moderation-reports-modal-pagination span{color:#718096;font-size:11px;font-variant-numeric:tabular-nums}
 @media(max-width:700px){
+ .moderation-filter-controls .support-filter-form .support-filter-submit{width:42px;min-height:42px;justify-self:end}
  .moderation-table{min-width:860px}
  .moderation-decision-form{align-items:stretch;flex-direction:column}
  .moderation-decision-actions{justify-content:flex-end}
@@ -473,6 +445,7 @@ body.moderation-reports-open{overflow:hidden}
 
 @push('scripts')
 <script src="{{ asset('jsfiles/admin/components/action-menu.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/admin-password-confirmation.js') }}"></script>
 <script>
 (() => {
     const reportModal = document.getElementById('moderation-reports-modal');
@@ -639,19 +612,46 @@ body.moderation-reports-open{overflow:hidden}
         });
     }
 
-    // Use the application-wide alert modal for every consequential action.
-    // This keeps confirmations and the required removal-reason input identical
-    // to the other admin modules instead of creating a page-specific modal.
+    // Every moderation decision follows the same two-step security flow as
+    // official agency responses: confirmation first, then password verification.
+    const requestModerationPassword = (form, actionLabel) => {
+        if (!form || form.dataset.passwordGateStarted === 'true') return;
+        form.dataset.passwordGateStarted = 'true';
+
+        if (typeof window.requestAdminPasswordForForm !== 'function') {
+            form.dataset.passwordGateStarted = 'false';
+            window.showAlertModal?.({
+                title: 'Security verification unavailable',
+                text: 'Please refresh the page and try again.',
+                variant: 'danger', confirmText: 'OK', showCancel: false
+            });
+            return;
+        }
+
+        const evaluationLabel = form.closest('tr')?.querySelector('.moderation-agency-cell small')?.textContent?.split(' · ')[0] || 'this evaluation';
+        window.requestAdminPasswordForForm({
+            form,
+            verificationUrl: form.dataset.passwordVerificationUrl,
+            actionDescription: actionLabel,
+            subject: evaluationLabel,
+            onCancel: () => { form.dataset.passwordGateStarted = 'false'; }
+        });
+    };
+
     document.addEventListener('submit', (event) => {
         const form = event.target.closest('.moderation-action-form');
         if (!form) return;
 
-        const submitter = event.submitter;
-        if (!submitter?.dataset.confirmTitle) return;
         event.preventDefault();
+        if (form.dataset.passwordGateStarted === 'true') return;
 
-        if (typeof window.showAlertModal !== 'function') {
-            console.error('The shared admin confirmation modal is unavailable.');
+        const submitter = event.submitter;
+        if (!submitter?.dataset.confirmTitle || typeof window.showAlertModal !== 'function') {
+            window.showAlertModal?.({
+                title: 'Confirmation unavailable',
+                text: 'Please refresh the page and try again.',
+                variant: 'danger', confirmText: 'OK', showCancel: false
+            });
             return;
         }
 
@@ -660,14 +660,17 @@ body.moderation-reports-open{overflow:hidden}
             text: submitter.dataset.confirmMessage || 'Please confirm this moderation decision.',
             icon: submitter.dataset.confirmIcon || 'ph-light ph-shield-warning',
             variant: submitter.dataset.confirmVariant || 'warning',
-            confirmText: submitter.dataset.confirmAction || 'Confirm',
+            confirmText: submitter.dataset.confirmAction || 'Continue',
             cancelText: 'Cancel',
             showCancel: true,
             onConfirm: () => {
                 window.closeAlertModal?.();
-                submitter.disabled = true;
-                form.submit();
-            },
+                requestModerationPassword(form, form.querySelector('input[name="action"]')?.value === 'restore'
+                    ? 'restore'
+                    : (form.querySelector('input[name="action"]')?.value === 'hide'
+                        ? 'temporarily hide'
+                        : 'dismiss the reports for'));
+            }
         });
     });
 
@@ -679,24 +682,20 @@ body.moderation-reports-open{overflow:hidden}
         const reasonField = form?.querySelector('input[name="reason"]');
         if (!form || !reasonField) return;
 
-        // Close the shared portalled action menu before opening the global modal.
         const ownerMenuId = openRemoval.closest('.admin-action-menu-content')?.dataset.ownerMenu;
         const ownerTrigger = ownerMenuId
             ? document.querySelector(`.admin-action-menu[data-menu-id="${ownerMenuId}"] .admin-action-menu-trigger`)
             : null;
         ownerTrigger?.click();
 
-        if (typeof window.showAlertModal !== 'function') {
-            console.error('The shared admin removal modal is unavailable.');
-            return;
-        }
+        if (typeof window.showAlertModal !== 'function') return;
 
         window.showAlertModal({
             title: 'Remove evaluation permanently?',
-            text: 'This evaluation will be removed from public view. Its original content and moderation records will be retained. The author will receive the reason you provide.',
+            text: 'This evaluation will be removed from public view. Its original content and moderation records will be retained. The author will receive the reason you provide. This action cannot be undone.',
             icon: 'ph-light ph-trash',
             variant: 'danger',
-            confirmText: 'Remove evaluation',
+            confirmText: 'Continue',
             cancelText: 'Cancel',
             showCancel: true,
             input: {
@@ -705,14 +704,13 @@ body.moderation-reports-open{overflow:hidden}
                 required: true,
                 minLength: 5,
                 maxLength: 1000,
-                validationMessage: 'Please provide a reason of at least 5 characters.',
+                validationMessage: 'Please provide a reason of at least 5 characters.'
             },
             onConfirm: (reason) => {
                 reasonField.value = String(reason || '').trim();
                 window.closeAlertModal?.();
-                openRemoval.disabled = true;
-                form.submit();
-            },
+                requestModerationPassword(form, 'permanently remove');
+            }
         });
     });
 })();

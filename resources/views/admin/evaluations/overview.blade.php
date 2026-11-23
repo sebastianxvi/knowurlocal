@@ -12,19 +12,15 @@
 
 @section('content')
 <div class="logs-page evaluation-admin-page">
-    <div class="section-heading evaluation-overview-heading">
-        <div>
-            <h2>Agency performance</h2>
-            <p>Each rating, evaluation count, and response status belongs to the individual agency shown below.</p>
-        </div>
-        @if(auth()->user()->role === 'superadmin' || (auth()->user()->role === 'admin' && auth()->user()->can_moderate_evaluations))
+    @if(auth()->user()->role === 'superadmin' || (auth()->user()->role === 'admin' && auth()->user()->can_moderate_evaluations))
+        <div class="evaluation-overview-actions">
             <a class="evaluation-moderation-link" href="{{ route('admin.evaluations.moderation') }}">
                 <i class="ph-light ph-flag" aria-hidden="true"></i>
                 <span>Moderation queue</span>
                 @if($pendingReports > 0)<span class="evaluation-moderation-count">{{ number_format($pendingReports) }}</span>@endif
             </a>
-        @endif
-    </div>
+        </div>
+    @endif
 
     {{-- Use the same filter toolbar used by NGA & NGO Management and other admin list pages. --}}
     <div class="admin-data-controls">
@@ -46,16 +42,16 @@
                     <label for="evaluation-rating-filter" class="sr-only">Filter agencies by average rating</label>
                     <i class="ph-light ph-funnel" aria-hidden="true"></i>
                     <select id="evaluation-rating-filter" name="rating_filter" aria-label="Filter agencies by average rating">
-                        <option value="all" @selected($ratingFilter === 'all')>All rating levels</option>
+                        <option value="" @selected($ratingFilter === 'all')>All rating levels</option>
                         <option value="below_3" @selected($ratingFilter === 'below_3')>Below 3 stars</option>
                         <option value="three_to_four" @selected($ratingFilter === 'three_to_four')>3 to below 4 stars</option>
                         <option value="four_plus" @selected($ratingFilter === 'four_plus')>4 stars and above</option>
                         <option value="no_evaluations" @selected($ratingFilter === 'no_evaluations')>No evaluations</option>
                     </select>
                 </div>
-                <button type="submit" class="support-filter-submit" aria-label="Apply agency filters" title="Apply agency filters">
-                    <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
-                    <span>Search</span>
+                <button type="submit" class="support-filter-submit admin-icon-button" aria-label="Apply agency filters" title="Apply agency filters">
+                    <i class="ph-light ph-sliders-horizontal" aria-hidden="true"></i>
+                    <span class="sr-only">Filter</span>
                 </button>
                 @if($search !== '' || $ratingFilter !== 'all')
                     <a class="support-filter-clear" href="{{ route('admin.evaluations.overview') }}">
@@ -161,8 +157,6 @@
 <style>
 .evaluation-admin-page{display:grid;gap:16px;min-width:0}
 .evaluation-overview-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:0 0 2px}
-.evaluation-overview-heading h2{margin:0;color:var(--admin-text,#172033);font-size:17px;font-weight:650}
-.evaluation-overview-heading p{margin:5px 0 0;color:var(--admin-muted,#64748b);font-size:13px}
 .evaluation-agency-abbreviation{display:block;margin-top:2px;color:var(--admin-muted,#64748b);font-size:12px}
 .evaluation-view-link{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:8px 14px;border-radius:8px;font-size:12px;white-space:nowrap;text-decoration:none}
 .evaluation-rating-filter{flex:0 1 230px}
@@ -171,13 +165,12 @@
 .evaluation-moderation-link:hover{background:#f8fafc;border-color:#cbd5e1}
 .evaluation-moderation-count{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#fff1f2;color:#be123c;font-size:10px;font-weight:700}
 .evaluation-admin-page .support-filter-form{display:flex;align-items:center;gap:10px;min-width:0}
-.evaluation-admin-page .support-filter-submit,.evaluation-admin-page .support-filter-clear{flex:0 0 auto;min-width:92px}
+.evaluation-admin-page .support-filter-submit{flex:0 0 auto}
 .evaluation-admin-page .support-search-field{flex:1 1 340px}
 @media(max-width:700px){
-    .evaluation-overview-heading{align-items:flex-start;flex-direction:column;gap:10px}
     .evaluation-admin-page .support-filter-form{display:grid;grid-template-columns:minmax(0,1fr)}
     .evaluation-admin-page .support-filter-form>*{width:100%;min-width:0}
-    .evaluation-admin-page .support-filter-form .support-filter-submit,.evaluation-admin-page .support-filter-form .support-filter-clear{min-height:42px}
+    .evaluation-admin-page .support-filter-form .support-filter-submit{min-height:42px;width:42px;justify-self:end}
     .evaluation-rating-filter{flex:1 1 100%}
     .support-filter-form{flex-wrap:wrap}
     .support-filter-form .support-search-field{flex:1 1 100%}

@@ -32,7 +32,9 @@
     let month = root.dataset.analyticsCurrentMonth || new Date().toISOString().slice(0, 7);
     let trend = JSON.parse(root.dataset.analyticsInitialTrend || '[]');
     let metrics = JSON.parse(root.dataset.analyticsInitialMetrics || '{}');
+    let evaluationRatings = JSON.parse(root.dataset.analyticsInitialEvaluationRatings || '{}');
     let loading = false;
+    let refreshQueued = false;
 
     const setPeriodControls = () => {
         root.querySelectorAll('[data-analytics-period]').forEach(button => {
@@ -81,6 +83,35 @@ const smoothPath = points => {
         return d;
     };
 
+    const renderEvaluationRatings = distribution => {
+        const host = root.querySelector('[data-evaluation-rating-chart]');
+        if (!host) return;
+        host.replaceChildren();
+        const values = distribution || {};
+        const total = Object.values(values).reduce((sum, value) => sum + Number(value || 0), 0);
+        if (total === 0) {
+            host.textContent = 'No published evaluations were received during this period.';
+            return;
+        }
+        [5, 4, 3, 2, 1].forEach(rating => {
+            const count = Number(values[rating] || 0);
+            const row = document.createElement('div');
+            row.className = 'analytics-rating-row';
+            const label = document.createElement('span');
+            label.textContent = `${rating} ★`;
+            const track = document.createElement('i');
+            track.className = 'analytics-rating-track';
+            const fill = document.createElement('em');
+            fill.style.width = `${total ? (count / total) * 100 : 0}%`;
+            track.append(fill);
+            const amount = document.createElement('b');
+            amount.textContent = numberFormat.format(count);
+            row.append(label, track, amount);
+            row.title = `${count} published evaluations rated ${rating} out of 5`;
+            host.append(row);
+        });
+    };
+
     const renderTrend = () => {
         const host = root.querySelector('[data-trend-chart]');
         if (!host) return;
@@ -123,7 +154,8 @@ const smoothPath = points => {
             trend.forEach((item, index) => {
                 const circle = document.createElementNS(svg.namespaceURI, 'circle');
                 circle.setAttribute('cx', x(index)); circle.setAttribute('cy', y(item[key]));
-                circle.setAttribute('r', trend.length > 30 ? 3 : 4);
+                const pointValue = Number(item[key] || 0);
+                circle.setAttribute('r', pointValue > 0 ? (trend.length > 30 ? 3.5 : 4) : 1.8);
                 circle.setAttribute('class', `trend-point ${css}`);
                 circle.setAttribute('tabindex', '0');
                 circle.setAttribute('aria-label', `${item.label}: ${item[key]} ${key}`);
@@ -153,13 +185,16 @@ const smoothPath = points => {
     };
 
     const loadPeriod = async () => {
-        if (!endpoint || loading) return;
+        if (!endpoint) return;
+        if (loading) { refreshQueued = true; return; }
         loading = true;
+        const requestedPeriod = period;
+        const requestedMonth = month;
         root.classList.add('is-loading');
         try {
             const url = new URL(endpoint, window.location.origin);
-            url.searchParams.set('period', period);
-            if (period === 'month') url.searchParams.set('month', month);
+            url.searchParams.set('period', requestedPeriod);
+            if (requestedPeriod === 'month') url.searchParams.set('month', requestedMonth);
             else url.searchParams.delete('month');
             const response = await fetch(url.toString(), {
                 credentials: 'same-origin', cache: 'no-store',
@@ -167,11 +202,24 @@ const smoothPath = points => {
             });
             if (!response.ok) throw new Error(`Analytics request failed: ${response.status}`);
             const payload = await response.json();
+            // Ignore stale responses if the administrator changed the period
+            // while this request was still in flight.
+            if (requestedPeriod !== period || (requestedPeriod === 'month' && requestedMonth !== month)) return;
             trend = payload.trend || [];
+            metrics = payload.metrics || {};
+            evaluationRatings = payload.evaluation_rating_distribution || {};
             setPeriodControls();
             renderTrend();
             updateDescription(payload.period_label || (period === 'month' ? month : period === '30d' ? '30 days' : '7 days'));
             setMetric('period_answered', Number(payload.metrics?.period_answered || 0));
+            setMetric('evaluation_period_total', Number(metrics.evaluation_period_total || 0));
+            setMetric('evaluation_period_responded', Number(metrics.evaluation_period_responded || 0));
+            setMetric('evaluation_period_awaiting_response', Number(metrics.evaluation_period_awaiting_response || 0));
+            setMetric('evaluation_period_average', metrics.evaluation_period_average === null || metrics.evaluation_period_average === undefined ? '—' : `${Number(metrics.evaluation_period_average).toFixed(1)} / 5`);
+            setMetric('evaluation_period_response_rate', `${metrics.evaluation_period_response_rate ?? 0}%`);
+            renderEvaluationRatings(evaluationRatings);
+            const satisfactionDescription = root.querySelector('.analytics-satisfaction-panel .analytics-panel-head p');
+            if (satisfactionDescription) satisfactionDescription.textContent = `Published evaluations received during ${payload.period_label || period}. Only evaluations for your agency are included.`;
             const updated = root.querySelector('[data-last-updated]');
             if (updated) updated.textContent = `Updated ${new Date(payload.updated_at || Date.now()).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
             root.dataset.analyticsCurrentPeriod = period;
@@ -181,6 +229,7 @@ const smoothPath = points => {
         } finally {
             loading = false;
             root.classList.remove('is-loading');
+            if (refreshQueued) { refreshQueued = false; loadPeriod(); }
         }
     };
 
@@ -200,6 +249,7 @@ const smoothPath = points => {
     animateInitialMetrics();
     setPeriodControls();
     renderTrend();
+    renderEvaluationRatings(evaluationRatings);
     root.querySelectorAll('[data-tooltip]').forEach(node => {
         node.addEventListener('focus', () => node.setAttribute('aria-label', node.dataset.tooltip));
         node.addEventListener('mouseenter', () => node.setAttribute('aria-label', node.dataset.tooltip));

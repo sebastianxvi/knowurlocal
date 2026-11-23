@@ -1,5 +1,5 @@
 <div class="report-intro">
-    <strong>Reading this report:</strong> The selected period is <strong>{{ $periodLabel }}</strong>. Use the support section for workload, the chatbot section for answer coverage, and the information section for content quality.
+    <strong>Reading this report:</strong> The selected period is <strong>{{ $periodLabel }}</strong>. Use the support section for workload, citizen satisfaction for published evaluation ratings, the chatbot section for answer coverage, and the information section for content quality.
 </div>
 
 <section class="section">
@@ -70,6 +70,48 @@
         </table>
     @else
         <div class="empty">No agency-linked support requests have been recorded.</div>
+    @endif
+</section>
+
+<section class="section">
+    <div class="section-kicker">Citizen satisfaction</div>
+    <h2 class="section-title">How are citizens rating public services?</h2>
+    <p class="section-subtitle">Published evaluations received during {{ $periodLabel }} across all registered agencies. Deleted and unpublished evaluations are excluded.</p>
+    <table class="metric-table"><tr>
+        <td class="metric-cell metric-cell-blue"><div class="metric-label">Published evaluations</div><div class="metric-value blue">{{ number_format($evaluationPeriodTotal) }}</div><div class="metric-note">Selected period</div></td>
+        <td class="metric-cell metric-cell-purple"><div class="metric-label">Average rating</div><div class="metric-value purple">{{ $evaluationPeriodAverage !== null ? number_format((float) $evaluationPeriodAverage, 1) . ' / 5' : '—' }}</div><div class="metric-note">Out of five stars</div></td>
+        <td class="metric-cell metric-cell-green"><div class="metric-label">Response coverage</div><div class="metric-value green">{{ $evaluationPeriodResponseRate }}%</div><div class="metric-note">{{ number_format($evaluationPeriodResponded) }} evaluations received an official response</div></td>
+        <td class="metric-cell metric-cell-amber"><div class="metric-label">Awaiting response</div><div class="metric-value amber">{{ number_format($evaluationPeriodAwaitingResponse) }}</div><div class="metric-note">Published evaluations without an official response</div></td>
+    </tr></table>
+    <div class="section-subtitle" style="margin-top:9px;margin-bottom:4px;">Rating distribution</div>
+    <table class="status-row">
+        @foreach(range(5, 1) as $rating)
+            <tr><td>{{ $rating }} out of 5 stars</td><td>{{ number_format((int) ($evaluationRatingDistribution[$rating] ?? 0)) }}</td></tr>
+        @endforeach
+    </table>
+</section>
+
+<section class="section">
+    <div class="section-kicker">Agency satisfaction comparison</div>
+    <h2 class="section-title">Agencies with the lowest average ratings</h2>
+    <p class="section-subtitle">Up to 15 active agencies with published evaluations during {{ $periodLabel }}. Agencies with fewer than 10 evaluations have a small sample and should be interpreted cautiously.</p>
+    @if($agencyComparison->isNotEmpty())
+        <table class="report-table">
+            <thead><tr><th>Agency</th><th>Type</th><th class="number">Average rating</th><th class="number">Evaluations</th><th class="number">Response coverage</th></tr></thead>
+            <tbody>
+                @foreach($agencyComparison as $item)
+                    <tr>
+                        <td>{{ $item['name'] }}</td>
+                        <td>{{ $item['type'] }}</td>
+                        <td class="number">{{ number_format($item['average_rating'], 1) }} / 5</td>
+                        <td class="number">{{ number_format($item['evaluation_count']) }}{{ $item['evaluation_count'] < 10 ? ' (small sample)' : '' }}</td>
+                        <td class="number">{{ $item['response_rate'] }}%</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @else
+        <div class="empty">No agency satisfaction data is available for this period.</div>
     @endif
 </section>
 

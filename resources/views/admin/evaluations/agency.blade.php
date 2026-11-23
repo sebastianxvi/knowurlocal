@@ -95,13 +95,13 @@
                             <form id="admin-response-form-{{ $evaluation->id }}" method="POST" action="{{ route('admin.evaluations.respond', [$agency, $evaluation]) }}" class="evaluation-response-form evaluation-response-inline-form" data-requires-admin-password="true" data-agency-name="{{ $agency->agency_name }}" data-password-verification-url="{{ route('admin.categories.verify-lifecycle-password') }}" hidden>
                                 @csrf
                                 <label for="admin-response-{{ $evaluation->id }}">Edit official response</label>
-                                <textarea id="admin-response-{{ $evaluation->id }}" name="body" rows="3" maxlength="2000" required placeholder="Acknowledge the feedback and explain any follow-up...">{{ old('body', $evaluation->response->body) }}</textarea>
+                                <textarea id="admin-response-{{ $evaluation->id }}" name="body" rows="3" maxlength="2000" required data-original-value="{{ $evaluation->response->body }}" placeholder="Acknowledge the feedback and explain any follow-up...">{{ old('body', $evaluation->response->body) }}</textarea>
                                 <div class="evaluation-response-form-actions">
                                     <button type="button" class="btn btn-cancel evaluation-compose-cancel">Cancel</button>
                                     <button type="submit" class="btn btn-primary"><i class="ph-light ph-paper-plane-tilt" aria-hidden="true"></i><span>Save changes</span></button>
                                 </div>
                             </form>
-                            <form id="admin-delete-response-{{ $evaluation->id }}" method="POST" action="{{ route('admin.evaluations.responses.delete', [$agency, $evaluation->response]) }}" class="evaluation-delete-response-form">@csrf @method('DELETE')</form>
+                            <form id="admin-delete-response-{{ $evaluation->id }}" method="POST" action="{{ route('admin.evaluations.responses.delete', [$agency, $evaluation->response]) }}" class="evaluation-response-form evaluation-delete-response-form" data-requires-admin-password="true" data-action-type="delete" data-agency-name="{{ $agency->agency_name }}" data-password-verification-url="{{ route('admin.categories.verify-lifecycle-password') }}">@csrf @method('DELETE')</form>
                         @endif
                     </div>
                 @endif
@@ -193,7 +193,7 @@
 .evaluation-response-form-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px}
 .evaluation-response-form-actions .btn,.evaluation-admin-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:10px 16px;border-radius:9px;font-size:13px;font-weight:600;line-height:1.2;white-space:nowrap}
 .evaluation-response-form-actions .btn i,.evaluation-admin-actions .btn i{font-size:17px}
-.evaluation-response-form-actions .btn:disabled{opacity:.7;cursor:wait}
+.evaluation-response-form-actions .btn:disabled{opacity:.55;cursor:not-allowed}
 .evaluation-response-form-actions [hidden],.evaluation-admin-actions [hidden]{display:none!important}
 .evaluation-back-link{display:inline-flex;align-items:center;justify-content:center;gap:9px;justify-self:start;min-height:40px;padding:9px 15px;border:1px solid #dbe3ed;border-radius:9px;background:#fff;color:#334155;font-size:13px;font-weight:600;line-height:1.2;text-decoration:none;box-shadow:0 1px 2px rgba(15,23,42,.04);transition:background-color .16s ease,border-color .16s ease,color .16s ease,transform .16s ease}
 .evaluation-back-link:hover{background:#f8fafc;border-color:#cbd5e1;color:#1e293b;text-decoration:none;transform:translateY(-1px)}
@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const content = responseCard.querySelector('.evaluation-admin-response-content');
             if (content) content.hidden = false;
             const textarea = form.querySelector('textarea');
-            if (textarea) textarea.value = textarea.defaultValue;
+            if (textarea) { textarea.value = textarea.dataset.originalValue ?? textarea.defaultValue; textarea.dispatchEvent(new Event('input', { bubbles: true })); }
         } else {
             const actions = form.closest('.evaluation-admin-item')?.querySelector('.evaluation-admin-actions');
             if (actions) actions.hidden = false;
@@ -264,11 +264,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         form.querySelector('textarea')?.blur();
     }));
+    document.querySelectorAll('.evaluation-response-inline-form').forEach(form => {
+        const textarea = form.querySelector('textarea[name="body"]');
+        const saveButton = form.querySelector('button[type="submit"]');
+        if (!textarea || !saveButton) return;
+
+        const updateDirtyState = () => {
+            saveButton.disabled = textarea.value === (textarea.dataset.originalValue ?? textarea.defaultValue);
+            saveButton.setAttribute('aria-disabled', String(saveButton.disabled));
+        };
+
+        textarea.addEventListener('input', updateDirtyState);
+        updateDirtyState();
+    });
+
     document.querySelectorAll('.evaluation-response-form').forEach(form => form.addEventListener('submit', event => {
         const submit = form.querySelector('button[type="submit"]');
-        if (!submit) return;
-
         const isEditing = form.classList.contains('evaluation-response-inline-form');
+        const isDeleting = form.dataset.actionType === 'delete';
+        if (!submit && !isDeleting) return;
 
         // Central administrators must confirm the response, then verify their
         // password through the shared security modal before the form is posted.
@@ -297,20 +311,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.requestAdminPasswordForForm({
                     form,
                     verificationUrl,
-                    actionDescription: isEditing ? 'update the official response for' : 'publish an official response for',
+                    actionDescription: isDeleting ? 'delete the official response for' : (isEditing ? 'update the official response for' : 'publish an official response for'),
                     subject: agencyName,
                     onCancel: () => { form.dataset.passwordGateStarted = 'false'; }
                 });
             };
 
             window.showAlertModal({
-                title: isEditing ? 'Save official response changes?' : 'Publish official response?',
-                text: isEditing
-                    ? 'Review your changes before updating the public response for ' + agencyName + '.'
-                    : 'Your response will be visible to the public alongside this evaluation for ' + agencyName + '.',
-                icon: 'ph-light ph-shield-check',
-                variant: 'success',
-                confirmText: isEditing ? 'Continue' : 'Publish',
+                title: isDeleting ? 'Delete official response?' : (isEditing ? 'Save official response changes?' : 'Publish official response?'),
+                text: isDeleting
+                    ? 'This will remove the public response from this evaluation for ' + agencyName + '.'
+                    : (isEditing
+                        ? 'Review your changes before updating the public response for ' + agencyName + '.'
+                        : 'Your response will be visible to the public alongside this evaluation for ' + agencyName + '.'),
+                icon: isDeleting ? 'ph-light ph-trash' : 'ph-light ph-shield-check',
+                variant: isDeleting ? 'danger' : 'success',
+                confirmText: isDeleting ? 'Continue' : (isEditing ? 'Continue' : 'Publish'),
                 cancelText: 'Cancel',
                 showCancel: true,
                 onCancel: () => { form.dataset.passwordGateStarted = 'false'; },
@@ -319,21 +335,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        submit.disabled = true;
-        submit.innerHTML = '<i class="ph-light ph-spinner-gap" aria-hidden="true"></i><span>' + (isEditing ? 'Updating…' : 'Publishing…') + '</span>';
+        if (submit) {
+            submit.disabled = true;
+            submit.innerHTML = '<i class="ph-light ph-spinner-gap" aria-hidden="true"></i><span>' + (isEditing ? 'Updating…' : 'Publishing…') + '</span>';
+        }
     }));
     document.querySelectorAll('.evaluation-delete-response-trigger').forEach(button => button.addEventListener('click', () => {
         closeMenus();
         const form = document.getElementById(button.dataset.form);
         if (!form) return;
-        const confirmDelete = () => {
-            button.disabled = true;
-            button.innerHTML = '<i class="ph-light ph-spinner-gap" aria-hidden="true"></i> Deleting…';
-            form.submit();
-        };
-        if (typeof window.showAlertModal === 'function') {
-            window.showAlertModal({title:'Delete official response?',text:'This will remove the public response from this evaluation.',icon:'ph-light ph-trash',variant:'danger',confirmText:'Delete response',showCancel:true,cancelText:'Cancel',onConfirm:confirmDelete});
-        } else if (window.confirm('Delete this official response?')) confirmDelete();
+        // Use the shared confirmation and password gate; the server rechecks the password.
+        form.requestSubmit();
     }));
 });
 </script>

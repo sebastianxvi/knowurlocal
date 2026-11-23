@@ -2,6 +2,21 @@
     <strong>At a glance:</strong> This report summarizes the current KNOWURLOCAL workspace, the items that may need administrator attention, citizen feedback, and active team work.
 </div>
 
+@if($canModerateEvaluations)
+<section class="section">
+    <div class="section-kicker">Public feedback</div>
+    <h2 class="section-title">Evaluation moderation</h2>
+    <p class="section-subtitle">Current report activity and the moderation workload.</p>
+    <table class="metric-table"><tr>
+        <td class="metric-cell metric-cell-amber"><div class="metric-label">Pending reports</div><div class="metric-value amber">{{ number_format($evaluationPendingReports) }}</div><div class="metric-note">Awaiting moderation review</div></td>
+        <td class="metric-cell metric-cell-blue"><div class="metric-label">Reported evaluations</div><div class="metric-value blue">{{ number_format($reportedEvaluationCount) }}</div><div class="metric-note">Unique evaluations reported</div></td>
+        <td class="metric-cell metric-cell-green"><div class="metric-label">Resolved reports</div><div class="metric-value green">{{ number_format($evaluationResolvedReports) }}</div><div class="metric-note">Dismissed or actioned</div></td>
+        <td class="metric-cell metric-cell-purple"><div class="metric-label">Hidden evaluations</div><div class="metric-value purple">{{ number_format($hiddenReportedEvaluations) }}</div><div class="metric-note">Temporarily unavailable publicly</div></td>
+    </tr></table>
+</section>
+@endif
+
+
 <section class="section">
     <div class="section-kicker">Current snapshot</div>
     <h2 class="section-title">How the system looks right now</h2>
@@ -17,17 +32,28 @@
 <section class="section">
     <div class="section-kicker">Needs attention</div>
     <h2 class="section-title">What may need action</h2>
-    <p class="section-subtitle">These are the areas most likely to benefit from administrator follow-up.</p>
+    <p class="section-subtitle">These are the areas most likely to benefit from administrator follow-up. Counts are attention flags, not unique records; a record may appear in more than one category.</p>
     <table class="metric-table"><tr>
         <td class="metric-cell metric-cell-amber"><div class="metric-label">Pending requests</div><div class="metric-value amber">{{ number_format($pendingInquiries) }}</div><div class="metric-note">Waiting for an administrator response</div></td>
         <td class="metric-cell metric-cell-blue"><div class="metric-label">Incomplete agencies</div><div class="metric-value blue">{{ number_format($incompleteAgencies) }}</div><div class="metric-note">Missing one or more required public details</div></td>
         <td class="metric-cell metric-cell-amber"><div class="metric-label">FAQs to complete</div><div class="metric-value amber">{{ number_format($incompleteFaqs) }}</div><div class="metric-note">Missing required or bilingual information</div></td>
         <td class="metric-cell metric-cell-purple"><div class="metric-label">Feedback to review</div><div class="metric-value purple">{{ number_format($faqFeedbackOutstanding) }}</div><div class="metric-note">FAQ feedback that may need attention</div></td>
     </tr></table>
+    @if($canModerateEvaluations || $canManageAdministratorAccounts)
+        <table class="metric-table"><tr>
+            @if($canModerateEvaluations)
+                <td class="metric-cell metric-cell-amber"><div class="metric-label">Evaluation reports</div><div class="metric-value amber">{{ number_format($evaluationPendingReports) }}</div><div class="metric-note">Awaiting moderation review</div></td>
+            @endif
+            @if($canManageAdministratorAccounts)
+                <td class="metric-cell metric-cell-blue"><div class="metric-label">Administrator approvals</div><div class="metric-value blue">{{ number_format($pendingAdminApprovals) }}</div><div class="metric-note">Pending central administrator access</div></td>
+                <td class="metric-cell metric-cell-purple"><div class="metric-label">Agency Admin invitations</div><div class="metric-value purple">{{ number_format($pendingAgencyAdminInvitations) }}</div><div class="metric-note">Unaccepted, unexpired invitations</div></td>
+            @endif
+        </tr></table>
+    @endif
     @if($totalNeedsAttention === 0)
         <div class="empty">Everything currently tracked for attention is clear.</div>
     @else
-        <div class="callout"><strong>{{ number_format($totalNeedsAttention) }} attention items</strong> are currently counted across requests, agency information, FAQs, and citizen feedback.</div>
+        <div class="callout"><strong>{{ number_format($totalNeedsAttention) }} attention flags</strong> are counted across support requests, moderation, information quality, citizen feedback, and applicable administrator account workflows. Categories may overlap.</div>
     @endif
 </section>
 

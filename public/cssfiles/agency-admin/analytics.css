@@ -105,3 +105,9 @@
     white-space:normal;
     overflow-wrap:anywhere;
 }
+
+/* Agency-specific spacing for the shared citizen-satisfaction analytics panel. */
+.agency-satisfaction-panel{margin-top:12px}
+.agency-satisfaction-panel .analytics-satisfaction-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:1000px){.agency-satisfaction-panel .analytics-satisfaction-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.agency-satisfaction-panel .analytics-satisfaction-grid{gap:7px}.agency-satisfaction-panel .analytics-satisfaction-metric{padding:10px}}
