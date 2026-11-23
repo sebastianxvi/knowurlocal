@@ -13,6 +13,7 @@ use App\Models\UserLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CollaborationController extends Controller
@@ -29,13 +30,30 @@ class CollaborationController extends Controller
     {
         $data = $request->validate([
             'task_type' => ['required', 'in:handoff,review,assist'],
-            'assigned_to_id' => ['required', 'integer'],
+            'assigned_to_id' => ['nullable', 'integer'],
+            'assigned_to_ids' => ['nullable', 'array', 'min:1', 'max:250'],
+            'assigned_to_ids.*' => ['required', 'integer', 'distinct'],
+            'bulk_assign_agency_admins' => ['nullable', 'boolean'],
             'title' => ['required', 'string', 'max:140'],
             'description' => ['nullable', 'string', 'max:1000'],
             'target_type' => ['nullable', 'string', 'in:agency,faq,category,support_request,user'],
             'target_id' => ['nullable', 'integer'],
             'due_at' => ['nullable', 'date', 'after:now'],
         ]);
+
+        $recipientIds = collect($data['assigned_to_ids'] ?? [])
+            ->whenEmpty(fn ($ids) => filled($data['assigned_to_id'] ?? null)
+                ? collect([$data['assigned_to_id']])
+                : collect())
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($recipientIds->isEmpty()) {
+            throw ValidationException::withMessages([
+                'assigned_to_ids' => 'Choose at least one administrator to receive this task.',
+            ]);
+        }
 
         $actor = $request->user();
         $assignableRoles = match ($actor->role) {
@@ -44,40 +62,107 @@ class CollaborationController extends Controller
             default => [],
         };
 
-        $assignee = User::query()
+        $assignees = User::query()
+            ->with('agency')
             ->whereIn('role', $assignableRoles)
             ->where('status', 'active')
-            ->findOrFail($data['assigned_to_id']);
+            ->whereIn('id', $recipientIds)
+            ->get()
+            ->keyBy('id');
 
-        if ($assignee->id === auth()->id()) {
-            return response()->json([
-                'message' => 'A collaboration task must be assigned to another active administrator.',
-            ], 422);
+        if ($assignees->count() !== $recipientIds->count()) {
+            throw ValidationException::withMessages([
+                'assigned_to_ids' => 'One or more selected administrators are no longer active or cannot receive this task.',
+            ]);
         }
 
-        $this->validateAssignmentScope($actor, $assignee, $data);
+        if ($recipientIds->contains((int) $actor->id)) {
+            throw ValidationException::withMessages([
+                'assigned_to_ids' => 'A collaboration task must be assigned to another active administrator.',
+            ]);
+        }
 
-        [$targetType, $targetId, $targetLabel] = $this->resolveTarget($data, $assignee);
+        $isBulkAgencyAssignment = (bool) ($data['bulk_assign_agency_admins'] ?? false) || $assignees->count() > 1;
+        if ($isBulkAgencyAssignment && !in_array($actor->role, ['admin', 'superadmin'], true)) {
+            throw ValidationException::withMessages([
+                'bulk_assign_agency_admins' => 'Only System Admins can assign work to all Agency Admins.',
+            ]);
+        }
 
-        $task = CollaborationTask::create([
-            'created_by_id' => auth()->id(),
-            'assigned_to_id' => $assignee->id,
-            'task_type' => $data['task_type'],
-            'status' => 'open',
-            'target_type' => $targetType,
-            'target_id' => $targetId,
-            'target_label_snapshot' => $targetLabel,
-            'title' => trim($data['title']),
-            'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
-            'due_at' => $data['due_at'] ?? null,
-        ]);
+        if ($isBulkAgencyAssignment && $assignees->contains(fn (User $user) => $user->role !== 'agency_admin')) {
+            throw ValidationException::withMessages([
+                'assigned_to_ids' => 'Bulk assignment is available for Agency Admins. Select Agency Admin recipients only.',
+            ]);
+        }
 
-        $this->log($task, 'create_collaboration_task');
-        broadcast(new CollaborationTaskUpdated($task, 'created'));
+        if ($isBulkAgencyAssignment && ($data['target_type'] ?? null) !== 'agency') {
+            throw ValidationException::withMessages([
+                'target_type' => 'For a task sent to multiple agencies, choose Agency profile. Each task will link to its recipient’s own agency.',
+            ]);
+        }
+
+        $tasks = DB::transaction(function () use ($assignees, $data, $actor, $isBulkAgencyAssignment) {
+            $created = collect();
+
+            foreach ($assignees as $assignee) {
+                $recipientData = $data;
+                if ($isBulkAgencyAssignment) {
+                    if (!$assignee->agency_id || !$assignee->agency) {
+                        throw ValidationException::withMessages([
+                            'assigned_to_ids' => 'Every selected Agency Admin must be linked to an active agency.',
+                        ]);
+                    }
+                    // A single bulk instruction becomes one independently owned task
+                    // per agency, linked to that recipient's own agency profile.
+                    $recipientData['target_id'] = $assignee->agency_id;
+                }
+
+                $this->validateAssignmentScope($actor, $assignee, $recipientData);
+                [$targetType, $targetId, $targetLabel] = $this->resolveTarget($recipientData, $assignee);
+
+                $task = CollaborationTask::create([
+                    'created_by_id' => $actor->id,
+                    'assigned_to_id' => $assignee->id,
+                    'task_type' => $data['task_type'],
+                    'status' => 'open',
+                    'target_type' => $targetType,
+                    'target_id' => $targetId,
+                    'target_label_snapshot' => $targetLabel,
+                    'title' => trim($data['title']),
+                    'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
+                    'due_at' => $data['due_at'] ?? null,
+                ]);
+
+                $this->log($task, 'create_collaboration_task');
+                $created->push($task);
+            }
+
+            return $created;
+        });
+
+        // Broadcast only after the transaction has committed so recipients never
+        // receive an event for a task that was rolled back.
+        $tasks->each(function (CollaborationTask $task): void {
+            try {
+                broadcast(new CollaborationTaskUpdated($task, 'created'));
+            } catch (\Throwable $exception) {
+                // Task creation is already committed. A realtime outage must not
+                // make the client believe the assignment failed and retry it.
+                report($exception);
+            }
+        });
+
+        $loadedTasks = $tasks->map(fn (CollaborationTask $task) =>
+            $this->taskPayload($task->load(['creator', 'assignee', 'target']))
+        )->values();
 
         return response()->json([
-            'message' => 'Collaboration task created and assigned.',
-            'task' => $this->taskPayload($task->load(['creator', 'assignee', 'target'])),
+            'message' => $tasks->count() > 1
+                ? $tasks->count() . ' collaboration tasks created and assigned.'
+                : 'Collaboration task created and assigned.',
+            'created_count' => $tasks->count(),
+            'tasks' => $loadedTasks,
+            'task' => $loadedTasks->first(),
         ], 201);
     }
 

@@ -205,7 +205,7 @@
 @endpush
 
 @push('scripts')
-<script src="{{ asset('jsfiles/admin/dashboard.js') }}?v={{ filemtime(public_path('jsfiles/admin/dashboard.js')) }}"></script>
+<script src="{{ asset('jsfiles/admin/dashboard.a065679f0403.js') }}"></script>
 <script src="{{ asset('jsfiles/admin/admin-password-confirmation.js') }}?v={{ filemtime(public_path('jsfiles/admin/admin-password-confirmation.js')) }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {

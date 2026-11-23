@@ -7,7 +7,7 @@
 @section('content')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('cssfiles/admin/dashboard.12ce9ef2e91a.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/dashboard.918a184166bd.css') }}">
 @endpush
 
 @php
@@ -463,6 +463,7 @@
                 data-status-base-url="{{ url('/admin/dashboard/collaboration') }}"
             >
                 @csrf
+                <input type="hidden" name="bulk_assign_agency_admins" value="0" data-bulk-agency-flag>
 
                 <div class="dashboard-form-grid">
                     <label>
@@ -474,33 +475,77 @@
                         </select>
                     </label>
 
-                    <label>
-                        <span>Assign to</span>
-                        <select name="assigned_to_id" required>
-                            <option value="">Choose administrator</option>
-                            @foreach(\App\Models\User::query()->with('agency')->whereIn('role', ['admin', 'superadmin', 'agency_admin'])->where('status', 'active')->where('id', '<>', auth()->id())->orderBy('role')->orderBy('first_name')->orderBy('last_name')->get() as $admin)
-                                <option value="{{ $admin->id }}" data-role="{{ $admin->role }}" data-agency-id="{{ $admin->agency_id }}">{{ trim($admin->first_name . ' ' . $admin->last_name) ?: $admin->email }}{{ $admin->role === 'agency_admin' ? ' — ' . ($admin->agency?->agency_name ?? 'Agency Admin') : ' — ' . ucfirst($admin->role) }}</option>
-                            @endforeach
-                        </select>
-                    </label>
+                    <div class="dashboard-recipient-field">
+                        <label class="dashboard-field-label" for="collaboration-recipient-search">Assign to</label>
+                        <div class="dashboard-recipient-picker" data-recipient-picker>
+                            <input type="search" id="collaboration-recipient-search" class="dashboard-recipient-search-input" data-recipient-search
+                                placeholder="Search administrator or agency" autocomplete="off" role="combobox" aria-autocomplete="list"
+                                aria-expanded="false" aria-controls="collaboration-recipient-options">
+                            <div class="dashboard-recipient-dropdown" data-recipient-dropdown hidden>
+                                <div class="dashboard-recipient-list" id="collaboration-recipient-options" data-recipient-list role="listbox" aria-label="Administrators">
+                                    @php
+                                        $collaborationRecipients = \App\Models\User::query()
+                                            ->with('agency')
+                                            ->whereIn('role', ['admin', 'superadmin', 'agency_admin'])
+                                            ->where('status', 'active')
+                                            ->where(function ($query) {
+                                                $query->whereIn('role', ['admin', 'superadmin'])
+                                                    ->orWhere(function ($agencyQuery) {
+                                                        $agencyQuery->where('role', 'agency_admin')->whereHas('agency');
+                                                    });
+                                            })
+                                            ->where('id', '<>', auth()->id())
+                                            ->orderByRaw("CASE role WHEN 'admin' THEN 1 WHEN 'superadmin' THEN 2 WHEN 'agency_admin' THEN 3 ELSE 4 END")
+                                            ->orderBy('first_name')
+                                            ->orderBy('last_name')
+                                            ->get();
+                                        $selectAllRendered = false;
+                                    @endphp
+                                    @foreach($collaborationRecipients as $admin)
+                                        @if($admin->role === 'agency_admin' && !$selectAllRendered)
+                                            <button type="button" class="dashboard-recipient-option dashboard-recipient-select-all" data-select-all-option role="option">
+                                                <strong>Select all Agency Admins</strong><small>Assign an individual task to every active Agency Admin</small>
+                                            </button>
+                                            @php $selectAllRendered = true; @endphp
+                                        @endif
+                                        @php
+                                            $recipientName = trim($admin->first_name . ' ' . $admin->last_name) ?: $admin->email;
+                                            $agencyName = $admin->agency?->agency_name ?? '';
+                                            $agencyAbbreviation = $admin->agency?->agency_abbreviation ?? '';
+                                            $recipientSearch = \Illuminate\Support\Str::lower($recipientName . ' ' . $agencyName . ' ' . $agencyAbbreviation . ' ' . $admin->role);
+                                        @endphp
+                                        <button type="button" class="dashboard-recipient-option" data-recipient-option data-recipient-id="{{ $admin->id }}"
+                                            data-role="{{ $admin->role }}" data-search="{{ $recipientSearch }}" role="option">
+                                            <strong>{{ $recipientName }}</strong>
+                                            <small>{{ $admin->role === 'agency_admin' ? trim(($agencyAbbreviation ? $agencyAbbreviation . ' · ' : '') . ($agencyName ?: 'Agency Admin')) : ucfirst($admin->role) }}</small>
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <div data-recipient-values></div>
+                        </div>
+                    </div>
                 </div>
 
                 <p class="dashboard-collaboration-guidance" data-collaboration-guidance role="note">Choose work that matches the recipient’s responsibilities and link the relevant record when applicable.</p>
 
                 <label>
                     <span>Related record <em>required</em></span>
-                    <div class="dashboard-target-row">
+                    <div class="dashboard-target-row" data-target-picker>
                         <select name="target_type" id="collaboration-target-type" required>
-                            <option value="">No specific record</option>
+                            <option value="">Choose record type</option>
                             <option value="agency">Agency</option>
                             <option value="faq">FAQ</option>
                             <option value="category">Category</option>
                             <option value="support_request">Support request</option>
                             <option value="user">Account</option>
                         </select>
-                        <select name="target_id" id="collaboration-target-id" required disabled>
-                            <option value="">Choose a record</option>
-                        </select>
+                        <div class="dashboard-target-search-wrap">
+                            <input type="search" id="collaboration-target-search" data-target-search placeholder="Choose or search a record" autocomplete="off"
+                                role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="collaboration-target-results" disabled>
+                            <div class="dashboard-target-results" id="collaboration-target-results" data-target-results role="listbox" aria-label="Matching records" hidden></div>
+                            <input type="hidden" name="target_id" id="collaboration-target-id">
+                        </div>
                     </div>
                 </label>
 
@@ -554,7 +599,7 @@
 </div>
 
 @push('scripts')
-<script src="{{ asset('jsfiles/admin/dashboard.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/dashboard.ff02fcccceab.js') }}"></script>
 @endpush
 
 @endsection

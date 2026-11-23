@@ -3,7 +3,7 @@
 @section('page-title', 'Agency Dashboard')
 @section('page-subtitle', 'Support performance, common citizen questions, and shared work')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('cssfiles/admin/dashboard.12ce9ef2e91a.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/admin/dashboard.918a184166bd.css') }}">
 <style>
 
 .aw-stat,.aw-card{position:relative;overflow:visible;transition:border-color .16s,box-shadow .16s}
@@ -78,7 +78,7 @@
 }
 
 </style>
-<link rel="stylesheet" href="{{ asset('cssfiles/agency-admin/dashboard.a623edd25e25.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/agency-admin/dashboard.2cb329521de4.css') }}">
 @endpush
 @section('content')
 <div class="dashboard-content agency-workspace" data-collaboration-realtime="true" data-admin-id="{{ auth()->id() }}">
@@ -178,82 +178,119 @@
             </tbody></table></div>
         @endif
     </section>
-    <section class="aw-card aw-collab" id="agency-collaboration">
-        <div class="aw-card-head">
+    <section class="dashboard-section" id="team-collaboration">
+        <div class="dashboard-section-heading">
             <div>
-                <span class="aw-eyebrow" title="Work shared between your agency and the System Admin team.">Shared work</span>
-                <h3 class="aw-collab-heading">Collaboration with the system team</h3>
-                <p class="aw-muted aw-collab-subtitle">Receive reminders, request help, and track follow-ups with System Admins and Superadmins.</p>
+                <span class="eyebrow">TEAM WORK</span>
+                <h2>What your team is working on</h2>
+                <p>Handoffs, reviews, and assistance requests with System Admins.</p>
             </div>
-            <button type="button" class="aw-btn aw-collab-add" id="open-collaboration-modal"><i class="ph-light ph-plus" aria-hidden="true"></i><span>New task</span></button>
+            <button type="button" class="dashboard-collaboration-add" id="open-collaboration-modal" title="Create a shared task">
+                <i class="ph-light ph-plus" aria-hidden="true"></i><span>New task</span>
+            </button>
         </div>
-        <div class="aw-collab-summary">
-            <div class="aw-collab-stat" title="Shared tasks involving you that are still open or in progress."><strong>{{ number_format($collaborationOpenCount) }}</strong><span>Open shared tasks</span></div>
-            <div class="aw-collab-stat" title="Open or in-progress tasks where you are the assigned person responsible for the next action."><strong>{{ number_format($collaborationYourActionCount) }}</strong><span>Assigned to you</span></div>
-            <div class="aw-collab-stat" title="Tasks assigned to you whose due date has already passed and that are not yet completed."><strong>{{ number_format($collaborationOverdueCount) }}</strong><span>Overdue for you</span></div>
+        <div class="dashboard-collaboration-summary">
+            <div class="dashboard-collaboration-stat"><strong>{{ number_format($collaborationOpenCount) }}</strong><span>open tasks</span></div>
+            <div class="dashboard-collaboration-stat is-primary"><strong>{{ number_format($collaborationYourActionCount) }}</strong><span>assigned to you</span></div>
+            <div class="dashboard-collaboration-stat"><strong>{{ number_format($collaborationOverdueCount) }}</strong><span>overdue for you</span></div>
+            <div class="dashboard-collaboration-stat"><strong>{{ number_format($collaborationTasks->count()) }}</strong><span>shared tasks</span></div>
         </div>
-        @forelse($collaborationTasks as $task)
-            @php
-                $creatorName = trim(($task->creator?->first_name ?? 'Admin') . ' ' . ($task->creator?->last_name ?? ''));
-                $assigneeName = trim(($task->assignee?->first_name ?? 'Admin') . ' ' . ($task->assignee?->last_name ?? ''));
-                $isAssignedToMe = (int) $task->assigned_to_id === (int) auth()->id();
-                $isOverdue = $task->due_at && $task->due_at->isPast();
-            @endphp
-            <article class="aw-collab-item" id="collaboration-task-{{ $task->id }}" data-collaboration-task data-task-id="{{ $task->id }}">
-                <div class="aw-collab-icon"><i class="ph-light {{ $task->task_type === 'review' ? 'ph-check-square' : ($task->task_type === 'assist' ? 'ph-handshake' : 'ph-bell-ringing') }}" aria-hidden="true"></i></div>
-                <div class="aw-collab-copy">
-                    <strong>{{ $task->title }}</strong>
-                    <small>{{ $task->task_type_label }} · {{ $creatorName }} → {{ $assigneeName }}@if($task->target_label_snapshot) · {{ $task->target_module_label }}: {{ $task->target_label }}@endif</small>
-                    @if($task->description)<small>{{ $task->description }}</small>@endif
-                </div>
-                <div class="aw-collab-meta">
-                    @if($task->due_at)<span class="aw-collab-due">{{ $isOverdue ? 'Overdue · ' : 'Due ' }}{{ $task->due_at->format('M j') }}</span>@endif
-                    <select class="aw-collab-status" data-collaboration-status data-task-id="{{ $task->id }}" aria-label="Update collaboration task status" {{ $isAssignedToMe || $task->created_by_id === auth()->id() ? '' : 'disabled' }}>
-                        @if($isAssignedToMe)
-                            @if($task->created_by_id === auth()->id())<option value="cancelled">Cancel task</option>@endif
-                            <option value="open" {{ $task->status === 'open' ? 'selected' : '' }}>Open</option>
-                            <option value="in_progress" {{ $task->status === 'in_progress' ? 'selected' : '' }}>In progress</option>
-                            <option value="completed" {{ $task->status === 'completed' ? 'selected' : '' }}>Completed</option>
-                        @else
-                            <option value="{{ $task->status }}" selected>{{ $task->status_label }}</option>
-                            @if($task->created_by_id === auth()->id())<option value="cancelled">Cancel task</option>@endif
-                        @endif
-                    </select>
-                </div>
-            </article>
-        @empty
-            <div class="aw-collab-empty"><strong>No shared tasks yet</strong>Use collaboration to remind your agency team about important updates or ask the system team for assistance.</div>
-        @endforelse
+        <div class="dashboard-collaboration-card">
+            @forelse($collaborationTasks as $task)
+                @php
+                    $creatorName = trim(($task->creator?->first_name ?? 'Admin') . ' ' . ($task->creator?->last_name ?? ''));
+                    $assigneeName = trim(($task->assignee?->first_name ?? 'Admin') . ' ' . ($task->assignee?->last_name ?? ''));
+                    $isAssignedToMe = (int) $task->assigned_to_id === (int) auth()->id();
+                    $isOverdue = $task->due_at && $task->due_at->isPast();
+                @endphp
+                <article class="dashboard-collaboration-item {{ $isOverdue ? 'is-overdue' : '' }}" id="collaboration-task-{{ $task->id }}" data-collaboration-task data-task-id="{{ $task->id }}">
+                    <div class="dashboard-collaboration-item-icon"><i class="ph-light {{ $task->task_type === 'review' ? 'ph-check-square' : ($task->task_type === 'assist' ? 'ph-handshake' : 'ph-arrow-bend-up-right') }}" aria-hidden="true"></i></div>
+                    <div class="dashboard-collaboration-item-copy">
+                        <strong>{{ $task->title }}</strong>
+                        <small>{{ $task->task_type_label }} · {{ $creatorName }} → {{ $assigneeName }}@if($task->target_label_snapshot) · {{ $task->target_module_label }}: {{ $task->target_label }}@endif</small>
+                    </div>
+                    <div class="dashboard-collaboration-item-meta">
+                        @if($task->due_at)<span class="dashboard-collaboration-due {{ $isOverdue ? 'is-overdue' : '' }}">{{ $isOverdue ? 'Overdue' : $task->due_at->format('M j') }}</span>@endif
+                        <select class="dashboard-collaboration-status" data-collaboration-status data-task-id="{{ $task->id }}" aria-label="Update collaboration task status" {{ $isAssignedToMe || $task->created_by_id === auth()->id() ? '' : 'disabled' }}>
+                            @if($isAssignedToMe)
+                                @if($task->created_by_id === auth()->id())<option value="cancelled" {{ $task->status === 'cancelled' ? 'selected' : '' }}>Cancel task</option>@endif
+                                <option value="open" {{ $task->status === 'open' ? 'selected' : '' }}>Open</option>
+                                <option value="in_progress" {{ $task->status === 'in_progress' ? 'selected' : '' }}>In progress</option>
+                                <option value="completed" {{ $task->status === 'completed' ? 'selected' : '' }}>Completed</option>
+                            @else
+                                <option value="{{ $task->status }}" selected>{{ $task->status_label }}</option>
+                                @if($task->created_by_id === auth()->id())<option value="cancelled">Cancel task</option>@endif
+                            @endif
+                        </select>
+                    </div>
+                </article>
+            @empty
+                <div class="dashboard-collaboration-empty"><i class="ph-light ph-users-three" aria-hidden="true"></i><div><strong>No shared work is waiting.</strong><span>Use collaboration to request assistance, reviews, or follow-ups with the system team.</span></div></div>
+            @endforelse
+        </div>
     </section>
 
-    <div class="aw-collab-modal" id="collaboration-modal" hidden aria-hidden="true">
-        <div class="aw-collab-backdrop" data-close-collaboration-modal></div>
-        <section class="aw-collab-dialog" role="dialog" aria-modal="true" aria-labelledby="agency-collaboration-title">
-            <div class="aw-collab-dialog-head">
-                <div><span class="aw-eyebrow">Team collaboration</span><h3 id="agency-collaboration-title">Create shared work</h3><p class="aw-muted">Handoffs, reviews, and assistance requests with the system team.</p></div>
-                <button type="button" class="aw-collab-close" data-close-collaboration-modal aria-label="Close"><i class="ph-light ph-x"></i></button>
+    <div class="dashboard-collaboration-modal" id="collaboration-modal" hidden aria-hidden="true">
+        <div class="dashboard-collaboration-modal-backdrop" data-close-collaboration-modal></div>
+        <section class="dashboard-collaboration-modal-card" role="dialog" aria-modal="true" aria-labelledby="agency-collaboration-title">
+            <div class="dashboard-collaboration-modal-header">
+                <div><span class="eyebrow">Team collaboration</span><h3 id="agency-collaboration-title">Create shared work</h3></div>
+                <button type="button" class="dashboard-icon-button" data-close-collaboration-modal aria-label="Close"><i class="ph-light ph-x" aria-hidden="true"></i></button>
             </div>
-            <form id="collaboration-form" class="aw-collab-form"
+            <form id="collaboration-form" class="dashboard-collaboration-form" data-recipient-limit="1"
                 data-store-url="{{ route('agency-admin.collaboration.store') }}"
                 data-targets-url="{{ route('agency-admin.collaboration.targets') }}"
                 data-status-base-url="{{ url('/agency-admin/collaboration') }}">
                 @csrf
-                <div class="aw-collab-form-grid">
+                <input type="hidden" name="bulk_assign_agency_admins" value="0" data-bulk-agency-flag>
+                <div class="dashboard-form-grid">
                     <label><span>Work type</span><select name="task_type" required><option value="assist">Ask for assistance</option><option value="review">Request a review</option><option value="handoff">Follow-up / handoff</option></select></label>
-                    <label><span>Assign to</span><select name="assigned_to_id" required><option value="">Choose system administrator</option>@foreach($collaborationAdmins as $admin)<option value="{{ $admin->id }}">{{ trim($admin->first_name . ' ' . $admin->last_name) ?: $admin->email }} — {{ ucfirst($admin->role) }}</option>@endforeach</select></label>
+                    <div class="dashboard-recipient-field">
+                        <label class="dashboard-field-label" for="collaboration-recipient-search">Assign to</label>
+                        <div class="dashboard-recipient-picker" data-recipient-picker>
+                            <input type="search" id="collaboration-recipient-search" class="dashboard-recipient-search-input" data-recipient-search
+                                placeholder="Search system administrators" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="collaboration-recipient-options">
+                            <div class="dashboard-recipient-dropdown" data-recipient-dropdown hidden>
+                                <div class="dashboard-recipient-list" id="collaboration-recipient-options" data-recipient-list role="listbox" aria-label="System administrators">
+                                    @foreach($collaborationAdmins as $admin)
+                                        @php $recipientName = trim($admin->first_name . ' ' . $admin->last_name) ?: $admin->email; @endphp
+                                        <button type="button" class="dashboard-recipient-option" data-recipient-option data-recipient-id="{{ $admin->id }}" data-role="{{ $admin->role }}"
+                                            data-search="{{ \Illuminate\Support\Str::lower($recipientName . ' ' . $admin->role) }}" role="option">
+                                            <strong>{{ $recipientName }}</strong><small>{{ ucfirst($admin->role) }}</small>
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <div data-recipient-values></div>
+                        </div>
+                    </div>
                 </div>
-                <label><span>Related record (required)</span><div class="aw-collab-targets"><select name="target_type" id="collaboration-target-type"><option value="">Choose related record</option><option value="agency">Agency profile</option><option value="faq">FAQ</option><option value="support_request">Support request</option></select><select name="target_id" id="collaboration-target-id" disabled><option value="">Choose a record</option></select></div></label>
+                <p class="dashboard-collaboration-guidance" data-collaboration-guidance role="note">Choose work that matches the recipient’s responsibilities and link the relevant record.</p>
+                <label>
+                    <span>Related record <em>required</em></span>
+                    <div class="dashboard-target-row" data-target-picker>
+                        <select name="target_type" id="collaboration-target-type" required>
+                            <option value="">Choose record type</option><option value="agency">Agency profile</option><option value="faq">FAQ</option><option value="support_request">Support request</option>
+                        </select>
+                        <div class="dashboard-target-search-wrap">
+                            <input type="search" id="collaboration-target-search" data-target-search placeholder="Choose or search a record" autocomplete="off"
+                                role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="collaboration-target-results" disabled>
+                            <div class="dashboard-target-results" id="collaboration-target-results" data-target-results role="listbox" aria-label="Matching records" hidden></div>
+                            <input type="hidden" name="target_id" id="collaboration-target-id">
+                        </div>
+                    </div>
+                </label>
                 <label><span>Title</span><input type="text" name="title" maxlength="140" placeholder="e.g. Review the updated office hours" required></label>
                 <label><span>Instructions <em>required</em></span><textarea name="description" rows="3" maxlength="1000" required placeholder="Explain the specific request and expected outcome..."></textarea></label>
-                <label><span>Due date (optional)</span><input type="datetime-local" name="due_at"></label>
-                <div class="aw-collab-form-error" id="collaboration-form-error" role="alert" hidden></div>
-                <div class="aw-collab-actions"><button type="button" class="aw-collab-secondary" data-close-collaboration-modal>Cancel</button><button type="submit" class="aw-btn" id="collaboration-submit"><i class="ph-light ph-paper-plane-tilt" style="margin-right:8px"></i>Create task</button></div>
+                <label><span>Due date <em>optional</em></span><input type="datetime-local" name="due_at"></label>
+                <div class="dashboard-collaboration-form-error" id="collaboration-form-error" role="alert" hidden></div>
+                <div class="dashboard-collaboration-modal-actions"><button type="button" class="dashboard-secondary-button" data-close-collaboration-modal>Cancel</button><button type="submit" class="dashboard-primary-button" id="collaboration-submit"><i class="ph-light ph-paper-plane-tilt" aria-hidden="true"></i> Create task</button></div>
             </form>
         </section>
     </div>
 
 </div>
 @push('scripts')
-<script src="{{ asset('jsfiles/admin/dashboard.js') }}"></script>
+<script src="{{ asset('jsfiles/admin/dashboard.ff02fcccceab.js') }}"></script>
 @endpush
 @endsection
