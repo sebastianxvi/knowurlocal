@@ -62,6 +62,8 @@
 
     <x-public.app-install-banner />
 
+    @include('components.public.tutorial-widget')
+
     {{-- =========================================================
          LANDING PAGE ROOT
 

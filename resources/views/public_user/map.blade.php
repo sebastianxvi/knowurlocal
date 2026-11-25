@@ -63,6 +63,8 @@
 
     <x-public.navbar />
 
+    @include('components.public.tutorial-widget')
+
     <!-- Map Container (fills entire page) -->
     <div
         id="map"

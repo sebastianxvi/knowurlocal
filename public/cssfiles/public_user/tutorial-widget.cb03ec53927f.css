@@ -1,0 +1,264 @@
+/* Compact draggable tutorial launcher and portrait video dialog. */
+.kul-tutorial {
+    --kul-tutorial-blue: #2459c5;
+    --kul-tutorial-ink: #17243a;
+    position: relative;
+    z-index: 10000;
+}
+
+.kul-tutorial[hidden],
+.kul-tutorial-dialog[hidden] {
+    display: none !important;
+}
+
+.kul-tutorial-launcher {
+    position: fixed;
+    right: max(22px, env(safe-area-inset-right));
+    bottom: max(24px, env(safe-area-inset-bottom));
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    border-radius: 17px;
+    background: #fff;
+    border: 1px solid rgba(36, 89, 197, .16);
+    box-shadow: 0 9px 28px rgba(15, 35, 70, .24);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+}
+
+.kul-tutorial-launcher.is-dragging {
+    cursor: grabbing;
+    box-shadow: 0 14px 34px rgba(15, 35, 70, .3);
+}
+
+.kul-tutorial-open,
+.kul-tutorial-dismiss,
+.kul-tutorial-modal-close {
+    border: 0;
+    font: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kul-tutorial-open {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+    color: #fff;
+    background: linear-gradient(145deg, #3269d8, #204eaf);
+    font-size: 27px;
+    line-height: 1;
+    touch-action: manipulation;
+    transition: background .18s ease, transform .18s ease;
+}
+
+.kul-tutorial-open:hover {
+    background: linear-gradient(145deg, #3d75e5, #2459c5);
+}
+
+.kul-tutorial-open:active {
+    transform: scale(.95);
+}
+
+.kul-tutorial-dismiss {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 25px;
+    height: 25px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    color: #526176;
+    background: #eef2f8;
+    font-size: 13px;
+    line-height: 1;
+    touch-action: manipulation;
+    box-shadow: 0 2px 7px rgba(15, 35, 70, .16);
+}
+
+.kul-tutorial-open:focus-visible,
+.kul-tutorial-dismiss:focus-visible,
+.kul-tutorial-modal-close:focus-visible {
+    outline: 3px solid #f4b942;
+    outline-offset: 3px;
+}
+
+.kul-tutorial-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    box-sizing: border-box;
+}
+
+.kul-tutorial-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 17, 34, .76);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+}
+
+.kul-tutorial-panel {
+    position: relative;
+    display: flex;
+    flex: 0 1 auto;
+    flex-direction: column;
+    width: min(420px, calc((100dvh - 124px) * .5625), calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    min-width: 0;
+    margin: 0 auto;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid rgba(255, 255, 255, .7);
+    border-radius: 22px;
+    box-shadow: 0 28px 90px rgba(0, 0, 0, .38);
+}
+
+.kul-tutorial-header {
+    flex: 0 0 auto;
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 16px 12px 19px;
+    background: linear-gradient(180deg, #fff, #f9fbff);
+    border-bottom: 1px solid #e9eef6;
+}
+
+.kul-tutorial-eyebrow {
+    margin: 0 0 4px;
+    color: var(--kul-tutorial-blue);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .13em;
+}
+
+.kul-tutorial-header h2 {
+    margin: 0;
+    color: var(--kul-tutorial-ink);
+    font-size: clamp(15px, 3.6vw, 18px);
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.kul-tutorial-modal-close {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: #53647b;
+    background: #edf2f8;
+    font-size: 19px;
+    transition: color .16s ease, background .16s ease, transform .16s ease;
+}
+
+.kul-tutorial-modal-close:hover {
+    color: #1e4fae;
+    background: #e2eafa;
+    transform: rotate(90deg);
+}
+
+.kul-tutorial-video-wrap {
+    position: relative;
+    flex: 0 1 auto;
+    width: 100%;
+    aspect-ratio: 9 / 16;
+    margin-inline: auto;
+    overflow: hidden;
+    min-height: 0;
+    background: #05070b;
+}
+
+.kul-tutorial-video-wrap iframe {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #05070b;
+}
+
+body.kul-tutorial-modal-open {
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+@media (max-width: 600px) {
+    .kul-tutorial-launcher {
+        right: max(15px, env(safe-area-inset-right));
+        bottom: max(17px, env(safe-area-inset-bottom));
+        width: 50px;
+        height: 50px;
+        border-radius: 15px;
+    }
+
+    .kul-tutorial-open {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        font-size: 25px;
+    }
+
+    .kul-tutorial-dialog {
+        padding: 12px;
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .kul-tutorial-panel {
+        width: min(390px, calc((100dvh - 116px) * .5625), calc(100vw - 24px));
+        max-height: calc(100dvh - 24px);
+        margin-inline: auto;
+        border-radius: 18px;
+    }
+
+    .kul-tutorial-header {
+        min-height: 64px;
+        padding: 11px 12px 10px 15px;
+    }
+
+    .kul-tutorial-modal-close {
+        flex-basis: 33px;
+        width: 33px;
+        height: 33px;
+    }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+    .kul-tutorial-dialog {
+        padding: 8px;
+    }
+
+    .kul-tutorial-panel {
+        width: min(calc((100dvh - 92px) * .5625), calc(100vw - 20px));
+        max-height: calc(100dvh - 16px);
+        margin-inline: auto;
+    }
+
+    .kul-tutorial-header {
+        min-height: 58px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .kul-tutorial-launcher {
+        transition: box-shadow .16s ease;
+    }
+}
+
