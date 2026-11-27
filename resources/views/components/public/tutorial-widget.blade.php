@@ -1,11 +1,10 @@
 @php
-    $tutorialVideoId = '1886zanQdGeGfm3qRrBYQlJIIrobAg2ay';
     // A successful login regenerates Laravel's session ID. Using a one-way
     // fingerprint lets the launcher dismissal reset on the next login.
     $tutorialSessionKey = hash('sha256', session()->getId());
 @endphp
 
-<link rel="stylesheet" href="{{ asset('cssfiles/public_user/tutorial-widget.357f5af01c0a.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/public_user/tutorial-widget.35cff928e356.css') }}">
 <div class="kul-tutorial" data-tutorial-widget data-tutorial-session="{{ $tutorialSessionKey }}">
     <div class="kul-tutorial-launcher" data-tutorial-launcher>
         <button class="kul-tutorial-open" type="button" aria-label="Watch KNOWURLOCAL tutorial"
@@ -31,16 +30,19 @@
                 </button>
             </header>
             <div class="kul-tutorial-video-wrap">
-                <iframe
-                    data-tutorial-frame
+                <video
+                    data-tutorial-video
                     title="KNOWURLOCAL tutorial video"
-                    data-src="https://drive.google.com/file/d/{{ $tutorialVideoId }}/preview"
-                    allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                    allowfullscreen
-                    referrerpolicy="strict-origin-when-cross-origin">
-                </iframe>
+                    controls
+                    playsinline
+                    preload="metadata"
+                    controlslist="nodownload noplaybackrate"
+                    aria-label="KNOWURLOCAL tutorial video">
+                    <source src="{{ asset('videos/knowurlocal%20introduction.mp4') }}" type="video/mp4">
+                    Your browser does not support HTML5 video playback.
+                </video>
             </div>
         </section>
     </div>
 </div>
-<script src="{{ asset('jsfiles/public_user/tutorial-widget.473fa873d2d7.js') }}" defer></script>
+<script src="{{ asset('jsfiles/public_user/tutorial-widget.006f92111f3a.js') }}" defer></script>
