@@ -4,7 +4,7 @@
     $tutorialSessionKey = hash('sha256', session()->getId());
 @endphp
 
-<link rel="stylesheet" href="{{ asset('cssfiles/public_user/tutorial-widget.35cff928e356.css') }}">
+<link rel="stylesheet" href="{{ asset('cssfiles/public_user/tutorial-widget.96fb9ea30ea6.css') }}">
 <div class="kul-tutorial" data-tutorial-widget data-tutorial-session="{{ $tutorialSessionKey }}">
     <div class="kul-tutorial-launcher" data-tutorial-launcher>
         <button class="kul-tutorial-open" type="button" aria-label="Watch KNOWURLOCAL tutorial"
@@ -45,4 +45,4 @@
         </section>
     </div>
 </div>
-<script src="{{ asset('jsfiles/public_user/tutorial-widget.006f92111f3a.js') }}" defer></script>
+<script src="{{ asset('jsfiles/public_user/tutorial-widget.7d661971db00.js') }}" defer></script>
